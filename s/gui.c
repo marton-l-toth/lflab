@@ -45,6 +45,7 @@
 #define DF_OIDEL 8
 #define DF_WRAP 16
 #define DF_BOXCONF 32
+#define DF_TRK 64
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]));
@@ -197,10 +198,9 @@ static int conf_nomwin = 0;
 static int conf_portwid;
 
 static int dflg = 0;
-static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 16:wrap 32:boxconf";
-
+static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
+			     "40: track";
 // general
-
 #define MYPRINTF(nm, l)             			\
 void nm(const char * fmt, ...) {      			 \
         va_list ap; va_start(ap, fmt); 			  \
@@ -2421,7 +2421,7 @@ ok:     return tdiv_dvix[k] + 1;
 
 static void tc_mk_xy_a(tc_t * tc) {
         int i, j, i1 = tc->y1a = tc->y1r, j1 = tc->x1a = tc->x1r;
-	if (j1<0) { LOG("tc_mk_xy_a: x1r = %d", j1); return; }
+	if (j1<0) { if (dflg & DF_TRK) LOG("tc_mk_xy_a: x1r = %d", j1); return; }
         for (j=tc->x0a=tc->x0r; j<=j1; j++) {
                 tc->ybv[j&15]=0u; for (i=tc->y0a=tc->y0r; i<=i1; i++) TC_BLKZ(tc,j,i); }
 	tc_vw_cmd(tc);
@@ -2480,9 +2480,11 @@ static void trk_d1b(tc_t * tc, trk_24 * bx, int x16) {
 	tc->dl_bcur = bx; tc->dl_xcur = px;
 }
 
-#define BXCL(L) LOG("tc_bx_cmd/%s: x15y4=0x%x, idr_flg=0x%x s14=\"%s\"", #L, x15y4, idr_flg, s14)
+#define BXCL(L) ((dflg&DF_TRK)?LOG("tc_bx_cmd/%s: x15y4=0x%x, idr_flg=0x%x s14=\"%s\"", \
+				    #L, x15y4, idr_flg, s14):(void)0)
 static int tc_bx_cmd(tc_t * tc, int ib, int jb, int idr_flg, const char * s14) {
-	/*LOG("tc_bx_cmd: ib=0x%x jb=0x%x, idr_flg=0x%x, s14=%.14s",ib,jb,idr_flg,s14?s14:"(null pointer)");*/
+	if (dflg&DF_TRK) LOG("tc_bx_cmd: ib=0x%x jb=0x%x, idr_flg=0x%x, s14=%.14s",
+				ib, jb, idr_flg, s14?s14:"(null pointer)");
         int y64 = ib >> 7, x64 = jb >> 18;
         if (y64<tc->y0a || y64>tc->y1a || x64<tc->x0a || x64>tc->x1a) return -1;
         int y8 = (ib >> 4) & 7, x8 = (jb >> 15) & 7, cf = idr_flg & TBXF_CRE;
@@ -2682,7 +2684,7 @@ static void trk_reqdr(tc_t * tc, int x, unsigned int ym) {
 	char buf[24]; buf[0] = 'X'; buf[1] = 'R'; *(int*)(buf+2) = qh4(x);
 	buf[6] = 36; *(int*)(buf+7) = qh4((int)(ym>>16)); *(int*)(buf+11) = qh4(ym&65535); buf[15] = 0;
 	widg_defcmd(tc->ww, buf); tc->flg &= TCF_PEND;
-	LOG("trk 0x%x: req x=%d, msk=0x%x", tc->nid, x, ym); }
+	if (dflg&DF_TRK) LOG("trk 0x%x: req x=%d, msk=0x%x", tc->nid, x, ym); }
 
 static int trk_cond_req(tc_t * tc) {
 	int i; unsigned int m2;
@@ -2725,7 +2727,7 @@ static void datrk_draw(ww_t * ww, cairo_t * cr2) {
 
 static void trk_mv(ww_t * ww, int dx, int dy) { 
         tc_t * tc = (tc_t*) ww->etc;
-	LOG("trk_mv: x:%d y:%d", dx, dy); 
+	if (dflg&DF_TRK) LOG("trk_mv: x:%d y:%d", dx, dy); 
 	tc->x0 += dx; tc->y0 += dy; da_fullre(ww);
 }
 
@@ -2753,7 +2755,7 @@ static void trkclk_e(ww_t * ww, int b9, int cy) { LOG("trkclk_e: b%c y:%d", 48+b
 
 static void tsc_cc(int c) {
 	CMD("~X#%x$C%c%x$%x$%x\n", tsc_ww->top->id>>4, c, tsc_id, tsc_y, tsc_x);
-	LOG("tsc_cmd:  id:0x%x, x:%d y:%d c:0x%x '%c'", tsc_id, tsc_x, tsc_y, c, c);
+	if (dflg&DF_TRK) LOG("tsc_cmd:  id:0x%x, x:%d y:%d c:0x%x '%c'", tsc_id, tsc_x, tsc_y, c, c);
 }
 
 static void tsc_act(ww_t * ww, int ix) { int buf[3];
@@ -2766,7 +2768,7 @@ static void tsc_act(ww_t * ww, int ix) { int buf[3];
 			 default: LOG("BUG: tsc_act: md=%d", tsc_md); return; }}
 
 static void trkclk_w(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
-	LOG("trkclk_w: b%c x:%d y:%d", 48+b9, cx, cy);
+	if (dflg&DF_TRK) LOG("trkclk_w: b%c x:%d y:%d", 48+b9, cx, cy);
 	if (cx<20) return LOG("trkclk_w: nothing happens");
         tc_t * tc = (tc_t*) ww->etc;   tsc_y = cy/48+tc->y0; tsc_ww = ww;
 	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lookup_ps(ww->top,"d"))&~1u, ev);
@@ -2784,7 +2786,7 @@ static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 	tsc_md = 0; tsc_x = t1; tsc_y = y; tsc_id = r; tsc_ww = ww;
 	if (b9!=3) return tsc_cc(48+b9);
 	popup2(ww, tsc_mi, r ? 1 : 0x37, ev);
-	LOG("trkclk_c: b%c x:%d(%d) y:%d(%d) --> 0x%x", 48+b9, cx, t1, cy, y, r);
+	if (dflg&DF_TRK) LOG("trkclk_c: b%c x:%d(%d) y:%d(%d) --> 0x%x", 48+b9, cx, t1, cy, y, r);
 }
 
 static void datrk_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
@@ -2929,7 +2931,7 @@ static void tc_upd255(tc_t * tc, int flg) {
 	else	  for (i=1; i<256; i++) if ( p[i] && !((1u<<tdiv_idsf[p[i]].i)&m)) tc_set_d1(tc, i, 0);
 }
 
-static void tc_set_ppb(tc_t * tc, int v) { LOG("tc_set_ppb %d", v);
+static void tc_set_ppb(tc_t * tc, int v) { if (dflg&DF_TRK)  LOG("tc_set_ppb %d", v);
 	if (v==tc->gwfr[1]) return;
 	if (!le40320(tc->gwfr[0], v)) return LOG("BUG: tc_set_ppb: v=%d, g=%d", v, tc->gwfr[0]);
 	tc->gwfr[1] = v;  tsr_op(tc->ww, TSR_ALL, 0);  trk_upd_wgd(tc->ww, 4);
@@ -2948,7 +2950,7 @@ static void tc_set_gd(tc_t * tc, int gd) {
 }
 
 static void tc_dcmd(tc_t * tc, int i, int v, int cf) {
-	LOG("tc_dcmd: %d %d(%d) %d", i, v, tc->div[i], cf);
+	if (dflg&DF_TRK) LOG("tc_dcmd: %d %d(%d) %d", i, v, tc->div[i], cf);
 	if (tc->div[i] == v) return;
 	tc_set_d1(tc, i, v); if (!i) tc_upd255(tc, 1);
 }
@@ -4327,11 +4329,6 @@ static void cmd_ob(int c0, int id, char * arg) {
 
 static int last_obid = 0;
 
-static void cmd_dflg(const char * s) {
-	if (*s=='?') LOG("dlfg: %d %s", dflg, dflg_s);
-	else dflg = atoi(s);
-}
-
 static void debug_wid(int fs) {
 	if (fs<6 || fs>25) { LOG("debug_wid: invalid fs %d", fs); return; }
 	char buf[96], *p = FONT_WTAB(fs);
@@ -4379,12 +4376,11 @@ static void cmd1(char * str) {
 					 LOG("wid: %d", tx_len(k, s));
 					 return;
 				case '=': lsr_debug();
-				case 'f': break;
+				case 'f': if (s[1]=='?') LOG("dlfg: %d %s", dflg, dflg_s); 
+					  else dflg = atoi_h(s+1);	
+					  return;
 				default: LOG("unknown debug-cmd 0x%x(%c)",*s, *s); return;
 			}
-			if (s[1]=='?') LOG("dlfg: %d %s", dflg, dflg_s); 
-			else dflg = atoi(s+1);
-			return;
 		default:LOG("unknown cmd 0x%x",*str); return;
 	}
 }
