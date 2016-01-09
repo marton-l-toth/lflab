@@ -151,7 +151,7 @@ int ZBAcc::calc(int inflg, double** inb, double** outb, int n) {
 // fq_warp() does "pre-warping" for frequency -- it converts value in Hz to the "frequency"
 // required by filters.
 
-QUICK_PZFILT(ZBEqF) {
+QUICK_PZFILT(ZBEqLF) {
         double fq = inb[0][0], step = fq*inb[1][0], wid1 = inb[2][0],
                amp1 = exp(M_LN2 / inb[3][0]), wid2 = wid1 * fq;
         NAN_UNPK_32(amp, inb[4], 0);
@@ -159,7 +159,7 @@ QUICK_PZFILT(ZBEqF) {
 	set_n(np); // sets number poles, allocates m_ab
         RECF_PZItem * pzn = new RECF_PZItem[np]; // pole-zero pairs
         for (i=j=0; i<np; i++, fq+=step) if ((k=amp_x[i])) pzn[j].eql(fq_warp(fq),wid2/fq,ipows(amp1,k)), j++;
-        rfpz_transform(m_ab, pzn, j); return 0;
+        rfpz_transform(m_ab, pzn, j); return 0; // pzn not freed now, available for main menu/filter disp.
 }
 
 // And finally, the init function (called before files are read or GUI started)
@@ -195,7 +195,8 @@ QUICK_PZFILT(ZBEqF) {
 
 // io-alias: when allowed (no&32) input buffers(s) may have the same address as output buffer(s)
 // that can cause a problem if you use the output buffer as a temporary store while still
-// needing the input buffers -- if unsure, leave it disabled
+// needing the input buffers -- if unsure, leave it disabled (its only disadvantage is that
+// graph boxes containing this box might allocate one more temporary buffer)
 
 // In the early initialization there is no fancy error handling: when an operation fails,
 // the program quits with a core dump. (since you start with an empty subtree, nothing
@@ -205,7 +206,17 @@ QUICK_PZFILT(ZBEqF) {
 
 void ci_zB(ANode * r) {
 	log("zB hellohello");
-	qmk_box(r, "+", QMB_ARG0(ZBAdd), 0, 2, 1, "zB", 0);
+	qmk_box(r, "abs", QMB_ARG0(ZBAbs), 0, 1, 33, "zB", "i*o*R*1", "X", "absX", "Pz%%0%"); 
+	qmk_box(r, "+", QMB_ARG0(ZBAdd), 0, 2, 1, "zB", "1i*o*", "x$y", "x+y");
+
+	ANode * dsel = qmk_dir(r, "sel"); qmb_arg_t qa = QMB_ARG1(ZBSel);
+	char nm[8]; memcpy(nm, "sel02", 6); 
+	qmk_box(dsel, nm, qa, 2, 3, 33, "zB", "R*1i-", "uu%99%", 513, "sel"); // store color only
+	for (int i=3; i<30; i++) nm[3] = '0'+i/10, nm[4] = '0'+i%10,   // keep default labels (exc. "sel")
+		qmk_box(dsel, nm, qa, i, i+1, 33, "zB", "1i-", 1+256*i, "sel");
+
+	qmk_box(r, "=acc", QMB_ARG0(ZBAcc), 0, 2, 1, "zB", "i*", "in$loss");
+	qmk_box(r, "=eql-ls", QMB_ARG0(ZBEqLF),0,6,33,"zB", "i*R*", "in$fq1$step$wid$2div$[a]", "uuu3%F");
 }
 
 // you can find more examples (although with less comments) in the main source files.
