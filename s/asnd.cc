@@ -91,7 +91,7 @@ int ASnd::set_clk(int lim) {
 	m_ca_min = m_ca_max = m_ca_acc = m_ca_cnt = 0; m_ev_arg = 'K';
 	int t = 1000000 * (tv1.tv_sec - tv0.tv_sec) + tv1.tv_usec - tv0.tv_usec;
 	log("bufsiz = %d (%d), t(wr64+avail) = %d us, %s", av + 64, m_bsiz_ref, t, t<lim ? "OK":"fail"); 
-	return -(t>=lim);
+	return t<lim ? 0 : (close(), -1);
 }
 
 void ASnd::adj_clk() {
