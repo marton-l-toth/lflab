@@ -173,11 +173,11 @@ int TrackInst::ini(double **inb) {
 	m_md = 1; m_rpc = (int)lround(inb[3][0]);
 	m_vt = 40320.0*inb[1][0]; m_to = VTARG(2); 
 	int vti = (int)lround(m_vt); if ((vti|m_to)<0) return BXE_RANGE;
-	int ec = Node::mk(&m_pn, m_m->tn, 0, '!', 2, vti);
-	if (ec<0 || (ec = Node::mk(&m_tn, m_m->tn, 0, '!', 3, m_to))<0) return ec;
+	int ec = Node::mk(&m_pn, m_m->tn, 0, '!', 2|NOF_FORCE, vti);
+	if (ec<0 || (ec = Node::mk(&m_tn, m_m->tn, 0, '!', 3|NOF_FORCE, m_to))<0) return ec;
 	if (!m_rpc) return 0;
 	m_fr2 = VTARG(4); m_to2 = VTARG(5);
-	return Node::mk(&m_fn, m_m->tn, 0, '!', 1, m_fr2);
+	return Node::mk(&m_fn, m_m->tn, 0, '!', 1|NOF_FORCE, m_fr2);
 }
 
 void TrackInst::sane(int n) {
@@ -431,7 +431,7 @@ int TrackGen::save2(SvArg * sv) {
 
 BXCMD_DEF(TrackGen) { {8192+'\\',0}, {'R'|256, c_rq}, {'C'|256, c_cx1}, {'c'|256, c_cx0},
 	{'V'|256, c_view}, {'m'|256, c_mv}, {'s'|256, c_stp}, {'r', c_rec}, {'u'|256, c_upp},
-	{'g'|256, c_gcf}, {'b', c_bpm}, {'p', c_pl}, {'Q', c_qk}, {0, 0} };
+	{'g'|256, c_gcf}, {'b', c_bpm}, {'p'|256, c_pl}, {'Q', c_qk}, {0, 0} };
 
 //export
 BoxGen * trk_mk(ABoxNode * nd, ANode * g0, ANode * g1) { return new TrackGen(nd,g0,g1); }
