@@ -1,0 +1,40 @@
+#2053
+style "entx"
+{
+  font_name = "normal 9"
+  base[NORMAL] = { .0, .0, .0 }
+  text[NORMAL] = { .66667, 1.0, .66667 }
+  text[SELECTED] = { .2, .2, .2 }
+  base[SELECTED] = { .8, 1.0, .7 }
+}
+class "GtkEntry" style "entx"
+#
+style "treev"
+{
+	font_name = "normal 9"
+	GtkTreeView::vertical-separator = 1
+}
+class "GtkTreeView" style "treev"
+#
+style "tw"
+{
+	bg[NORMAL] = { .6667, .6667, .6667 }
+}
+class "GtkWindow" style "tw"
+style "sw"
+{
+	GtkScrolledWindow::scrollbars-within-bevel = 0
+	GtkScrolledWindow::scrollbar-spacing = 2
+}
+class "GtkScrolledWindow" style "sw"
+style "mnui"
+{	
+  	font_name = "normal 9"
+	bg[NORMAL] = {.2, .2, .1}
+ 	base[NORMAL] = {.0, .0, .0}
+  	fg[NORMAL] = {1.0, 1.0, .5}
+ 	text[NORMAL] = {1.0, 1.0, .5}
+}
+class "GtkMenu" style "mnui"
+class "GtkMenuItem" style "mnui"
+class "GtkLabel" style "mnui"

@@ -1,0 +1,8 @@
+INI_ORDER   |i|0          |0   |1    |iord  |starts gui before (x=1) or after (x=0) reading files
+AU_NAME     |s|default    |1   |255  |anm   |name of ALSA PCM output device
+AU_CHCFG    |s|lr         |1   |255  |chcfg |channel cfg [lracsz]* (Left Right Avg Center(sqrt2*Avg) Sum Zero)
+AU_SPD      |i|50         |0   |99   |asp   |audio buffer size: 2^(11-.05*x) frames
+AU_RSRV     |i|50         |1   |200  |arsrv |audio buffer reserve (percentage of buffer size)
+AU_CLK      |i|2          |0   |2    |aclk  |set clock from avail(0), delay(1) or hw_params+avail(2)
+AU_TRY_N    |i|10         |1   |99   |artn  |(re)try audio init x times
+AU_TRY_MS   |i|50         |10  |999  |artt  |millisecs. to wait between audio init retry

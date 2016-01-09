@@ -1,0 +1,197 @@
+MINUS_ONE    hmmm... some error occured (BUG)
+JQE_UNDEF    undefined job
+JQE_FULL     job queue is full
+JQE_DUP      job already running
+JQE_FAIL     job failed
+JQE_KILL     job killed
+JQE_DONE     job done
+JQE_ZERO     (no job)
+JQE_HANGUP   job aborted (owner object deleted)
+JQE_LU       job not found
+JQE_NOCMD    this job accepts no commands
+JQE_PARSE    parse error (jobq)               
+JQE_ZOMBIE   command passed to zombie job     
+JQE_WTF      you just have found a bug (jobq)
+JQE_RSRV     you should not see this error message (jobq/BUG)
+S0__________ __________________________________________________________(BUG)__
+EEE_ERRNO    syscall/stdlib error
+EEE_ZEROLEN  read/write returned unexpected zero (unexp.EOF/disk full?)
+EEE_ENVUNDEF missing environment variable
+EEE_NOPRC    process missing
+EEE_STATE    either you can click very fast or you have found a bug
+EEE_SUM      errors in save file (see console/log for details)
+EEE_AUDEV    error from audio device (see console/log)
+EEE_NOEFF    nothing happens
+S1__________ __________________________________________________________(BUG)__
+RTE_BUG      you just have found a bug in a primitive box
+RTE_RANGE    box parameter out of range
+RTE_CONFIG   invalid configuration for box
+RTE_FZZZ     too many zeroes in filter
+S11_________ __________________________________________________________(BUG)__
+AUE_START    failed to start audio (see help ?.etc.audio)
+AUE_RE_CLK   failed to set audio clock on recovering, trying to restart...
+AUE_AVAIL    audio: snd_pcm_avail() failed (see console/log for details)
+AUE_DLY      audio: snd_pcm_delay() failed (see console/log for details)
+AUE_WRITEI   audio: snd_pcm_writei() failed (see console/log for details)
+AUE_LESSWR   audio: less frames written than requested
+AUE_ZEROWR   audio: zero frames written 
+AUE_PLAYRCV  audio: recover (after write) failed
+AUE_MCFLY    time went backwards (maybe this is a virtual machine?)
+S13_________ __________________________________________________________(BUG)__
+PTE_GUICRASH Unexpected GUI exit. Please see help 'reporting bugs'.
+PTE_IOCRASH  Unexpected exit of IO process. Please see help 'reporting bugs'.
+PTE_ACVERR   Audio converter exited with error
+PTE_ACVSIG   Audio converter crashed
+PTE_ACVZERO  Audio file contained only zeroes, nothing written
+PTE_ACVHMM   Audio converter not exited, not signalled, hmmm????
+PTE_WHAT     Child process not exited, not signalled, hmmm????
+PTE_WTF      you just have found a bug (pt)
+S15_________ __________________________________________________________(BUG)__
+NDE_WTF      you just have found a bug (node)
+NDE_PERM     this object is read only (make a copy...)
+NDE_NONEMP   directory not empty
+NDE_USEDBY   box is used (see info/used by)
+NDE_FULL     directory full (32 elements)
+NDE_FULLAW   this box can have no more anonwraps
+NDE_FULLCO   this box can have no more components in this folder
+NDE_INVTRG   invalid target
+NDE_PARSE    syntax error
+NDE_NOROOT   not allowed for root node
+NDE_BTCOPY   builtin boxes cannot be copied
+NDE_RUSURE   confirmation needed
+NDE_ZNAME    empty box/dir name not allowed
+NDE_LNAME    max box/dir name length is 20
+NDE_XNAME    box/dir name can have ASCII chars ' '...'~' except '.' and '$'
+NDE_NDUP     duplicate box/dir name
+NDE_BDUP     duplicate component/anonwrap index
+NDE_WDUP     duplicate wrapbox in clipboard
+NDE_TDUP     duplicate wrapbox in track
+NDE_RMWHAT   attempted remove from wrong container (BUG)
+NDE_EXPBOX   box expected (no dir/clip allowed)
+NDE_EXPNULL  new object expected (BUG)
+NDE_EXPWRAP  wrapbox expected
+NDE_TRGLU    target lookup failed
+NDE_BOXCRE   create box failed
+NDE_LOOPB1   refused to self-reference box
+NDE_LOOPBX   refused to create box reference loop
+NDE_TSNF     error in track subnode format
+NDE_USBT     unknown subbox type
+NDE_BIDX     wrong subbox index
+NDE_BASTARD  error in node structure (BUG)
+NDE_NOUP     nowhere to insert new node
+NDE_SETPERM  permissions can only be set for dir/clipb
+NDE_IDX      index out of range
+NDE_UGC      unknown guicfg command
+NDE_UTYPE    unknown node type
+NDE_NULLBOX  null box in boxnode (BUG)
+NDE_NOWIN    this node has no window
+NDE_IW4      this window type is invalid for this node
+NDE_NOSOBCP  no shared object to copy
+NDE_48       maximum allowed tree depth is 48 -- cannot save/copy
+NDE_USVCONT  attempting to save box before container box (BUG)
+NDE_NOSVTRG  invalid save target (BUG)
+NDE_SOBCP0   no shared object to copy
+NDE_DIR255   sorry, max. 255 directories can be open
+NDE_BOX63    sorry, max. 63 boxes can be open
+NDE_LOCK     global node lock is active (see job queue)
+NDE_QMKCAST  qmk/dyncast failed
+NDE_NOGUI    this box has no UI to configure
+NDE_LEAF     this box cannot have sub-nodes
+NDE_GUARD    invalid usage of guard node 
+NDE_NOLIB    a complete save cannot be loaded as library
+NDE_SORRY    sorry not yet implemented (node)
+S2__________ __________________________________________________________(BUG)__
+GCE_WTF      you just have found a bug (cmd)
+GCE_ZNODE    node path/id expected (no current node)
+GCE_LOOKUP   node lookup failed
+GCE_WHAT     undefined command
+GCE_UTREE    undefined tree-cmd
+GCE_UCLIP    undefined clipb-cmd
+GCE_UNADM    undefined n-adm-cmd
+GCE_VOLARG   volume: expected 'x' or '0'...'9'
+GCE_UMISC    undefined misc (_?) command
+GCE_SORRY    sorry not yet implemented (cmd)
+GCE_EXADir   dir/clipb expected
+GCE_EXNDir   dir expected
+GCE_EXClip   clipb expected
+GCE_EXABox   box expected
+GCE_RBATCH   '.' commands cannot be nested
+GCE_FOPEN    cannot open file
+GCE_FREAD    cannot read file
+GCE_EOF      end of file
+GCE_PREFIX   prefix command (BUG)
+GCE_ZARG0    cmd: missing arg0
+GCE_ZARG1    cmd: missing arg1
+GCE_ZARG2    cmd: missing arg2
+GCE_FULLBUF  command buffer is full
+GCE_EXOCT    octal number expected
+GCE_ARGLU    arg lookup failed
+GCE_WRONGWT  wrong window type
+GCE_UPREFIX  undefined prefix
+GCE_NOPFX    prefix character expected
+GCE_NOCONT   '<' without continued command
+GCE_EXWR     commands expects wrapbox
+GCE_JRUN     job already running
+GCE_PARSE    command parse error
+S3__________ __________________________________________________________(BUG)__
+BXE_WTF      you just have found a bug (box)
+BXE_NOCMD    no commands defined for this box
+BXE_NOGCMD   no GUI commands defined for this box
+BXE_NOSAVE   this box cannot be saved/copied
+BXE_ARGLU    box-cmd: arg lookup error
+BXE_NOARG    box-cmd: arg missing 
+BXE_ARGNBX   box-cmd: box expected as argument (no dir/clip)
+BXE_PARSE    box-cmd: parse error
+BXE_TYDIFF   expected box of identical type
+BXE_ZCMD     empty box command
+BXE_IDX      box-cmd: index out of range
+BXE_CENUM    box-cmd: unexpected op/typeid
+BXE_UCMD     command undefined for this box type
+BXE_UCMD2    box-subcmd undefined
+BXE_EXPOP    box-cmd: arith op expected
+BXE_UCLICK   undefined click value
+BXE_GFULL    graph is full
+BXE_GSEQ     graph: graph seq# mismatch
+BXE_GIOSEL   graph: no input/output selected
+BXE_ACYC     graph: no circle allowed (use feedback)
+BXE_NOAWIN   this box has no auxiliary window
+BXE_NOEWIN   this box has no extra window
+BXE_NOWDAT   box has no GUI state (BUG)
+BXE_ZIFILT   attempted to set box w/o inputs as filter
+BXE_RANGE    box parameter out of range
+BXE_UNDEFKEY key undefined (instr/grid)
+BXE_ZEROWAV  all zero audio -- no file written
+BXE_AVZERO   autovol failed because of zero output
+BXE_SORRY    sorry not yet implemented (box)
+S4__________ __________________________________________________________(BUG)__
+VTE_WTF      you just have found a bug (voltab)
+VTE_PARSE    voltab-cmd: parse error
+VTE_ID	     voltab id mismatch
+VTE_9 	     voltab: dim out of range
+VTE_UNF      voltab: prev input unfinished
+VTE_CURR     no current voltab
+VTE_UCMD     unknown voltab-cmt
+VTE_IXDIFF   voltab: index mismatch (BUG)
+VTE_NONE     no voltab to copy
+S5__________ __________________________________________________________(BUG)__
+MXE_WTF      you just have found a bug (mixer)
+MXE_WRONGID  invalid mixer object ID
+MXE_NOSUCH   mixer object not found
+MXE_GFULL    maximum number of mixer objs (64k!) reached
+MXE_RFULL    maximum number of different filters reached
+MXE_MFULL    maximum number of filters (same box) reached
+MXE_EXPr     mixer: root object expected
+MXE_EXPc     mixer: control object expected
+MXE_EXPb     mixer: box object expected
+MXE_EXPRF    mixer: root object or filter expected
+MXE_EXPBRF   mixer: box/filter/root object expected
+MXE_CTLU     mixer: box not found in control obj (BUG)
+MXE_CFULL    mixer: control obj full
+MXE_HCPFAIL  mixer: write to file failed
+MXE_CFGPAR   mixer: invalid config parameter
+MXE_REC255   you reached the maximum followable src boxes (255) for trk rec.
+S7__________ __________________________________________________________(BUG)__
+TKE_WTF      you just have found a bug (trk)
+TKE_NOROOM   only 16 boxes can be at the same track position
+S6__________ __________________________________________________________(BUG)__
+ERRTAB_LAST  this error message is supposed to be invisible (BUG)

@@ -1,0 +1,473 @@
+{{{?._abou}}}
+lflab - lineral filter based audio lab
+vX.YY
+Copyright (C) Marton Laszlo Toth, 2014-2015.
+This is free software (GNU General Public License version 2),
+with ABSOLUTELY NO WARRANTY.
+----
+The text of the license should be opened in a separate window.
+In case it isn't see COPYING in the install directory or at
+http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+----
+Thanks to all g++,gdb,gtk,graphviz,gnuplot... developers, and
+Steven W. Smith for his free DSP book (dspguide.com) 
+==> getting started
+{{{empty}}}
+perhaps some day a description will be here
+{{{?._strt}}}
+lflab is free software with ABSOLUTELY NO WARRANTY:
+==> about
+A short overview of GUI elements, and of audio config:
+==> etc.gui (general)
+==> etc.audio
+The two windows already open:
+==> win.main
+==> win.tree
+"!e" stands for "examples". The items 1,2,... are clipboards
+double click (on the number not the arrow) to open them.
+==> etc.!b and !e
+==> win.clipboard
+On the clipboards, left clk. plays (&stops when clicked again),
+but each of these sounds is just a single representative of an
+instrument which can be opened with right click for playing.
+==> win.instrument(play)
+There is help for most windows (a "?" button or in a menu "+").
+The examples in "!e" are read-only but you can make copies
+or create new objects. (Sounds/instruments can be quickly
+copied with a middle-click (e.g. on the play grid), other
+objects can only be created in the tree view window.
+-----
+If you make new instruments/tracks/components, save them with
+the "save" button. (or if you exit you can "autosave")
+THERE IS NO UNDO, SAVE OFTEN!!!
+==> etc.save files
+{{{?._dtre}}}
+Without any save files, you start with the "!b", "!c" subtree,
+and (unless you started with the "-n" option) the "!e" subtree.
+In "!b" you have the default clipboard "[]", help texts like
+this one under "?", and various builtin boxes. You can open
+a description for each builtin box by double-clicking them.
+"!c" is reserved for contributions, see c/zB.c for details.
+In "!e" the numbered items 1,2,... are clipboards (double-click
+on the name(number) to open window), which contain instruments.
+These instruments use builtin boxes and editable (to be exact,
+copiable, then editable) boxes from "!e.box".
+Example boxes are grouped as follows:
+echo : combinations of simple echo filters
+fb : simple examples for feedback
+fe : string/membrane wrappers for the finite-elem builtin "=fe"
+filt : some simple compound filters
+hpar : combination (almost iteration) of parallel p/z filters
+nz : noise-based boxes
+osc : simple applications of non-linear (rev.quad.) oscillator
+sel : some filter config using selector boxes
+wave : waves modulated by other waves
+{{{?._boxg}}}
+A box is a little machine with 0...30 input ports and 1...30
+output ports, each of which receives/sends 44100 real(64-bit)
+numbers per second. From simple builtin boxes you can build
+more complicated ones, and ultimately wrap them in an
+instrument configuration to be able to conveniently select
+their inputs and hear their outputs.
+-----
+Most non-filter boxes can accept constant or variable input on
+all input ports (except "phs" for waves "~xyz"), and most 
+filters "=xyz" can take variable input only on the first input
+port. Exceptions to this are mentioned in the description of
+builtin boxes. "Not accepted" variable input does not result
+in an explicit "error", only most of the input is ignored
+(except the first sample, or in some cases the first sample
+in each time-slice).
+-----
+Editable boxes can be graphs, calculators or tracks.
+==> win.graph-box
+==> win.calc-box
+==> win.track
+Browse "!b" and "!e" for primitive boxes and examples of
+editable boxes.
+==> etc.!b and !e
+{{{?._file}}}
+THERE IS NO UNDO, SAVE OFTEN!!!
+You can get a list of command line options by "lf -?"
+There are two kinds of save files: normal & library.
+If you start the program with a list of files, the last will
+be read as a normal save file, the others as libraries.
+This can be changed by including "/" in the file list,
+then only files before the "/" are libraries -- in this case
+when you save the normal files are merged into a single file.
+Object in a library are read only.
+"save" button in main window saves the whole tree
+(except read-only objects) to a normal save file.
+on exit (with autosave) a file "__autosave" is written
+"save(L)" & "save(R)" save the (left/right) selected directory
+to a library. (you can always load libraries as normal files
+for editing, but you can't load normal files as libraries).
+5 backup versions are kept for save & autosave files.
+(file--1, file--2, ... file--5)
+Currently there is no "load file" option so you have to 
+restart the program to load another file.
+THERE IS NO UNDO, SAVE OFTEN!!!
+{{{?._wma}}}
+main window:
+kussb+ - kill all sounds (not the same as mute, cf. below)
+unplot - restarts gnuplot (closes all plot windows)
+LR - displays (on top) tree window
+++ - main menu (here you can open the console, show the
+pole-zero diagram for the last filter, and exit)
+save - save file (name can be changed in tree window)
+rec - start/stop recording (see auconv link below)
+CPU meter: green-OK, yellow-high load, red-danger grey-muted
+CPU meter should run about 1 dashed line / sec, depending
+on the speed setting.
+(if stopped or very fast then something doesn't work...)
+---
+Mute mode: Ctrl+right-click on CPU meter (grey when muted)
+In mute mode the audio device is closed, so other programs
+can use it (but close them before "unmuting"), sounds/boxes
+are not stopped, recording (if on) continues.
+==> etc.audio
+==> win.tree
+==> win.auconv
+{{{?._au}}}
+In the current version there is no window for audio config,
+you can set them from the command line (-? for help) or by 
+editing the lf.ini file (in .lf under you home dir.)
+(If you have a config (from command line) that works well,
+you can select "save config" from the main menu, and the 
+current settings will be written to "lf.ini".)
+---
+Device name (-anm) can be "default", it typically means
+a software mixer. (more applications can use it at the same
+time, but can have large delays, and "interesting" clock
+behaviour, so it is highly recommended to switch to a hardware
+device.)
+Hardware devices ("hw:0", "hw:1", "hw:0,1" "plughw:0" ...)
+are opened for exclusive use (*), and they are faster.
+The optimal setting for speed (-asp), clock type (-aclk)
+and reserve buffer size (-arsrv) depend on your soundcard,
+machine speed, and even kernel scheduler settings.
+Typically "-aclk 2" is good for software mixers and "-aclk 0"
+is good for hardware devices.
+(*) when you turn on "mute mode" (ctrl+right-click on CPU
+meter), the device is released so other programs can use it.
+---
+If you see the message "failed to start audio", please see
+the console for detailed error messages:
+- "unknown PCM" means the device name (-anm) is invalid
+- "device or resurce busy" means that an other program is
+using the hardware device
+{{{?._wtr}}}
+Tree view: here you can browse and edit the object tree.
+(The same tree is visible on the left and right side.)
+The object tree can contain the following types of objects:
+folders (see below), intruments, boxes and clipboards.
+==> win.instrument(cfg)
+==> win.clipboard
+==> etc.box (general)
+A folder can contain up to 32 named objects (of any type).
+Name: up to 20 ASCII characters except dot(.) and dollar sign.
+(up to 20 ASCII characters except dot(.) and dollar sign)
+Folders can be opened by double-clicking on the name or
+clicking on the little arrow. (clipboards can also be opened
+as folders (arrow) but in most cases it is more convenient to
+open their own window (double-click).
+On the top, you can change the file name or save to library.
+==> etc.save files
+On the bottom, there are buttons for rename/local copy/
+copy/move/del and a create object menu button. The text field
+above the buttons is used for all these operations.
+(for copy/move set the text on the "from" side). 
+---
+Object selection (in instrument config window or graph window):
+3 menu buttons ('[' '*' ']'), with which a list of left
+selected folder, shortlist, and right sel. f. can be opened.
+(Open/reload/edit an object to add it to the shortlist.)
+{{{?._gui}}}
+Gui -- general description
+Cyan (like "save" on main win.) -- simple button
+Yellow (like "++" on main win.) -- menu button
+Green number + grey label (like vol. on main win.) -- counter
+On counters, left click increments, right clicks decrements.
+For some counters, shift+click and ctrl+click incr/decr more.
+(not all counters have an attached slider)
+For most menu buttons left & right click have the same effect,
+but for menus where the first item is in [brackets], left
+click activates the first item, without opening the menu.
+Text fields (like file name in top line of tree view window)
+are standard text fields, with usual copy & paste functions.
+---
+When strange things happen, it can be helpful to open the
+console (from main win./++ menu) because the information
+there is much more detailed then in the "Errors" window.
+{{{?._plan}}}
+Planned features (please don't take these as promises :) )
+- window for audio config
+- import of external audio
+- improved track editor usability (drag & drop?)
+- default values for boxes
+- description for non-builtin boxes
+- plot/save/record to backgr. job (like autovol calc.)
+- RPM package
+- user input for running sounds (perhaps with some MIDI HW)
+- more builtin boxes and example editable boxes
+{{{?._wwp}}}
+Small button on the left, below (or between) the sliders:
+left-click: focus (keyboard) on grid, right-click: menu
+--- MOUSE ---
+L: default action (set in config window, play in clik mode)
+Sh-L: toggle (or play in tggl mode)
+Ctrl-L: play unique (or play in uniq mode)
+M: copy
+Sh-M: copy to current track
+R: set (config window is updated)
+Sh-R: set but keep constants
+Ctrl-R: kill
+Release L: stop (hold mode) otherwise no effect
+--- KEYS ---
+If keys are configured, they are visible in the grid.
+(unless the window is very small)
+A key press (release) has the same effect as left click (rel.)
+Use the ESC key to enter / leave key edit mode.
+In key edit mode a purple box cursor is visible.
+Left-click to select square, mid-click to delete key,
+press (non-ESC) key to assign.
+{{{?._wgr}}}
+At a time you can have one selected input (blue), a selected
+output (red) and a selected box (purple).
+(external input counts as output, and vice versa)
+Top toolbar: number of inputs, output, feedback (see below),
+reserved (later, there will be a 'replace' mode), box select
+(left/sl/right, see tree view for obj selection),
+connect (sel. output to sel. input), set value (sel. input)
+remove (selected box), and shuffle.
+Every input has either a constant value (== button), or
+is connected to an output (or external input) (---> button).
+Shuffle does not work for all graphs (and sometimes it only
+changes the serial nr. of boxes not the layout).
+Because graph layout is calculated by an external program
+(graphviz/dot, many thanks to its developers!), after every
+new/deleted connection the graph is redrawn.
+Feedback: The delay (!i) is expected to be a >0 constant.
+The special output >i comes back to the special input <i
+with !i delay. (when delay goes below 0.01 (10ms), CPU
+usage will increase rapidly).
+==> win.tree
+{{{?._wcc}}}
+Calculator boxes are stateless boxes (each set of outputs only
+depends on the current set of inputs, not previous ones),
+defined by arithmetic expressions. A calc-box can have 0...30
+inputs, 0..30 temporary variables and 1...30 outputs.
+Temporary variables can be calculated using the inputs and
+previous temporary variables. Output values can be calculated 
+using inputs, temporaries and previous outputs.
+-----
+In the top line you can set the number of inputs/tmps/outputs.
+There is a line for each temporary/output: as you edit the
+expression, the status (right) follows; a white-on-green "+"
+means OK, while white-on-red means error:
+"(" - syntax error 
+"x" - non-existing input
+"y"/"z" - non-existing or out-of-order tmp/output
+"f" - non-existing function
+"<" - too few arguments to function
+">" - too many arguments to function
+----
+Currently only operators +,-,*,/,^(power) and the conditional
+if<(a,b,c,d) (if a<b then c else d) are supported.
+{{{?._wtk}}}
+right now, the track editor is very simple, so the recommended
+way is to write individual sounds (or perhaps simple loops) to
+.wav files, and use a more full-featured tracker to compose
+your 4-hour opera :)
+---
+a more complete description (along with more feautures) will
+come in later versions, right now some of the non-trivial bits:
+"rec" is for recording to this track at current position
+"ali" is align clicks to dividing lines (and not pixels)
+at the top right you can set pixel/beat and default values for
+divisor/subdivisor
+there is a context menu at the top/bottom of each column, where
+you can play/loop a part of the track
+---
+every track can be used as a box (in graphs or instruments),
+with BPM and from-to-repeat as input (BPM can be non-constant)
+{{{?._wwcg}}}
+This help text describes the top part (above "vol/envlp/LR") of
+the instrument config window. In the top left corner, you can
+set the play mode (clik/hold/tggl/uniq), described here:
+==> win.instrument(play)
+"stp" stops, "kill" stops sounds without "down" section
+clicking on the 6-char-icon plays the selected sound
+Right-click on the mini-grid opens the play window, left-click
+is the same as a left-click on the grid in the play window.
+---
+You can display the output using gnuplot (many thanks to its
+developers!) in a specified time interval, and also the
+frequency spectrum (FFT) in a time interval and freq. range.
+---
+The four labels below the plot parameters select the config
+line below them: [#] is grid dimensions config, "cfg" is 
+currently defunct, for "av" and "wav" see:
+==> win.icfg.autovol
+==> win.auconv
+Note: changing grid dimensions can change the selected sound
+(known bug: left col. in scl.grps. is not updated in this case)
+{{{?._wwav}}}
+When using source/filter pairs with a wide range of inputs,
+the output volume can vary greatly. The automatic volume
+calibration makes convenient playback of such configurations
+possible. The volume is computed on a (per default) 9x9x9x9
+hypercube grid, and interpolated (on log.scale) on positions
+between. The four dimensions are x, y (grid) and the first
+two sliders. Per default, s5 is L/R and s6 is (manual, mul. by
+autovol) volume, so if you use s3 and s4 you should only
+configure inputs for them which do not significantly alter the
+output volume. "t" is time in seconds, "r" is repeat (for boxes
+involving noise, currently buggy so leave it 1).
+The button "calc" starts the calculation. (right-clk stops).
+The calculation goes left-to-right, so (assuming x=9) when it 
+reaches 11.2%, the first column is already playable.
+(known bug: sometimes the progress bar is stuck at 99.x%, but
+it is only a GUI error, the calculation is actually finishes)
+{{{?._wwc}}}
+An instrument/sound is a wrapper object which makes boxes
+playable. You can give constant (DC) inputs to a source box and
+an optional filter box. These inputs can be either fixed or
+selectable from a (linear/logarithmic/quadratic etc.) interval
+using grid click x and y coordinates and some (max.6) sliders.
+In addition to the box inputs, you can set duration, simple
+enveloping, volume, and L/R balance.
+---
+This object is called "instrument/sound" because from every
+single sound the whole instr. config can be edited, and every
+instrument config has a specific "selected" sound (marked by
+an "X" on the play grid, and specified by the first column of
+the scale groups.)
+---
+As you may have noticed, this window is somewhat complicated,
+so the description is broken to several parts:
+==> win.icfg.general(top)
+==> win.icfg.autovol
+==> win.icfg.scale lines
+==> win.icfg.scale groups
+{{{?._wwsg}}}
+Open/close scale groups with the "<>" / "><" buttons (right)
+---volume/envlp(grp 1)---
+"/*" and "\*" menu buttons set the shape of the "up" and "down"
+sections of the enveloping function (for the source box):
+(L)inear, (Q)uadratic, (E)xponential, (G)aussian, (S)igmoid, 
+(-)None (up only), (A)utomatic (down only). Their length 
+(except for "A") is given by "up" and "dn/l" in seconds.
+The down section starts after "wait" seconds. (counted from the
+start, not the end of "up" -- so if "wait"<"up" then the two
+sections overlap and are multiplied). 
+Auto mode "A": the src box ends when output is under the limit
+"dn/l" for "wait" seconds. Filters are always in auto mode,
+ending when under "Flim" for "Fwt" seconds.
+Volume is vol1*vol2 (in most cases vol2 is fixed at 1.0)
+LR: left-right balance (-1:left 0:center 1:right)
+HINT1: with small up/wait/down values you can create simple
+impulses (with src=!b.misc.copy) or "contaminated" impulses
+(with src=!e.box.nz.nz01) of various shapes.
+HINT2: you can easily visualise enveloping functions with
+gnuplot (source box:"!b.misc.copy", x=1, filter:none) --
+the copy box outputs constant 1, so you only see the evp.func.
+---src/filter (grp 2/3)---
+You can select source/filter box from the object tree with the
+3 menu buttons ([, S/F and ]), as described here (bottom of pg)
+==> win.tree
+The values are the inputs of the source and filter boxes.
+The first (0th) input of the filter box is not configurable,
+since it is connected to the output of the source box.
+{{{?._wwsl}}}
+In every scale line, there are 3 entry fields (for numbers),
+and 3 menu buttons.
+The first field is for constant value -- if the scale (see
+below) is set to "con" it is always effective, otherwise it
+is ignored on (grid) left click and overwritten on right clk.
+The 2 other fields (sep. by "...") are the from-to values.
+The first menu button select the source (x,y grid coord. or
+one of the sliders; ignored when scale is "con" or "cn1").
+The second one sets the scale: linear, logarithmic, quadratic,
+cubic, harmonic (1/x), reverse quad. and reverse cubic.
+"con" means that the first col. is never changed, "cn1" means
+that the value is the "from" value (ignoring "to" and source)
+---
+With the last button you can set one value (typically a freq.)
+as reference value "=", and can multiply "*" or divide "/"
+other values (typically frqs and impulse lengths) by it.
+(If you want more complicated relations between inputs, create
+a graph box with builtin arithmetic or calculator boxes.)
+{{{?._wcl}}}
+A clipboard is a container for at most 32 instrument objects.
+Besides providing a convenient collection, it also serves as a
+source/target for copy/paste operations. 
+"cp" - toggle copy target (*)
+"ps" - toggle paste source (*)
+"2x" - allow to create duplicated with copy
+"au" - play when left-clicked (to select)
+"xc" - exchange on right-click
+"re" - redraw
+"+"  - menu (you can delete objects here)
+(*) at any time, there is one source clipboard and one target
+clipboard; at start both are set to the default clipb. "!b.[]"
+---
+left-cl:sel, right-cl:open(play) ctrl+right-cl:open(cfg)
+middle-click: copy
+keybindings for instruments also work from this window
+(first selected obj, then sel. row, then next row etc.)
+{{{?._wacv}}}
+Audio files are first written to a 20-bit binary file.
+This window provides a shortcut to convert the whole file
+to .wav or .flac (if flac is installed), or delete it.
+The result file will be placed to your home dir. (~), the
+current dir. (.) or the temporary dir. (t) where the .a20
+file is located. On successful conversion, the .a20 file
+is deleted, and the audio convert window is closed.
+-----
+"Keep" simply closes this window, and you can convert the .a20
+file (or intervals from it) with the program "lf.acv" later.
+Run lf.acv without arguments to see a short description.
+-----
+The temporary directory is the LF_TMPROOT env. variable when  
+defined, otherwise /run/shm (if exists) or /tmp.
+/run/shm is a ramdisk filesystem, it won't survive a reboot!
+Save the audio files worth keeping to a permanent place
+(e.g. you home directory)
+-----
+There are two ways to write audio:
+- "rec" (main window)  starts/ends a (stereo) recording
+(unless tmp dir. is a ramdisk, this can cause serious slowdown)
+- "wav" tab / "write" in instrument config window
+here you can select mono/stereo and from-to/full duration
+(from-to means the interval given for plot(t) (top right))
+-----
+HINT: if you are using a hardware audio device (which is
+recommended for good response time), you can use the "mute"
+function (ctrl-right click on the CPU meter, main window),
+which releases the audio device, allowing you can listen to the
+.wav/.flac file with an external program.
+{{{?._werr}}}
+With the controls on the top, you can clear the list, set the
+number of messages, turn "annoying" (raising the message window
+on new error, but at most once per second) on and off, and
+opening the console.
+-----
+The console has much more detailed information than the error
+message window, take a look when strange things are happening.
+==> reporting bugs
+{{{?._rbug}}}
+Please send the following:
+- precise instructions how to reproduce the error
+- a save file with which the error is reproducible
+- log (lf.log in <your_homedir>/.lf)
+- lf.tlog (run "write tlog" from main menu)
+- type of your sound card
+- core file if any (see file /proc/sys/kernel/core_pattern,
+if it looks like a file name pattern you can easily find the
+core file, if not then you have some automatic core-file
+collecting system, see its documentation to find the core)
+----
+Not all of the above are absolutely necessary, but the more
+you send, the greater the chance that the bug will be fixed.
+@@@

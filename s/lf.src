@@ -1,0 +1,81 @@
+#!/bin/bash
+[[ -z "$LF_DIR" ]] && LF_DIR="$(dirname "$(readlink -f "$0")")"
+[[ -z "$LF_USERDIR" ]] && LF_USERDIR="$HOME/.lf"
+[[ -z "$LF_TMPROOT" ]] && LF_TMPROOT="/run/shm"
+[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="/tmp"
+export LF_DIR LF_USERDIR LF_TMPROOT
+export LF_IO="$LF_DIR/lf.io"
+export LF_BIN="$LF_DIR/lf.bin"
+export LF_GUI="$LF_DIR/lf.gui"
+export LF_CON="$LF_DIR/lf.con"
+export LF_ACV="$LF_DIR/lf.acv"
+export LF_HLP="$LF_DIR/help.txt"
+export LF_LIC="$LF_DIR/COPYING"
+export LF_LICB="$LF_DIR/lf.lic"
+export LF_LOG="$LF_USERDIR/lf.log"
+export LF_TLOG="$LF_USERDIR/lf.tlog"
+export LF_CLEANUP="$LF_DIR/lf.cleanup"
+export LF_TMPDIR="$LF_TMPROOT/lf.$$"
+export LF_KILLER=$LF_TMPDIR/killer-file
+export LANG=C
+LF_DEFLIB="$LF_DIR/ex.lf"
+ulimit -c 262144
+
+echo "LF_DIR='$LF_DIR'  LF_USERDIR='$LF_USERDIR' LF_TMPDIR='$LF_TMPDIR'"
+mkdir -p $LF_TMPDIR $LF_USERDIR
+echo hahahaha > $LF_KILLER
+#trap "kill -9 $(fuser $LF_KILLER)" SIGINT
+lf_ini=def
+cond=y
+export LF_INIFILE="$LF_USERDIR/lf.ini"
+if [[ ! -f "$LF_INIFILE" ]]; then cp "$LF_DIR/lf.ini" "$LF_INIFILE"; fi
+. "$LF_USERDIR/lf.ini"
+
+dbg=""
+trc=""
+while [[ -n "$cond" ]]; do
+        case "$1" in
+                "") cond="" ;;
+		"-i")
+		     source "$2"
+		     shift 2;;
+		"-d") dbg=y; shift;;
+		"-D") export LF_DEBUGFLG="$2"; shift 2;;
+		"-t") trc=y; shift;;
+		"-kp") LF_KILLPULSE=y; shift;;
+		"-nkp") LF_KILLPULSE=n; shift;;
+		"-fg") fg=y; shift;;
+		"-n")  LF_DEFLIB=""; shift;;
+                "-?"|"-h")
+		     echo "usage: $0 <options> <lib>* <save_file>"
+		     echo "   or  $0 <options> <lib>* / <save_file>*"
+		     echo "options: (x:integer arg. s:string arg. [default-value/current-value])"
+		     echo "    -? or -h   this help"
+		     echo "    -kp / -nkp kill/don't kill pulseaudio"
+		     echo "    -i <file>  include settings file"
+		     echo "    -d         run with GDB"
+		     echo "    -t         run with strace"
+		     echo "    -n         skip default lib"
+#=#=#=# here comes the generated part #=#=#=#
+
+if [[ -n "$LF_KILLPULSE" ]]; then
+	killall pulseaudio
+fi
+
+if [[ -z "$LF_GUI_CFG" ]]; then
+	export LF_GTKRC="$LF_DIR/lf.gtk.rc.def"
+else
+	export LF_GTKRC="$LF_DIR/lf.gtk.rc.$LF_GUI_CFG"
+fi
+	
+if [[ -n "$dbg" ]]; then
+	gdb --args "$LF_BIN" $*
+elif [[ -n "$trc" ]]; then
+	strace -olf.trc "$LF_BIN" $* 
+else
+	[[ -f "$LF_LOG--2" ]] && mv "$LF_LOG--2" "$LF_LOG--3"
+	[[ -f "$LF_LOG--1" ]] && mv "$LF_LOG--1" "$LF_LOG--2"
+	[[ -f "$LF_LOG"    ]] && mv "$LF_LOG"    "$LF_LOG--1"
+	date >> "$LF_LOG"
+	if [[ -z "$*" ]]; then exec "$LF_BIN" "$LF_DEFLIB" /; else exec "$LF_BIN" "$LF_DEFLIB" $*; fi
+fi
