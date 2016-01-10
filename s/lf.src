@@ -22,17 +22,21 @@ LF_DEFLIB="$LF_DIR/ex.lf"
 ulimit -c 262144
 
 echo "LF_DIR='$LF_DIR'  LF_USERDIR='$LF_USERDIR' LF_TMPDIR='$LF_TMPDIR'"
-mkdir -p $LF_TMPDIR $LF_USERDIR
-echo hahahaha > $LF_KILLER
-#trap "kill -9 $(fuser $LF_KILLER)" SIGINT
 lf_ini=def
 cond=y
 export LF_INIFILE="$LF_USERDIR/lf.ini"
-if [[ ! -f "$LF_INIFILE" ]]; then cp "$LF_DIR/lf.ini" "$LF_INIFILE"; export LF_HITHERE="y"; fi
-. "$LF_USERDIR/lf.ini"
-
 dbg=""
 trc=""
+
+LF_PKGINI="$LF_DIR/lf.ini"
+
+if [[ -f "$LF_INIFILE" ]]; then
+	. "$LF_INIFILE"
+else
+	. "$LF_PKGINI"
+	export LF_HITHERE="y"
+fi
+
 while [[ -n "$cond" ]]; do
         case "$1" in
                 "") cond="" ;;
@@ -55,6 +59,10 @@ while [[ -n "$cond" ]]; do
 		     echo "    -n         skip default lib"
 #=#=#=# here comes the generated part #=#=#=#
 
+mkdir -p "$LF_USERDIR" "$LF_TMPDIR"
+echo hahahaha > "$LF_KILLER"
+if [[ ! -f "$LF_INIFILE" ]]; then cp "$LF_PKGINI" "$LF_INIFILE"; fi
+
 if [[ -z "$LF_GUI_CFG" ]]; then
 	export LF_GTKRC="$LF_DIR/lf.gtk.rc.def"
 else
@@ -64,11 +72,17 @@ fi
 if [[ -n "$dbg" ]]; then
 	gdb --args "$LF_BIN" $*
 elif [[ -n "$trc" ]]; then
-	strace -olf.trc "$LF_BIN" $* 
+	strace "-o$LF_USERDIR/lf.trc" "$LF_BIN" $* 
 else
 	[[ -f "$LF_LOG--2" ]] && mv "$LF_LOG--2" "$LF_LOG--3"
 	[[ -f "$LF_LOG--1" ]] && mv "$LF_LOG--1" "$LF_LOG--2"
 	[[ -f "$LF_LOG"    ]] && mv "$LF_LOG"    "$LF_LOG--1"
 	date >> "$LF_LOG"
-	if [[ -z "$*" ]]; then exec "$LF_BIN" "$LF_DEFLIB" /; else exec "$LF_BIN" "$LF_DEFLIB" $*; fi
+	if [[ -z "$*" ]]; then
+		anon="$HOME/unnamed.lf"
+		if [[ ! -f "$anon" ]]; then touch "$anon"; fi
+		exec "$LF_BIN" "$LF_DEFLIB" / "$anon"
+	else 
+		exec "$LF_BIN" "$LF_DEFLIB" $*
+	fi
 fi

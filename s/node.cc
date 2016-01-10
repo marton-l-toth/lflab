@@ -1140,11 +1140,11 @@ int TBoxNode::rm(ANode * that) {
 void TBoxNode::chk_ord(ANode * p, ANode *q) {
 	if (p->cl_id()!='w' || q->cl_id()!='w') return;
 	const trk_24 *a = p->cth(), *b = q->cth();
-	if (a->j > b->j || ((a->j==b->j) && a->i>b->i)) bug("aljasgeci");
+	if (a->j > b->j || ((a->j==b->j) && a->i>b->i)) bug("chk_ord");
 }
 
 void TBoxNode::chk_ord_ij(int i, int j, ANode * p) {
-	if (j>p->cth()->j || (j==p->cth()->j && i>15 && p->cth()->i>15 && i>p->cth()->i)) bug("rohadekgeci");
+	if (j>p->cth()->j || (j==p->cth()->j && i>15 && p->cth()->i>15 && i>p->cth()->i)) bug("chk_ord_ij");
 }
 
 int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
@@ -1449,6 +1449,7 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	FILE * f = fdopen(fd, "w"); if (!f) return EEE_ERRNO;
 	// if (fprintf(f,"#!%s/lf\n",getenv("LF_DIR"))<=0) return EEE_ERRNO;
 	ANode::sv_start(new FOBuf(f), dir, flg);
+	if (fprintf(f,"# lflab save file\n")<=0) return EEE_ERRNO;
 	if (fprintf(f,"_V%d.%d\n",v_major,v_minor)<=0) return EEE_ERRNO;
 	if (dir->id()) {
 		if (fprintf(f,":F:R")<=0) return EEE_ERRNO;
