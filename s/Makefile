@@ -24,7 +24,7 @@ OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC)
 GTKINC = -I/usr/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/ -I/usr/include/glib-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0/ -I/usr/include/gdk-pixbuf-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0
 GTKLIB = -lgtk-x11-2.0 -lgdk-x11-2.0 -lcairo -lgobject-2.0 -lglib-2.0 -lm
 
-all: lf.gui lf.bb lf.bin lf help.txt lf.io lf.con lf.acv lf.lic
+all: lf.gui lf.bb lf.bin lf lf.ini help.txt lf.io lf.con lf.acv lf.lic
 
 lf.io:
 	ln -sf lf.bb lf.io
@@ -67,7 +67,7 @@ lf.bb:  bb.c uc0.h
 help.txt: helpm.txt $(SRCS)
 	cp helpm.txt help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
-deb:	lf.gui lf.bb lf.bin lf help.txt deb.sh
+deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.cleanup COPYING deb.sh 
 	./deb.sh -v
 
 clean:

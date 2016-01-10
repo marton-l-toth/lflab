@@ -28,7 +28,7 @@ echo hahahaha > $LF_KILLER
 lf_ini=def
 cond=y
 export LF_INIFILE="$LF_USERDIR/lf.ini"
-if [[ ! -f "$LF_INIFILE" ]]; then cp "$LF_DIR/lf.ini" "$LF_INIFILE"; fi
+if [[ ! -f "$LF_INIFILE" ]]; then cp "$LF_DIR/lf.ini" "$LF_INIFILE"; export LF_HITHERE="y"; fi
 . "$LF_USERDIR/lf.ini"
 
 dbg=""
@@ -42,8 +42,6 @@ while [[ -n "$cond" ]]; do
 		"-d") dbg=y; shift;;
 		"-D") export LF_DEBUGFLG="$2"; shift 2;;
 		"-t") trc=y; shift;;
-		"-kp") LF_KILLPULSE=y; shift;;
-		"-nkp") LF_KILLPULSE=n; shift;;
 		"-fg") fg=y; shift;;
 		"-n")  LF_DEFLIB=""; shift;;
                 "-?"|"-h")
@@ -51,16 +49,11 @@ while [[ -n "$cond" ]]; do
 		     echo "   or  $0 <options> <lib>* / <save_file>*"
 		     echo "options: (x:integer arg. s:string arg. [default-value/current-value])"
 		     echo "    -? or -h   this help"
-		     echo "    -kp / -nkp kill/don't kill pulseaudio"
 		     echo "    -i <file>  include settings file"
 		     echo "    -d         run with GDB"
 		     echo "    -t         run with strace"
 		     echo "    -n         skip default lib"
 #=#=#=# here comes the generated part #=#=#=#
-
-if [[ -n "$LF_KILLPULSE" ]]; then
-	killall pulseaudio
-fi
 
 if [[ -z "$LF_GUI_CFG" ]]; then
 	export LF_GTKRC="$LF_DIR/lf.gtk.rc.def"

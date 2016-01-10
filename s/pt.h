@@ -20,6 +20,7 @@ void pt_chld_act();
 int pt_iocmd(char *s);
 int pt_con_op(int x); // -1: start >0: pid
 int pt_acv_op(int id, int op);
+int pt_kill_pa(int flg);
 int pt_show_lic();
 
 #endif // __qwe_pt_h__

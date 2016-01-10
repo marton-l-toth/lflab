@@ -311,8 +311,8 @@ static const char * help_d[] = { "", "0win", "0etc", "1icfg", 0 };
 static const char * help_b[] = { "0abou.about", "0strt.getting started", "0plan.planned features",
 "0rbug.reporting bugs",
 "1wcl.clipboard", "1wma.main", "1wtr.tree", "1wtk.track", "1wgr.graph-box", "1wcc.calc-box",
-"1wwc.instrument(cfg)", "1wwp.instrument(play)", "1wacv.auconv", "1werr.errors",
-"2dtre.!b and !e", "2au.audio", "2gui.gui (general)", "2file.save files", "2boxg.box (general)", 
+"1wwc.instrument(cfg)", "1wwp.instrument(play)", "1wacv.auconv", "1werr.errors", "1wau.audio",
+"2dtre.!b and !e", "2puls.pulseaudio", "2gui.gui (general)", "2file.save files", "2boxg.box (general)", 
 "3wwcg.general(top)", "3wwav.autovol", "3wwsl.scale lines", "3wwsg.scale groups", 0 };
 
 void b_help_init(ANode * rn) {

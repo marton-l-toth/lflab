@@ -51,22 +51,17 @@ char * alloc_32k() {
 	char * p = cur; cur += 32768; return p;
 }
 
+void cfg_setint(cfg_ent *p, int k) { p->i = ivlim(k, p->i_m, p->i_M); }
+int cfg_setstr(cfg_ent *p, const char *s) { int l01 = p->i_M, l0 = l01>>16, l1 = l01&65535, l = strlen(s);
+	return l0<=l && l<=l1 && (memcpy(p->s, s, (p->i=l)+1), 1); }
+
 void cfg_init() {
-        for (cfg_ent * p = cfg_tab+1; p->s_vd; p++) {
+	for (cfg_ent * p = cfg_tab+1; p->s_vd; p++) {
                 const char * s = getenv(p->s_vd);
-                int k;
                 if (p->i_m==0x7fffffff) {
-                        if (!s || (k=strlen(s))<(p->i_M>>16) || k>(p->i_M&65535)) {
-                                for (s = p->s_vd; *s; s++) ; k = strlen(++s); }
-			char * q = (char*)malloc(k+1); 
-                        memcpy(q, s, k+1); p->s = q;
-                } else {
-                        if (!s) continue; else k = atoi(s);
-                        if      (k < p->i_m) k = p->i_m;
-                        else if (k > p->i_M) k = p->i_M;
-                }
-                p->i = k;
-        }}
+			p->s = (char*)malloc((p->i_M&65535)+1);
+			if (!s || !cfg_setstr(p, s)) { for (s = p->s_vd; *s; s++); cfg_setstr(p, s+1); }
+		} else if (s) { cfg_setint(p, atoi(s)); }}}
 
 int cfg_write() {
 	const char * fn = getenv("LF_INIFILE"); if (!fn) return EEE_ENVUNDEF;
@@ -80,7 +75,8 @@ int cfg_write() {
 }
 
 int u_sleep(int x) {
-	struct timespec ts; ts.tv_sec = 0; ts.tv_nsec = 1000*x; return nanosleep(&ts, 0); }
+	struct timespec ts; ts.tv_sec = 0; ts.tv_nsec = 1000*x; int ec;
+	do ec = nanosleep(&ts, &ts); while (ec==EINTR); return ec; }
 
 void shuffle(int * p, int n) { for (int j, t, i=0; i<n-1; i++) 
 		j = i + (random() % (n-i)), t = p[i], p[i] = p[j], p[j] = t; }

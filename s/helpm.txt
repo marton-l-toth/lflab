@@ -19,7 +19,7 @@ lflab is free software with ABSOLUTELY NO WARRANTY:
 ==> about
 A short overview of GUI elements, and of audio config:
 ==> etc.gui (general)
-==> etc.audio
+==> win.audio
 The two windows already open:
 ==> win.main
 ==> win.tree
@@ -113,7 +113,8 @@ kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restarts gnuplot (closes all plot windows)
 LR - displays (on top) tree window
 ++ - main menu (here you can open the console, show the
-pole-zero diagram for the last filter, and exit)
+pole-zero diagram for the last filter, configure audio, write
+timing log, and exit)
 save - save file (name can be changed in tree window)
 rec - start/stop recording (see auconv link below)
 CPU meter: green-OK, yellow-high load, red-danger grey-muted
@@ -125,37 +126,67 @@ Mute mode: Ctrl+right-click on CPU meter (grey when muted)
 In mute mode the audio device is closed, so other programs
 can use it (but close them before "unmuting"), sounds/boxes
 are not stopped, recording (if on) continues.
-==> etc.audio
+==> win.audio
 ==> win.tree
 ==> win.auconv
-{{{?._au}}}
-In the current version there is no window for audio config,
-you can set them from the command line (-? for help) or by 
-editing the lf.ini file (in .lf under you home dir.)
-(If you have a config (from command line) that works well,
-you can select "save config" from the main menu, and the 
-current settings will be written to "lf.ini".)
+{{{?._puls}}}
+Disclaimer: I have only tried with pulseaudio 2.0 with a
+more-or-less default configuration. If you know better, please
+dot not hesitate to tell me:
+@@@
+It seems that pulseaudio timing behaviour (at least when used
+through the ALSA snd_pcm_ interface) depends on whether zero or
+non-zero sample values are written to the PCM interface. This
+completely breaks the clock adjustments in this program, so
+please use a hardware device. (ALSA SW mixer works, although
+with a longer latency than HW devices). 
 ---
-Device name (-anm) can be "default", it typically means
-a software mixer. (more applications can use it at the same
-time, but can have large delays, and "interesting" clock
-behaviour, so it is highly recommended to switch to a hardware
-device.)
-Hardware devices ("hw:0", "hw:1", "hw:0,1" "plughw:0" ...)
-are opened for exclusive use (*), and they are faster.
-The optimal setting for speed (-asp), clock type (-aclk)
-and reserve buffer size (-arsrv) depend on your soundcard,
-machine speed, and even kernel scheduler settings.
-Typically "-aclk 2" is good for software mixers and "-aclk 0"
-is good for hardware devices.
-(*) when you turn on "mute mode" (ctrl+right-click on CPU
-meter), the device is released so other programs can use it.
+LFLAB will open the HW device for exclusive use, but this
+should not cause much trouble -- a simple ctrl+right-click on
+the CPU meter, and the device is released. If pulseaudio is
+in autospawn mode (default), and you have some PA app running
+(like pavucontrol) PA will grab the device in a few seconds.
 ---
-If you see the message "failed to start audio", please see
-the console for detailed error messages:
-- "unknown PCM" means the device name (-anm) is invalid
-- "device or resurce busy" means that an other program is
-using the hardware device
+Because exclusive open only works when PA is not running, the
+"kill PA" option is provided for convenience, which forcibly
+stops PA on start/unmute, and hopefully grabs the device before
+it starts again (so you don't have to turn autospawn off).
+This only works when PA is configured in a per-user mode (which
+is the default and recommended PA configuration.) On most
+systems "-9" is safe (immediate stop of process), but on some 
+machines closing the device too abruptly can cause problems.
+{{{?._wau}}}
+If you are running LFLAB on this machine for the first time,
+you should configure the audio because the default settings are
+not likely to work, especially if you have PulseAudio:
+==> etc.pulseaudio
+The device name "default" typically means a SW mixer, and
+HW mixers are called "hw:x" or "plughw:w", sometimes having
+sub-devices. If your device name is not listed, you can also
+edit the text field below -- the menu button (like for channel
+config) is only for convenience.
+---
+Channel config: for most systems, "lr" works perfectly well,
+but you might have more then two outputs ("s" means sum,
+"a" is average, "c" is center (sqrt(2)*"a" = "s"/sqrt(2)), and
+"z" is for zero). For example "rl" swaps outputs, and "lrc" can
+be used if you have a subwoofer as 3rd output.
+---
+Speed is controlled by the first two sliders, buffer size is
+2^(11-"spd"/20) frames, and the reserve buffer is "rsv" % of
+this size. Larger speed and smaller reserve mean faster
+response, but more risk of (very unpleasant) buffer underrun.
+---
+"try" and "t/w" say how many times the opening of the audio
+device is attempted, and how many msecs. to wait in between.
+In most cases clock mode can be left unchanged ("retBS").
+---
+"kill PA" means to forcibly stop pulseaudio (see link above).
+Finally, you can restart the audio from this window, thus
+applyingf settingsm, (roughly equivalent to ctrl+right-clicking
+the CPU meter twice), and save the config to the lf.ini file 
+(in ".lf" dir. under your home directory).
+All these settings can also be specified in the command line.
 {{{?._wtr}}}
 Tree view: here you can browse and edit the object tree.
 (The same tree is visible on the left and right side.)
@@ -201,7 +232,6 @@ console (from main win./++ menu) because the information
 there is much more detailed then in the "Errors" window.
 {{{?._plan}}}
 Planned features (please don't take these as promises :) )
-- window for audio config
 - import of external audio
 - improved track editor usability (drag & drop?)
 - default values for boxes
@@ -467,6 +497,10 @@ Please send the following:
 if it looks like a file name pattern you can easily find the
 core file, if not then you have some automatic core-file
 collecting system, see its documentation to find the core)
+----
+If the program seems to be stuck in an infinite loop (CPU meter
+not moving, but CPU is used), try SIGABRT or SIGQUIT to produce
+a core.
 ----
 Not all of the above are absolutely necessary, but the more
 you send, the greater the chance that the bug will be fixed.

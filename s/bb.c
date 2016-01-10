@@ -270,15 +270,16 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 typedef void (*lfun)(char *, int, int);
 typedef struct { int fd, siz, cont, arg; lfun lf; char * p; } ibuf;
 
-#define N_IBUF 7
-char bigbuf[0x7000];
-static ibuf ib[7] = {{ 0, 4096, 0, 0,   &cmd_l, bigbuf},
+#define N_IBUF 8
+char bigbuf[0x8000];
+static ibuf ib[8] = {{ 0, 4096, 0, 0,   &cmd_l, bigbuf},
 		     {-1, 4096, 0, '.', &log_l, bigbuf+0x1000},
 		     {-1, 4096, 0, 'p', &log_l, bigbuf+0x2000},
 		     {-1, 4096, 0, 't', &log_l, bigbuf+0x3000},
 		     {-1, 4096, 0, 'u', &log_l, bigbuf+0x4000},
 		     {-1, 4096, 0, 'x', &log_l, bigbuf+0x5000},
-		     {-1, 4096, 0, 'k', &log_l, bigbuf+0x6000}};
+		     {-1, 4096, 0, 'k', &log_l, bigbuf+0x6000},
+		     {-1, 4096, 0, 's', &log_l, bigbuf+0x7000}};
 
 static void ib_init(int mlog_fd) {
 	if ((ib[1].fd = mlog_fd)&0xffff8000) LOG("mlog_fd = %d", mlog_fd); 

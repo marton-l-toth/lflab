@@ -39,6 +39,9 @@ void log_sn(const char * pref, const char * s, int l);
 void log_sortedblk(short *p, int n, bool absf, const char * pref = 0);
 int u_sleep(int x);
 int cfg_write();
+struct cfg_ent;
+void cfg_setint(cfg_ent *p, int k);
+int cfg_setstr(cfg_ent *p, const char *s);
 
 bool save_to_file(const char * fname);
 void bye(int x);

@@ -6,6 +6,7 @@
 #include "guistub.h"
 #include "util2.h"
 #include "asnd.h"
+#include "pt.h"
 
 #ifdef DUMMY
 #include "t/dummybox.h"
@@ -43,15 +44,17 @@ void ASnd::clk_samp(int n) {
 }
 
 int ASnd::start() {
+	cfg(-2, -2);
 	if (!m_clk_sec) { struct timeval tv; gettimeofday(&tv, 0); 
 			  m_clk_sec=tv.tv_sec; m_clk_usec=tv.tv_usec; m_ev_arg='0'; }
-	int e=-1, us = 1000 * CFG_AU_TRY_MS.i, sclim = 100;
-	for (int i=CFG_AU_TRY_N.i; i>0; u_sleep(us), i--, sclim*=3, sclim>>=1)
-		if ((e=start1(sclim))>=0) return m_state = 1, e;
-	return err(e, "start", AUE_START), gui_errq_add(AUE_START), close();
+	int e=-1, us = 1000 * CFG_AU_TRY_MS.i, sclim = CFG_AU_CLK.i ? 999999 : CFG_AU_CLKLIM.i;
+	for (int i=CFG_AU_TRY_N.i; i>0; u_sleep(us), i--, sclim*=5, sclim>>=2)
+		if ((e=start1(sclim))>=0) return m_state = 1, w(1024), e;
+	return err(e, "start", AUE_START), w(-1), close();
 }
 
 int ASnd::start1(int sc_lim) {
+	if (CFG_AU_KILL_PA.i) gui2.errq_add(pt_kill_pa(CFG_AU_KILL_PA.i));
         int e = snd_pcm_open(&m_hnd, CFG_AU_NAME.s, SND_PCM_STREAM_PLAYBACK, 0);
         if (e<0) return err(e, CFG_AU_NAME.s); else log("snd: \"%s\" opened OK", CFG_AU_NAME.s);
         snd_pcm_hw_params_t *hwpar;
@@ -64,11 +67,14 @@ int ASnd::start1(int sc_lim) {
         log("rate=%d", sample_rate = (int)rate);
 	unsigned int chan = strlen(CFG_AU_CHCFG.s);
 	if ((e=snd_pcm_hw_params_set_channels_min (m_hnd, hwpar, &chan))<0) return err(e, "#chan");
+        if ((e=snd_pcm_hw_params_set_buffer_size_min(m_hnd, hwpar, &bsiz))<0) return err(e, "bufsiz/m");
+//        if ((e=snd_pcm_hw_params_set_buffer_size_near(m_hnd, hwpar, &bsiz))<0) return err(e, "bufsiz/n");
+        if ((e=snd_pcm_hw_params(m_hnd, hwpar))<0) return err(e,"setpar");
+	if ((e=snd_pcm_hw_params_get_channels(hwpar, &chan))<0) err(e, "get_nchan");
 	log("#chan=%d",m_n_chan = (int)chan); if (chan>16) return log("snd/init2: #chan=%d, WTF???"), -1;
 	mx_au16_cfg(&m_cfg, m_n_chan, CFG_AU_CHCFG.s);
-        if ((e=snd_pcm_hw_params_set_buffer_size_min(m_hnd, hwpar, &bsiz))) return err(e, "bufsiz");
+	if ((e=snd_pcm_hw_params_get_buffer_size(hwpar, &bsiz))<0) err(e, "get_bufsiz");
 	if (bsiz < 8192) return log("alsa/bsiz: ret(%d) < rq(8192)", bsiz), -1;
-        if ((e=snd_pcm_hw_params(m_hnd, hwpar))<0) return err(e,"setpar");
         snd_pcm_hw_params_free(hwpar);
         if ((e=snd_pcm_nonblock(m_hnd,1))<0) return err(e,"nonblock");
         if ((e=snd_pcm_prepare(m_hnd)) < 0) return err(e,"prepare");
@@ -90,21 +96,24 @@ int ASnd::set_clk(int lim) {
 	m_clk_sec = tv0.tv_sec; m_clk_usec = tv0.tv_usec; m_clk_frac = 0.0;
 	m_ca_min = m_ca_max = m_ca_acc = m_ca_cnt = 0; m_ev_arg = 'K';
 	int t = 1000000 * (tv1.tv_sec - tv0.tv_sec) + tv1.tv_usec - tv0.tv_usec;
-	log("bufsiz = %d (%d), t(wr64+avail) = %d us, %s", av + 64, m_bsiz_ref, t, t<lim ? "OK":"fail"); 
+	log("bufsiz = %d (%d), t(wr64+avail) = %d us, clk_buf=%d, %s",
+			av + 64, m_bsiz_ref, t, m_clk_buf, t<lim ? "OK":"fail"); 
 	return t<lim ? 0 : (close(), -1);
 }
 
 void ASnd::adj_clk() {
-	if (++m_ca_cnt>99) { IFDBG log("snd/adj100: min=%d max=%d acc=%d", m_ca_min, m_ca_max, m_ca_acc);
-		m_ca_min = m_ca_max = m_ca_acc = m_ca_cnt = 0; }
 	int t = clk(), ibuf = m_buftot<0 ? delay(AUE_DLY) : m_buftot - avail(AUE_AVAIL); if (!m_hnd) return;
 	int dif = (int)lround(m_uspf * (double)ibuf) - t, dif2 = ivlim((dif+8)>>4, -950, 950);
+	if (++m_ca_cnt>99) {
+		IFDBG log("snd/adj100: min=%d max=%d acc=%d   ibuf=%d",
+			m_ca_min, m_ca_max, m_ca_acc, ibuf);
+		m_ca_min = m_ca_max = m_ca_acc = m_ca_cnt = 0; }
 	if (dif<m_ca_min) m_ca_min = dif; else if (dif>m_ca_max) m_ca_max = dif;
 	m_ca_acc += dif2; m_clk_buf += dif2; m_ev_arg = 1090 + dif2;
 }
 
-int ASnd::close() { if (m_hnd) snd_pcm_close(m_hnd); m_hnd = 0; 
-	mark('x'); m_clk_buf = m_t_half-1; return m_state = 0; }
+int ASnd::close() { if (m_hnd) snd_pcm_close(m_hnd); m_hnd = 0; m_n_chan = 0;
+	mark('x'); m_clk_buf = m_t_half-1; w(1024); return m_state = 0; }
 
 void ASnd::tlog(unsigned int arg, int t) {
 	static int pl_cnt = 0;
@@ -166,7 +175,7 @@ int ASnd::recover(int ec, const char * from, int ec2) {
 	if ((ec=snd_pcm_recover(m_hnd, ec, 1))<0)
 		return log("snd: %s: %s (cannot recover from: %s)", from, snd_strerror(ec), s0), close(),
 		       gui2.errq_add(ec2), -1;
-	log("snd: %s: recovered from %s", from, s0);
+	log("snd: %s: recovered from %s", from, s0); gui2.errq_add(AUE_RECOVER);
 	int e = set_clk(10000); if (e<0) { return err(e, "recover/clk", AUE_RE_CLK), close(), start(), 0; }
 	return 0;
 }
@@ -188,10 +197,38 @@ int ASnd::delay2(snd_pcm_t * q) {
 TWICE(avail, snd_pcm_avail)
 TWICE(delay, delay2)
 
-int ASnd::timer_test(int ty, int n) { return GCE_SORRY; }
 int ASnd::stat(unsigned int * to, int n) { return GCE_SORRY; }
 
+int ASnd::w(int flg) {
+	if (flg&   1) gui2.cre(0x67, 'S'); else gui2.setwin(0x67, 'S');
+	if (flg&   2) gui2.wupd_i2('s', CFG_AU_SPD.i);
+	if (flg&   4) gui2.wupd_i2('r', CFG_AU_RSRV.i);
+	if (flg&   8) gui2.wupd_s('n', CFG_AU_NAME.s);
+	if (flg&  16) gui2.wupd_s('o', CFG_AU_CHCFG.s);
+	if (flg&  32) gui2.wupd_s('c', "avail\0delay\0retBS"+6*CFG_AU_CLK.i);
+	if (flg&  64) gui2.wupd_i2('t', CFG_AU_TRY_N.i);
+	if (flg& 128) gui2.wupd_i2('w', CFG_AU_TRY_MS.i);
+	if (flg& 256) gui2.wupd_i1('0', CFG_AU_KILL_PA.i&1);
+	if (flg& 512) gui2.wupd_i1('1', CFG_AU_KILL_PA.i>>1);
+	if (flg&1024) { char buf[8]; memcpy(buf, "#out: 0", 8); 
+			if (m_n_chan>9) buf[5]='1', buf[6] = 38+m_n_chan; else buf[6] += m_n_chan;
+			gui2.wupd_s('#', buf); }
+	return 0;
+}
+
 int ASnd::cmd(const char *s) { switch(*s) {
-	case 'T': return timer_test(s[1], atoi(s+2)*1000);
 	case 'Y': if (m_state) close(); else start();   return 0;
+	case 'R': if (m_state) close();      start();   return 0;
+	case 'W': return w(-1);
+	case 's': cfg_setint(&CFG_AU_SPD,   atoi_h(s+1)); return 0; 
+	case 'r': cfg_setint(&CFG_AU_RSRV,  atoi_h(s+1)); return 0; 
+	case 'c': cfg_setint(&CFG_AU_CLK,   atoi_h(s+1)); return w(32);
+	case 't': cfg_setint(&CFG_AU_TRY_N, atoi_h(s+1)); return 0; 
+	case 'w': cfg_setint(&CFG_AU_TRY_MS,atoi_h(s+1)); return 0;
+	case '0': CFG_AU_KILL_PA.i = 3*(s[1]&1); return w(768);
+	case '1': return (CFG_AU_KILL_PA.i) ? (CFG_AU_KILL_PA.i=1+2*((s[1]&1)), w(512)) : EEE_NOEFF; 
+	case 'n': cfg_setstr(&CFG_AU_NAME,  s+1); return w(8);
+	case 'o': cfg_setstr(&CFG_AU_CHCFG, s+1); return w(16);
+	case 'N': cfg_setstr(&CFG_AU_NAME,  s+1); return 0;
+	case 'O': cfg_setstr(&CFG_AU_CHCFG, s+1); return 0;
 	default: return GCE_PARSE; }}

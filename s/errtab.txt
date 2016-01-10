@@ -20,7 +20,6 @@ EEE_ENVUNDEF missing environment variable
 EEE_NOPRC    process missing
 EEE_STATE    either you can click very fast or you have found a bug
 EEE_SUM      errors in save file (see console/log for details)
-EEE_AUDEV    error from audio device (see console/log)
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
@@ -28,7 +27,7 @@ RTE_RANGE    box parameter out of range
 RTE_CONFIG   invalid configuration for box
 RTE_FZZZ     too many zeroes in filter
 S11_________ __________________________________________________________(BUG)__
-AUE_START    failed to start audio (see help ?.etc.audio)
+AUE_START    failed to start audio
 AUE_RE_CLK   failed to set audio clock on recovering, trying to restart...
 AUE_AVAIL    audio: snd_pcm_avail() failed (see console/log for details)
 AUE_DLY      audio: snd_pcm_delay() failed (see console/log for details)
@@ -37,6 +36,7 @@ AUE_LESSWR   audio: less frames written than requested
 AUE_ZEROWR   audio: zero frames written 
 AUE_PLAYRCV  audio: recover (after write) failed
 AUE_MCFLY    time went backwards (maybe this is a virtual machine?)
+AUE_RECOVER  audio: recoverable error (buffer empty?)
 S13_________ __________________________________________________________(BUG)__
 PTE_GUICRASH Unexpected GUI exit. Please see help 'reporting bugs'.
 PTE_IOCRASH  Unexpected exit of IO process. Please see help 'reporting bugs'.
@@ -45,6 +45,7 @@ PTE_ACVSIG   Audio converter crashed
 PTE_ACVZERO  Audio file contained only zeroes, nothing written
 PTE_ACVHMM   Audio converter not exited, not signalled, hmmm????
 PTE_WHAT     Child process not exited, not signalled, hmmm????
+PTE_PKWAIT   command 'killall pulseaudio did not return in spec. wait time
 PTE_WTF      you just have found a bug (pt)
 S15_________ __________________________________________________________(BUG)__
 NDE_WTF      you just have found a bug (node)

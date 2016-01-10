@@ -1,7 +1,7 @@
 #ifndef __qwe_uc1_h__
 #define __qwe_uc1_h__
 
-#define LOGPIPES "uxptk"
+#define LOGPIPES "uxptks"
 #define CMDPIPES "gi"
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define TRK_DEF_GWFR ((const unsigned char*)"$%\0")

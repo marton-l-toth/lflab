@@ -24,6 +24,7 @@ class ASnd {
 		int hcp_end(int f = 0);
 		int hcp() const { return m_hcp; }
 		int cmd(const char *s);
+		int w(int flg);
 		int cond_clk(int * trg /*int[2]*/, int min_us); 
         protected:
 		int start1(int sc_lim);

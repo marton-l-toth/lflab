@@ -2,6 +2,7 @@
 #include "uc0.h"
 #include "util.h"
 #include "glob.h"
+#include "cfgtab.inc"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -128,12 +129,16 @@ int pt_acv_op(int id, int op) {
 		case 0:   gui_closewin(ACV_WIN(id)); return 0;
 		case 0xd: pid = launch("/bin/rm", "!(kk", pt_acv_nm(id, 0), (char*)0); break;
 		default:  if (op<2 || op>7) return BXE_PARSE;
-			  pid = launch(acv_bin, "(kk", "lf.acv", "-r", pt_acv_nm(id,0), pt_acv_nm(id,op), (char*)0); break;
+			  pid = launch(acv_bin, "(kk", "lf.acv", "-r", pt_acv_nm(id,0), pt_acv_nm(id,op),(char*)0);
+			  break;
 	}
 	return  (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
 }
-			  
+
 int pt_show_lic() { return launch("xterm", "!)((", "-e", getenv("LF_LICB"), (char*)0); }
+
+int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
+					EEE_ERRNO : 0; }
 
 void pt_init() {
         const char * kfn = getenv("LF_KILLER");
@@ -143,7 +148,7 @@ void pt_init() {
         pt_dlog(1, "(log start)\n");
 	signal(SIGCHLD, &pt_sigchld);
         close(0); if ((fd=open("/dev/null", O_RDONLY))>0) dup2(fd,0), close(fd);
-        for (const char* s ="ptuxmkACT"; *s; s++) if (mkfifo(tpipe_name(*s), 0600)<0)
+        for (const char* s ="ptuxmskACT"; *s; s++) if (mkfifo(tpipe_name(*s), 0600)<0)
                 log("FATAL: failed mkfifo '%c': %s", *s, strerror(errno)), bye(1);
 	if (io_start(0) < 0) log("FATAL: io_start failed"), bye(1);
 }

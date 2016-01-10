@@ -130,7 +130,7 @@ typedef struct _ob_box {
 } ob_box;
 
 
-static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel,
+static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel;
 static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
@@ -157,6 +157,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'D', 0         , doc_skel, doc_cmd },
 	{'E', 0         , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
+	{'S', 0         , acfg_skel, NULL },
 	{ 0 , 0, 0, NULL } };
 
 static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
@@ -903,9 +904,9 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
 {0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
-{'.',12,0,12,4, "filter disp.open consoleflush log   write tlog  save config ------------exit(autosv)"
-		"------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
-		"_F  _c-1*f  $!t _K  ####qq  ####q!  #%$6#%$3#%$9"},
+{'.',12,0,12,4, "filter disp.audio configopen consoleflush log   write tlog  save config "
+	        "------------exit(autosv)------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
+		"_F  A0W _c-1*f  $!t _K  ####qq  ####q!  #%$6#%$3#%$9"},
 {'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
 {0,  3, 0, 7, 6, "[save] save(L)save(R)", "s%1   S@L$%1S@R$%1"},
 {'#',4, 0, 8, 3, "[focus] config  help    redraw  ", "$>*W$ N??M9 "},
@@ -923,6 +924,12 @@ TDIV_MENU_LN
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
 {'K', 6, 0, 5, 2, "help info del/s-----cleardel  ", "N?I3Kd##KZNd"},
+#define HWS0(X)      "hw:" #X "      hw:" #X ",0    hw:" #X ",1    "
+#define HWS1(X)  "plughw:" #X "  plughw:" #X ",0plughw:" #X ",1"
+{'S', 25,0, 10,10,"default   " HWS0(0) HWS0(1) HWS0(2) HWS0(3) HWS1(0) HWS1(1) HWS1(2) HWS1(3),
+		  "default   " HWS0(0) HWS0(1) HWS0(2) HWS0(3) HWS1(0) HWS1(1) HWS1(2) HWS1(3) },
+{0, 3, 1, 5, 1, "availdelayretBS", "012"},
+{0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -3770,6 +3777,20 @@ static void err_skel (struct _topwin * tw, char * arg) {
 		if (t!=err_annoy_t) err_annoy_t = t, gtk_window_present(GTK_WINDOW(tw->w));
 	}
 	if (arg) err_cmd(tw, arg);
+	if (w) gtk_widget_show(w);
+}
+
+///////////////// audio config ///////////////////////////////////////////////
+
+static void acfg_skel (struct _topwin * tw, char * arg) {
+	const char * ws = "({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
+	"[{B_?$$?win.audio}{M_name:$A0n|S0}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
+	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_save$_K}])";
+	GtkWidget * w = NULL;
+	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws);
+			  memcpy(tw->title, "audio", 6);
+			  gtk_container_add (GTK_CONTAINER (tw->w), w); }
+	else { 		  gtk_window_present(GTK_WINDOW    (tw->w)); }
 	if (w) gtk_widget_show(w);
 }
 
