@@ -122,13 +122,13 @@ const char * pt_acv_nm(int id, int j) {
 	}}
 
 int pt_acv_op(int id, int op) {
-	static const char * acv_bin = 0; if (!acv_bin && !(acv_bin=getenv("LF_ACV"))) acv_bin="lf.acv";
+	static const char * acv_bin = 0; if (!acv_bin && !(acv_bin=getenv("LF_BB"))) acv_bin="lf.bb";
 	int pid = 0;
 	switch(op) {
 		case 0:   gui_closewin(ACV_WIN(id)); return 0;
 		case 0xd: pid = launch("/bin/rm", "!(kk", pt_acv_nm(id, 0), (char*)0); break;
 		default:  if (op<2 || op>7) return BXE_PARSE;
-			  pid = launch(acv_bin, "!(kk", "-r", pt_acv_nm(id,0), pt_acv_nm(id,op), (char*)0); break;
+			  pid = launch(acv_bin, "(kk", "lf.acv", "-r", pt_acv_nm(id,0), pt_acv_nm(id,op), (char*)0); break;
 	}
 	return  (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
 }

@@ -95,7 +95,8 @@ fdchk:          if (k<0) k = open("/dev/null", md);
         for (i=0; i<ac; i++) {
                 for (av2[i]=q, s=av[nf+i]; *s; s++,q++) *q = *s;    *(q++) = 0; }
         execvp(exe, av2);
-        fprintf(stderr,"execvp \"%s\" failed: %s\n", exe,  strerror(errno)); fflush(stderr); exit(1); // TODO: report err cfg;
+        fprintf(stderr,"execvp \"%s\" failed: %s\n", exe,  strerror(errno)); fflush(stderr);
+	raise(9); while(1) sleep(60); // call your <censored>, not the static destructors
 }
 
 #endif // QWE_UTILC_DEF
