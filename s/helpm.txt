@@ -77,7 +77,9 @@ port. Exceptions to this are mentioned in the description of
 builtin boxes. "Not accepted" variable input does not result
 in an explicit "error", only most of the input is ignored
 (except the first sample, or in some cases the first sample
-in each time-slice).
+in each time-slice). On inputs labeled as "[xy]", lists are
+==> etc.[lists]
+expected, these are constant inputs unless noted otherwise.
 -----
 Editable boxes can be graphs, calculators or tracks.
 ==> win.graph-box
@@ -86,6 +88,27 @@ Editable boxes can be graphs, calculators or tracks.
 Browse "!b" and "!e" for primitive boxes and examples of
 editable boxes.
 ==> etc.!b and !e
+{{{?._nanl}}}
+Some builtin boxes expect lists of small integers on some of
+their input ports (e.g. [3 -4 -5 2]). The maximal list sizes
+(x*y means at most x signed/unsigned y-bit integers) are:
+1*32, 2*23, 3*16, 4*12, 5*9, 6*8, 7*7, 8*6, 9*5, 11*4 and 15*3
+As a convention, such input ports are named like "[xy]".
+---
+As some readers familiar with floating-point arithmetic may
+already have guessed, these lists are represented as NaN
+(not-a-number) values. You cannot do arithmetic with these
+values, and passing such list to input ports where a number
+is expected also results in an error.
+---
+In future versions there may be boxes for handling such lists
+(packing/unpacking/selecting/replacing values), but currently
+the only way they can be used in instruments and graphs is to
+pass them to builtin boxes without changing them.
+---
+Labels/strings like "this" can have at most 6 ASCII characters,
+they are currently only used for slider group boxes. They are,
+of course, also not numbers.
 {{{?._file}}}
 THERE IS NO UNDO, SAVE OFTEN!!!
 You can get a list of command line options by "lf -?"
@@ -130,7 +153,7 @@ are not stopped, recording (if on) continues.
 ==> win.tree
 ==> win.auconv
 {{{?._puls}}}
-Disclaimer: I have only tried with pulseaudio 2.0 with a
+Disclaimer: I have only tried with pulseaudio 2.0 using a
 more-or-less default configuration. If you know better, please
 dot not hesitate to tell me:
 @@@
@@ -152,7 +175,7 @@ Because exclusive open only works when PA is not running, the
 stops PA on start/unmute, and hopefully grabs the device before
 it starts again (so you don't have to turn autospawn off).
 This only works when PA is configured in a per-user mode (which
-is the default and recommended PA configuration.) On most
+is the default and recommended PA configuration). On most
 systems "-9" is safe (immediate stop of process), but on some 
 machines closing the device too abruptly can cause problems.
 {{{?._wau}}}

@@ -131,7 +131,7 @@ typedef struct _ob_box {
 
 
 static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel,
-		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel;
+		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel;
 static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
@@ -158,6 +158,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'E', 0         , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
 	{'S', 0         , acfg_skel, NULL },
+	{'J', 0         , in01_skel, NULL },
 	{ 0 , 0, 0, NULL } };
 
 static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
@@ -451,7 +452,9 @@ static void tw_remove(topwin *tw) {
 		ob_box * ob = ot_box + (k & OI_ID);
 		if (!(ob->flg &= ~(1<<(ty-8)))) obidtab_lookup(&oi_box, id, 2);
 	} else if (ty==7) {
-		LOG("tw_remove: %x: globwin not yet imp", id);
+		int k = obidtab_lookup(&oi_etc, id, 0);
+		if (k<0) { LOG("tw_remove: %x: globwin lookup failed", id); return; }
+		obidtab_lookup(&oi_etc, id, 2);
 	} else if (ty==3) {
 		int k = obidtab_lookup(&oi_dir, id, 0);
 		if (k<0) { LOG("tw_remove: %x: dirtab lookup failed", id); return; }
@@ -493,8 +496,9 @@ static void cltab_init() {
 
 static void tw_bye(GtkWidget *w, gpointer p) {
 	topwin * tw = (topwin*)p;
-	if (dflg & DF_WCLOSE) LOG("tw_bye:0x%x", tw->id);
-	CMD("~x%c%x", hexc1(tw->id&15), tw->id>>4);
+	if (dflg & DF_WCLOSE) LOG("tw_bye: 0x%x, cl=0x%x '%c'", tw->id, tw->cl->ch, tw->cl->ch);
+	if (tw->cl->ch=='J') CMD("~L%04xFF01", (tw->id>>4)&65535);
+	else CMD("~x%c%x", hexc1(tw->id&15), tw->id>>4);
 	tw_remove(tw); tw_free(tw);
 }
 
@@ -1813,7 +1817,11 @@ static void dacnt_draw(ww_t * ww, cairo_t * cr2) {
 	int vmode = (DACNT_ARG(ww) >> 12) & 15;
 	int nflg = -(~(vmode>>3) | (vmode&1));
 	int val = DACNT_X(ww);
-	if (nflg) {
+	if (vmode&4) {
+		if (val==0)   buf[0]='0', buf[1] = 0;
+		else if (val==100) buf[0]='1', buf[1] = 0;
+		else buf[0]='.', buf[1]=48+val/10, buf[2]=48+val%10, buf[3] = 0;
+	} else if (nflg) {
 		int k = sprintf(buf, fmts[zpad], val);
 		if (DACNT_DOTC(ww)==1) buf[k]=buf[k-1], buf[k-1]='.', buf[k+1]=0;
 		else if (DACNT_DOTC(ww)) buf[k]=buf[k-1], buf[k-1]=buf[k-2], buf[k-2]='.', buf[k+1]=0;
@@ -1941,14 +1949,14 @@ static void dacntvs_skel(struct _ww_t * ww, const char **pp) {
 	get_tok(DACNT_LBL(ww), 4, pp, '$');
 	int ty = **pp & 7, k = hex2(*pp+1); *pp += 3;
 	get_tok(ww->cmd, 16, pp, 0);
-	int zpad = 1 + (k>9) + (k>99);
+	int zpad = (ty&4) ? 2 : (1 + (k>9) + (k>99));
 	int nfs = (ty&1) ? DACNT_VNFS(zpad) : 0;
 	int wid2, wid = tx_len(conf_lbfs_s, DACNT_LBL(ww));
 	int heig = FONT_HEIG(conf_lbfs_s) + 4;
 	(ty&1) && (heig += 1+FONT_HEIG(nfs)) && (wid2 = FONT_NWID(nfs)*zpad) > wid && (wid = wid2);
 	(ty&2) && (heig += 1+FONT_HEIG(conf_lbfs)) && (wid2=tx_len(conf_lbfs,"W"))>wid && (wid = wid2);
 	DACNT_ARG(ww) |= zpad | (wid<<4) | (ty<<12) | (k<<24);
-	da_skel(ww, wid+4, heig);
+	da_skel(ww, wid+4+(ty&4), heig);
 	double step = 1.0 / (double) k;
 	//LOG("scale: ty:%c step=%g w:%d h:%d", 48+ty, step, wid, heig);
       	GtkWidget * scl = gtk_vscale_new_with_range(0.0, 1.0, step);
@@ -3792,6 +3800,30 @@ static void acfg_skel (struct _topwin * tw, char * arg) {
 			  gtk_container_add (GTK_CONTAINER (tw->w), w); }
 	else { 		  gtk_window_present(GTK_WINDOW    (tw->w)); }
 	if (w) gtk_widget_show(w);
+}
+
+///////////////// input box //////////////////////////////////////////////////
+
+static void in01_skel (struct _topwin * tw, char * arg) {
+	if (tw->state) return LOG("BUG: create called again for input win 0x%x", tw->id);
+	int i, l, n = arg ? ivlim(*arg-48, 1, 16) : 1;
+	sprintf(tw->cmdpref, "%04x", (tw->id>>4)&65535); tw->cmdp_len = 4;
+	char ws[256], *num, *p = arg + 1, *q = ws+1; 
+	if (l>7) hxdoub_str(tw->title, p, 15); p+=8, l-=8;
+	ws[0] = '('; l = strlen(p);
+	for (i=0; i<n; i++, q+=14) {
+		q[0] = '{'; q[1] = '!';
+		memcpy(q+3, (l>7) ? (num = hxdoub_str(NULL, p, 15), p+=8, l-=8, num+(*num=='"'))
+				  : "---", 3);
+		memcpy(q+6, "$564L0", 6); q[12] = q[2] = hexc1(i);
+		q[13] = '}';
+	}
+	q[0] = ')'; q[1] = 0;
+	GtkWidget * w; tw->arg[0].p = w = parse_w_s(tw, ws);
+	int ni = min_i(n, l>>1);
+	for (i=0; i<ni; i++) LOG("setarg %d", i), DACNT_ARG(widg_lookup_pci(tw, hexc1(i), 0)) |= hex2(p+2*i)<<16;
+	gtk_container_add (GTK_CONTAINER (tw->w), w); 
+	gtk_widget_show(w);
 }
 
 ///////////////// audio file dialog //////////////////////////////////////////

@@ -25,6 +25,8 @@ S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
 RTE_RANGE    box parameter out of range
 RTE_CONFIG   invalid configuration for box
+RTE_IWCLOSE  input window was closed
+RTE_MXLDFAIL cannot delete related mixer live obj (BUG)
 RTE_FZZZ     too many zeroes in filter
 S11_________ __________________________________________________________(BUG)__
 AUE_START    failed to start audio
@@ -184,12 +186,16 @@ MXE_MFULL    maximum number of filters (same box) reached
 MXE_EXPr     mixer: root object expected
 MXE_EXPc     mixer: control object expected
 MXE_EXPb     mixer: box object expected
+MXE_EXPl     mixer: live object expected
 MXE_EXPRF    mixer: root object or filter expected
 MXE_EXPBRF   mixer: box/filter/root object expected
 MXE_CTLU     mixer: box not found in control obj (BUG)
 MXE_CFULL    mixer: control obj full
 MXE_HCPFAIL  mixer: write to file failed
 MXE_CFGPAR   mixer: invalid config parameter
+MXE_L_ALL    mixer: invalid parameter for live/all op
+MXE_L_IX     mixer: invalid ix for live object
+MXE_L_FF     mixer: invalid special op. for live object
 MXE_REC255   you reached the maximum followable src boxes (255) for trk rec.
 S7__________ __________________________________________________________(BUG)__
 TKE_WTF      you just have found a bug (trk)

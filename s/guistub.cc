@@ -10,9 +10,15 @@
 
 void gui_closewin(int x) { gui2.closewin(x); }
 void gui_errq_add(int x) { gui2.errq_add(x); }
+void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0) {
+	gui2.cre(oid, 'J'); gui2.c1(hexc1(n));
+	for (int i=0; i<=n; i++) gui2.hdbl(lbl[i]);
+	for (int i=0; i< n; i++) gui2.c2(hexc1(v0[i]>>4), hexc1(v0[i]&15));
+}
 
 void GuiStub::errq_add(int ec) {
-	if (!ec) return; ec = (ec==EEE_ERRNO) ? errno&0xffffff : ec&0xffffff;
+	if (!ec || ec==EEE_NOEFF || ec==RTE_IWCLOSE) return; 
+	ec = (ec==EEE_ERRNO) ? errno&0xffffff : ec&0xffffff;
 	for (int v, i=0; i<m_errq_n; i++) if (((v=m_errq_v[i])&0xffffff)==ec && v<0x63000000)
 		return (void) (m_errq_v[i] += 0x1000000);
 	if (m_errq_n==32) log("errq_add: bug???"), memmove(m_errq_v, m_errq_v+1, 124), --m_errq_n;

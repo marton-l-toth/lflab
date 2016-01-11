@@ -54,7 +54,7 @@ class CmdTab {
 		static int c_iofw(CmdBuf * p) { return pt_iocmd(p->m_c_a0); }
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0-48; return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
 		static dfun_t c_cre, c_vol, c_misc, c_nadm, c_closewin, c_tree, c_stat,
-			      c_efw, c_wfw, c_xfw, c_win, c_job, c_pfx, c_cont;
+			      c_efw, c_wfw, c_xfw, c_win, c_job, c_pfx, c_cont, c_live;
 };
 
 char * CmdTok::t(char *s) {
@@ -325,11 +325,19 @@ int CmdTab::c_pfx(CmdBuf * p) {  // --RC TEFG
 	return GCE_PREFIX;
 }
 
+int CmdTab::c_live(CmdBuf *p) {
+	const char * s = p->m_c_a0;
+	for (int i=0; i<7; i++) if (!s[i]) return GCE_PARSE;
+	log("c_live: id:0x%04x, ix:0x%02x, v:0x%02x", qh4rs(s), hex2(s+4), s[7] ? hex2(s+6) : hxd2i(s[6]));
+	mx_l_op(qh4rs(s), hex2(s+4), s[7] ? hex2(s+6) : hxd2i(s[6]));
+	return 0;
+}
+
 char CmdTab::m0_chtab[128];
 CmdTab::ent_t CmdTab::m0_tab[] = {
 {'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2},
 {'/',c_stat}, {'C'|CF_NODE1,c_cre}, {'N'|CF_NODE1,c_nadm}, {'I'|CF_NODE,c_info}, {'S'|CF_NODE1,c_sv2},
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx},
-{'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw},
+{'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
 {'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {0,0} };
 

@@ -64,6 +64,14 @@ STATELESS_BOX_0(Map01Box) {
 	return 1;
 }
 
+//? {{{!._m01x}}}
+//? Multiple interval mapping (useful for input boxes)
+//? [sc] - list of scales (-3 ... 3) as for simple map01
+//? for each <i>, the 0..1 interval (x<i>) is mapped to
+//? fr<i>..to<i>, with the <i>th element of [sc] selecting
+//? the scale type. 
+// TODO
+
 STATELESS_BOX_0(VersionBox) { **outb = (double)v_major + 0.01 * (double)v_minor; return 0; }
 
 //? {{{!._1}}}
@@ -313,6 +321,7 @@ static const char * help_b[] = { "0abou.about", "0strt.getting started", "0plan.
 "1wcl.clipboard", "1wma.main", "1wtr.tree", "1wtk.track", "1wgr.graph-box", "1wcc.calc-box",
 "1wwc.instrument(cfg)", "1wwp.instrument(play)", "1wacv.auconv", "1werr.errors", "1wau.audio",
 "2dtre.!b and !e", "2puls.pulseaudio", "2gui.gui (general)", "2file.save files", "2boxg.box (general)", 
+"2nanl.[lists]",
 "3wwcg.general(top)", "3wwav.autovol", "3wwsl.scale lines", "3wwsg.scale groups", 0 };
 
 void b_help_init(ANode * rn) {

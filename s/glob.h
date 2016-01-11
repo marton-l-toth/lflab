@@ -39,5 +39,6 @@ void ini_err(int ec);
 void log(const char * fmt, ...);
 void log_n(const char * fmt, ...);
 
-void gui_errq_add(int ec), gui_closewin(int oid);
+void gui_errq_add(int ec), gui_closewin(int oid),
+     gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0);
 #endif // __qwe_glob_h__

@@ -1,3 +1,4 @@
+#include "mx.h"
 #include "util.h"
 #include "tab7.h"
 #include "box0.h"
@@ -108,6 +109,7 @@ struct MxItem {
 		MxItCtrl c;
 		struct { char flg, rsrv[7]; short mi[120]; } r;
 		struct { BoxModel * m; short fi[120]; } m;
+		struct { BoxInst * bxi; int flg; unsigned char dat[224]; } l;
 	} u;
 	void b_ini(const char * updnnino, const double * arg, int delay);
 	int b_calc(double *to1, double * to2, double * tmp, int n);
@@ -132,6 +134,7 @@ struct MxItem {
 
 static MxItem *mx_ptab[512], *mx_fptr = 0;
 static int mx_ptix = 0;
+static int mx_live0 = 0;
 
 /////// trk rec /////////////////////////////////////////////////////
 
@@ -473,6 +476,22 @@ static void mx_d2s(short *q, au16w_t * cfg, int vd, const double *p, int n) {
                            (short)( (((v+1)>>1)^sg) - sg));
 }
 
+/////// live obj ////////////////////////////////////////////////////
+
+unsigned char * mx_l_dat(int li) { MxItem * p = mx_ptr(li); return (p->m_ty == 'l') ? p->u.l.dat : 0; }
+
+void mx_ldel(MxItem *p) {
+	int pvi = p->m_pv, nxi = p->m_nx;
+	if      (!pvi) { if (!nxi) mx_live0 = 0; else mx_ptr(mx_live0=nxi) -> m_pv = 0; }
+	else           { mx_ptr(pvi)->m_nx = nxi; if (nxi) mx_ptr(nxi) -> m_pv = pvi; }
+	mx_free(p);
+}
+
+void mx_l_boxrm(MxItem *p) { p->u.l.bxi = 0;
+	if (!(p->u.l.flg & MXLF_WIN)) mx_ldel(p); else gui_closewin(MX_L_WIN(p->m_id)); }
+
+int mx_l_closewin(MxItem *p) {
+	int rv = p->m_nx; return p->u.l.bxi ? mx_ldel(p) : (void)(p->u.l.flg &= ~MXLF_WIN), rv; }
 
 /////// export //////////////////////////////////////////////////////
 typedef int (*mx_fp_fun_t) (MxItem*, double*, double, double);
@@ -502,6 +521,10 @@ int mx_mkroot() {
 int mx_mkctl(BoxGen * bx) {
 	MxItem * p = mx_alloc('c');
 	return p ? (p->u.c.bref=bx, p->u.c.nb=p->u.c.uk=0, p->m_id) : MXE_GFULL; }
+
+int mx_mklive(BoxInst * bxi) {
+	MxItem * p = mx_alloc('l'); return (!p) ? MXE_GFULL :
+		(p->m_pv=0, p->m_nx = mx_live0, p->u.l.flg = MXLF_WIN, p->u.l.bxi = bxi, mx_live0 = p->m_id); }
 
 int mx_clear(int i) { 
 	MxItem * p = mx_ptr(i);
@@ -630,6 +653,19 @@ int mx_c_bpm_ugly_hack(int ci, int bp10m) {
 	if (r<0) return log("mx_c_bpm_ugly_hack: box not found"), MXE_WTF;
 	mx_ptr(cn->u.c.bx[r])->u.b.in.pp[0][0] = 0.1 * (double)bp10m; return 0;
 }
+
+int mx_l_op(int li, int ix, int val) {
+	if (li<0) { if (ix!=255 || val!=1) return MXE_L_ALL;
+		    int i = mx_live0; while (i>0) i = mx_l_closewin(mx_ptr(i));
+		    return i; }
+	MXIARG(ln, li, l);
+	if (ix<224) return (ix<0) ? MXE_L_IX : (ln->u.l.dat[ix] = val, 0);
+	if (ix!=255) return MXE_L_IX;
+	switch(val) { case 1:  return mx_l_closewin(ln), 0;
+		      case 2:  return mx_l_boxrm(ln), 0;
+		      case 3:  return ln->u.l.flg;
+		      default: return MXE_L_FF; 
+	}}
 
 int mx_tr_add(int bi, BoxGen * bx) { MXIARG(bn, bi, b); int r = trec_alloc();
 	return r<0 ? r : (trec_bx[r] = bx, trec_bi[r] = bi, bn->u.b.trec = r); }
