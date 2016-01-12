@@ -915,7 +915,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
 {0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
-{'.',12,0,12,4, "filter disp.audio configopen consoleflush log   write tlog  save config "
+{'.',13,0,12,4, "filter disp.audio configopen consoleflush log   write tlog  save config "
 	        "------------exit(autosv)------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
 		"_F  A0W _c-1*f  $!t _K  ####qq  ####q!  #%$6#%$3#%$9"},
 {'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
@@ -3991,8 +3991,8 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 ///////////////// main window ////////////////////////////////////////////////
 
 static void mwin_skel (struct _topwin * tw, char * arg) {
-	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}{B_unplot$_g}"
-		"({22}3[{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
+	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
+	"(3{B_unplot$_g}{B_?$$?win.main})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
         GtkWidget * mbx = parse_w(tw, &str);
         gtk_widget_show (mbx);
 	gtk_container_add (GTK_CONTAINER (tw->w), GTK_WIDGET(mbx));

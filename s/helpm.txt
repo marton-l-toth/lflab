@@ -137,14 +137,15 @@ Currently there is no "load file" option so you have to
 restart the program to load another file.
 THERE IS NO UNDO, SAVE OFTEN!!!
 {{{?._wma}}}
-main window:
+This help text describes the main window. For general help, see
+==> getting started
 kussb+ - kill all sounds (not the same as mute, cf. below)
-unplot - restarts gnuplot (closes all plot windows)
-LR - displays (on top) tree window
+unplot - restart gnuplot (close all gnuplot windows)
+LR - display tree window (on top)
 ++ - main menu (here you can open the console, show the
 pole-zero diagram for the last filter, configure audio, write
 timing log, and exit)
-save - save file (name can be changed in tree window)
+save - save file (name can be changed in the tree window)
 rec - start/stop recording (see auconv link below)
 CPU meter: green-OK, yellow-high load, red-danger grey-muted
 CPU meter should run about 1 dashed line / sec, depending
@@ -159,9 +160,9 @@ are not stopped, recording (if on) continues.
 ==> win.tree
 ==> win.auconv
 Note: main window is configured to be "always on top" whenever
-the window manager permits this. This has a side effect: when
-you open a small window (and many windows are opened small), it
-may "hide" behind the main window.
+the window manager permits it. This has a side effect: when you
+open a small window (e.g. instrument/play and input windows),
+it may "hide" behind the main window.
 {{{?._puls}}}
 Disclaimer: I have only tried with pulseaudio 2.0 using a
 more-or-less default configuration. If you know better, please
