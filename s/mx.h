@@ -28,5 +28,6 @@ unsigned char * mx_l_dat(int li); // uchar[224]
 int mx_l_op(int li, int ix, int val); // (ix/-1,ff,1)-closewin (ix,ff,2)-boxrm (ix,ff,3)-getflg
 int mx_au16_cfg(au16w_t * to, int nch, const char * s);
 int mx_calc_int(int ix, short * to, au16w_t * cfg, fa_writer * fa, int n);
+int mx_debug(const char *s);
 
 #endif // __qwe_mx_h__

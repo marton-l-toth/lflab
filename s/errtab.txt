@@ -196,6 +196,7 @@ MXE_CFGPAR   mixer: invalid config parameter
 MXE_L_ALL    mixer: invalid parameter for live/all op
 MXE_L_IX     mixer: invalid ix for live object
 MXE_L_FF     mixer: invalid special op. for live object
+MXE_INVDBG   unknown mixer debug command
 MXE_REC255   you reached the maximum followable src boxes (255) for trk rec.
 S7__________ __________________________________________________________(BUG)__
 TKE_WTF      you just have found a bug (trk)

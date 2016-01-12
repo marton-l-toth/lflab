@@ -4382,7 +4382,7 @@ static void cmd_ob(int c0, int id, char * arg) {
 			gtk_window_present(GTK_WINDOW(tw->w)); return;
 		case 'Z':
 			if (id<32) LOG("cowardly refusing to destroy window 0x%x", id);
-			else gdk_window_destroy(gtk_widget_get_window(tw->w)); return;
+			else gtk_widget_destroy(tw->w); return;
 		default: LOG("unknown cmd 0x%x \"%s\"", c0); return;
 	}
 }

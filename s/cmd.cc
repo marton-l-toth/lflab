@@ -287,6 +287,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		          if (i!=v_major || j!=v_minor) log("save file is from version %d.%d", i, j);
 			  p->m_sv_M = i; p->m_sv_m = j; return 0;
 		case 'K': return cfg_write();
+		case 'M': return mx_debug(p->m_c_a0+1);
 		default: return GCE_UMISC;
 	}}
 

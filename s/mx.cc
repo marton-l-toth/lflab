@@ -130,12 +130,19 @@ struct MxItem {
 	int c_stop_j(int j, int f);
 	void c_cut1j(int j) { int n = --u.c.nb - j; if (n) memmove(u.c.bx+j,u.c.bx+j+1,2*n); }
 	void c_sane();
+	void debug();
 };
 
 static MxItem *mx_ptab[512], *mx_fptr = 0;
 static int mx_ptix = 0;
 static int mx_live0 = 0;
 
+void MxItem::debug() {
+	log_n("(%c/%x", m_ty ? m_ty : '0', m_id); switch(m_ty) {
+		case 'l': log_n("%c%x", 43+2*!u.l.bxi, u.l.flg); break;
+		default: break;
+	} log_n(")");
+}
 /////// trk rec /////////////////////////////////////////////////////
 
 static BoxGen * trec_bx[256];
@@ -478,20 +485,23 @@ static void mx_d2s(short *q, au16w_t * cfg, int vd, const double *p, int n) {
 
 /////// live obj ////////////////////////////////////////////////////
 
-unsigned char * mx_l_dat(int li) { MxItem * p = mx_ptr(li); return (p->m_ty == 'l') ? p->u.l.dat : 0; }
-
-void mx_ldel(MxItem *p) {
+static void mx_ldel(MxItem *p) {
 	int pvi = p->m_pv, nxi = p->m_nx;
 	if      (!pvi) { if (!nxi) mx_live0 = 0; else mx_ptr(mx_live0=nxi) -> m_pv = 0; }
 	else           { mx_ptr(pvi)->m_nx = nxi; if (nxi) mx_ptr(nxi) -> m_pv = pvi; }
 	mx_free(p);
 }
 
-void mx_l_boxrm(MxItem *p) { p->u.l.bxi = 0;
+static void mx_l_boxrm(MxItem *p) { p->u.l.bxi = 0;
 	if (!(p->u.l.flg & MXLF_WIN)) mx_ldel(p); else gui_closewin(MX_L_WIN(p->m_id)); }
 
-int mx_l_closewin(MxItem *p) {
+static int mx_l_closewin(MxItem *p) {
 	int rv = p->m_nx; return p->u.l.bxi ? (void)(p->u.l.flg &= ~MXLF_WIN) : mx_ldel(p), rv; }
+
+static void mx_l_debug() {
+	MxItem *p; log_n("mixer live objs:");
+	for (int i = mx_live0; i; i=p->m_nx) (p=mx_ptr(i))->debug();
+	log(""); }
 
 /////// export //////////////////////////////////////////////////////
 typedef int (*mx_fp_fun_t) (MxItem*, double*, double, double);
@@ -523,8 +533,9 @@ int mx_mkctl(BoxGen * bx) {
 	return p ? (p->u.c.bref=bx, p->u.c.nb=p->u.c.uk=0, p->m_id) : MXE_GFULL; }
 
 int mx_mklive(BoxInst * bxi) {
-	MxItem * p = mx_alloc('l'); return (!p) ? MXE_GFULL :
-		(p->m_pv=0, p->m_nx = mx_live0, p->u.l.flg = MXLF_WIN, p->u.l.bxi = bxi, mx_live0 = p->m_id); }
+	MxItem * p = mx_alloc('l'); if (!p) return MXE_GFULL;
+	if (mx_live0) mx_ptr(mx_live0)->m_pv = p->m_id;
+	return p->m_pv=0, p->m_nx = mx_live0, p->u.l.flg = MXLF_WIN, p->u.l.bxi = bxi, mx_live0 = p->m_id; }
 
 int mx_clear(int i) { 
 	MxItem * p = mx_ptr(i);
@@ -654,6 +665,8 @@ int mx_c_bpm_ugly_hack(int ci, int bp10m) {
 	mx_ptr(cn->u.c.bx[r])->u.b.in.pp[0][0] = 0.1 * (double)bp10m; return 0;
 }
 
+unsigned char * mx_l_dat(int li) { MxItem * p = mx_ptr(li); return (p->m_ty == 'l') ? p->u.l.dat : 0; }
+
 int mx_l_op(int li, int ix, int val) {
 	if (li<0) { if (ix!=255 || val!=1) return MXE_L_ALL;
 		    int i = mx_live0; while (i>0) i = mx_l_closewin(mx_ptr(i));
@@ -672,6 +685,10 @@ int mx_tr_add(int bi, BoxGen * bx) { MXIARG(bn, bi, b); int r = trec_alloc();
 
 void mx_tr_rm(int tri) { if (!trec_bx[tri]) log("BUG: mx_tr_rm(%d): nothing to remove", tri);
 			 else mx_ptr(trec_bi[tri])->u.b.trec = 0, trec_free(tri); }
+
+int mx_debug(const char *s) { switch(*s) {
+	case 'L': return mx_l_debug(), 0;
+	default:  return MXE_INVDBG; }}
 
 void mx_init() {
 	log("sizB: %d sizF: %d", sizeof(MxItBox), sizeof(MxItFilt));
