@@ -319,6 +319,25 @@ int smallnum(char * to, double v) {
         return sg+i+1;
 }
 
+static char * hxdoub_str(char * to, const char * s, int prec) {
+	double v = hx2doub(s);
+	long long xl; memcpy(&xl, &v, 8);
+	static char buf[256]; if (!to) to = buf;
+	int l1 = nan_2str(to, xl); if (l1>=0) return to[l1]=0, /*LOG("nan_str: '%s'", to),*/ to;
+	char fmt[8], *p=fmt; *(p++)='%'; *(p++)='.';
+	if (prec<2) prec=2; else if (prec>15) prec=15;
+	if (prec>9) prec-=10, *(p++)=49;
+	*(p++) = prec+48; *(p++) = 'g'; *p = 0;
+	sprintf(to, fmt, v); return to;
+}
+
+static char * hxdoub_lbl(const char * s) { // q.mark remove, min.len=3
+	char * r = hxdoub_str(NULL, s, 15); if (*r=='"') ++r;
+	int l = strlen(r); if (r[l-1]=='"') r[--l] = 0;
+	if (l<3) { do r[l++] = ' '; while(l<3);  r[3] = 0; }
+	return r;
+}
+
 ///////////////// font metrics /////////////////////////////////////////////////
 
 static char font_h[20], font_o[20], font_dig[20], font_b32[20], font_w[1920];
@@ -769,18 +788,6 @@ static void entry_set(ww_t * ww, const char * s) {
 	}
 	memcpy(ww->etc, s, l);
 	gtk_entry_set_text(GTK_ENTRY(ww->w), s);
-}
-
-static char * hxdoub_str(char * to, const char * s, int prec) {
-	double v = hx2doub(s);
-	long long xl; memcpy(&xl, &v, 8);
-	static char buf[256]; if (!to) to = buf;
-	int l1 = nan_2str(to, xl); if (l1>=0) return to[l1]=0, /*LOG("nan_str: '%s'", to),*/ to;
-	char fmt[8], *p=fmt; *(p++)='%'; *(p++)='.';
-	if (prec<2) prec=2; else if (prec>15) prec=15;
-	if (prec>9) prec-=10, *(p++)=49;
-	*(p++) = prec+48; *(p++) = 'g'; *p = 0;
-	sprintf(to, fmt, v); return to;
 }
 
 static void entry_cmd(struct _ww_t * ww, const char * arg) {
@@ -3806,22 +3813,22 @@ static void acfg_skel (struct _topwin * tw, char * arg) {
 
 static void in01_skel (struct _topwin * tw, char * arg) {
 	if (tw->state) return LOG("BUG: create called again for input win 0x%x", tw->id);
-	int i, l, n = arg ? ivlim(*arg-48, 1, 16) : 1;
+	int i, l = arg ? strlen(arg-1) : 0, n = arg ? ivlim(*arg-48, 1, 16) : 1;
 	sprintf(tw->cmdpref, "%04x", (tw->id>>4)&65535); tw->cmdp_len = 4;
-	char ws[256], *num, *p = arg + 1, *q = ws+1; 
-	if (l>7) hxdoub_str(tw->title, p, 15); p+=8, l-=8;
-	ws[0] = '('; l = strlen(p);
+	char ws[256], *num, *p = arg + 1, *q = ws+1;
+	memcpy(tw->title,"input box", 12);
+	ws[0] = '('; 
+	if (l>15) hxdoub_str(tw->title, p, 15), p+=16, l-=16;
 	for (i=0; i<n; i++, q+=14) {
 		q[0] = '{'; q[1] = '!';
-		memcpy(q+3, (l>7) ? (num = hxdoub_str(NULL, p, 15), p+=8, l-=8, num+(*num=='"'))
-				  : "---", 3);
+		memcpy(q+3, (l>15) ? (p+=16, l-=16, hxdoub_lbl(p-16)) : "---", 3);
 		memcpy(q+6, "$564L0", 6); q[12] = q[2] = hexc1(i);
 		q[13] = '}';
 	}
 	q[0] = ')'; q[1] = 0;
 	GtkWidget * w; tw->arg[0].p = w = parse_w_s(tw, ws);
 	int ni = min_i(n, l>>1);
-	for (i=0; i<ni; i++) LOG("setarg %d", i), DACNT_ARG(widg_lookup_pci(tw, hexc1(i), 0)) |= hex2(p+2*i)<<16;
+	for (i=0; i<ni; i++) LOG("setarg %d %d", i, hex2(p+2*i)), dacnt_set_x(widg_lookup_pci(tw, hexc1(i), 0), hex2(p+2*i), 512);
 	gtk_container_add (GTK_CONTAINER (tw->w), w); 
 	gtk_widget_show(w);
 }

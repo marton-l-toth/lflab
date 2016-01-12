@@ -29,7 +29,7 @@ static int vlim_calc(double *to, double *pos, double trg, double vlim, double vl
 	double v = sg<0 ? -vlim : vlim, n2 = (sg<0 ? y-trg : trg-y) * vlim_1;
 	if (n2 > (double)n) { for (int i=0; i<n; i++) to[i] = (y += v);  *pos = y; return 1; }
 	int n2i = (int)floor(n2);
-	for (int i=0;   i<n2i; i++) to[n] = (y += v);
+	for (int i=0;   i<n2i; i++) to[i] = (y += v);
 	for (int i=n2i; i<n;   i++) to[i] = trg;
 	*pos = trg; return 1;
 }
@@ -96,9 +96,10 @@ int VLSBox::ini(double **inb) {
 	m_lim_bv = m_acc_bv = 0;
 	for (int i=0; i<no; i++) {
 		pos[i] = .01 * (double)m_dat[i];
-		double x = inb[2+ac1+2*i][0];
+		double x = inb[3+ac1+2*i][0];
 		if (x>1e-8 && (x*=sample_length)<1.0) vlim[i]=x, vlim_1[i]=1.0/x, m_lim_bv|=(1<<i);
 	}
+	log("m_lim_bv = 0x%x", m_lim_bv);
 	return 0;
 }
 // static int vlim_calc(double *to, double *pos, double trg, double vlim, double vlim_1, int n) {
