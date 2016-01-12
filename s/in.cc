@@ -13,7 +13,8 @@
 class AInputBox : public BoxInst {
 	public:
 		AInputBox() : m_flg(0), m_mxid(0), m_dat(0) {}
-		virtual ~AInputBox() { if (m_mxid>0 && mx_l_op(m_mxid,255,2)<0) gui_errq_add(RTE_MXLDFAIL); }
+		virtual ~AInputBox() { int ec; if (m_mxid>0 && (ec=mx_l_op(m_mxid,255,2))<0) 
+			gui_errq_add(ec), gui_errq_add(RTE_MXLDFAIL); }
 		virtual int ini(double ** inb) = 0;
 		virtual int calc2(double **pto, int n) = 0;
 		virtual int calc(int inflg, double** inb, double** outb, int n);

@@ -491,7 +491,7 @@ void mx_l_boxrm(MxItem *p) { p->u.l.bxi = 0;
 	if (!(p->u.l.flg & MXLF_WIN)) mx_ldel(p); else gui_closewin(MX_L_WIN(p->m_id)); }
 
 int mx_l_closewin(MxItem *p) {
-	int rv = p->m_nx; return p->u.l.bxi ? mx_ldel(p) : (void)(p->u.l.flg &= ~MXLF_WIN), rv; }
+	int rv = p->m_nx; return p->u.l.bxi ? (void)(p->u.l.flg &= ~MXLF_WIN) : mx_ldel(p), rv; }
 
 /////// export //////////////////////////////////////////////////////
 typedef int (*mx_fp_fun_t) (MxItem*, double*, double, double);
