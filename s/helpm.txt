@@ -109,6 +109,12 @@ pass them to builtin boxes without changing them.
 Labels/strings like "this" can have at most 6 ASCII characters,
 they are currently only used for slider group boxes. They are,
 of course, also not numbers.
+---
+Known bug: when you input a list which is too long, the nice
+behaviour would be to drop the last few elements (possibly with
+a message in the "errors" window). Currently a "haircut" is
+is applied instead: the highest bit(s) of each elements are
+sliently dropped.
 {{{?._file}}}
 THERE IS NO UNDO, SAVE OFTEN!!!
 You can get a list of command line options by "lf -?"
@@ -152,6 +158,10 @@ are not stopped, recording (if on) continues.
 ==> win.audio
 ==> win.tree
 ==> win.auconv
+Note: main window is configured to be "always on top" whenever
+the window manager permits this. This has a side effect: when
+you open a small window (and many windows are opened small), it
+may "hide" behind the main window.
 {{{?._puls}}}
 Disclaimer: I have only tried with pulseaudio 2.0 using a
 more-or-less default configuration. If you know better, please
@@ -304,6 +314,9 @@ Feedback: The delay (!i) is expected to be a >0 constant.
 The special output >i comes back to the special input <i
 with !i delay. (when delay goes below 0.01 (10ms), CPU
 usage will increase rapidly).
+---
+Because an external program is started, opening the first 
+graph box window may cause an audio buffer underrun.
 ==> win.tree
 {{{?._wcc}}}
 Calculator boxes are stateless boxes (each set of outputs only

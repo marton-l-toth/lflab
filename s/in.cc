@@ -61,18 +61,10 @@ void AInputBox::w_slider(double **inb, int n, int bv) {
 //? a speed limit of 0 (or above the samp. rate) means no limit
 //? if [s0] or [s7] are shorter on non-lists, the default is 50
 //? all inputs are expected to be constant
-
-//? {{{!._slgA}}}
-//? input box: speed-limited & smoothed slider group
-//? titl - window title
-//? [s0] - start pos (0...100) for sliders 0-6
-//? [s7] - start pos (0...100) for sliders 7-8
-//? lb<i> - label for slider #i
-//? vl<i> - speed limit (1/s) for slider #i
-//? dmp<i> - dampening: 0=unfiltered, otherwise as for =accN(md=0)
-//? a speed limit <= 0 (or above the samp. rate) means no limit
-//? if [s0] or [s7] are shorter on non-lists, the default is 50
-//? all inputs are expected to be constant
+//? ---
+//? limitation: input boxes are not compatible with recording
+//? to track (in the recorded track, the sound will be as if
+//? all sliders were left on starting position)
 
 class VLSBox : public AInputBox {
 	public:
@@ -103,7 +95,6 @@ int VLSBox::ini(double **inb) {
 	log("m_lim_bv = 0x%x", m_lim_bv);
 	return 0;
 }
-// static int vlim_calc(double *to, double *pos, double trg, double vlim, double vlim_1, int n) {
 
 int VLSBox::calc2(double **pto, int n) {
 	int no = m_no;
@@ -112,17 +103,16 @@ int VLSBox::calc2(double **pto, int n) {
 	BVFOR_JM(cbv) pto[j][0] = .01 * m_dat[j];
 	BVFOR_JM(m_lim_bv) rv |= vlim_calc(pto[j], pos+j, .01*m_dat[j], vlim[j], vlim_1[j], n) << j;
 	if (!(m_arg&64)) return rv;
-	return RTE_BUG; // TODO: acc
+	return RTE_BUG; // TODO: filter (or remove?)
 }
 
-#define LVD(J) "$lb" #J "$vl" #J "$dmp" #J
 void b_in_init(ANode *r) {
 	qmb_arg_t qa = QMB_ARG1(VLSBox);
-	ANode *dv = qmk_dir(r, "vls"), *dva = qmk_dir(r, "vlsA");
+	ANode *dv = qmk_dir(r, "vls");
 	char nm[8]; memcpy(nm, "vls01", 6);
-	qmk_box(dv, nm, qa, 1, 4, 1, "slg", "i-i:R*1", 2, "titl$[s0]", 2, 2, "lb$vl", "z%%%%z"); ++nm[4];
+	qmk_box(dv, nm, qa, 1, 4, 1, "slg", "i-i:R*1", 2, "titl$[s0]", 2, 2, "lb$vl", "%zzz%%"); ++nm[4];
 	for (int i=2; i<=7; i++) qmk_box(dv, nm, qa, i, 2+2*i, i, "slg", "1"), ++nm[4];
-	qmk_box(dv, nm, qa, 8, 13, 8, "slg", "i-i:R*1", 3, "titl$[s0]$[s1]", 3, 3, "vl$lb", "z%%%%z");
+	qmk_box(dv, nm, qa, 8, 13, 8, "slg", "1i-i:R*", 3, "titl$[s0]$[s1]", 3, 3, "vl$lb");
 	for (int i=9; i<=13; i++) (i==10?(nm[3]=49,nm[4]=48):++nm[4]), 
 				  qmk_box(dv, nm, qa, i, 3+2*i, i, "slg", "1");
 }

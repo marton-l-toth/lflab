@@ -37,7 +37,10 @@ STATELESS_BOX_0(CopyBox) { return BOX_CP0; }
 
 //? {{{!._m01}}}
 //? Interval mapping: maps interval [0..1] to [y0..y1]
-//? mapping depends on "scl":
+//? x - input
+//? y0, y1 - interval endpoints (output for x=0 and x=1)
+//? scl - scale type
+//? ---
 //? scl = -3: 1 1/8 1/27 1/64 (rev. cub.)
 //? scl = -2: 1 1/4 1/9 1/16 (rev. quad.) (*)
 //? scl = -1: 1 1/2 1/3 1/4 (harmonic)
@@ -46,8 +49,11 @@ STATELESS_BOX_0(CopyBox) { return BOX_CP0; }
 //? scl = 2: 1, 4, 9, 16  (quadratic) (*)
 //? scl = 3: 1, 8, 27, 64 (cubic)
 //? (*): y0 and y1 must have the same sign
+//? ---
 //? Note: this "from-to-scale" scheme is used in several
 //? builtin boxes, and in instrument configuration
+//? For non-linear mapping (scl!=1) having non-constant
+//? y0 and/or y1 input increases CPU usage.
 STATELESS_BOX_0(Map01Box) {
 	double *to = outb[0];
 	if (!(inflg&15)) return *to = Scale01::f0(inb[1][0], inb[2][0], (int)lround(inb[3][0]), **inb), 0;
@@ -65,12 +71,34 @@ STATELESS_BOX_0(Map01Box) {
 }
 
 //? {{{!._m01x}}}
-//? Multiple interval mapping (useful for input boxes)
+//? Multiple interval mapping
 //? [sc] - list of scales (-3 ... 3) as for simple map01
+//? x<i>  - mapping input (exp. 0 <= x<i> <= 1)
+//? fr<i> - from (output for x<i>=0)
+//? to<i> - to   (output for x<i>=1)
 //? for each <i>, the 0..1 interval (x<i>) is mapped to
 //? fr<i>..to<i>, with the <i>th element of [sc] selecting
-//? the scale type. 
-// TODO
+//? the scale type.
+//? if [sc] is shorted than expected or non-list, the default
+//? scale type is 0 (logarithmic)
+//? ---
+//? Unless you want non-constant scale types, you can replace
+//? multiple "map01" boxes with one instance of this box, 
+//? simplifying graph box layout.
+STATELESS_BOX_1(Map01VBox) {
+	NAN_UNPK_8(scl, inb[0], 0);
+	int oflg = 0;  inflg >>= 1;  inb++;
+	for (int i=0, nmap=m_arg; i<nmap; i++, inflg>>=3, inb+=3) {
+		int ty = scl_x[i], flg = inflg & 7;
+		double * to = outb[i];
+		if (!flg) { *to = Scale01::f0(inb[1][0], inb[2][0], ty, **inb); }
+		else if (oflg |= (1<<i), flg==1) {
+			Scale01 sc; sc.set_all(inb[1][0], inb[2][0], ty);
+			double * px = inb[0]; for (int i=0; i<n; i++) to[i] = sc.f(px[i]); }
+		else {  PREP_INPUT(x, 0); PREP_INPUT(f, 1); PREP_INPUT(t, 2);
+			for (int i=0;i<n;i++) to[i] = Scale01::f0(fp[i&fmsk], tp[i&tmsk], ty, xp[i&xmsk]); }}
+	return oflg;
+}
 
 STATELESS_BOX_0(VersionBox) { **outb = (double)v_major + 0.01 * (double)v_minor; return 0; }
 
@@ -330,12 +358,21 @@ void b_help_init(ANode * rn) {
 	for (int i=0; (s=help_b[i]); i++) { for (s2=s+1; *s2!='.'; s2++);
 					    qmk_box(dir[*s&7], s2+1, qa, 0, 0, 1, s+1, 0); }}
 
+#define XFT(J) "$x" #J "$fr" #J "$to" #J
+void b_map_init(ANode * rn) {
+	qmk_box(rn, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");
+	char nm[16]; memcpy(nm, "map01*2", 8); qmb_arg_t qa = QMB_ARG1(Map01VBox);
+	qmk_box(rn, nm, qa, 2, 7, 2, "m01x", "i-o.R*1", 28, "[sc]" XFT(0) XFT(1) XFT(2) XFT(3) XFT(4)
+		   XFT(5) XFT(6) XFT(7) XFT(8), 0, "y", "kkk%%%");
+	for (int i=3; i<=9; i++) ++nm[6], qmk_box(rn, nm, qa, i, 3*i+1, i, "m01x", "1");
+}
+
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
 	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
 	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_2", "*i*o*", "kkk%%%", "x", "x");
-	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");
+	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
 	qmk_box(mc, "rqosc", QMB_ARG0(RQOsc), 0, 5, 33, "rqo", "*i*", "k%k0%0", "f0$f1$dmp$vlim$samp");
 	qmk_box(nz, "nz0", QMB_ARG0(NZ0Box), 0, 1, 33, "nz", "i*o*R*1", "ty", "out", "zzzOOO");
 	qmk_box(nz, "nz0*2", QMB_ARG0(NZ0m2Box), 0, 2, 33, "nz2", "1i*", "ty1$ty2"); 
