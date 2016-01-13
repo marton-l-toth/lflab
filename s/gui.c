@@ -1688,7 +1688,7 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 
 static void daclb_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	int k = ww->arg[3].i[0]; if (!k) return;
-	if (k<0) { CMD("~W%s%s\n", (((char*)ww->etc)[4]=='.')?"":".!b.?.", (char*)ww->etc + 4); return; }
+	if (k<0) { CMD("~W%s%s", (((char*)ww->etc)[4]=='.')?"":".!b.?.", (char*)ww->etc + 4); return; }
 	int tid = ww->top->id, f = (k==(tid>>4));
 	char buf[16]; buf[0] = '~'; buf[1] = 87-10*f; buf[2] = '#';
 	int l = 3 + hx5(buf+3, k);
@@ -2422,7 +2422,7 @@ static trk_24 * tc_a24(tc_t * tc, unsigned short * to) {
 	trk_24 * r = tc_p24(tc, ((*to=tc->t24_f)||(*to=tc_mk_b3k(tc))||(tc->flg|=TCF_OOM),*to));
 	if (*to) tc->t24_f = r->b.nx;     return r; }
 
-static void tc_vw_cmd(tc_t * tc) { CMD("~X#%x$V%c%c$%x$%x\n",
+static void tc_vw_cmd(tc_t * tc) { CMD("~X#%x$V%c%c$%x$%x",
 		tc->nid, tc->y0a+48, tc->y1a+48, tc->x0a, tc->x1a); }
 
 static void tc_clear(tc_t * tc, int re) {
@@ -2784,7 +2784,7 @@ static void trkclk_s(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
 static void trkclk_e(ww_t * ww, int b9, int cy) { LOG("trkclk_e: b%c y:%d", 48+b9, cy); }
 
 static void tsc_cc(int c) {
-	CMD("~X#%x$C%c%x$%x$%x\n", tsc_ww->top->id>>4, c, tsc_id, tsc_y, tsc_x);
+	CMD("~X#%x$C%c%x$%x$%x", tsc_ww->top->id>>4, c, tsc_id, tsc_y, tsc_x);
 	if (dflg&DF_TRK) LOG("tsc_cmd:  id:0x%x, x:%d y:%d c:0x%x '%c'", tsc_id, tsc_x, tsc_y, c, c);
 }
 
