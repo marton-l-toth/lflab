@@ -63,6 +63,7 @@ int nan_unpk(char * to8, int * to32, long long xl, int flg);
 int nan_2str(char * to, long long xl);
 int dbl2str(char * to, double x);
 int trk_g_parse(const char * s, unsigned char * div, unsigned char * gwfr);
+int find_dev(unsigned char *to, int midiflg, int max);
 
 #else
 
@@ -222,6 +223,17 @@ int dbl2str(char * to, double x) {
 int trk_g_parse(const char * s, unsigned char * div, unsigned char * gwfr) {
 	int i; for (i=0; s[i]>47; i+=4) *(s[i]=='_' ? gwfr+(s[i+1]&3) : div+hex2(s+i)) = hex2(s+i+2);
 	return i + (s[i]=='.');   }
+
+int find_dev(unsigned char *to, int midiflg, int max) {
+	DIR * dir = opendir("/dev/snd/"); if (!dir) return 0;
+	struct dirent * ent;
+	int n = 0, len0 = 4 + midiflg, z = midiflg ? 0 : 'p';
+	const char *s, *pfx = midiflg ? "midiC" : "pcmC";
+	while (n<max && (ent = readdir(dir)))
+		if (s=ent->d_name, !memcmp(s, pfx, len0) && s[len0+1]=='D' && s[len0+3]==z)
+			to[n++] = 16*s[len0] + s[len0+2] - 816;
+	closedir(dir); return n;
+}
 
 #endif // QWE_UTILC_DEF
 #endif // __qwe_uc1_h__

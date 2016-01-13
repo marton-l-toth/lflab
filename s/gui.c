@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -935,10 +936,7 @@ TDIV_MENU_LN
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
 {'K', 6, 0, 5, 2, "help info del/s-----cleardel  ", "N?I3Kd##KZNd"},
-#define HWS0(X)      "hw:" #X "      hw:" #X ",0    hw:" #X ",1    "
-#define HWS1(X)  "plughw:" #X "  plughw:" #X ",0plughw:" #X ",1"
-{'S', 25,0, 10,10,"default   " HWS0(0) HWS0(1) HWS0(2) HWS0(3) HWS1(0) HWS1(1) HWS1(2) HWS1(3),
-		  "default   " HWS0(0) HWS0(1) HWS0(2) HWS0(3) HWS1(0) HWS1(1) HWS1(2) HWS1(3) },
+{'S', 1,0, 1,1, "??", "##" },
 {0, 3, 1, 5, 1, "availdelayretBS", "012"},
 {0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {-1,0,0,0,0,NULL,NULL} };
@@ -1057,6 +1055,15 @@ static void lsr_popup(int flg) {
 	}
 }
 
+static void pcm_popup() {
+	unsigned char ls[16]; 
+	char buf[12]; memcpy(buf, "plughw:x,y\0",12);
+	int i, n = find_dev(ls, 0, 15);
+	add_dyn("default", "default", -1);
+	for (i=0; i<n; i++) buf[7] = 48+(ls[i]>>4), buf[9] = 48+(ls[i]&15), add_dyn(buf+4, buf+4, -1);
+	for (i=0; i<n; i++) buf[7] = 48+(ls[i]>>4), buf[9] = 48+(ls[i]&15), add_dyn(buf  , buf  , -1);
+}
+
 static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
@@ -1072,6 +1079,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 		gtk_widget_show(it2);
 		g_signal_connect(it2, "activate", G_CALLBACK(menu_act), (char*)ww + i);
 	}} else { switch(msk&15) {
+		case 1: pcm_popup(); break;
 		case 3: lsr_popup((int)(msk>>4u)); break;
 		default: LOG("undef _menu %d", (int)(msk&15)); break;
 	}}
@@ -3799,7 +3807,7 @@ static void err_skel (struct _topwin * tw, char * arg) {
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char * ws = "({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
-	"[{B_?$$?win.audio}{M_name:$A0n|S0}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
+	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
 	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_save$_K}])";
 	GtkWidget * w = NULL;
 	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws);
