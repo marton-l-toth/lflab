@@ -17,8 +17,9 @@
 #define DFLG_MX 0x400
 #define DFLG_JQ 0x800 
 #define DFLG_GRTMP 0x1000
+#define DFLG_RWMIDI 0x2000
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk\n"\
-		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(tmpfile)"
+		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(tmpfile) 2000:midi-rw(ini only)"
 
 extern int glob_flg;
 extern int debug_flags;

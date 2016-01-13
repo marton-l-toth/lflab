@@ -14,6 +14,7 @@
 #include "mx.h"
 #include "asnd.h"
 #include "pt.h"
+#include "midi.h"
 
 #define CMD_NODE(T) T##Node* nd = dynamic_cast<T##Node*>(p->m_c_node); if (!nd) return GCE_EX##T
 
@@ -288,6 +289,8 @@ int CmdTab::c_misc(CmdBuf * p) {
 			  p->m_sv_M = i; p->m_sv_m = j; return 0;
 		case 'K': return cfg_write();
 		case 'M': return mx_debug(p->m_c_a0+1);
+		case '_': return midi_cmd(p->m_c_a0+1);
+		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
 		default: return GCE_UMISC;
 	}}
 

@@ -21,7 +21,7 @@ class AMidi {
 		virtual void longcmd(const unsigned char *p, int n) = 0;
 		const char * nm() { return m_nm; }
 		int id() const { return m_id; }
-		int ini(int id);
+		int ini(int ix, int id);
 		void errmsg(int ec);
 	protected:
 		int m_id;
@@ -39,13 +39,13 @@ class LogMidi : public AMidi {
 
 static char devname[24];
 
-int AMidi::ini(int id) {
+int AMidi::ini(int ix, int id) {
 	if (id>=0) m_id = id; else id = m_id;
 	rawmidi_desc(m_nm, id, 64);
 	devname[14] = 48+(id>>4); devname[16] = 48+(id&15);
-	int fd = open(devname, O_RDONLY); 
-	if (fd<0) log("midi: %s(%s): %s", devname, m_nm, strerror(errno));
-	else 	  log("midi: %s(%s): opened(%d)", devname , m_nm, fd);
+	int fd = open(devname, (debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY); 
+	if (fd<0) log("midi%x: %s(%s): %s", ix, devname, m_nm, strerror(errno));
+	else 	  log("midi%x: %s(%s): opened(%d)", ix, devname , m_nm, fd);
 	return fd;
 }
 
@@ -58,6 +58,21 @@ void LogMidi::longcmd(const unsigned char * p, int n) {
 unsigned int midi_bv;
 int midi_fd[32];
 static AMidi * midi_p[32];
+
+int midi_cmd(const char *s) {
+	if (!s || !*s) return MDE_PARSE;
+	unsigned char buf[64];
+	int ec, ix = b32_to_i(*(s++)), n = 0;
+	for (int i=0; i<64; i++) {
+		while (*s==32) ++s;
+		if (!*s) break;
+		if (!s[1]) return MDE_PARSE;
+		buf[n++] = hex2(s); s += 2;
+	}
+	if ((ec=write(midi_fd[ix], buf, n))<=0) return ec ? EEE_ERRNO : EEE_ZEROLEN;
+	return 0;
+}
+
 
 void midi_input(int i) {
 	unsigned char buf[256], *p = buf;
@@ -90,7 +105,7 @@ void midi_init() {
 	memcpy(devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32];
 	int n = find_dev(buf, 1, 32);
-	for (int i=0; i<n; i++) if ((midi_fd[i] = (midi_p[i] = new LogMidi())->ini(buf[i])) < 0) 
+	for (int i=0; i<n; i++) if ((midi_fd[i] = (midi_p[i] = new LogMidi())->ini(i,buf[i])) < 0) 
 		delete(midi_p[i]); else midi_bv |= 1u<<i;
 }
 

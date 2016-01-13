@@ -64,7 +64,7 @@ static void ini1() {
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
 	gui2.root_expand(); gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(1)));
 	                    gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(2)));
-	sl_cmd[2].sn("v4b\n", 4);
+	sl_cmd[2].sn("v50\n", 4);
 	log("###tpipe=%d", gui2.tpipe());
 	if (getenv("LF_HITHERE")) snd0.w(-1);
 	snd0.cfg(gui2.tpipe(), 0); snd0.start();
