@@ -144,6 +144,7 @@ void pt_init() {
         const char * kfn = getenv("LF_KILLER");
         int fd = -1, k = kfn ? open(kfn, O_RDONLY) : -1;
         killer_fd = k ? k : dup(0);
+	if ((tmp_dir=getenv("LF_TMPDIR"))) tmp_dir_len=strlen(tmp_dir); else tmp_dir="/tmp", tmp_dir_len=4;
 	if (!(pt_logf_name = getenv("LF_LOG"))) pt_logf_name = "/tmp/lf.noenv.log";
         pt_dlog(1, "(log start)\n");
 	signal(SIGCHLD, &pt_sigchld);

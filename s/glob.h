@@ -15,9 +15,10 @@
 #define DFLG_GUI2 256
 #define DFLG_SAVE 512
 #define DFLG_MX 0x400
-#define DFLG_JQ 0x800
+#define DFLG_JQ 0x800 
+#define DFLG_GRTMP 0x1000
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk\n"\
-		  "100-gui2        200:save   400:mixer 800:jobq"
+		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(tmpfile)"
 
 extern int glob_flg;
 extern int debug_flags;
@@ -28,6 +29,9 @@ extern int killer_fd;
 extern char mostly_zero[0x8080];
 extern double junkbuf[4096];
 extern char save_file_name[1024];
+
+extern const char * tmp_dir;
+extern int tmp_dir_len;
 
 extern int v_major, v_minor;
 

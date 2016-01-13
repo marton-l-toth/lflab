@@ -127,9 +127,15 @@ int Dot::start() {
 	return (m_pid<0) ? (log("failed to start %s\n", path), -1) : 0;
 }
 
-void Dot::flush() { 
-	int cp = creat("gr-tmp.dot", 0644); 
-	if (cp>0) { write(cp, m_buf, m_n); close(cp); }
+void Dot::flush() {
+	static char * t_dot = 0;
+	if (debug_flags & DFLG_GRTMP) {
+		if (!t_dot) t_dot = (char*)malloc(tmp_dir_len+8), memcpy(t_dot, tmp_dir, tmp_dir_len),
+								  memcpy(t_dot+tmp_dir_len, "/gr.dot", 8);
+		int fd = creat(t_dot, 0644);
+		if (fd<0) perror(t_dot);
+		else write(fd, m_buf, m_n), close(fd);
+	}
 	write(m_pipe, m_buf, m_n); m_n = 0;
 }
 
