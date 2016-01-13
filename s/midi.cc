@@ -8,11 +8,13 @@
 
 #include "uc1.h"
 #include "glob.h"
+#include "errtab.inc"
 
 int rawmidi_desc(char *to, int id, int maxlen); //asnd.cc
 
 class AMidi {
 	public:
+		virtual ~AMidi() {}
 		virtual void cmd0(int x) = 0;
 		virtual void cmd1(int x, int y) = 0;
 		virtual void cmd2(int x, int y, int z) = 0;
@@ -20,6 +22,7 @@ class AMidi {
 		const char * nm() { return m_nm; }
 		int id() const { return m_id; }
 		int ini(int id);
+		void errmsg(int ec);
 	protected:
 		int m_id;
 		char m_nm[64];
@@ -46,6 +49,8 @@ int AMidi::ini(int id) {
 	return fd;
 }
 
+void AMidi::errmsg(int ec) { gui_errq_add(ec); log("midi (0x%x:%s): %s", m_id, m_nm, err_str(ec)); }
+
 void LogMidi::longcmd(const unsigned char * p, int n) {
 	log_n("midi-c+(%d,%s) : [", m_id, m_nm);
 	for (int i=0; i<n; i++) log_n(" %0x", p[i]); log(" ]"); }
@@ -56,14 +61,17 @@ static AMidi * midi_p[32];
 
 void midi_input(int i) {
 	unsigned char buf[256], *p = buf;
-	int r = read(midi_fd[i], buf, 256); if (r<0) perror(midi_p[i]->nm());
 	AMidi * q = midi_p[i];
+	int r = read(midi_fd[i], buf, 256); 
+	if (r<0) return close(midi_fd[i]), midi_p[i]=0, midi_bv &= ~(1<<i), // TODO: reopen for 0 (?)
+			q->errmsg(EEE_ERRNO), q->errmsg(MDE_FATAL), delete(q);
 	while (r) {
 		int x = *p;
 		if (x<0xf0) {
-			if ((x&0xe0)==0xc0) { if (r<2) return log("midi-frag1: %s(0x%x)", q->nm(), q->id());
+			if (x<128) return q->errmsg(MDE_SEVEN);
+			if ((x&0xe0)==0xc0) { if (r<2 || p[1]>127) return q->errmsg(MDE_FRAG12);
 					      q->cmd1(x, p[1]); p+=2; r -= 2; }
-			else if (r<3) return log("midi-frag%c: %s(0x%x)", r+48, q->nm(), q->id());
+			else if (r<3 || ((p[1]|p[2])&128) ) return q->errmsg(MDE_FRAG23-(r==1||p[2]>127));
 			q->cmd2(x, p[1], p[2]); p+=3, r-=3;
 			continue;
 		}

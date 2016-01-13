@@ -167,6 +167,12 @@ BXE_ZEROWAV  all zero audio -- no file written
 BXE_AVZERO   autovol failed because of zero output
 BXE_SORRY    sorry not yet implemented (box)
 S4__________ __________________________________________________________(BUG)__
+MDE_SEVEN    got MIDI data byte where cmd expected
+MDE_FRAG12   got MIDI arg 0/1
+MDE_FRAG13   got MIDI arg 0/2
+MDE_FRAG23   got MIDI arg 1/2
+MDE_FATAL    removing MIDI device from list
+S45_________ __________________________________________________________(BUG)__
 VTE_WTF      you just have found a bug (voltab)
 VTE_PARSE    voltab-cmd: parse error
 VTE_ID	     voltab id mismatch
