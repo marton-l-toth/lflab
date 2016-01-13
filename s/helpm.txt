@@ -272,8 +272,22 @@ Planned features (please don't take these as promises :) )
 - description for non-builtin boxes
 - plot/save/record to backgr. job (like autovol calc.)
 - RPM package
-- user input for running sounds (perhaps with some MIDI HW)
 - more builtin boxes and example editable boxes
+- support of various MIDI HW
+==> etc.midi.new devices
+{{{?._midd}}}
+If you want support for your favourite MIDI input device,
+please do as follows:
+1. open the console
+2. type a '?' character, followed by a short description of
+what are you going to do right now. (e.g. press and then
+release the first 5/last 5 keys, turn knobs, move sliders etc.)
+(your line will be echoed with a message "undefined command",
+and will be included in the log)
+3. do as you have promised in 2., until you finished with all
+buttons/keys/sliders/knobs/touchpads etc., go back to 2.
+4. flush log (or exit), and send the lf.log file
+@@@
 {{{?._wwp}}}
 Small button on the left, below (or between) the sliders:
 left-click: focus (keyboard) on grid, right-click: menu

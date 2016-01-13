@@ -10,10 +10,11 @@
 #include "util2.h"
 #include "guistub.h"
 #include "asnd.h"
+#include "midi.h"
 #include "pt.h"
 
 #define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
-		 mx_init(), wrap_init(), track_init()
+		 mx_init(), wrap_init(), track_init(), midi_init()
 int glob_flg = 0;
 int debug_flags = 0;
 int sample_rate = 44100;
@@ -74,10 +75,12 @@ static void sel_loop() {
 	fd_set rset; struct timeval tv; int nj = 1;
 	while (1) {
 		int nfd = 0; FD_ZERO(&rset); FOR_SLC { FD_SET(k, &rset); if (k>=nfd) nfd = k+1; }
+		BVFOR_JM(midi_bv) { int k=midi_fd[j];  FD_SET(k, &rset); if (k>=nfd) nfd = k+1; }
 		tv.tv_sec=0; tv.tv_usec = snd0.time4sel(nj);
 		int r = select(nfd, &rset, 0, 0, &tv), cf = pt_chld_flg; 
 		if (cf) pt_chld_act(), cf &= 3;
-		if (r>0) {FOR_SLC FD_ISSET(k,&rset) && !((1<<i)&cf) && (snd0.mark(48+i), sl_cmd[i].read_f());}
+		if (r>0){ FOR_SLC FD_ISSET(k,&rset) && !((1<<i)&cf) && (snd0.mark(48+i), sl_cmd[i].read_f());
+			  BVFOR_JM(midi_bv) if (FD_ISSET(midi_fd[j], &rset)) snd0.mark('M'), midi_input(j);  }
 		else if (r<0) { perror("select"); }
 		if (gui2.pending()) snd0.mark('G'), gui2.flush_all();
 		if ((nj=jobq.nj())){ while (snd0.time4job()&&jobq.run());  jobq.upd_gui(0), nj=jobq.purge(); }

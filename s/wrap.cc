@@ -727,7 +727,7 @@ int WrapSOB::icmd(const char * s, int flg, int gui9, const char * i8) {
 	int ix0 = 16*(s[0]&7) + hxd2i(s[1]), ix = wr_ixtr(ix0), k,
 	    i = (ix>>6)&1, j = ix&63, cf, r=2*(ix==core->xfd);
 	if (j > 39) return BXE_IDX; else s += 2;
-	if (*s=='X') return log("icmd/X"), SOB_RW(core)->xfd = ix, 0; // save file only
+	if (*s=='X') return SOB_RW(core)->xfd = ix, 0; // save file only
 	else if (*s=='=') r |= (flg & WRF_NOCON) ? (unflg(), flg &= ~WRF_NOCON, 1) : 0,
 		     cf = (s[1]=='x' && !s[2]) ? (SOB_RW(con[i])->rm(j), s+=2, 4) 
 				    	       : (parse_num(SOB_RW(con[i])->addp(j), s+1), 0);

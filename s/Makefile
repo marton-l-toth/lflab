@@ -1,9 +1,9 @@
 CC=g++
 CFLAGS ?= -O2 -fpredictive-commoning -fgcse-after-reload
 
-SRC1 = main.cc node.cc util.cc cmd.cc box.cc util2.cc asnd.cc job.cc mx.cc pt.cc
-INC1 = glob.h  node.h  util.h  cmd.h  box.h  util2.h  asnd.h  job.h  mx.h  pt.h 
-OBJ1 = main.o  node.o  util.o  cmd.o  box.o  util2.o  asnd.o  job.o  mx.o  pt.o 
+SRC1 = main.cc node.cc util.cc cmd.cc box.cc util2.cc asnd.cc job.cc mx.cc pt.cc midi.cc
+INC1 = glob.h  node.h  util.h  cmd.h  box.h  util2.h  asnd.h  job.h  mx.h  pt.h  midi.h
+OBJ1 = main.o  node.o  util.o  cmd.o  box.o  util2.o  asnd.o  job.o  mx.o  pt.o  midi.o
 
 SRC2 = expr.cc wrap.cc nz.cc guistub.cc gp.cc combo.cc pzrf.cc trk.cc
 INC2 = expr.h  wrap.h  nz.h  guistub.h  gp.h  combo.h  pzrf.h  trk.h

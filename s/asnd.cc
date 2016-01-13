@@ -243,3 +243,19 @@ int ASnd::cmd(const char *s) { switch(*s) {
 	case 'N': cfg_setstr(&CFG_AU_NAME,  s+1); return 0;
 	case 'O': cfg_setstr(&CFG_AU_CHCFG, s+1); return 0;
 	default: return GCE_PARSE; }}
+
+int rawmidi_desc(char *to, int id, int maxlen) {
+	static char nm[8]; if (!nm[0]) memcpy(nm, "hw:x,y\0", 8);
+	nm[3] = 48 + (id>>4); nm[5] = 48 + (id&15);
+	snd_rawmidi_t * dev = 0;
+	snd_rawmidi_info_t * info = 0;
+	int len; const char * s;
+	if (snd_rawmidi_open(&dev, 0, nm, 0)    < 0) len= 9, s="open fail";
+	else if (snd_rawmidi_info_malloc(&info) < 0) len=11, s="malloc fail";
+	else if (snd_rawmidi_info (dev, info)   < 0) len=12, s="getinfo fail";
+	else s = snd_rawmidi_info_get_name(info),  len = min_i(strlen(s), maxlen-1);
+	memcpy(to, s, len); to[len] = 0;
+	if (info) snd_rawmidi_info_free(info);
+	if (dev)  snd_rawmidi_close(dev);
+	return len;
+}
