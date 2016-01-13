@@ -1676,7 +1676,7 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 	if (**pp==',') ++*pp; else if (!(flg&2)) memcpy(ww->arg[2].c, *pp, 6), *pp += 6;
 	int l = get_tok(buf, 256, pp, ((flg&1)<<7)+36);
 	if (l) ++l; else buf[0]=32, buf[1]=0, l=2;
-	ww->etc = malloc(l); memcpy(ww->etc, buf, l);
+	ww->etc = realloc(ww->etc, l); memcpy(ww->etc, buf, l);
 	if (force) {
 		if (buf[0]!='.') { LOG("daclb_set: path begins with 0x%x", buf[0]); return; }
 		int j; for (j=l-1; buf[j]!='.'; j--) ;
@@ -3806,9 +3806,9 @@ static void err_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio config ///////////////////////////////////////////////
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
-	const char * ws = "({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
+	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
 	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
-	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_save$_K}])";
+	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_save$_K}])]";
 	GtkWidget * w = NULL;
 	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws);
 			  memcpy(tw->title, "audio", 6);

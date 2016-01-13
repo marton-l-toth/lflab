@@ -210,9 +210,20 @@ int ASnd::w(int flg) {
 	if (flg& 128) gui2.wupd_i2('w', CFG_AU_TRY_MS.i);
 	if (flg& 256) gui2.wupd_i1('0', CFG_AU_KILL_PA.i&1);
 	if (flg& 512) gui2.wupd_i1('1', CFG_AU_KILL_PA.i>>1);
-	if (flg&1024) { char buf[8]; memcpy(buf, "#out: 0", 8); 
-			if (m_n_chan>9) buf[5]='1', buf[6] = 38+m_n_chan; else buf[6] += m_n_chan;
-			gui2.wupd_s('#', buf); }
+	if (flg&1024) { 
+		char buf[8]; memcpy(buf, "#out: 0", 8); 
+		if (m_n_chan>9) buf[5]='1', buf[6] = 38+m_n_chan; else buf[6] += m_n_chan;
+		gui2.wupd_s('#', buf);
+		if (!m_hnd) { gui2.wupd_s('C', "%%%XXX(no audio output)"); }
+		else {  snd_pcm_info_t * info;
+			if (snd_pcm_info_malloc(&info)<0 || snd_pcm_info(m_hnd, info)<0) {
+				gui2.wupd_s('C', "zz%z%%(getinfo failed)"); }
+			else {  char buf[24]; const char *s = snd_pcm_info_get_name(info);
+				int l = strlen(s); 
+				if (l<21) memcpy(buf, s, l+1);
+				else 	  memcpy(buf, s, 20), memcpy(buf+20, "...", 4);
+				gui2.wupd_s('C', "%%%zz%"); gui2.sz(buf);
+			}}}
 	return 0;
 }
 
