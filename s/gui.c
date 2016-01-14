@@ -1411,7 +1411,7 @@ static void write_tlog() {
 }
 
 static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
-	static int maxv = 0, cnt = 0;
+	static int maxv = 0, cnt = 0, unexp = 0;
 	static char buf[1024];
 	if (cond!=G_IO_IN) return LOG("ioc=%d", cond), FALSE;
 	int r = read( g_io_channel_unix_get_fd  (src), (char*)tlog_dat + tlog_ix_c, 4096);
@@ -1420,7 +1420,12 @@ static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
 	unsigned int * q = tlog_dat;  char bbuf[32];
 	for (i=tlog_ix_i; i<nxi; i++) {
 		int c = q[i]>>18; if ((c|1)=='q') cpu_austat = 'q'-c; else continue;
-		if (!i || (k=q[i-1]>>18)<4097) { LOG("unexp 'p' in tlog"); continue; }
+		if (!i || (k=q[i-1]>>18)<4097) {
+			if (++unexp<1001) LOG("unexp 'p' in tlog (cnt:%d)%s", unexp, 
+					unexp==1000?" -- this is the last message":"");
+			if (unexp>999888777) LOG("this is impossible."), kill(getppid(), 9);
+			continue; 
+		}
 		int v = (51 * ((q[i]&262143)+(q[i-1]&262143)) / (k-4096)) >> 5;
 		if (v>maxv) maxv = v;
 		if (++cnt>3) cnt = 0, bbuf[j] = min_i(maxv, 99), maxv = 0, j = j<31 ? j+1 : (++m,0);
