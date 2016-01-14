@@ -87,6 +87,7 @@ int fa_start(fa_writer * fa, int nch);
 int fa_add12(fa_writer * fa, const double * x, const double * y, int n);
 int fa_end(fa_writer * fa);
 void samp_stat(const double *p, int n, int k, bool dB, double dBy, double *pmin, double *pmax, double *pavg);
+int coward(const char * fn);
 
 class Scale01 {
 	public:

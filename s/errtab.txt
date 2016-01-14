@@ -20,6 +20,8 @@ EEE_ENVUNDEF missing environment variable
 EEE_NOPRC    process missing
 EEE_STATE    either you can click very fast or you have found a bug
 EEE_SUM      errors in save file (see console/log for details)
+EEE_COWARD   file doesn't look like an lflab save -- refusing to overwrite
+EEE_BACKUP   backup failed
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box

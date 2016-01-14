@@ -6,7 +6,7 @@
 
 void bye(int x) {
 	if (x&256 || (glob_flg&GLF_FINAL_ASV)) fprintf(stderr, "skipping autosave\n");
-	else glob_flg |= GLF_FINAL_ASV, Node::save_batch(Node::root(), "__autosave", NOF_FORCE);
+	else glob_flg |= GLF_FINAL_ASV, Node::save_batch(Node::root(), "/", NOF_FORCE);
 	delete (Gnuplot::sg());
 	exit(x&255);
 }

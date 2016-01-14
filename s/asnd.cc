@@ -18,7 +18,7 @@
 static fa_writer fa_wr;
 
 int ASnd::cond_clk(int * p, int min_us) { int sd = m_clk_sec - p[0];
-	return (sd>1800 || (1000000*sd+m_clk_usec-p[1]) >= min_us) && (p[0]=m_clk_sec, p[1]=m_clk_usec, 1); }
+	return (sd>2100 || (1000000*sd+m_clk_usec-p[1]) >= min_us) && (p[0]=m_clk_sec, p[1]=m_clk_usec, 1); }
 
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
@@ -161,7 +161,7 @@ void ASnd::c_play() {
 					 d59(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
 					 gui2.setwin(7,'.'), gui2.wupd_s('W', m_hcp_lbl), ec = 0;
 	}
-	int ae = m_state ? snd_pcm_writei(m_hnd, buf, nf) : nf;
+	int ae = m_state ? snd_pcm_writei(m_hnd, buf, nf) : (glob_flg |= GLF_SILENCE, nf);
 	if (ae<0) { if (recover(ae, "play1", AUE_PLAYRCV)) return;
 		    ae = snd_pcm_writei(m_hnd, buf, nf);
 		    if (ae<0) return err(ae, "play1/2", AUE_WRITEI), (void)close();

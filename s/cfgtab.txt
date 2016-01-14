@@ -8,3 +8,8 @@ AU_CLKLIM   |i|100        |0   |250  |aclkt |time limit for setclk (only for acl
 AU_TRY_N    |i|10         |1   |99   |artn  |(re)try audio init x times
 AU_TRY_MS   |i|50         |10  |250  |artt  |millisecs. to wait between audio init retry
 AU_KILL_PA  |i|0          |0   |3    |kpa   |pulseaudio: 0-don't kill 1-sig15 3-sig9
+SV_BACKUP   |i|5          |1   |9    |svbk  |# of backups for save file
+ASV_BACKUP  |i|5          |1   |9    |asbk  |# of backups for autosave
+ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosave (0: none)
+TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit
+TLOG_BACKUP |i|2          |0   |9    |tkbk  |# of backups for tlog

@@ -651,6 +651,7 @@ int mx_calc_int(int ix, short * to, au16w_t * cfg, fa_writer * fa, int n) {
 cp:	if (cfg) for (s=cfg->cp; (k=*s); s++) for (j=k&15, k=(k>>4)-j; j<n2; j+=s_nch) to[j+k]=to[j];
 	goto done;
 ze:	if (r) return r;
+	glob_flg |= GLF_SILENCE;
 	if (fa) fa_add12(fa, zeroblkD, f_nch?zeroblkD:0, f_nch*n);
 	if (oflg && !(oflg&128)) memset(to, 0, 2*n2);
 done:	return ec<0 ? MXE_HCPFAIL : 0;

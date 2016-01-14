@@ -23,8 +23,8 @@ double sample_length = 1.0/44100.0;
 char mostly_zero[0x8080];
 double junkbuf[4096];
 char save_file_name[1024];
-const char * tmp_dir;
-int tmp_dir_len;
+const char *tmp_dir,    *usr_dir, *autosave_name;
+int         tmp_dir_len, usr_dir_len;
 
 GuiStub gui2;
 JobQ jobq;
@@ -32,6 +32,7 @@ ASnd snd0;
 
 #define N_SLCMD 4
 static CmdBuf sl_cmd[N_SLCMD];
+static int asv_ts[2];
 
 void hi() { log("linear filter lab %d.%02d\n%s\n%s\n%s", v_major, v_minor,
 	    "Copyright (C) 2014-2015 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
@@ -85,6 +86,8 @@ static void sel_loop() {
 		if (gui2.pending()) snd0.mark('G'), gui2.flush_all();
 		if ((nj=jobq.nj())){ while (snd0.time4job()&&jobq.run());  jobq.upd_gui(0), nj=jobq.purge(); }
 		snd0.c_play();
+		if ((glob_flg&GLF_SILENCE) && (glob_flg&=~GLF_SILENCE, r=CFG_ASV_MIN.i) &&
+				snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
 int main(int ac, char** av) { ini0(); rf(av+1, ac-1); ini1(); sel_loop(); }

@@ -531,3 +531,13 @@ double Scale01::f(double x) { double z; switch(m_ty) {
                 default: return 0.0;
 }}
 
+///
+int coward(const char * fn) {
+	int r, fd = open(fn, O_RDONLY); if (fd<0) return 0;
+	char buf[32]; memset(buf, 0, 32);
+	r = (read(fd,buf,32)>0) && memcmp(buf, "# lflab save file\n_V", 20)
+				&& memcmp(buf, "#!/usr/bin/lflab\n_V", 19)
+				&& memcmp(buf, "_V0.4\n:TN.$F", 12)
+				&& memcmp(buf, "_V0.4\n::F:RC", 12);
+	close(fd); return r;
+}

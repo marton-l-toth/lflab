@@ -1438,8 +1438,12 @@ int Node::chkwin(int oid) {
 }
 
 int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
-	if (!fn || !*fn) fn = save_file_name; else strncpy(save_file_name, fn, 1023), gui2.savename();
-	if (backup(fn, 5)<0) log("WARNING: backup failed: %s", strerror(errno));
+	if (!fn || !*fn) { if (coward(fn = save_file_name)) return EEE_COWARD; }
+	else if (*fn=='/' && !fn[1]) { fn = autosave_name; }
+	else if (coward(fn)) { return EEE_COWARD; }
+	else { strncpy(save_file_name, fn, 1023), gui2.savename(); }
+	if (backup(fn, 5)<0) gui2.errq_add(EEE_ERRNO), gui2.errq_add(EEE_BACKUP),
+			     log("WARNING: backup failed: %s", strerror(errno));
 	Clock clk; clk.reset();
 	log("saving to \"%s\"...", fn);
 	if (ANode::m0_lock) {
