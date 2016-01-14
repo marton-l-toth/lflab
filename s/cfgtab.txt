@@ -13,3 +13,4 @@ ASV_BACKUP  |i|5          |1   |9    |asbk  |# of backups for autosave
 ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosave (0: none)
 TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit
 TLOG_BACKUP |i|2          |0   |9    |tkbk  |# of backups for tlog
+DEVEL       |i|0          |0   |1    |devel |allow non-ready features (at your own risk)

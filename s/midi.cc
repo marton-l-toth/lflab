@@ -9,6 +9,7 @@
 #include "uc1.h"
 #include "glob.h"
 #include "errtab.inc"
+#include "cfgtab.inc"
 
 int rawmidi_desc(char *to, int id, int maxlen); //asnd.cc
 
@@ -102,6 +103,7 @@ void midi_input(int i) {
 }
 
 void midi_init() {
+	if (!CFG_DEVEL.i) return;
 	memcpy(devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32];
 	int n = find_dev(buf, 1, 32);
