@@ -89,6 +89,7 @@ int ASnd::hcp_end(int f) { return !(f|m_hcp) ? EEE_NOEFF : (m_hcp = 0, gui2.acv_
 int ASnd::set_clk(int lim) {
 	struct timeval tv0, tv1;
 	if (gettimeofday(&tv0, 0)<0) return log("gettimeofday failed"), -1;
+	if (!m_hnd) return m_clk_sec = tv0.tv_sec, m_clk_usec = tv0.tv_usec, m_clk_buf = m_t_half, 0;
 	int e1 = snd_pcm_writei(m_hnd, zeroblkC, 64); if (e1<0) return err(e1, "write 64*zero"), -1;
 	int av = avail();
 	if (gettimeofday(&tv1, 0)<0) return log("gettimeofday failed"), -1;
@@ -149,8 +150,9 @@ void ASnd::jt_flush() {
 }
 
 void ASnd::c_play() {
-	int t = clk(); if (t>m_t_half) return (void) (m_ev_arg = 'P');
-	int nf = ((m_t_full - t) * m_fp32m) >> 15; if (nf>4095) nf = 4095;
+	int t = clk(); if (!m_hnd && (t<0 || t>2*m_t_full)) return (void) set_clk(0);
+	if (t>m_t_half) return (void) (m_ev_arg = 'P');
+	int nf = ((m_t_full - t) * m_fp32m) >> 15; if ((unsigned int)nf>4095u) nf = 4095;
 	short buf[nf*m_cfg.nch];
 	int ec = 0, mxr = mx_calc_int(m_mxid, buf, &m_cfg, m_hcp?&fa_wr : 0, nf);
 	if (mxr<0) gui_errq_add(mxr);
