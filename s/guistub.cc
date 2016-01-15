@@ -7,6 +7,7 @@
 #include "mx.h"
 #include "pt.h"
 #include "asnd.h"
+#include "cfgtab.inc"
 
 void gui_closewin(int x) { gui2.closewin(x); }
 void gui_errq_add(int x) { gui2.errq_add(x); }
@@ -149,7 +150,7 @@ void GuiStub::node_rm(int i, ANode * nd) {
 	c2(9, 'N'); hex5(dir->id()); c2(i+49, '-'); hex5(nd->id());
 }
 
-void GuiStub::acv_open(int j) { cre(ACV_WIN(j),'A'); hex8(j); }
+void GuiStub::acv_open(int j) { cre(ACV_WIN(j),'A'); sz(au_file_name(j, 0)); }
 void GuiStub::flush_all() { cfl(); slr_upd(); errq_cfl(); flush(); }
 
 void GuiStub::j_upd(int wwt, int st, int wwix) {
@@ -169,7 +170,20 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 	sn("(no ", 4); sz(defstr); sn(" box)", 5);
 }
 
+void GuiStub::mcfg_win(int flg) {
+	if (flg&   1) cre(0x57, 'F'); else setwin(0x57, 'F');
+	if (flg&   2) t0(), c1('s'), sz(save_file_name);
+	if (flg&   4) wupd_i1('s', CFG_SV_EXEC.i);
+	if (flg&   8) wupd_i2('a', CFG_ASV_MIN.i);
+	if (flg&  16) wupd_i1('t', CFG_TLOG_AUTO.i);
+	if (flg&  32) wupd_i1('S', CFG_SV_BACKUP.i);
+	if (flg&  64) wupd_i1('A', CFG_ASV_BACKUP.i);
+	if (flg& 128) wupd_i1('T', CFG_TLOG_BACKUP.i);
+	if (flg& 256) wupd_s ('k', CFG_AO_DIR.s);
+	if (flg& 512) wupd_i1('d', CFG_DEVEL.i);
+}
+
 void GuiStub::savename() { const char *p, *s = save_file_name;
-	for (p=s; *p; p++) if (*p=='/') s=p+1;
+	mcfg_win(2);  for (p=s; *p; p++) if (*p=='/') s=p+1;  
 	setwin( 7,'.'); wupd_s('N',","); sz(s); setwin(23,'/'); wupd_s('1',save_file_name); }
 

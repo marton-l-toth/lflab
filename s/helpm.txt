@@ -216,11 +216,39 @@ device is attempted, and how many msecs. to wait in between.
 In most cases clock mode can be left unchanged ("retBS").
 ---
 "kill PA" means to forcibly stop pulseaudio (see link above).
-Finally, you can restart the audio from this window, thus
-applyingf settingsm, (roughly equivalent to ctrl+right-clicking
-the CPU meter twice), and save the config to the lf.ini file 
-(in ".lf" dir. under your home directory).
-All these settings can also be specified in the command line.
+You can restart the audio from this window, applying settings.
+(roughly equivalent to ctrl+right-clicking the CPU meter twice)
+There is only one config file, so "save" is the same as in:
+==> win.config
+{{{?._wcf}}}
+Here you can change (and save) some settings (which are also 
+available from the lflab command line)
+dev" - features under development (at your own risk :))
+sv.exec - save files will be executable (quasi-script)
+min/asv - autosave every x minutes (*) (0: off)
+au.tlog - automatically write timing log on exit (max. 4MB)
+{sv|as|tl}.bkup - max # of backup copies for save, a.sv. & tlog
+(*) autosave is only made when there is no sound being played,
+to avoid unpleasant buffer underruns.
+---
+Some directory paths are shown for information: current dir is
+relevant for save files without (or with a relative) path, logs
+and autosaves go to the user directory, instdir is where lflab
+is installed, and workdir is only interesting when you want to
+send lflab commands via the "<workdir>/A" pipe.
+---
+You can change the target directory for temporary audio files:
+==> win.auconv
+Unless you are short on RAM, you should leave it to empty, so
+they are written to tmp.dir (/run/shm, which is a ramdisk; if
+there is none, /tmp is used instead). When you write these
+files to a real disk (even SSD) you should decrease audio speed
+and/or increase reserve buffer to avoid buffer underrun.
+---
+Finally, you can save settings to the file "<userdir>/lf.ini".
+Since there is only one ini file (not counting the backups),
+this button saves all config, just like the save button in:
+==> win.audio
 {{{?._wtr}}}
 Tree view: here you can browse and edit the object tree.
 (The same tree is visible on the left and right side.)

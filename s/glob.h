@@ -20,7 +20,7 @@
 #define DFLG_GRTMP 0x1000
 #define DFLG_RWMIDI 0x2000
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk\n"\
-		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(tmpfile) 2000:midi-rw(ini only)"
+		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only)"
 
 extern int glob_flg;
 extern int debug_flags;
@@ -32,8 +32,8 @@ extern char mostly_zero[0x8080];
 extern double junkbuf[4096];
 extern char save_file_name[1024];
 
-extern const char *tmp_dir,    *usr_dir, *autosave_name;
-extern int 	   tmp_dir_len, usr_dir_len;
+extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name;
+extern int 	   tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 extern int v_major, v_minor;
 

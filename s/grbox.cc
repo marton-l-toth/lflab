@@ -130,8 +130,8 @@ int Dot::start() {
 void Dot::flush() {
 	static char * t_dot = 0;
 	if (debug_flags & DFLG_GRTMP) {
-		if (!t_dot) t_dot = (char*)malloc(tmp_dir_len+8), memcpy(t_dot, tmp_dir, tmp_dir_len),
-								  memcpy(t_dot+tmp_dir_len, "/gr.dot", 8);
+		if (!t_dot) t_dot = (char*)malloc(wrk_dir_len+8), memcpy(t_dot, wrk_dir, wrk_dir_len),
+								  memcpy(t_dot+wrk_dir_len, "/gr.dot", 8);
 		int fd = creat(t_dot, 0644);
 		if (fd<0) perror(t_dot);
 		else write(fd, m_buf, m_n), close(fd);

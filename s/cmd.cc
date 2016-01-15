@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "util.h"
+#include "util2.h"
 #include "cmd.h"
 #include "glob.h"
 #include "pzrf.h"
@@ -15,6 +16,7 @@
 #include "asnd.h"
 #include "pt.h"
 #include "midi.h"
+#include "cfgtab.inc"
 
 #define CMD_NODE(T) T##Node* nd = dynamic_cast<T##Node*>(p->m_c_node); if (!nd) return GCE_EX##T
 
@@ -54,7 +56,7 @@ class CmdTab {
                 static int c_sv2(CmdBuf * p) { CMD_NODE(ADir); return Node::save_batch(nd, p->m_c_a1, p->m_c_nof&NOF_FORCE); }
 		static int c_iofw(CmdBuf * p) { return pt_iocmd(p->m_c_a0); }
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0-48; return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
-		static dfun_t c_cre, c_vol, c_misc, c_nadm, c_closewin, c_tree, c_stat,
+		static dfun_t c_cre, c_vol, c_misc, c_nadm, c_closewin, c_tree, c_stat, c_cfg,
 			      c_efw, c_wfw, c_xfw, c_win, c_job, c_pfx, c_cont, c_live;
 };
 
@@ -273,6 +275,23 @@ int CmdTab::c_stat(CmdBuf * p) {
 
 static void log_load(int n) { for (int i=0; i<n; i++) log("log load test ------------------------- #%d", i); }
 
+int CmdTab::c_cfg(CmdBuf * p) {
+	const char *s = p->m_c_a0; int f = 0; switch(*(s++)) {
+		case '>': return cfg_write();
+		case 's': CFG_SV_EXEC.i = *s&1; f = 4; break;
+		case 'a': intv_cmd(&CFG_ASV_MIN.i, s, 0, 35, 0x33330501); f = 8; break;
+		case 't': CFG_TLOG_AUTO.i = *s&1; f = 16; break;
+		case 'S': intv_cmd(&CFG_SV_BACKUP.i,   s, 0, 9); f =  32; break;
+		case 'A': intv_cmd(&CFG_ASV_BACKUP.i,  s, 0, 9); f =  64; break;
+		case 'T': intv_cmd(&CFG_TLOG_BACKUP.i, s, 0, 9); f = 128; break;
+		case 'k': return (f=strlen(s))<255 ? (cfg_setstr(&CFG_AO_DIR, s),0) : EEE_LONGSTR;
+		case 'd': CFG_DEVEL.i = *s&1; f = 512; break;
+		case 'W': f = -1; break;
+		default:  return GCE_UCFG;
+	}
+	return gui2.mcfg_win(f), 0;
+}
+
 int CmdTab::c_misc(CmdBuf * p) {
 	int i,j; switch(*p->m_c_a0) {
 		case 'g': Gnuplot::sg() -> restart(); return 0;
@@ -339,7 +358,7 @@ int CmdTab::c_live(CmdBuf *p) {
 
 char CmdTab::m0_chtab[128];
 CmdTab::ent_t CmdTab::m0_tab[] = {
-{'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2},
+{'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2}, {'c', c_cfg},
 {'/',c_stat}, {'C'|CF_NODE1,c_cre}, {'N'|CF_NODE1,c_nadm}, {'I'|CF_NODE,c_info}, {'S'|CF_NODE1,c_sv2},
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},

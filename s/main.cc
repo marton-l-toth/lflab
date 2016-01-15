@@ -23,8 +23,8 @@ double sample_length = 1.0/44100.0;
 char mostly_zero[0x8080];
 double junkbuf[4096];
 char save_file_name[1024];
-const char *tmp_dir,    *usr_dir, *autosave_name;
-int         tmp_dir_len, usr_dir_len;
+const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name;
+int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 GuiStub gui2;
 JobQ jobq;

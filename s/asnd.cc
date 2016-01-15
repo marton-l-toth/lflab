@@ -81,7 +81,7 @@ int ASnd::start1(int sc_lim) {
         return m_bsiz_ref = CFG_AU_CLK.i==2 ? bsiz : -CFG_AU_CLK.i, set_clk(sc_lim);
 }
 
-int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_ERRNO : 
+int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
 		(m_hcp = t, m_hcp_s0 = 0x7fffffff, memcpy(m_hcp_lbl, "R --:--", 8), 0)); }
 int ASnd::hcp_end(int f) { return !(f|m_hcp) ? EEE_NOEFF : (m_hcp = 0, gui2.acv_open(fa_wr.id),
 	gui2.setwin(7,'.'), gui2.wupd_s('W',"rec"), fa_end(&fa_wr)<0 ? EEE_ERRNO : 0); }

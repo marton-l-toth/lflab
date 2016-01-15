@@ -101,35 +101,16 @@ void pt_chld_act() { BVFOR_JM(pt_chld_flg) {
 	q->t = (q->pid = pid) > 0 ? t : 0;
 } pt_chld_flg = 0; }
 
-const char * pt_acv_nm(int id, int j) { 
-	static char *buf2, *buf3, *buf = 0; // tmp/8.4 tmp/8.4 home/8.4
-	static int tlen, hlen;
-	if (!buf) {
-		const char *s1 = getenv("LF_TMPROOT"), *s2 = getenv("HOME");
-		tlen = s1 ? strlen(s1) : (s1="/tmp", 4);
-		hlen = s2 ? strlen(s2) : (s2="/tmp", 4);
-		buf = (char*)malloc(2*tlen + hlen + 45); buf2 = buf+tlen+15; buf3 = buf2+tlen+15;
-		memcpy(buf , s1, tlen); buf [tlen] = '/';
-		memcpy(buf2, s1, tlen); buf2[tlen] = '/';
-		memcpy(buf3, s2, hlen); buf3[hlen] = '/'; tlen++, hlen++;
-	}
-	const char * ext = (j&1) ? "flac" : "wav";
-	switch(j&6) {
-		case 0: return sprintf(buf+tlen, "%08x.a20", id), buf;
-		case 2: return sprintf(buf2+tlen, "%08x.%s", id, ext), buf2+tlen;
-		case 6: return sprintf(buf2+tlen, "%08x.%s", id, ext), buf2;
-		case 4: return sprintf(buf3+hlen, "%08x.%s", id, ext), buf3;
-		default: return "WTF";
-	}}
-
 int pt_acv_op(int id, int op) {
 	static const char * acv_bin = 0; if (!acv_bin && !(acv_bin=getenv("LF_BB"))) acv_bin="lf.bb";
-	int pid = 0;
+	int pid = 0;  const char *src, *trg;
 	switch(op) {
 		case 0:   gui_closewin(ACV_WIN(id)); return 0;
-		case 0xd: pid = launch("/bin/rm", "!(kk", pt_acv_nm(id, 0), (char*)0); break;
+		case 0xd: pid = launch("/bin/rm", "!(kk", au_file_name(id, 0), (char*)0); break;
 		default:  if (op<2 || op>7) return BXE_PARSE;
-			  pid = launch(acv_bin, "(kk", "lf.acv", "-r", pt_acv_nm(id,0), pt_acv_nm(id,op),(char*)0);
+			  src = au_file_name(id,0); trg = au_file_name(id,op);
+			  log("auconv: src=\"%s\", trg=\"%s\"", src, trg);
+			  pid = launch(acv_bin, "(kk", "lf.acv", "-r", src, trg, (char*)0);
 			  break;
 	}
 	return  (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
@@ -144,8 +125,10 @@ void pt_init() {
         const char * kfn = getenv("LF_KILLER");
         int fd = -1, k = kfn ? open(kfn, O_RDONLY) : -1;
         killer_fd = k ? k : dup(0);
-	if ((tmp_dir=getenv("LF_TMPDIR")))  tmp_dir_len=strlen(tmp_dir); else tmp_dir="/tmp", tmp_dir_len=4;
+	if ((wrk_dir=getenv("LF_TMPDIR")))  wrk_dir_len=strlen(wrk_dir); else wrk_dir="/tmp", wrk_dir_len=4;
+	if ((tmp_dir=getenv("LF_TMPROOT"))) tmp_dir_len=strlen(tmp_dir); else tmp_dir="/tmp", tmp_dir_len=4;
 	if ((usr_dir=getenv("LF_USERDIR"))) usr_dir_len=strlen(usr_dir); else usr_dir="/tmp", usr_dir_len=4;
+	if ((hsh_dir=getenv("HOME")))       hsh_dir_len=strlen(hsh_dir); else hsh_dir="/tmp", hsh_dir_len=4;
 	char *s = (char*)malloc(usr_dir_len+10); memcpy(s, usr_dir, usr_dir_len);
 	memcpy(s+usr_dir_len,  "/__asv.lf", 10); autosave_name = s;
 	if (!(pt_logf_name = getenv("LF_LOG"))) pt_logf_name = "/tmp/lf.noenv.log";

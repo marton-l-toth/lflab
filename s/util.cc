@@ -66,13 +66,14 @@ void cfg_init() {
 
 int cfg_write() {
 	const char * fn = getenv("LF_INIFILE"); if (!fn) return EEE_ENVUNDEF;
+	backup(fn, 9);
 	FILE * f = fopen(fn, "w"); if (!f) return EEE_ERRNO;
 	for (cfg_ent * p = cfg_tab+1; p->s_vd; p++) {
 		int k = (p->i_m==0x7fffffff) ? fprintf(f, "%s=\"%s\"\n", p->s_vd, p->s)
 					     : fprintf(f, "%s=%d\n", p->s_vd, p->i);
 		if (k<=0) return k ? EEE_ERRNO : EEE_ZEROLEN;
 	}
-	return fclose(f)<0 ? EEE_ERRNO : 0;
+	return fclose(f)<0 ? EEE_ERRNO : (log("config written to \"%s\"", fn), 0);
 }
 
 int u_sleep(int x) {
@@ -456,19 +457,31 @@ static int fa_w2k(fa_writer * fa, int fl) {
         return 0;
 }
 
+const char * au_file_name(int id, int j) {
+	static char *srcp = 0, *dstp = 0;
+	const char *dir, *ext; int dlen, elen;
+	switch(j&6) {
+		case 0:
+		case 6: if (*(dir=CFG_AO_DIR.s)) dlen = CFG_AO_DIR.i;
+			else  dir=tmp_dir, 	 dlen = tmp_dir_len;     break;
+		case 2: dir = ".", dlen = 1; break;
+		case 4: dir = hsh_dir, dlen = hsh_dir_len; break;
+		default: return "WTF";
+	}
+	if (!j) ext=FA_SUFFIX, elen=FA_SUFFIX_ZLEN; else ext = ".wav\0.flac"+5*(j&1), elen = 5+(j&1);
+	char **pp = j ? &dstp : &srcp, *p = *pp = (char*)realloc(*pp, dlen+9+elen);
+	memcpy(p, dir, dlen); p[dlen] = '/'; sprintf(p+dlen+1, "%08x", id); memcpy(p+dlen+9, ext, elen);
+	return p;
+}
+
 int fa_start(fa_writer * fa, int nch) {
-	static int id = 0;
-        static int hxpos = 0;
-        static char * nm = 0;
+	static int id = -1;
         fa->cnt = fa->fd = fa->cur = 0;
-        if (!nm) {
-		id = time(NULL);
-                const char * s = getenv("LF_AUDIR"); if (!s) s = "/run/shm";
-                int l = strlen(s); memcpy(nm=(char*)malloc(l+16), s, l);
-                nm[l] = '/'; hxpos = l + 1;
-        }
-        sprintf(nm+hxpos, "%08x.a20", id); fa->id = id++;
-        fa->nch = nch; return (fa->fd = creat(nm, 0600))<0 ? EEE_ERRNO : 0;
+        if (id<0) id = time(NULL); else ++id;
+	const char * nm = au_file_name(fa->id = id, 0);
+	fa->nch = nch; 
+	int r = fa->fd = creat(nm, 0600);
+	return (r<0) ? (gui_errq_add(EEE_ERRNO), log("autmp: \"%s\": %s", nm, strerror(errno)), EEE_A20) : 0;
 }
 
 int fa_add12(fa_writer * fa, const double * x, const double * y, int n) { while (1) {

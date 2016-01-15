@@ -22,6 +22,8 @@ EEE_STATE    either you can click very fast or you have found a bug
 EEE_SUM      errors in save file (see console/log for details)
 EEE_COWARD   file doesn't look like an lflab save -- refusing to overwrite
 EEE_BACKUP   backup failed
+EEE_A20      tmp audio open/write failed (path/permission problem?)
+EEE_LONGSTR  string too long
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
@@ -113,6 +115,7 @@ GCE_WHAT     undefined command
 GCE_UTREE    undefined tree-cmd
 GCE_UCLIP    undefined clipb-cmd
 GCE_UNADM    undefined n-adm-cmd
+GCE_UCFG     undefined cfg-cmd
 GCE_VOLARG   volume: expected 'x' or '0'...'9'
 GCE_UMISC    undefined misc (_?) command
 GCE_SORRY    sorry not yet implemented (cmd)

@@ -94,6 +94,7 @@ class GuiStub {
 		void j_upd(int wwt, int st, int wwix = -1);
 		void acv_open(int j);
 		void errq_add(int ec);
+		void mcfg_win(int flg);
 		void savename();
 	protected:
 		int m_pid, m_inpipe, m_outpipe, m_tpipe;

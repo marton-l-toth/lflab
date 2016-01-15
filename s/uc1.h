@@ -6,6 +6,9 @@
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define TRK_DEF_GWFR ((const unsigned char*)"$%\0")
 
+#define FA_SUFFIX ".a20"
+#define FA_SUFFIX_ZLEN 5
+
 typedef union _sthg {
 	double d; void *p; int i[2]; short s[4]; char c[8]; float f[2];
 } sthg;

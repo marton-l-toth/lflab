@@ -10,6 +10,7 @@
 #include "util.h"
 #include "util2.h"
 #include "contrib.h"
+#include "cfgtab.inc"
 
 ///////// decl ///////////////////////////////////////////////////////////////
 
@@ -1449,11 +1450,11 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	if (ANode::m0_lock) {
 		if (flg&NOF_FORCE) ANode::sv_end(); else return NDE_LOCK;
 	}
-	int ec, fd = creat(fn, 0755); if (fd<0) return EEE_ERRNO;
+	int ec, exef = !!CFG_SV_EXEC.i, fd = creat(fn, 0644+(0111&-exef)); if (fd<0) return EEE_ERRNO;
 	FILE * f = fdopen(fd, "w"); if (!f) return EEE_ERRNO;
 	// if (fprintf(f,"#!%s/lf\n",getenv("LF_DIR"))<=0) return EEE_ERRNO;
 	ANode::sv_start(new FOBuf(f), dir, flg);
-	if (fprintf(f,"# lflab save file\n")<=0) return EEE_ERRNO;
+	if (fprintf(f,"#%s\n", exef ? "!/usr/bin/lflab" : " lflab save file")<=0) return EEE_ERRNO;
 	if (fprintf(f,"_V%d.%d\n",v_major,v_minor)<=0) return EEE_ERRNO;
 	if (dir->id()) {
 		if (fprintf(f,":F:R")<=0) return EEE_ERRNO;

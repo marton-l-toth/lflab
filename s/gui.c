@@ -131,9 +131,9 @@ typedef struct _ob_box {
 } ob_box;
 
 
-static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel,
+static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, mcfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel;
-static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd;
+static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, mcfg_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
@@ -159,6 +159,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'E', 0         , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
 	{'S', 0         , acfg_skel, NULL },
+	{'F', 0         , mcfg_skel, mcfg_cmd },
 	{'J', 0         , in01_skel, NULL },
 	{ 0 , 0, 0, NULL } };
 
@@ -916,9 +917,9 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
 {0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
-{'.',13,0,12,4, "filter disp.audio configopen consoleflush log   write tlog  save config "
+{'.',14,0,12,4, "filter disp.audio configmain config open consoleflush log   write tlog  save config "
 	        "------------exit(autosv)------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
-		"_F  A0W _c-1*f  $!t _K  ####qq  ####q!  #%$6#%$3#%$9"},
+		"_F  A0W cW  _c-1*f  $!t c>  ####qq  ####q!  #%$6#%$3#%$9"},
 {'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
 {0,  3, 0, 7, 6, "[save] save(L)save(R)", "s%1   S@L$%1S@R$%1"},
 {'#',4, 0, 8, 3, "[focus] config  help    redraw  ", "$>*W$ N??M9 "},
@@ -1712,7 +1713,7 @@ static void daclb_skel(struct _ww_t * ww, const char **pp) {
 	int w = get_dec(pp, 36), w2 = 0;
 	int h = get_dec(pp, 36);
 	if (h<2) w2 = h, h = f2 ? 2*conf_lbh-6 : conf_lbh;
-	memcpy(ww->arg[2].c, "ZZZ666_", 8);
+	memcpy(ww->arg[2].c, "ppp666_", 8);
 	daclb_set(ww, pp, 0);
 	if (!w || w2) {
 		w2 = tx_len(conf_lbfh, ww->etc);
@@ -3152,7 +3153,7 @@ static void doc_cmd (struct _topwin * tw, char * s) {
 	if (*s=='!') s = help_lu(s+1);
 	int i, i0 = VB_WBASE(w), n = *(s++) - 48;
 	vbox_show_bv(w, (1<<n)-1); const char * ahh = s;
-	for (i=0; i<n; i++) daclb_set(widg_p(tw, i0+i), &ahh, 14), ahh+=(*ahh==36);
+	for (i=0; i<n; i++) daclb_set(widg_p(tw, i0+i), &ahh, 15), ahh+=(*ahh==36);
 }
 
 ///////////////// gui conf ///////////////////////////////////////////////////
@@ -3808,6 +3809,44 @@ static void err_skel (struct _topwin * tw, char * arg) {
 	if (w) gtk_widget_show(w);
 }
 
+///////////////// main config ////////////////////////////////////////////////
+
+static const char * curdir; static int curdir_l = 0;
+
+static void mcfg_cmd (struct _topwin * tw, char * s) {
+	if (*s!='s') return LOG("mcfg_cmd: invalid c=0x%x '%c'", *s, *s);
+	int len = strlen(++s)+1, absf = (*s=='/'), ofs = absf ? 0 : curdir_l+1;
+	ww_t *ww = widg_lookup_pci(tw, '7', -1);
+	char * q = (char*)(ww->etc = realloc(ww->etc, ofs+len));
+	if (!absf) memcpy(q, curdir, curdir_l), q[curdir_l] = '/';
+	memcpy(q+ofs, s, len); da_fullre(ww);
+}
+
+static void mcfg_skel (struct _topwin * tw, char * arg) {
+	static const char *d[7], *v[6] = {NULL, "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR", "LF_TLOG"};
+	if (!d[0]) {
+		char *s, buf[PATH_MAX+1]; buf[0] = 0; getcwd(buf, PATH_MAX);
+		int i, l = (curdir_l = strlen(buf))+1;
+		s = malloc(l); memcpy(s, buf, l); curdir = d[0] = s;
+		for (i=1; i<6; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>";
+		l = strlen(d[1]); s = malloc(l+10); memcpy(s, d[1], l); memcpy(s+l, "/__asv.lf", 10); d[6]=s;
+	}
+	const char *ws="[(3[{C7,?}{C6,?}{C5,?}]0[{Yssv.exec$cs}{8amin/asv$2ca}{Ytau.tlog$ct}]"
+	"[{8Ssv.bkup$1cS}{8Aas.bkup$1cA}{8Ttl.bkup$1cT}][3{B_ ? $$?win.config}0{Yddev$cd}])"
+	"{C_,audio tmpfile directory: (defaults to tmp.dir when left empty)}({__}{ek60$ck}{__})"
+	"([{L_cur.dir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]3[{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}])"
+	"{B_save$c>}]";
+	GtkWidget * w = NULL;
+	if (!tw->state) { 
+		tw->arg[0].p = w = parse_w_s(tw, ws);
+		memcpy(tw->title, "config", 6);
+		gtk_container_add (GTK_CONTAINER (tw->w), w);
+		int i; const char *s;
+		for (i=0; i<7; i++) s = d[i], daclb_set(widg_lookup_pci(tw, 48+i, 0), &s, 3);
+	} else {  gtk_window_present(GTK_WINDOW    (tw->w)); }
+	if (w) gtk_widget_show(w);
+}
+
 ///////////////// audio config ///////////////////////////////////////////////
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
@@ -3855,16 +3894,13 @@ static void a20_skel (struct _topwin * tw, char * arg) {
 	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws); 
 			  gtk_container_add (GTK_CONTAINER (tw->w), w);
 	} else {  gtk_window_present(GTK_WINDOW(tw->w)); }
-	if (arg) { 
-		int l = min_i(strlen(arg), 17); tw->cmdp_len=l+2; 
-		tw->cmdpref[0]='W'; memcpy(tw->cmdpref+1, arg, l); tw->cmdpref[l+1] = ':';
-		memcpy(tw->title, arg, l+1); 
-		const char * spath = getenv("LF_TMPROOT"); if (!spath) spath = "/tmp";
-		int spl = strlen(spath);
-		ww_t * ww = widg_lookup_ps(tw, "C"); if (ww->etc) free(ww->etc);
-		char * q = (char*) (ww->etc = malloc(spl+l+8));
-		memcpy(q, spath, spl); q[spl] = '/'; memcpy(q+spl+1, arg, l); memcpy(q+spl+l+1, ".a20", 5);
-	}
+	int l=0; if (arg && (l=strlen(arg)) >= FA_SUFFIX_ZLEN+7) {
+		char *cto = tw->cmdpref, *h8 = arg + l - (FA_SUFFIX_ZLEN+7);
+		cto[0] = 'W'; memcpy(cto+1, h8, 8); cto[9] = ':'; tw->cmdp_len = 10;
+		memcpy(tw->title, h8, 8); tw->title[8] = 0;
+		ww_t * ww = widg_lookup_ps(tw, "C"); 
+		memcpy (ww->etc = realloc(ww->etc, l+1), arg, l+1);
+	} else { LOG("auconv BUG: l=%d", l); }
 	if (w) gtk_widget_show(w);
 }
 ///////////////// calculator /////////////////////////////////////////////////
