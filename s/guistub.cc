@@ -51,7 +51,7 @@ int GuiStub::start() {
 	set_fd(&m_inpipe, pfi); set_fd(&m_outpipe, pfo); set_fd(&m_tpipe, pft);
 	log("m_tpipe = %d", m_tpipe);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor); 
-	savename(); flush();
+	savename(); set_tlog(); flush();
 	return 0;
 }
 
@@ -169,6 +169,9 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 	sn("ttt666", 6); if (!defstr) { sn("(none)", 6); return; }
 	sn("(no ", 4); sz(defstr); sn(" box)", 5);
 }
+
+void GuiStub::set_tlog() {
+	c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
 
 void GuiStub::mcfg_win(int flg) {
 	if (flg&   1) cre(0x57, 'F'); else setwin(0x57, 'F');

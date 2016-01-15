@@ -919,7 +919,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
 {'.',14,0,12,4, "filter disp.audio configmain config open consoleflush log   write tlog  save config "
 	        "------------exit(autosv)------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
-		"_F  A0W cW  _c-1*f  $!t c>  ####qq  ####q!  #%$6#%$3#%$9"},
+		"_F  A0W cW  _c-1*f  $!t c>  ####$!q1####$!q2#%$6#%$3#%$9"},
 {'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
 {0,  3, 0, 7, 6, "[save] save(L)save(R)", "s%1   S@L$%1S@R$%1"},
 {'#',4, 0, 8, 3, "[focus] config  help    redraw  ", "$>*W$ N??M9 "},
@@ -1360,6 +1360,7 @@ static cairo_surface_t * cpu_surf;
 static int cpu_austat = 1;
 static unsigned int tlog_dat[0x101000];
 static int tlog_ix_c = 0, tlog_ix_i = 0, tlog_wr = 0;
+static int tlog_c_onq = 0, tlog_c_bk = 0;
 
 static void dabmp_draw(ww_t * ww, cairo_t * cr2) {
 	static const double fg[2]={.2, 1.0}, bg[2]={.1,.3};
@@ -1403,7 +1404,7 @@ static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
 
 static void write_tlog() {
 	static const char *fn = 0; if (!fn && !(fn=getenv("LF_TLOG"))) fn = "lf.tlog";
-	backup(fn, 5);
+	backup(fn, tlog_c_bk);
 	LOG("write_tlog, expected file size: %d bytes", tlog_wr ? (1<<22) - 4*!!(tlog_ix_c&3) : 4*tlog_ix_i);
 	int n, k, fd = creat(fn, 0644); if (fd<0) return perror(fn);
 	if (tlog_wr && (n=(1<<22)-(k=(tlog_ix_c+3)&~3))) write(fd, (char*)tlog_dat + k, n);
@@ -3835,7 +3836,7 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 	"[{8Ssv.bkup$1cS}{8Aas.bkup$1cA}{8Ttl.bkup$1cT}][3{B_ ? $$?win.config}0{Yddev$cd}])"
 	"{C_,audio tmpfile directory: (defaults to tmp.dir when left empty)}({__}{ek60$ck}{__})"
 	"([{L_cur.dir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]3[{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}])"
-	"{B_save$c>}]";
+	"{B_saveCfg$c>}]";
 	GtkWidget * w = NULL;
 	if (!tw->state) { 
 		tw->arg[0].p = w = parse_w_s(tw, ws);
@@ -3852,7 +3853,7 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
 	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
-	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_save$_K}])]";
+	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
 	GtkWidget * w = NULL;
 	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws);
 			  memcpy(tw->title, "audio", 6);
@@ -4458,7 +4459,10 @@ static void cmd1(char * str) {
 	}
 	switch(k) {
 		case 0: return;
-		case 'q': LOG("bye"); bye(0);
+		case 'q': switch(*s&7) { case 0: LOG("bye"), bye(0); return; 
+					 case 1: if (tlog_c_onq) write_tlog(); CMD("~qq"); return;
+					 case 2: if (tlog_c_onq) write_tlog(); CMD("~q!"); return;
+				         default: LOG("q: invalid subcmd"); return; }
 		case '#': return;
 		case '+': 
 			  i = *(s++) - 48; t = *(s++);
@@ -4471,7 +4475,9 @@ static void cmd1(char * str) {
 			   else lsr_upd(i, s);
 			   return;
 		case 'v': memcpy(help_vpos, s, 4); return;
-		case 't': write_tlog(); return;
+		case 't': switch(*s) { case 'w': case 0: write_tlog(); return;
+				       case 'c': tlog_c_onq = (s[1]>63), tlog_c_bk = s[1]&15; return;
+				       default: LOG("t: invalid subcmd"); return; }
 		case 'd':
 			switch(*s) {
 				case 'S': sleep(1); return;

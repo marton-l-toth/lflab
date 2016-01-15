@@ -280,10 +280,10 @@ int CmdTab::c_cfg(CmdBuf * p) {
 		case '>': return cfg_write();
 		case 's': CFG_SV_EXEC.i = *s&1; f = 4; break;
 		case 'a': intv_cmd(&CFG_ASV_MIN.i, s, 0, 35, 0x33330501); f = 8; break;
-		case 't': CFG_TLOG_AUTO.i = *s&1; f = 16; break;
+		case 't': CFG_TLOG_AUTO.i = *s&1; f = 16; gui2.set_tlog(); break;
 		case 'S': intv_cmd(&CFG_SV_BACKUP.i,   s, 0, 9); f =  32; break;
 		case 'A': intv_cmd(&CFG_ASV_BACKUP.i,  s, 0, 9); f =  64; break;
-		case 'T': intv_cmd(&CFG_TLOG_BACKUP.i, s, 0, 9); f = 128; break;
+		case 'T': intv_cmd(&CFG_TLOG_BACKUP.i, s, 0, 9); f = 128; gui2.set_tlog(); break;
 		case 'k': return (f=strlen(s))<255 ? (cfg_setstr(&CFG_AO_DIR, s),0) : EEE_LONGSTR;
 		case 'd': CFG_DEVEL.i = *s&1; f = 512; break;
 		case 'W': f = -1; break;

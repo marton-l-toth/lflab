@@ -69,6 +69,7 @@ static void ini1() {
 	log("###tpipe=%d", gui2.tpipe());
 	if (getenv("LF_HITHERE")) snd0.w(-1);
 	snd0.cfg(gui2.tpipe(), 0); snd0.start();
+	snd0.cond_clk(asv_ts, 1);
 }
 
 #define FOR_SLC for (int k,i=0; i<N_SLCMD; i++) if ((k=sl_cmd[i].fd()) >= 0)
