@@ -223,7 +223,7 @@ There is only one config file, so "save" is the same as in:
 {{{?._wcf}}}
 Here you can change (and save) some settings (which are also 
 available from the lflab command line)
-dev" - features under development (at your own risk :))
+dev - features under development (at your own risk :))
 sv.exec - save files will be executable (quasi-script)
 min/asv - autosave every x minutes (*) (0: off)
 au.tlog - automatically write timing log on exit (max. 4MB)
@@ -306,15 +306,26 @@ Planned features (please don't take these as promises :) )
 {{{?._midd}}}
 If you want support for your favourite MIDI input device,
 please do as follows:
-1. open the console
+0. enable "dev" in main config to allow MIDI input, quit and
+restart lflab (will hang when another program is using one of
+your MIDI devices -- primarily this is why MIDI input is among 
+the "under development, at you own risk" features)
+1. open the console, type '?' and the (possibly precise) vendor
+and type of your MIDI input device (lines starting with '?'
+are echoed as "undefined command", and written to log)
 2. type a '?' character, followed by a short description of
 what are you going to do right now. (e.g. press and then
 release the first 5/last 5 keys, turn knobs, move sliders etc.)
-(your line will be echoed with a message "undefined command",
-and will be included in the log)
-3. do as you have promised in 2., until you finished with all
-buttons/keys/sliders/knobs/touchpads etc., go back to 2.
-4. flush log (or exit), and send the lf.log file
+to avoid confusion, press enter before proceeding to 3. (again,
+you should see your text echoed back as "undefined command".)
+3. do as you have promised in 2. (with keys try hitting them
+with different speeds, with knobs/sliders please reach both
+endpoints, for touchpads all 4 corners etc.)
+You should see messages starting with "midi_c". When you don't,
+either the Linux kernel does not see your device, or you have
+forgotten "dev" (see 0.)
+4. unless you finished all keys/controls/pads/etc. go back to 2
+5. flush log (or exit), and send me the lf.log file
 @@@
 {{{?._wwp}}}
 Small button on the left, below (or between) the sliders:
