@@ -74,7 +74,7 @@ class TrackGen : public BoxGen {
 		void sel0wn(sthg * bxw_rawptr, ANode * nd) {
 			TR_SEL_ID=nd->id(); sel0w(bxw_rawptr, nd->cth()->i, nd->cth()->j); }
  		BXCMD_DECL(TrackGen) c_rq, c_cx0, c_cx1, c_view, c_mv, c_stp, c_rec, c_upp, c_gcf, c_bpm, c_pl,
-				     c_qk;
+				     c_qk, c_cky;
 		int draw_bx_ini(int x, int ybv);
 		int draw_bx_1();
 		void w1b_pm(ANode * wb, int pm);
@@ -302,6 +302,14 @@ CH(upp){BXW_GETP(p); TR_UPP = atoi_h(s+1); return 0; }
 CH(gcf){return trk_g_parse(s+1, p->m_div, p->m_gwfr), 0; }
 CH(pl) {return s[1]>47 ? p->play(s[1]-48, atoi_h(s+2)) : BXE_PARSE; }
 CH(qk) {BXW_GETP(p); return p->grab_gsel(bxw_rawptr), ClipNode::kcp(2)->keyop_f(atoi_h(s+1),5,0,cb->cnof()); }
+CH(cky){int x = atoi_h(s+1); log("trk_qk: atoi_h(s+1) = %d", x); if (x!=53) return BXE_CENUM;
+	BXW_GETP(p); if (!TR_SEL_ID) return EEE_NOEFF;
+	ANode *nd0 = ANode::lookup_n_q(TR_SEL_ID), *nd = nd0->next();
+	int ec = Node::move(nd0, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()); if (ec<0) return ec;
+	while (nd->cth()->j<0x7fffffff && nd->cl_id()!='w') nd=nd->next();
+	if (nd->cl_id()=='w') TR_SEL_ID=nd->id(), p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr);
+	return ec;
+}
 
 CH(bpm){if (!intv_cmd(&p->m_bp10m,s+1,1,9999,0x64640a01)) return 0;
 	if (p->wnfl()) p->w_bpm(); if (p->m_mxctl) mx_c_bpm_ugly_hack(p->m_mxctl, p->m_bp10m); return 0; }
@@ -431,7 +439,7 @@ int TrackGen::save2(SvArg * sv) {
 
 BXCMD_DEF(TrackGen) { {8192+'\\',0}, {'R'|256, c_rq}, {'C'|256, c_cx1}, {'c'|256, c_cx0},
 	{'V'|256, c_view}, {'m'|256, c_mv}, {'s'|256, c_stp}, {'r', c_rec}, {'u'|256, c_upp},
-	{'g'|256, c_gcf}, {'b', c_bpm}, {'p'|256, c_pl}, {'Q', c_qk}, {0, 0} };
+	{'g'|256, c_gcf}, {'b', c_bpm}, {'p'|256, c_pl}, {'Q', c_qk}, {'K', c_cky}, {0, 0} };
 
 //export
 BoxGen * trk_mk(ABoxNode * nd, ANode * g0, ANode * g1) { return new TrackGen(nd,g0,g1); }

@@ -132,15 +132,16 @@ typedef struct _ob_box {
 
 
 static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, mcfg_skel,
-		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel;
-static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, mcfg_cmd;
-static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
+		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel,
+		     tkcf_skel;
+static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, mcfg_cmd, tkcf_cmd;
+static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel, dakcf_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
 static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_cmd, dacnt_cmd, dasep_cmd,
-                    daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd;
+                    daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd, dakcf_cmd;
 static ww_get_fun_t pv_get, entry_get, dagraph_get;
-static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk,
+static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
 static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, calc_vbl, gconf_vbl, doc_vbl, err_vbl;
 
@@ -161,6 +162,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'S', 0         , acfg_skel, NULL },
 	{'F', 0         , mcfg_skel, mcfg_cmd },
 	{'J', 0         , in01_skel, NULL },
+	{'k', 0         , tkcf_skel, tkcf_cmd },
 	{ 0 , 0, 0, NULL } };
 
 static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
@@ -182,6 +184,7 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'2', dabmp_skel, NULL, dabmp_cmd, dabmp_clk, WF_RESIZE },
 	{'_', dasep_skel, NULL, dasep_cmd, debug_clk, WF_RESIZE },
 	{'%', daprg_skel, NULL, daprg_cmd, daprg_clk, WF_RESIZE },
+	{'*', dakcf_skel, NULL, dakcf_cmd, dakcf_clk, WF_RESIZE|WF_BIGDA1|WF_KEYEV|WF_XM1EV},
 	{'#', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_KEYEV|WF_XM1EV},
 	{'+', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_XM1EV},
 	{'t', datrk_skel,  NULL, datrk_cmd, datrk_clk, WF_RESIZE | WF_BIGDA2 | WF_DTOR | WF_KEYEV},
@@ -2381,6 +2384,61 @@ static void tgrid_skel (struct _topwin * tw, char * arg) { const char * str =
 	gtk_widget_show(w); 
 }
 
+///////////////// keycfg /////////////////////////////////////////////////////
+
+#define KCF_IX(x) ((x)->arg[2].c[0])
+#define KCF_X(x)  ((x)->arg[2].c[1])
+#define KCF_Y(x)  ((x)->arg[2].c[2])
+
+static void dakcf_draw(ww_t * ww, cairo_t * cr2) {
+        short * a4 = ww->arg[4].s;
+        int x0 = a4[0], x1 = a4[2],
+            y0 = a4[1], y1 = a4[3];
+	int i, j, x, y, ix = KCF_IX(ww), wid = KCF_X(ww), heig = KCF_Y(ww);
+	int h1 = conf_lbh, w1 = (5*h1+2)>>2, wtot = wid*w1, htot = heig*h1;
+	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE); cairo_set_line_width(cr2, 2.0);
+	cairo_set_source_rgb(cr2, .05*(ix&4), .1*(ix&2), .2*(ix&1)); cairo_paint(cr2);
+	cairo_set_source_rgb(cr2, .8, .8, .8);
+	for (i=0; i<=wid; i++) if (x = 1+i*w1, x>=x0-1, x<=x1+1)
+		cairo_move_to(cr2, (double)x, 0.0), cairo_rel_line_to(cr2, 0.0, (double)(htot+2));
+	for (i=0; i<=heig;i++) if (y = 1+i*h1, y>=y0-1, y<=y1+1)
+		cairo_move_to(cr2, 0.0, (double)y), cairo_rel_line_to(cr2, (double)(wtot+2), 0.0);
+	cairo_stroke(cr2);
+}
+
+static void dakcf_cmd(struct _ww_t * ww, const char * s) {
+	if (!s) return dakcf_draw(ww, (cairo_t*)ww->arg[0].p);
+	switch(*s) {
+		case 's': KCF_X(ww) = b32_to_i(s[1]), KCF_Y(ww) = b32_to_i(s[2]); da_fullre(ww); return;
+		default: return LOG("dakcf:unknown cmd 0x%x/%c", *s, *s);
+	}}
+
+static void dakcf_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
+	LOG("kcf click!!"); }
+
+static void dakcf_skel(struct _ww_t * ww, const char **pp) {
+	int i = (*pp)[0] - 48; if ((unsigned int)i > 7u) goto err; else KCF_IX(ww) = i;
+	int x = (*pp)[1] - 48; if ((unsigned int)i > 30u) goto err; else KCF_X(ww)  = x;
+	int y = (*pp)[2] - 48; if ((unsigned int)i > 30u) goto err; else KCF_Y(ww)  = y;
+	da_skel(ww, ((5*conf_lbh+2)>>2)*x+2, conf_lbh*y+2); *pp += 3;
+err:    LOG("dakcf_skel: wrong arg");
+}
+
+static void tkcf_cmd (struct _topwin * tw, char * arg) {
+	LOG("tkcf: no commands yet"); }
+
+static void tkcf_skel (struct _topwin * tw, char * arg) { 
+	const char * str = "[{*0044}]";
+	GtkWidget * w = NULL;
+	LOG("tkcf: hello1");
+	if (tw->state) goto c;
+	LOG("tkcf: hello2");
+	tw->arg[0].p = w = parse_w(tw, &str);
+	gtk_container_add (GTK_CONTAINER (tw->w), w); 
+c:	if (arg) tkcf_cmd(tw, arg);
+	if (w) gtk_widget_show(w);
+}
+
 ///////////////// track //////////////////////////////////////////////////////
 
 #define TBXF_CRE 0x1000000
@@ -2828,8 +2886,9 @@ static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 
 static void datrk_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	if (b9<0) { if (b9!=-1) return;
-		    char buf[8]; buf[0]='X'; buf[1]='Q'; buf[2]=48+(cx>>4); buf[3]=hexc1(cx&15);
-		    buf[4] = 0; widg_defcmd(ww, buf); return; }
+		    int kch = DABOOL(widg_lookup_pci(ww->top, 'K', 0)) ? 'K' : 'Q';
+		    char buf[8]; buf[0]='X'; buf[1]=kch; *(int*)(buf+2) = qh4(cx); 
+		    buf[6] = 0; widg_defcmd(ww, buf); return; }
 	int wx = DA_W(ww), wy = DA_H(ww);
 	if (cy<20)    return trkclk_n(ww, b9, cx, ev); 
 	if (cy>wy-21) return trkclk_s(ww, b9, cx, ev); else cy -= 20;
@@ -3051,6 +3110,8 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 			case 'A': DABOOL(wn=widg_lookup_ps(tw,"A")) = !!((tc->gwfr[2]^=1)&1);
 				  da_fullre(wn); tsr_op(wt, 4098, -2); goto done;
 			default: break; }
+		case 'K':
+			wn = widg_lookup_pci(tw, 'K', 0); DABOOL(wn)^=1; da_fullre(wn); ++s; continue; 
 		default: LOG("ttrk: invalid cmd 0x%x \"%s\"", *s, s); goto done;
 	}}
 done:	tsr_op(wt, TSR_END, 0);
@@ -3061,7 +3122,7 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 	"[(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
 	  "({B<`<$Xs<}{MS*QWEQWE$Xc|T0}{B>`>$Xs>}{YAali$$>GA}"
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
-	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW})3{tt}]";
+	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW}{YKkeym$$>K})3{tt}]";
 	if (!tsc_mi) tsc_mi = menutab_lu('T', 0);
 	GtkWidget * w = NULL;
 	if (tw->state) { if (arg) ttrk_cmd(tw, arg); return; }

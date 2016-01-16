@@ -411,6 +411,10 @@ you can play/loop a part of the track
 ---
 every track can be used as a box (in graphs or instruments),
 with BPM and from-to-repeat as input (BPM can be non-constant)
+---
+'keym' selects keyboard mode -- when off, keys select sounds
+from the active clipboard, when on, they work as edit commands
+(currently only 'x' words for 'cut and select next')
 {{{?._wwcg}}}
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
