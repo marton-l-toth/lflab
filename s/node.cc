@@ -1153,11 +1153,12 @@ int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
 		return TKE_NOROOM;
 iok:    ;}
 	ANode *pv = nx->cth()->pv;
-	if (nx==that || pv==that) { log("trkadd/lmv"); trk_bkm_rm (m_box, that);
+	if (nx==that || pv==that) { if (debug_flags&DFLG_TRK) log("trkadd/lmv");
+				    trk_bkm_rm (m_box, that);
 			  	    if (wf)trk_cond_pm(m_box, that, '-');
 				    that->m_u24.t.i = i; that->m_u24.t.j = j;	
 				    chk_ord(that->cth()->pv,that,"lmv1"); chk_ord(that,that->next(),"lmv2"); }
-	else { log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
+	else { if  (debug_flags&DFLG_TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
 	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+'); return 0;
 }
 
