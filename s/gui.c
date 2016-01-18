@@ -22,6 +22,10 @@
 #define TWF_BOX 2
 #define TWF_CLIP 4
 #define TWF_OBJ 6
+#define TWF_YSIZE 8
+#define TWF_XSIZE 16
+#define TWF_XYSIZE (TWF_YSIZE|TWF_XSIZE)
+#define TWF_ABOVE 32
 
 #define WF_RESIZE 1
 #define WF_SURF 2
@@ -143,21 +147,21 @@ static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_c
 static ww_get_fun_t pv_get, entry_get, dagraph_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
-static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, calc_vbl, gconf_vbl, doc_vbl, err_vbl;
+static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
 
 static tw_cl tw_cltab[] = { {'?',0,NULL,NULL}, 
-	{'.', TWF_UNDEAD, mwin_skel, NULL },
+	{'.', TWF_UNDEAD|TWF_ABOVE, mwin_skel, NULL },
 	{'/', TWF_UNDEAD, t2win_skel, NULL },
-	{'K', 0         , clip_skel, NULL },
-	{'w', 0         , wrap_skel, wrap_cmd },
+	{'K', TWF_XYSIZE, clip_skel, NULL },
+	{'w', TWF_YSIZE , wrap_skel, wrap_cmd },
 	{'#', 0         , tgrid_skel, tgrid_cmd },
 	{'g', 0         , graph_skel, NULL },
 	{'P', 0         , pz_skel, NULL },
-	{'c', 0         , calc_skel, NULL },
+	{'c', TWF_YSIZE , calc_skel, NULL },
 	{'t', 0         , ttrk_skel, ttrk_cmd },
 	{'C', 0         , gconf_skel, gconf_cmd },
 	{'D', 0         , doc_skel, doc_cmd },
-	{'E', 0         , err_skel, err_cmd },
+	{'E', TWF_YSIZE , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
 	{'S', 0         , acfg_skel, NULL },
 	{'F', 0         , mcfg_skel, mcfg_cmd },
@@ -526,8 +530,30 @@ static void tw_bye(GtkWidget *w, gpointer p) {
 	tw_remove(tw); tw_free(tw);
 }
 
+static gboolean box_conf_2(GtkWidget *w, int c, gpointer p) {
+	if (dflg & DF_BOXCONF) { char ch = c; write(2, &ch, 1); }
+	topwin * tw = (topwin*) p;
+	if (!tw->arg[0].p) return TRUE;
+	GtkRequisition rq; gtk_widget_size_request (GTK_WIDGET(tw->arg[0].p),&rq);
+	if (rq.width == tw->arg[2].s[0] && rq.height == tw->arg[2].s[1]) return TRUE;
+	tw->arg[2].s[0] = rq.width; tw->arg[2].s[1] = rq.height;
+	if (dflg & DF_BOXCONF) LOG("box config:wi=%d, he=%d", rq.width, rq.height);
+	int cw, ch, flg = tw->cl->flg, xf = flg&TWF_XSIZE, yf = flg&TWF_YSIZE;
+	gtk_window_get_size(GTK_WINDOW(tw->w), &cw, &ch);
+	LOG("hello xf=%d yf=%d", xf, yf);
+	if (xf || cw<rq.width+4) cw = rq.width+4;
+	if (yf || ch<rq.height+4) ch = rq.height+4;
+	gtk_window_resize(GTK_WINDOW(tw->w), cw, ch);
+	return TRUE;
+}
+
+static gboolean box_conf(GtkWidget *w, GdkEventConfigure * ev, gpointer p) {
+	return box_conf_2(w, '#', p); }
+static gboolean box_xps(GtkWidget *w, GdkEventExpose * ev, gpointer p) {
+	return box_conf_2(w, '&', p); }
+
 static void topwin_skel(topwin * p, int cl_ch, char * arg) {
-	if (p->state) goto st1;
+	int nf = (!p->state); if (!nf) goto st1;
 	p->cl = tw_cltab + chtab_get(&tw_clch, cl_ch);
 	if (!p->cl) { LOG("topwin_skel: unknown tw class 0x%x '%c'", cl_ch, cl_ch); return; }
 	if (!p->cl->skel) { LOG("topwin_skel: undef skel fun: 0x%x '%c'", cl_ch, cl_ch); return; }
@@ -544,7 +570,17 @@ static void topwin_skel(topwin * p, int cl_ch, char * arg) {
 	memcpy(p->title, "...", 4);
 st1:	(*p->cl->skel)(p,arg); p->state = 1;
 	gtk_window_set_title(GTK_WINDOW(p->w), p->title);
-	gtk_widget_show(p->w);	
+	if (nf) {
+		GtkWidget * w = (GtkWidget*)(p->arg[0].p);
+		gtk_container_add (GTK_CONTAINER (p->w), w);
+		gtk_widget_show(w);
+		gtk_widget_show(p->w);	
+		if (p->cl->flg & TWF_ABOVE) 
+			gdk_window_set_keep_above(gtk_widget_get_window(GTK_WIDGET(p->w)), TRUE);
+		if (p->cl->flg & TWF_XYSIZE) 
+			g_signal_connect(w, "configure-event", G_CALLBACK(box_conf), (gpointer)p),
+			g_signal_connect(w, "expose-event", G_CALLBACK(box_xps), (gpointer)p);
+	}
 }
 
 static topwin * topwin_mk(int id, int cl_ch, char * arg) {
@@ -1157,6 +1193,7 @@ static void vbox_skel(struct _ww_t * ww, const char **pp) {
 		case 'g': ww->arg[3].p = &gconf_vbl; break;
 		case 'd': ww->arg[3].p = &doc_vbl; break;
 		case 'e': ww->arg[3].p = &err_vbl; break;
+		case 'K': ww->arg[3].p = &clip_vbl; break;
 		default: LOG("vbox: unknown subcl 0x%x(%c)",ty,ty); return;
 	}
 	VB_LMAX(ww) = *((*pp)++) - 48;
@@ -2051,24 +2088,16 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] 
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})",
 "({L0later}{L1...})"}; return parse_w_s(ww->top, str[ix]); }
 
-static gboolean box_conf_2(GtkWidget *w, int c, gpointer p) {
-	if (dflg & DF_BOXCONF) { char ch = c; write(2, &ch, 1); }
-	topwin * tw = (topwin*) p;
-	if (!tw->arg[0].p) return TRUE;
-	GtkRequisition rq; gtk_widget_size_request (GTK_WIDGET(tw->arg[0].p),&rq);
-	if (rq.width == tw->arg[2].s[0] && rq.height == tw->arg[2].s[1]) return TRUE;
-	tw->arg[2].s[0] = rq.width; tw->arg[2].s[1] = rq.height;
-	if (dflg & DF_BOXCONF) LOG("box config:wi=%d, he=%d", rq.width, rq.height);
-	int cw, ch; gtk_window_get_size(GTK_WINDOW(tw->w), &cw, &ch);
-	if (cw<rq.width+4) cw = rq.width+4;
-	gtk_window_resize(GTK_WINDOW(tw->w), cw, rq.height+4);
-	return TRUE;
+static void wrap_cmd (struct _topwin * tw, char * arg) {
+	int i, ix = hex2(arg), flg = hex2(arg+2), sh = (ix>>2)&24, j = (ix+(0x7000101>>sh)) & 31;
+	ww_t *p, *ww = widg_lookup_pci(tw, (0x455a4553 >> sh) & 127, -1);
+	int wi = VB_WBASE(ww) + j * VB_WPL(ww);
+	const char * s = arg + 4;
+	for (i=0; i<4; i++) if (flg&(1<<i))
+		get_tok((p = widg_p(tw, wi+((0x6320>>(4*i))&7)))->arg[2].c, 8, &s, 164), da_fullre(p);
+	for (i=0; i<3; i++) if (flg&(32<<i))
+		entry_set(widg_p(tw,wi+((0x541>>(4*i))&7)), hxdoub_str(NULL, s, 15)), s += 16;
 }
-
-static gboolean box_conf(GtkWidget *w, GdkEventConfigure * ev, gpointer p) {
-	return box_conf_2(w, '#', p); }
-static gboolean box_xps(GtkWidget *w, GdkEventExpose * ev, gpointer p) {
-	return box_conf_2(w, '&', p); }
 
 static void wrap_skel (struct _topwin * tw, char * arg) {
 	const char * str = 
@@ -2080,34 +2109,11 @@ static void wrap_skel (struct _topwin * tw, char * arg) {
 	        "(3()0{YG[#]$XWt0}{YAa.v$XWt1}{YWwav$XWt2}{Y:cfg$XWt3})])"
 		"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}"
 		"]";
-	GtkWidget * w = NULL;
-	if (!tw->state) {
-		tw->arg[0].p = w = parse_w_s(tw, str);
-		gtk_container_add (GTK_CONTAINER (tw->w), w);
-		g_signal_connect(w, "configure-event", G_CALLBACK(box_conf), (gpointer)tw);
-		g_signal_connect(w, "expose-event", G_CALLBACK(box_xps), (gpointer)tw);
-	}
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 	const char *s = arg;
 	if (*s) daclb_set(widg_lookup_ps(tw, "."), &s, 1);
-	if (!w) return;
-	int flg = tw->id & 1;
-	if (flg) {
-		tw->ix4 = 101;
-		WRAP_TABIX(tw) = 0;
-		//dalbl_cmd(widg_lookup_ps(tw, "G"), "s1");
-	}
-	gtk_widget_show(w); 
-}
-
-static void wrap_cmd (struct _topwin * tw, char * arg) {
-	int i, ix = hex2(arg), flg = hex2(arg+2), sh = (ix>>2)&24, j = (ix+(0x7000101>>sh)) & 31;
-	ww_t *p, *ww = widg_lookup_pci(tw, (0x455a4553 >> sh) & 127, -1);
-	int wi = VB_WBASE(ww) + j * VB_WPL(ww);
-	const char * s = arg + 4;
-	for (i=0; i<4; i++) if (flg&(1<<i))
-		get_tok((p = widg_p(tw, wi+((0x6320>>(4*i))&7)))->arg[2].c, 8, &s, 164), da_fullre(p);
-	for (i=0; i<3; i++) if (flg&(32<<i))
-		entry_set(widg_p(tw,wi+((0x541>>(4*i))&7)), hxdoub_str(NULL, s, 15)), s += 16;
+	if (tw->state) return;
+	if (tw->id & 1) tw->ix4 = 101, WRAP_TABIX(tw) = 0;
 }
 
 ///////////////// wrap/grid //////////////////////////////////////////////////
@@ -2373,15 +2379,12 @@ static void tgrid_skel (struct _topwin * tw, char * arg) { const char * str =
     "0{MMW.W$|#0}" //"0{MM+$G$|3$_3|set values (r-click)$_2|copy2clipb.(m-click)$?|help}"
     "7({!As1$332$c90}{!Bs2$332$c91}{!Cs3$332$c92}{!Ds4$332$c93}{!Es5$332$c94}{!Fs6$332$c95})]"
      "3{##XG})";
-	GtkWidget *w = NULL;
 	if (tw->state) { if (arg) tgrid_cmd(tw, arg); return; }
 	tw->ix4 = 3;
-	tw->arg[0].p = w = parse_w(tw, &str);
+	tw->arg[0].p = parse_w(tw, &str);
 	gtk_widget_show(GTK_WIDGET(tw->arg[3].p));
 	gtk_widget_show(GTK_WIDGET(tw->arg[4].p));
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
 	if (arg) tgrid_cmd(tw, arg);
-	gtk_widget_show(w); 
 }
 
 ///////////////// keycfg /////////////////////////////////////////////////////
@@ -2429,14 +2432,8 @@ static void tkcf_cmd (struct _topwin * tw, char * arg) {
 
 static void tkcf_skel (struct _topwin * tw, char * arg) { 
 	const char * str = "[{*0044}]";
-	GtkWidget * w = NULL;
-	LOG("tkcf: hello1");
-	if (tw->state) goto c;
-	LOG("tkcf: hello2");
-	tw->arg[0].p = w = parse_w(tw, &str);
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
-c:	if (arg) tkcf_cmd(tw, arg);
-	if (w) gtk_widget_show(w);
+	if (!tw->state) tw->arg[0].p = parse_w(tw, &str);
+  	if (arg) tkcf_cmd(tw, arg);
 }
 
 ///////////////// track //////////////////////////////////////////////////////
@@ -3124,13 +3121,10 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
 	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW}{YKkeym$$>K})3{tt}]";
 	if (!tsc_mi) tsc_mi = menutab_lu('T', 0);
-	GtkWidget * w = NULL;
 	if (tw->state) { if (arg) ttrk_cmd(tw, arg); return; }
-	tw->arg[0].p = w = parse_w(tw, &str);
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
+	tw->arg[0].p = parse_w(tw, &str);
 	if (arg) ttrk_cmd(tw, arg); 
 	trk_upd_wgd(widg_lookup_ps(tw, "t"),  7);
-	gtk_widget_show(w);
 }
 
 ///////////////// doc ////////////////////////////////////////////////////////
@@ -3200,14 +3194,9 @@ char * help_lu(const char * ky) {
 
 GtkWidget * doc_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "{C0448$0$%%%ccc}"); }
 
-static void doc_skel (struct _topwin * tw, char * arg) { const char * str = 
-	"[(3{C_300$1$ttt666...}0{__}{M_+$|+0}){:DdS10}]";
-	GtkWidget * w = NULL;
-	if (tw->state) goto c;
-	tw->arg[0].p = w = parse_w(tw, &str);
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
-c:	if (arg) doc_cmd(tw, arg);
-	if (w) gtk_widget_show(w);
+static void doc_skel (struct _topwin * tw, char * arg) {
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, "[(3{C_300$1$ttt666...}0{__}{M_+$|+0}){:DdS10}]");
+   	if (arg) doc_cmd(tw, arg);
 }
 
 static void doc_cmd (struct _topwin * tw, char * s) {
@@ -3237,15 +3226,12 @@ GtkWidget * gconf_vbl (struct _ww_t * ww, int ix) {
 static void gconf_skel (struct _topwin * tw, char * arg) { const char * str = 
   "([3({!rred$155$C0wy}{!ggrn$155$C1wy}{!bblu$155$C2wy})0(3{1w}[3{Byok$EG%.}{Bnno$EG!}])"
     "3({!Rred$155$C3wy}{!Ggrn$155$C4wy}{!Bblu$155$C5wy})]3{:LgN80})";
-	GtkWidget * w = NULL;
 	if (tw->state) { if (arg) gconf_cmd(tw, arg); return; }
 	tw->ix4 = 3;
-	tw->arg[0].p = w = parse_w(tw, &str);
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
+	tw->arg[0].p = parse_w(tw, &str);
 	ww_t * ww = widg_lookup_ps(tw, "w"); memcpy(ww->arg[3].c, "FG^vBGM:", 8);
 	ww = widg_lookup_ps(tw, "L."); vbox_cmd(ww, "+N");
 	if (arg) gconf_cmd(tw, arg);
-	gtk_widget_show(w);
 }
 
 static void gconf_cmd (struct _topwin * tw, char * s) {
@@ -3714,15 +3700,9 @@ static void graph_skel (struct _topwin * tw, char * arg) {
 	"{Maadd...$Xiz$|_0}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
 	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Bsshuffle$Xs})"
 	"3{ggX}]";
-	GtkWidget * w = NULL;
-	if (!tw->state) {
-		tw->arg[0].p = w = parse_w_s(tw, str);
-		gtk_container_add (GTK_CONTAINER (tw->w), w);
-	}
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 	if (s && *s) daclb_set(widg_lookup_ps(tw, "."), &s, 1);
-	if (!w) return;
-	gtk_widget_show(w); 
-	gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 400);
+	if (!tw->state) gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 400);
 }
 
 ///////////////// pole/zero //////////////////////////////////////////////////
@@ -3797,9 +3777,7 @@ static void dapz_cmd(struct _ww_t * ww, const char * arg) {
 }
 
 static void pz_skel (struct _topwin * tw, char * arg) {
-	GtkWidget * w = NULL;
-	if (!tw->state) gtk_container_add(GTK_CONTAINER (tw->w), w = w = parse_w_s(tw, "{PP}"));
-	if (w) gtk_widget_show(w);
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, "{PP}");
 }
 
 ///////////////// errmsg /////////////////////////////////////////////////////
@@ -3854,13 +3832,9 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 }
 
 static void err_skel (struct _topwin * tw, char * arg) {
-	GtkWidget * w = NULL;
 	if (!tw->state) {
-		tw->arg[0].p = w = parse_w_s(tw,
+		tw->arg[0].p = parse_w_s(tw,
 		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_console$_c-1}{B_?$?win.err}){:EeN10}]");
-		gtk_container_add (GTK_CONTAINER (tw->w), w);
-		g_signal_connect(w, "configure-event", G_CALLBACK(box_conf), (gpointer)tw);
-		g_signal_connect(w, "expose-event", G_CALLBACK(box_xps), (gpointer)tw);
 		memcpy(tw->title, "Errors\0", 8); 
 		err_upd_nl(tw); err_upd_flg(tw);
 	} else if (err_annoy) {
@@ -3868,7 +3842,6 @@ static void err_skel (struct _topwin * tw, char * arg) {
 		if (t!=err_annoy_t) err_annoy_t = t, gtk_window_present(GTK_WINDOW(tw->w));
 	}
 	if (arg) err_cmd(tw, arg);
-	if (w) gtk_widget_show(w);
 }
 
 ///////////////// main config ////////////////////////////////////////////////
@@ -3898,15 +3871,12 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 	"{C_,audio tmpfile directory: (defaults to tmp.dir when left empty)}({__}{ek60$ck}{__})"
 	"([{L_cur.dir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]3[{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}])"
 	"{B_saveCfg$c>}]";
-	GtkWidget * w = NULL;
 	if (!tw->state) { 
-		tw->arg[0].p = w = parse_w_s(tw, ws);
+		tw->arg[0].p = parse_w_s(tw, ws);
 		memcpy(tw->title, "config", 6);
-		gtk_container_add (GTK_CONTAINER (tw->w), w);
 		int i; const char *s;
 		for (i=0; i<7; i++) s = d[i], daclb_set(widg_lookup_pci(tw, 48+i, 0), &s, 3);
 	} else {  gtk_window_present(GTK_WINDOW    (tw->w)); }
-	if (w) gtk_widget_show(w);
 }
 
 ///////////////// audio config ///////////////////////////////////////////////
@@ -3915,12 +3885,8 @@ static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
 	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
 	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
-	GtkWidget * w = NULL;
-	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws);
-			  memcpy(tw->title, "audio", 6);
-			  gtk_container_add (GTK_CONTAINER (tw->w), w); }
-	else { 		  gtk_window_present(GTK_WINDOW    (tw->w)); }
-	if (w) gtk_widget_show(w);
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "audio", 6);
+	else gtk_window_present(GTK_WINDOW(tw->w)); 
 }
 
 ///////////////// input box //////////////////////////////////////////////////
@@ -3940,11 +3906,9 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 		q[13] = '}';
 	}
 	q[0] = ')'; q[1] = 0;
-	GtkWidget * w; tw->arg[0].p = w = parse_w_s(tw, ws);
+	tw->arg[0].p = parse_w_s(tw, ws);
 	int ni = min_i(n, l>>1);
 	for (i=0; i<ni; i++) LOG("setarg %d %d", i, hex2(p+2*i)), dacnt_set_x(widg_lookup_pci(tw, hexc1(i), 0), hex2(p+2*i), 512);
-	gtk_container_add (GTK_CONTAINER (tw->w), w); 
-	gtk_widget_show(w);
 }
 
 ///////////////// audio file dialog //////////////////////////////////////////
@@ -3952,10 +3916,8 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 static void a20_skel (struct _topwin * tw, char * arg) {
 	const char * ws = "[{CC300$1$rrr%%Ahe}({B_del$_D}{B_?$$?win.auconv}"
 	"{B_keep$_0}{__}[{B_~/wav$_4}{B_~/flac$_5}][{B_./wav$_2}{B_./flac$_3}][{B_t/wav$_6}{B_t/flac$_7}])]";
-	GtkWidget * w = NULL;
-	if (!tw->state) { tw->arg[0].p = w = parse_w_s(tw, ws); 
-			  gtk_container_add (GTK_CONTAINER (tw->w), w);
-	} else {  gtk_window_present(GTK_WINDOW(tw->w)); }
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws); 
+	else   gtk_window_present(GTK_WINDOW(tw->w)); 
 	int l=0; if (arg && (l=strlen(arg)) >= FA_SUFFIX_ZLEN+7) {
 		char *cto = tw->cmdpref, *h8 = arg + l - (FA_SUFFIX_ZLEN+7);
 		cto[0] = 'W'; memcpy(cto+1, h8, 8); cto[9] = ':'; tw->cmdp_len = 10;
@@ -3963,7 +3925,6 @@ static void a20_skel (struct _topwin * tw, char * arg) {
 		ww_t * ww = widg_lookup_ps(tw, "C"); 
 		memcpy (ww->etc = realloc(ww->etc, l+1), arg, l+1);
 	} else { LOG("auconv BUG: l=%d", l); }
-	if (w) gtk_widget_show(w);
 }
 ///////////////// calculator /////////////////////////////////////////////////
 
@@ -3986,12 +3947,7 @@ GtkWidget * calc_vbl (struct _ww_t * ww, int ix) {
 static void calc_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[(3{C_300$1$eeeeee333333...}0{M_#$|+1}{M_+$|+0})"
 		"({8x#in$2XX}{8z#tmp$2XZ}{8y#out$2XY}){:ZcN30}{:YcN31}]";
-	if (tw->state) return;
-	GtkWidget * w; tw->arg[0].p = w = parse_w_s(tw, str);
-	gtk_container_add (GTK_CONTAINER (tw->w), w);
-	g_signal_connect(w, "configure-event", G_CALLBACK(box_conf), (gpointer)tw);
-	g_signal_connect(w, "expose-event", G_CALLBACK(box_xps), (gpointer)tw);
-	gtk_widget_show(w);
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 }
 
 ///////////////// clipboard //////////////////////////////////////////////////
@@ -4078,25 +4034,24 @@ static void clip_setflg(struct _topwin * tw, int flg) {
 		da_fullre(ww);
 	}}
 
+GtkWidget * clip_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "({L0hello}{L1te}{C2,loooooooooooooooooooooooo})"); }
+
 static void clip_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{C.228$16$kkk000...}"
 		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{Ma+$|K0})"
-		"{KK}]";
-	GtkWidget * w = NULL;
+		"{KK}{:WK130}]";
 	ww_t * cl;
 	if (tw->state) {
 		cl = widg_lookup_ps(tw, "K"); if (!cl) {
 			LOG("clip_skel: da not found"); return; }
 		int i; for (i=0; i<32; i++) ((char*)cl->etc)[14*i+2] = 48;
 	} else {
-		w = parse_w(tw, &str);
-		gtk_container_add (GTK_CONTAINER (tw->w), w);
+		tw->arg[0].p = parse_w(tw, &str);
 		cl = widg_lookup_ps(tw, "K");
 	}
 	const char *s = arg;
 	if (!s || !*s || (daclb_set(widg_lookup_ps(tw, "."), &s, 1), !*s)) DACLIP_SEL(cl) = 0;
 	else if ((DACLIP_SEL(cl)=b32_to_i(*s), *++s) && (clip_setflg(tw, *s - 48), *++s)) daclip_cmd(cl, s);
-	if (w) gtk_widget_show(w); // else daclip_draw(cl); TODO: inv?
 }
 
 ///////////////// main window ////////////////////////////////////////////////
@@ -4104,11 +4059,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 static void mwin_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
 	"(3{B_unplot$_g}{B_?$$?win.main})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
-        GtkWidget * mbx = parse_w(tw, &str);
-        gtk_widget_show (mbx);
-	gtk_container_add (GTK_CONTAINER (tw->w), GTK_WIDGET(mbx));
-	gtk_widget_show(GTK_WIDGET(tw->w));
-	gdk_window_set_keep_above(gtk_widget_get_window(GTK_WIDGET(tw->w)), TRUE);
+        tw->arg[0].p = parse_w(tw, &str);
 	memcpy(tw->title, "lf\0", 4);
 }
 
@@ -4291,9 +4242,7 @@ static void t2win_skel (struct _topwin * tw, char * arg) {
 			case '>': r_panel[i] = '<'; break;
 		}
 	}
-	GtkWidget * t2 = parse_w(tw, &str);
-	gtk_container_add (GTK_CONTAINER (tw->w), t2); 
-	gtk_widget_show(t2);
+	tw->arg[0].p = parse_w(tw, &str);
 	gtk_window_set_default_size(GTK_WINDOW(tw->w), 320, 480);
 	memcpy(tw->title, "LR\0", 4);
 	t2sel_upd(0, 0, 'd', NULL, ".");
