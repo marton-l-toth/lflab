@@ -698,7 +698,10 @@ static void fw_cmd(topwin * tw, const char *s1, const char *s2) {
 	    l2 = s2 ? strlen(s2) : 0;
 	char buf[l1+l2+1]; if (l1) memcpy(buf   , s1, l1);
 			   if (l2) memcpy(buf+l1, s2, l2); buf[l1+l2] = 0;
-	if (tw) (*tw->cl->cmd)(tw, buf); else cmd1(buf);
+	ww_t * ww;
+	if (!tw) cmd1(buf);
+	else if (tw->cl->cmd) (*tw->cl->cmd)(tw, buf);
+	else s1=buf, ww=widg_lookup_p(tw, &s1), (ww->cl->cmd)(ww, s1);
 }
 
 static int widg_defcmd(ww_t * ww, const char * arg) {
@@ -975,7 +978,7 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 6, 0, 5, 2, "help info del/s-----cleardel  ", "N?I3Kd##KZNd"},
+{'K', 7, 0, 5, 6, "help info del/s-----cleardel  toWAV", "N?    I3    Kd    ##    KZ    Nd    $>W^0 "},
 {'S', 1,0, 1,1, "??", "##" },
 {0, 3, 1, 5, 1, "availdelayretBS", "012"},
 {0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
@@ -1174,9 +1177,11 @@ static void vbox_show_bv(struct _ww_t * ww, int bv) {
 
 static void upd_flgvec(topwin * tw, const char* s, int n, int oldbv, int newbv);
 static void vbox_cmd(struct _ww_t * ww, const char * arg) {
+	LOG("vbox_cmd=\"%s\"", arg);
 	int k=0; switch(*arg) {
 		case 'W': upd_flgvec(ww->top, "G", 4, VB_LBV(ww), k = 1<<(arg[1]-48)); break;
 		case '.': k = (1<<(arg[1]-48)); break;
+		case '^': k = VB_LBV(ww) ^ (1<<(arg[1]-48)); break;
 		case '+': k = (1<<(arg[1]-48)) - 1; break;
 		case '*': ++arg; while(*arg&80) k = 16*k + hxd2i(*(arg++));
 			  break;
