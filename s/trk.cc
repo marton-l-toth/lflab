@@ -23,6 +23,8 @@ struct BKMK32k { unsigned long long bv[4]; BKMK128 *** p[4];
 struct BKMK1M { unsigned int bv; BKMK32k * p[32];  BKMK1M() : bv(0) {}
                  int find(int i); void set(int i, int v), del(); };
 
+ANode * tgn_new(ANode *tn, int i, int j, ANode *nx); // node.c
+void tgn_del(ANode *tn, ANode *gn), tgn_move(ANode *tn, ANode *gn, int j, ANode*nx);
 
 class TrackModel;
 class TrackInst : public BoxInst {
@@ -34,11 +36,12 @@ class TrackInst : public BoxInst {
 		int ini(double **inb);
 		void mxprep(int bflg, double* bpm, int n);
 		void sane(int n);
+		void unexp_node(ANode * nd);
 
 		TrackModel * m_m;
 		ANode *m_pn, *m_fn, *m_tn;
-		int m_mxid, m_to, m_to2, m_fr2, m_rpc, m_md;
-		double m_vt;
+		int m_mxid, m_vti, m_to, m_to2, m_fr2, m_rpc, m_md;
+		double m_vtf;
 		
 };
 
@@ -164,55 +167,62 @@ TrackInst::TrackInst (TrackModel * m) : m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(
 	log("trki: hello");
 	BoxModel::ref(m); m_mxid=mx_mkroot(); }
 
-TrackInst::~TrackInst() { if (m_mxid>0) mx_del(m_mxid); Node::del(m_pn,NOF_FORCE);
-	log("trki: bye");
-	Node::del(m_fn,NOF_FORCE); Node::del(m_tn,NOF_FORCE); BoxModel::unref(m_m); }
+TrackInst::~TrackInst() { if (m_mxid>0) mx_del(m_mxid); 
+	log("trki: bye"); tgn_del(m_m->tn, m_pn); tgn_del(m_m->tn, m_tn); tgn_del(m_m->tn, m_fn);
+	BoxModel::unref(m_m); }
 
 #define VTARG(x) ((int)lround(40320.0*inb[x][0]))
 int TrackInst::ini(double **inb) {
+	sane(1);
 	m_md = 1; m_rpc = (int)lround(inb[3][0]);
-	m_vt = 40320.0*inb[1][0]; m_to = VTARG(2); 
-	int vti = (int)lround(m_vt); if ((vti|m_to)<0) return BXE_RANGE;
-	int ec = Node::mk(&m_pn, m_m->tn, 0, '!', 2|NOF_FORCE, vti);
-	if (ec<0 || (ec = Node::mk(&m_tn, m_m->tn, 0, '!', 3|NOF_FORCE, m_to))<0) return ec;
-	if (!m_rpc) return 0;
-	m_fr2 = VTARG(4); m_to2 = VTARG(5);
-	return Node::mk(&m_fn, m_m->tn, 0, '!', 1|NOF_FORCE, m_fr2);
+	int vti = VTARG(1); m_to = VTARG(2); if ((vti|m_to)<0) return BXE_RANGE;
+	m_vtf = .5 * natural_bpm;
+	m_pn = tgn_new(m_m->tn, 6, vti,  0);
+	m_tn = tgn_new(m_m->tn, 7, m_to, 0);
+	if (m_rpc) m_fr2 = VTARG(4), m_to2 = VTARG(5), m_fn = tgn_new(m_m->tn, 4, m_fr2, 0);
+	return 0;
 }
 
 void TrackInst::sane(int n) {
-	int k = 9999; ANode *pv = m_m->g0, *nd = pv->next();
-	while (1) {
+	int k = 9999; ANode *pv = m_m->g0, *nd = pv->next(), *zz = m_m->g1;
+	while (nd != zz) {
 		if (!--k) bug("trk/sane/loop(%d)", n);
 		if (nd->cth()->pv!=pv) bug("trk/sane/link(%d)", n);
-		if (nd->cth()->j < pv->cth()->j) bug("trk/sane/ord(%d)", n);
-		if ((pv=nd, nd=nd->next())==m_m->g1) return; 
+		Node::trk_chk_ord(m_m->tn, pv, nd, "sc0\0sc1\0sc2\0sc3"+4*(n&3));
+		pv = nd; nd = nd->next();
 	}}
+
+void TrackInst::unexp_node(ANode * nd) {
+	m_md=3; const trk_24 * q = nd->cth();
+	log("BUG: trk/unexp.node ty0x%x i0x%x, j0x%x, pv%p, nx%p", q->ty, q->i, q->j, q->pv, nd->next()); }
 
 void TrackInst::mxprep(int bflg, double* bpm, int n) {
 	ANode * nd = m_pn -> next();
-	double vt = m_vt, vtl = (double)nd->cth()->j - 0.001;
-	sane(2);
-	for (int i=0; i<n; i++, vt+=*bpm*0.015238095238095238, bpm+=bflg) {
-		sane(99);
-		for (; vt>=vtl; nd=nd->next(), vtl = (double)nd->cth()->j - 0.001) {
-			while (nd->cth()->i == 2) nd = nd->next();
-			if (nd->cl_id()=='w') { wrap_2mx(static_cast<ABoxNode*>(nd)->box(), m_mxid, 0, i); 
-				                if (debug_flags & DFLG_TRK) log("trk2mx: %d", m_mxid); }
-			else if (nd==m_tn) {
-				if (!m_rpc) { m_md = 3; return; }
-				vt += (double) (m_fr2 - m_to);
-				sane(0);
-				if (m_md==1) m_md = 2, Node::move(m_tn, m_m->tn, 0, 7|NOF_FORCE, m_to=m_to2);
-				sane(1);
-				nd = m_fn;  }
-			else if (nd->cth()->i == 4095) { m_md = 3; return; }
-			else if (nd->cl_id()!='!') {
-				return m_md = 4, log("BUG: trk: 0x%x, cl 0x%x", nd->id(), nd->cl_id()); }
-		}}
-	while (nd->cth()->i == 2) nd = nd->next();
-	if (nd->cl_id()=='!' && nd->cth()->i == 4095) m_md = 3;
-	else m_vt = vt, sane(299), m_pn->trk_insbf(nd, (int)lround(vt)+1), sane(3);
+	int vti = m_pn->cth()->j, nextvt = nd->cth()->j, vti_d = nextvt - vti;
+	double vtf = m_vtf, vtlim = natural_bpm * (double)vti_d;;
+	// vti+x/nbpm > nextvt  
+	// x/nbpm > nextvt-vti
+	//   x > (nextvt-vti)*nbpm
+	for (int i=0; i<n; i++, vtf+=*bpm, bpm+=bflg) {
+		if (vtf <= vtlim) continue;
+		int k = max_i(vti_d+1, (int)ceil(vtf * natural_bpm_r));
+		vti += k; vtf -= natural_bpm * (double)k;
+		for (; vti>nextvt; nd=nd->next(), nextvt=nd->cth()->j) {
+			int ci = nd->cth()->i; if (ci>15) {
+				if (nd->cl_id()!='w') return unexp_node(nd);
+				wrap_2mx(static_cast<ABoxNode*>(nd)->box(), m_mxid, 0, i);
+				if (debug_flags & DFLG_TRK) log("trk2mx: %d", m_mxid);   continue; }
+			if (ci==15) return (void) (m_md = 3);
+			if (nd!=m_tn) continue; 
+			if (!m_rpc) return (void)(m_md=3);
+			--m_rpc; vti += (m_fr2 - m_to); nd = m_fn;
+			if (m_md==1) m_md=2, tgn_move(m_m->tn, m_tn, m_to=m_to2, 0);
+		}
+		vti_d = nextvt - vti; vtlim = natural_bpm * (double)vti_d;
+	}
+	vti_d = min_i(vti_d, (int)ceil(vtf * natural_bpm_r));
+	m_vtf = vtf - natural_bpm * (double)vti_d;
+	tgn_move(m_m->tn, m_pn, vti + vti_d, nd);
 }
 
 int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
@@ -396,7 +406,7 @@ int TrackGen::cond_pm(ANode * wb, int pm) {
 int TrackGen::draw_bx_ini(int x, int ybv) {
 	if (m_drq_g) return EEE_STATE;
 	if (!ybv) return EEE_NOEFF;
-	int ec = Node::mk(&m_drq_g, m_node, 0, '!', 9|NOF_FORCE, (x+1)<<18);  if (ec<0) return ec;
+	m_drq_g = tgn_new(m_node, 9, (x+1)<<18, 0);
 	m_drq_x = x<<18; m_drq_msk = ybv; return 0;
 }
 
@@ -405,14 +415,15 @@ int TrackGen::draw_bx_1() {
 	ANode * q = m_drq_g->cth()->pv;  int k = 0;
 	gui2.setwin(w_oid(), 't'); gui2.wupd('t');
 	while (1) {
+		if (!q) goto done;
 		if (q->cth()->j < m_drq_x) goto done;
 		if (q->cl_id()!='w') { ++k; q = q->cth()->pv; continue; }
 		if (k>10000) goto cont;
 		w1b_pm(q,'+'); k += 32; q = q->cth()->pv;
 	}
 done:	gui2.c1('*'); gui2.hex4(m_drq_x>>18); gui2.hex8((int)(m_drq_msk)); 
-	Node::del(m_drq_g, NOF_FORCE); m_drq_g = 0; return 0;
-cont:   gui2.c1(','); m_drq_g -> trk_insbf(q->next()); return 0;
+	tgn_del(m_node, m_drq_g); m_drq_g = 0; return 0;
+cont:   gui2.c1(','); tgn_move(m_node, m_drq_g, -1, q->next()); return 0;
 }
 
 ANode * TrackGen::bkm_find(int j) {

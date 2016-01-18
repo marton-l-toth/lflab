@@ -183,7 +183,6 @@ class ANode {
                 void set_job_result(int ix3, int res);
                 int kill_job(int ix, int ec = JQE_KILL) { return jobq.kill(this, ix, ec); }
 		const trk_24* cth() const { return &m_u24.t; }
-		void trk_insbf(ANode * that, int j = -1);
         protected:
                 ANode() : m_winflg(0), m_visitor(0), m_up(0), m_next(0) { }
                 virtual int add(ANode * that, const char * nm, int i = NOF_PARSE, int j = -1) = 0;
@@ -553,6 +552,9 @@ class Node {
 		static bool being_crawled() { return !!ANode::m0_sv.rn; }
 		static const char * rgb(ANode * p) { return p->is_box() ? static_cast<ABoxNode*>(p)->rgb2()
 								 : "%%%ppp  %%Pppp"+8*(p->m_u24.s[0]&1); }
+
+		static void trk_chk_ord(ANode *tn, ANode *p, ANode *q, const char * msg);
+
 		static int obj_help(int cl);
 		static void lib_start(), lib_end();
 		static int lib_cfg(ANode * nd);

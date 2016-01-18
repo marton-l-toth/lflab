@@ -3111,7 +3111,7 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 				  da_fullre(wn); tsr_op(wt, 4098, -2); goto done;
 			default: break; }
 		case 'K':
-			wn = widg_lookup_pci(tw, 'K', 0); DABOOL(wn)^=1; da_fullre(wn); ++s; continue; 
+			wn = widg_lookup_pci(tw, 'K', 0); DABOOL(wn)^=1; da_fullre(wn); return; // TODO
 		default: LOG("ttrk: invalid cmd 0x%x \"%s\"", *s, s); goto done;
 	}}
 done:	tsr_op(wt, TSR_END, 0);

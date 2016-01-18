@@ -25,7 +25,7 @@
 extern int glob_flg;
 extern int debug_flags;
 extern int sample_rate;
-extern double sample_length;
+extern double sample_length, natural_bpm, natural_bpm_r;
 extern int killer_fd;
 
 extern char mostly_zero[0x8080];

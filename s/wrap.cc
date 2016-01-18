@@ -893,7 +893,7 @@ WrapGen::~WrapGen() { if (m_mxctl) mx_c_unlink(m_mxctl);
 int WrapGen::add2mx(int t, int f, int dly, int mxky) { 
 	double v[11];
 	int r = m_sob.ro()->add2mx(t, pflg()|f, v, m_xys6, dly); if (r<0) return r;
-	if (trk_rec_trg) trk_rec(m_node, r);
+	if (!t && trk_rec_trg) trk_rec(m_node, r);
 	return (mxky && r>=0) ? mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), r, mxky) : r;
 }
 

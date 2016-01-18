@@ -67,20 +67,19 @@ class LBoxNode : public ABoxNode {
 
 class TBoxNode : public ABoxNode {
 	public:
-		friend class Node;
 		virtual ANode * sn(const char **pp);
 		virtual ANode * sn_list(ANode ** pwl) { ANode * dbg; if (pwl) (dbg=trk_bkm_find(m_box, INT_MAX))->m_next = *pwl,
 							   *pwl= trk_bkm_find(m_box, 0),
 							log("TBox->snl: last=%p(0x%x) new=%p", dbg, dbg->m_id,*pwl);	  return 0; }
 		virtual void debug(int flg);
 		ANode * find_ijf(int i, int j, int flg, ANode * nd = 0);
-	protected:
 		TBoxNode(int ty) : ABoxNode(ty) {}
 		virtual int add(ANode * that, const char * nm, int i = -1, int j = -1);
 		virtual int rm(ANode * that);
-		void chk_ord(ANode * p, ANode *q);
-		void chk_ord_2(ANode *p) { chk_ord(p->cth()->pv, p); chk_ord(p,p->next()); }
-		void chk_ord_ij(int i, int j, ANode * p);
+		void chk_ord(ANode * p, ANode *q, const char * s);
+		void do_ins(ANode * q, int i, int j, ANode *nx);
+		void do_cut(ANode * q);
+		void ins_guard(ANode * that, int j, ANode * nx);
 };
 
 class AGuardNode : public ANode {
@@ -100,9 +99,8 @@ class AGuardNode : public ANode {
 class TGuardNode : public AGuardNode {
         public: 
                 TGuardNode() { m_u24.t.ty = '!'; }
-                TGuardNode(ANode * up, int ty) { m_up = up; m_u24.t.ty = '!'; m_u24.t.ct = 't';
-                        m_u24.t.i = (-ty)&4095; m_u24.t.j = ty ? 0x7fffffff : -1; }
-                virtual void debug(int i) { a_debug(); log("trk guard, i:%d, j:%d", m_u24.t.i, m_u24.t.j); }
+                TGuardNode(ANode * up, int ty) { m_up = up; m_u24.t.ty = '!'; m_u24.t.i = ty; m_next = 0; }
+                virtual void debug(int i) { a_debug(); log("t.guard, i:0x%x, j:0x%x", m_u24.t.i, m_u24.t.j); }
 };
 
 ///////// TODO: minidir //////////////////////////////////////////////////////
@@ -481,17 +479,6 @@ void ANode::sv_dump1(const char *s) {
         char buf[256]; buf[m0_sv.cn->get_path(buf, 255)] = 0;
         log("%s/save1: #%x(%c:%s), st=%d, st2=%d", s, m0_sv.cn->id(), m0_sv.cn->cl_id(),
                                   buf, m0_sv.st, m0_sv.st2); }
-
-void ANode::trk_insbf(ANode * that, int j) {
-	if (m_u24.t.ct!='t' || that->m_u24.t.ct!='t' || m_up != that->m_up) bug("trk_insbf");
-	if (j<0 || j>that->cth()->j) j = that->cth()->j;
-	that = static_cast<TBoxNode*>(m_up)->find_ijf(m_u24.t.i, j, 1, that);
-	if (that==m_next || that==this) return;
-	ANode *oldpv = m_u24.t.pv, *oldnx = m_next, *prev = that->m_u24.t.pv;
-	oldpv->m_next = oldnx; oldnx->m_u24.t.pv = oldpv;
-	if ((m_u24.t.j = (j<0 ? that->m_u24.t.j : j))<0) bug("insbf");
-	m_next = that; m_u24.t.pv = prev; prev->m_next = that->m_u24.t.pv = this;
-}
 
 void ANode::a_debug() {
         log("p=%p id=%x, ty=0x%x(%c), ty2=0x%x(%c), up=0x%x(%p) name=\"%s\" wf=0x%x",
@@ -1104,6 +1091,8 @@ void ABoxNode::ab_debug(int flg) {
 d2:	if (m_box && (flg&2)) m_box -> spec_debug();
 }
 
+///////// trk ////////////////////////////////////////////////////////////////
+
 static int trkn_parse(int * pi, int * pj, const char **pp) {
 	int ti = 0, tj = 0;
 	for (int i=0; i<3 && is_hx(**pp); i++, ++*pp) ti*=16, ti+=hxd2i(**pp);
@@ -1116,7 +1105,7 @@ ANode * TBoxNode::find_ijf(int i, int j, int nxf, ANode * nd) {
 	ANode *r = nd ? nd : trk_bkm_find(m_box, j);
 	int di, dj = r->cth()->j-j;
 	if (!dj) { if (!(di = r->cth()->i-i)) return r;
-		   if (di<0) goto up; else goto dn; }
+		   if (di<0) { r=r->next(); goto up; } else { r=r->cth()->pv; goto dn; }}
 	if (dj<0) { do r=r->next();    while ((dj=r->cth()->j-j)<0); if (dj) goto up2; goto up; }
 	else	  { do r=r->cth()->pv; while ((dj=r->cth()->j-j)>0); if (dj) goto dn2; goto dn; }
 up:	while (!(dj=r->cth()->j-j) && (di=r->cth()->i-i)<0) r=r->next();    if (di|dj) goto up2; return r;
@@ -1129,42 +1118,70 @@ ANode * TBoxNode::sn(const char **pp) {
 	int i, j, ec = trkn_parse(&i, &j, pp);
 	return ec<0 ? 0 : find_ijf(i, j, 0); }
 
+void TBoxNode::do_ins(ANode * q, int i, int j, ANode *nx) {
+	ANode * pv=0; trk_24 *ti, *tn;
+	if (!nx || !(pv=(tn=&nx->m_u24.t)->pv)) return bug("trk/do_ins: nx=%p, pv=%p", nx, pv);
+	ti = &q->m_u24.t; pv->m_next = tn->pv = q; 
+	ti->pv = pv; ti->ct = 't'; ti->i = (short)i; ti->j = j; q->m_up = this; q->m_next = nx; 
+	chk_ord(pv, q, "ins1"); chk_ord(q, nx, "ins2");
+}
+
+void TBoxNode::do_cut(ANode * q) {
+	ANode *nx = q->next(), *pv = q->cth()->pv; if (!nx || !pv) bug("trk/do_cut: nx=%p, pv=%p", nx, pv);
+	pv->m_next = nx; nx->m_u24.t.pv = pv; chk_ord(pv, nx, "cut"); }
+
 int TBoxNode::rm(ANode * that) {
 	if (that->m_up != this) return NDE_RMWHAT;
+	if (that->cl_id()!='w') return log("BUG: trk/rm: %s 0x%x/0x%x", that->cl_id()==33?"guard":"unexp",
+			that->id(), that->cl_id()), NDE_WTF;
 	if (m_winflg & 2048) trk_cond_pm(m_box, that, '-');
-	ANode *pv = that->m_u24.t.pv, *nx = that->m_next;
-	pv->m_next = nx; nx->m_u24.t.pv = pv;
-	trk_bkm_rm(m_box, that); 
+	do_cut(that); trk_bkm_rm(m_box, that);
 	return 0;
 }
 
-void TBoxNode::chk_ord(ANode * p, ANode *q) {
-	if (p->cl_id()!='w' || q->cl_id()!='w') return;
-	const trk_24 *a = p->cth(), *b = q->cth();
-	if (a->j > b->j || ((a->j==b->j) && a->i>b->i)) bug("chk_ord");
-}
-
-void TBoxNode::chk_ord_ij(int i, int j, ANode * p) {
-	if (j>p->cth()->j || (j==p->cth()->j && i>15 && p->cth()->i>15 && i>p->cth()->i)) bug("chk_ord_ij");
-}
-
 int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
-	int ty = that->m_u24.c.ty; if (ty!='w' && ty!='!') return NDE_EXPWRAP;
-	int k, ec, sf = !!(i&NOF_STRICT);
-	if ((i&NOF_PARSE) && (ec = trkn_parse(&i, &j, &nm)) < 0) return ec;
-	int wf = m_winflg&2048, gf = (i&=4095) < 16; if (!(gf|sf)) i&=4080;
-	ANode *nx = find_ijf(i, j, 1); chk_ord_ij(i,j,nx);
+	int ty = that->m_u24.c.ty; if (ty!='w') return NDE_EXPWRAP;
+	int k, ec, sf = !!(i&NOF_STRICT), wf = m_winflg & 2048;
+	if (!(i&NOF_PARSE)) i&=NOF_IDX; else if ((ec = trkn_parse(&i, &j, &nm)) < 0) return ec;
+	if ((unsigned int)(i-16)>4079u) return TKE_RANGEI;
+	if ((unsigned int)(j) > 2147483520u) return TKE_RANGEJ;
+	if (!sf) i&=4080;
+	ANode *nx = find_ijf(i, j, 1);
 	if (nx->cth()->j == j && nx->cth()->i == i) {
-	 	if (sf) return NDE_TDUP;  if (gf) goto iok;
+	 	if (sf) return NDE_TDUP; 
 		for (++i,k=1; k<16; k++,i++) if (nx=nx->m_next, nx->cth()->j!=j || nx->cth()->i!=i) goto iok;
 		return TKE_NOROOM;
 iok:    ;}
 	ANode *pv = nx->cth()->pv;
-	if (nx==that || pv==that) { trk_cond_pm(m_box, that, '-'); if (wf) trk_bkm_rm (m_box, that); log("he1"); }
-	else {  RMTHAT; pv->m_next = nx->m_u24.t.pv = that;  
-		that->m_next = nx; that->m_u24.t.pv = pv; that->m_up = this; that->m_u24.t.ct = 't'; }
-	that->m_u24.t.i = i; that->m_u24.t.j = j;
-	trk_bkm_add(m_box, that); if (wf) trk_cond_pm(m_box, that, '+'); chk_ord_2(that); return 0;
+	if (nx==that || pv==that) { log("trkadd/lmv"); trk_bkm_rm (m_box, that);
+			  	    if (wf)trk_cond_pm(m_box, that, '-');
+				    that->m_u24.t.i = i; that->m_u24.t.j = j;	
+				    chk_ord(that->cth()->pv,that,"lmv1"); chk_ord(that,that->next(),"lmv2"); }
+	else { log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
+	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+'); return 0;
+}
+
+void TBoxNode::ins_guard(ANode * that, int j, ANode * nx) {
+	if (j<0) { if (!nx) bug("ins_guard: 00"); else j = nx->cth()->j; }
+	const trk_24 * th = that->cth(); 
+	if (th->ty!=33 || (th->i&~15)) bug("ins_guard: c=0x%x, i=0x%x", th->ty, th->i);
+	nx = find_ijf(th->i, j, 1, nx);
+	if (nx==that || nx->cth()->pv==that) return (void) (that->m_u24.t.j = j);
+	if (that->m_next) do_cut(that); 
+	do_ins(that, th->i, j, nx);
+}
+
+void TBoxNode::chk_ord(ANode * p, ANode *q, const char * dsc) {
+	const trk_24 *a = p->cth(), *b = q->cth();
+	if (p->m_up!=this || q->m_up!=this) 
+		bug("chk_ord/%s: upnodes %p,%p / exp. %p", dsc, p->m_up, q->m_up, this);
+	if (p->m_next!=q || b->pv != p) 
+		bug("chk_ord: link error (p=%p,p->nx=%p,q=%p,q->pv=%p)", p, p->m_next, q, q->cth()->pv);
+	int di = b->i - a->i, dj = b->j - a->j;
+	if (dj<0) goto obug; if (dj>0) return;
+	if (di<0) goto obug; if (di>0 || b->i<16) return;
+	bug("chk_ord/%s (duplicate %x:%x)", dsc, a->i, a->j);
+obug:	bug("chk_ord/%s (%x:%x before %x:%x)", dsc, a->i, a->j, b->i, b->j);
 }
 
 void TBoxNode::debug(int flg) {
@@ -1172,6 +1189,20 @@ void TBoxNode::debug(int flg) {
 	ANode * nd = trk_bkm_find(m_box, -1); 
 	while (1) { log_n(" #%x", nd->id()); if (nd->m_u24.t.j==0x7fffffff) break; nd = nd->next(); }
 	log("]"); }
+
+void   tgn_del (ANode *tn, ANode *gn) { if (!gn) return;
+	if (gn->up()!=tn || gn->cl_id()!=33) bug("tgn_del"); 
+	if(gn->next())static_cast<TBoxNode*>(tn)->do_cut(gn); ANode::fN(gn);}
+
+void   tgn_move(ANode *tn, ANode *gn, int j, ANode*nx) { if (gn->up()!=tn || gn->cl_id()!=33) bug("tgn_move");
+	static_cast<TBoxNode*>(tn)->ins_guard(gn, j, nx); }
+
+ANode* tgn_new (ANode *tn, int i, int j, ANode *nx) {
+	ANode * r = new (ANode::aN()) TGuardNode(tn, i); 
+	static_cast<TBoxNode*>(tn)->ins_guard(r, j, nx); return r; }
+
+void Node::trk_chk_ord(ANode *tn, ANode *p, ANode *q, const char * msg) {
+	static_cast<TBoxNode*>(tn)->chk_ord(p,q,msg); }
 
 ///////// static /////////////////////////////////////////////////////////////
 
@@ -1247,8 +1278,9 @@ sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc;
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
 	TGuardNode *g0, *g1; trk_24 * t24;
-	t24 = &(g0 = new (ANode::aN())TGuardNode(nd,0))->m_u24.t; t24->pv = 0;  
-	t24 = &(g1 = new (ANode::aN())TGuardNode(nd,1))->m_u24.t; t24->pv = g0; g1->m_next=0; g0->m_next=g1;
+	t24 = &(g0 = new (ANode::aN())TGuardNode(nd, 0))->m_u24.t; t24->pv=0;  t24->ct='t'; t24->j=0;
+	t24 = &(g1 = new (ANode::aN())TGuardNode(nd,15))->m_u24.t; t24->pv=g0; t24->ct='t'; t24->j=0x7fffffff;
+	g1->m_next=0; g0->m_next=g1;
 	return nd->m_box = trk_mk(nd, g0, g1), 4;
 }
 		

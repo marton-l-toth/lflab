@@ -19,7 +19,7 @@ int glob_flg = 0;
 int debug_flags = 0;
 int sample_rate = 44100;
 int killer_fd = -1;
-double sample_length = 1.0/44100.0;
+double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625;
 char mostly_zero[0x8080];
 double junkbuf[4096];
 char save_file_name[1024];
