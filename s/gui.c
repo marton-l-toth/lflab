@@ -174,7 +174,7 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'e', entry_skel, entry_get, entry_cmd, NULL, 0 },
 	{'s', scale_skel, NULL, NULL, NULL, 0 },
 	{':', vbox_skel, NULL, vbox_cmd, NULL, 0 },
-	{'K', daclip_skel, NULL, daclip_cmd, daclip_clk, WF_BIGDA3 | WF_KEYEV },
+	{'K', daclip_skel, NULL, daclip_cmd, daclip_clk, WF_BIGDA3 | WF_KEYEV | WF_RESIZE },
 	{'M', dalbl_skel, NULL, dalbl_cmd, dlmenu_clk, WF_RESIZE },
 	{'8', dacnt_skel, NULL, dacnt_cmd, dacnt_clk, WF_RESIZE | WF_RAWCLK },
 	{'!', dacntvs_skel, NULL, dacnt_cmd, dacntvs_clk, WF_RESIZE | WF_CONT | WF_RAWCLK },
@@ -535,15 +535,13 @@ static gboolean box_conf_2(GtkWidget *w, int c, gpointer p) {
 	topwin * tw = (topwin*) p;
 	if (!tw->arg[0].p) return TRUE;
 	GtkRequisition rq; gtk_widget_size_request (GTK_WIDGET(tw->arg[0].p),&rq);
-	if (rq.width == tw->arg[2].s[0] && rq.height == tw->arg[2].s[1]) return TRUE;
 	tw->arg[2].s[0] = rq.width; tw->arg[2].s[1] = rq.height;
 	if (dflg & DF_BOXCONF) LOG("box config:wi=%d, he=%d", rq.width, rq.height);
 	int cw, ch, flg = tw->cl->flg, xf = flg&TWF_XSIZE, yf = flg&TWF_YSIZE;
 	gtk_window_get_size(GTK_WINDOW(tw->w), &cw, &ch);
-	LOG("hello xf=%d yf=%d", xf, yf);
-	if (xf || cw<rq.width+4) cw = rq.width+4;
-	if (yf || ch<rq.height+4) ch = rq.height+4;
-	gtk_window_resize(GTK_WINDOW(tw->w), cw, ch);
+	if ( ( ((cw-rq.width ) & (xf ? -1 : INT_MIN)) && (cw = rq.width,  1)) |
+	     ( ((ch-rq.height) & (yf ? -1 : INT_MIN)) && (ch = rq.height, 1)) )
+		gtk_window_resize(GTK_WINDOW(tw->w), cw, ch);
 	return TRUE;
 }
 
@@ -978,7 +976,7 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 7, 0, 5, 6, "help info del/s-----cleardel  toWAV", "N?    I3    Kd    ##    KZ    Nd    $>W^0 "},
+{'K', 7, 0, 5, 6, "help info del/s-----cleardel  toWAV", "N?    I3    Kd    ##    KZ    Nd    $>W^1 "},
 {'S', 1,0, 1,1, "??", "##" },
 {0, 3, 1, 5, 1, "availdelayretBS", "012"},
 {0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
@@ -4039,12 +4037,12 @@ static void clip_setflg(struct _topwin * tw, int flg) {
 		da_fullre(ww);
 	}}
 
-GtkWidget * clip_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "({L0hello}{L1te}{C2,loooooooooooooooooooooooo})"); }
+GtkWidget * clip_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, ix?"({L0sorry}{L1not yet}{C2,implemented})":"([])"); }
 
 static void clip_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{C.228$16$kkk000...}"
 		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{Ma+$|K0})"
-		"{KK}{:WK130}]";
+		"{KK}{:WK230}]";
 	ww_t * cl;
 	if (tw->state) {
 		cl = widg_lookup_ps(tw, "K"); if (!cl) {
@@ -4055,6 +4053,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 		cl = widg_lookup_ps(tw, "K");
 	}
 	const char *s = arg;
+	ww_t *ww = widg_lookup_pci(tw, 'W', -1); vbox_show_bv(ww, 1);
 	if (!s || !*s || (daclb_set(widg_lookup_ps(tw, "."), &s, 1), !*s)) DACLIP_SEL(cl) = 0;
 	else if ((DACLIP_SEL(cl)=b32_to_i(*s), *++s) && (clip_setflg(tw, *s - 48), *++s)) daclip_cmd(cl, s);
 }
