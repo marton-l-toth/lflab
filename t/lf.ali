@@ -2,4 +2,4 @@ ulimit -c 262144
 alias mk='../t/prod.sh -okcmd "^q2" -failcmd "^C47\$E>00ffffec" -j5'
 alias mk0='../t/prod.sh -okcmd "^q2" -failcmd "^C47\$E>00ffffec" -j5 CFLAGS=""'
 alias vim=$HOME/g/lflab/t/vimwrap
-alias mkg='../t/prod.sh -okcmd "^q" -failcmd "^C47\$E>00ffffeb" -j5 lf.gui; echo "^q" > /run/shm/lf.*/A'
+alias mkg='../t/prod.sh -okcmd "^q" -failcmd "^C47\$E>00ffffeb" -j5 lf.gui'
