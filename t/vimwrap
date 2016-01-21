@@ -1,0 +1,3 @@
+#!/bin/bash
+/bin/echo -e "\ek${1/\.cc/}\e\\"
+exec vim $* -s "$HOME/g/lflab/t/localsyntax.vim"
