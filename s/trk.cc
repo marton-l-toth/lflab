@@ -444,7 +444,9 @@ void TrackGen::bkm_rm(ANode * nd) {   const trk_24 * p = nd->cth();  int j = p->
 
 int TrackGen::save2(SvArg * sv) {
 	BXSV2_HEAD; int buf[300], n;
-	buf[0] = 0x67245800; n = gui_h4(buf+1); buf[n+1] = 10; CHKERR(f->sn((char*)buf+1, 4*n+4));
+	buf[0] = 0x67245800; n = gui_h4(buf+1); buf[n+1] = 10;
+	CHKERR(f->sn((char*)buf+1, 4*n+4));
+	CHKERR(f->pf("X$b%d\n", m_bp10m));
 	return r;
 }
 
