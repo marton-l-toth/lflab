@@ -1288,6 +1288,7 @@ int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
 int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, BoxGen* from) {
 	if (!up) return NDE_NOUP;
 	if (!(i&NOF_FORCE) && !up->perm_ed()) return NDE_PERM;
+	if ( (glob_flg & (GLF_EMPTY|GLF_LIBMODE|GLF_INI0)) == GLF_EMPTY) glob_flg &= ~GLF_EMPTY;
 	ANode * nd; ABoxNode * bnd;
 	int ec; sbfun_t * sbf = 0;
 	switch(ty) {
@@ -1299,7 +1300,8 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'c': nd = bnd = new (ANode::aN()) LBoxNode('c'); sbf = setbox_calc; break;
 		case '_': nd = bnd = new (ANode::aN()) LBoxNode('_'); sbf = sb_btin; break;
 		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk; break;
-		case '!': nd	   = new (ANode::aN()) TGuardNode(); break;
+		case '!': nd	   = new (ANode::aN()) TGuardNode(); 
+			  log("BUG: Node::mk(tguard)"); gui2.errq_add(NDE_WTF); break;
 		default: return NDE_UTYPE;
 	}
 	if ((ec=up->add(nd, name, i, j)) < 0) return ANode::fN(nd), ec;
@@ -1330,10 +1332,9 @@ int Node::copy(ANode * p, ANode * to, const char * name, int i, int j) {
 		default: break;
 	}
 	ANode * trg = 0;
+	SvArg * sv = &ANode::m0_sv; if (sv->rn) return NDE_LOCK;
 	int tid, ec = Node::mk(&trg, to2, name, p->cl_id(), i, j, 0); 
 	if (ec<0) return ec; else tid = trg->id();
-	SvArg * sv = &ANode::m0_sv;
-	if (sv->rn) return NDE_LOCK;
 	CmdBuf * cb = new CmdBuf(); 
 	cb->init(-1, NOF_FORCE|NOF_STRICT);
 	cb->setvar(0, tid); cb->setvar(1, tid); 
@@ -1472,20 +1473,23 @@ int Node::chkwin(int oid) {
 }
 
 int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
-	if (!fn || !*fn) { if (coward(fn = save_file_name)) return EEE_COWARD; }
-	else if (*fn=='/' && !fn[1]) { fn = autosave_name; }
+	int ec = 0, asvf = 0, snf = 0, n_bk = CFG_SV_BACKUP.i;
+	if (!fn || !*fn) {
+		if ((!*(fn=save_file_name) && (ec=EEE_NONAME)) || (coward(fn) && (ec=EEE_COWARD)))
+			return (flg|NOF_FGUI) ? (gui2.sn("\tf>W", 4), ec) : ec; }
+	else if (!memcmp(fn, "/" , 2)) { asvf = 1; fn = autosave_name;   n_bk = CFG_ASV_BACKUP.i; }
+	else if (!memcmp(fn, "//", 3)) { asvf = 1; fn = autosave_name_x; n_bk = 0; }
 	else if (coward(fn)) { return EEE_COWARD; }
-	else { strncpy(save_file_name, fn, 1023), gui2.savename(); }
-	if (backup(fn, 5)<0) gui2.errq_add(EEE_ERRNO), gui2.errq_add(EEE_BACKUP),
-			     log("WARNING: backup failed: %s", strerror(errno));
+	else if (is_asv_name(fn)) { return EEE_OVWASV; }
+	else if (!dir->id()) { snf = 1; }
+	if (backup(fn, n_bk)<0) gui2.errq_add(EEE_ERRNO), gui2.errq_add(EEE_BACKUP),
+			        log("WARNING: backup failed: %s", strerror(errno));
 	Clock clk; clk.reset();
-	log("saving to \"%s\"...", fn);
-	if (ANode::m0_lock) {
-		if (flg&NOF_FORCE) ANode::sv_end(); else return NDE_LOCK;
-	}
-	int ec, exef = !!CFG_SV_EXEC.i, fd = creat(fn, 0644+(0111&-exef)); if (fd<0) return EEE_ERRNO;
+	char pbuf[256]; pbuf[dir->get_path_uf(pbuf, 255)] = 0;
+	log("saving \"%s\" to \"%s\"...", pbuf, fn);
+	if (ANode::m0_lock) { if (flg&NOF_FORCE) ANode::sv_end(); else return NDE_LOCK; }
+	int exef = !!CFG_SV_EXEC.i, fd = creat(fn, 0644+(0111&-exef)); if (fd<0) return EEE_ERRNO;
 	FILE * f = fdopen(fd, "w"); if (!f) return EEE_ERRNO;
-	// if (fprintf(f,"#!%s/lf\n",getenv("LF_DIR"))<=0) return EEE_ERRNO;
 	ANode::sv_start(new FOBuf(f), dir, flg);
 	if (fprintf(f,"#%s\n", exef ? "!/usr/bin/lflab" : " lflab save file")<=0) return EEE_ERRNO;
 	if (fprintf(f,"_V%d.%d\n",v_major,v_minor)<=0) return EEE_ERRNO;
@@ -1500,6 +1504,8 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	ec = ANode::sv_write(-1);
 	ANode::sv_end(); ANode::m0_sv.out = 0; 
 	log("...save (%s): %s (%d)", fn, ec<0 ? err_str(ec) : "done", ec<0?ec:clk.get());
+	if (ec<0) { if (asvf) gui2.errq_add(ec), gui2.errq_add(EEE_ASVFAIL); }
+	else if (snf) strncpy(save_file_name, fn, 1023), glob_flg &= ~GLF_RECOVER, gui2.savename();
 	return ec;
 }
 
@@ -1589,7 +1595,7 @@ void Node::contrib_init(ANode * r) {
 
 void Node::init() {
 	ADirNode * r00t = new (ADirNode::aN()) NDirNode();
-	log("nodesiz: cl:%d nd:%d lbx:%d tg:%d", sizeof(ClipNode), sizeof(NDirNode), sizeof(LBoxNode), sizeof(TGuardNode));
+	if ((sizeof(ClipNode)|sizeof(NDirNode)|sizeof(LBoxNode)|sizeof(TBoxNode))&0xffffff80) bug("node size");
 	if (r00t->m_id) bug("nonzero id (0x%x) for root node", r00t->m_id);
 	ANode::m0_lr[0] = ANode::m0_lr[1] = r00t;
 	r00t->m_winflg |= WF_ROOT; r00t->set_perm(DF_ALL, DF_ALL);

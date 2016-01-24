@@ -17,9 +17,10 @@ extern int pt_cp_i2m;
 void pt_reg(int ix, int pid, pt_wfun fun);
 void pt_wait();
 void pt_chld_act();
+int pt_iocmd_sn(const char *s, int n);
 int pt_iocmd(char *s);
 int pt_con_op(int x); // -1: start >0: pid
-int pt_acv_op(int id, int op);
+int pt_acv_op(int id, int op, const char *a1, const char *a2);
 int pt_kill_pa(int flg);
 int pt_show_lic();
 

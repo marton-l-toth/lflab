@@ -205,7 +205,7 @@ QUICK_PZFILT(ZBEqLF) {
 // use the log() function -- both log() and bug() take printf-style arguments.
 
 void ci_zB(ANode * r) {
-	log("zB hellohello");
+	log("lflab is easy to extend, see %s for details", __FILE__);
 	qmk_box(r, "abs", QMB_ARG0(ZBAbs), 0, 1, 33, "zB", "i*o*R*1", "X", "absX", "Pz%%0%"); 
 	qmk_box(r, "+", QMB_ARG0(ZBAdd), 0, 2, 1, "zB", "1i*o*", "x$y", "x+y");
 

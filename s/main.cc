@@ -13,9 +13,7 @@
 #include "midi.h"
 #include "pt.h"
 
-#define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
-		 mx_init(), wrap_init(), track_init(), midi_init()
-int glob_flg = 0;
+int glob_flg = GLF_EMPTY | GLF_INI0;
 int debug_flags = 0;
 int sample_rate = 44100;
 int killer_fd = -1;
@@ -23,7 +21,7 @@ double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65
 char mostly_zero[0x8080];
 double junkbuf[4096];
 char save_file_name[1024];
-const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name;
+const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 GuiStub gui2;
@@ -34,24 +32,23 @@ ASnd snd0;
 static CmdBuf sl_cmd[N_SLCMD];
 static int asv_ts[2];
 
-void hi() { log("linear filter lab %d.%02d\n%s\n%s\n%s", v_major, v_minor,
-	    "Copyright (C) 2014-2015 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
+void hi() { log("lflab: linear filter based audio lab %d.%02d\n%s\n%s\n%s", v_major, v_minor,
+	    "Copyright (C) 2014-2016 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
 	    "see the file \"COPYING\" for details"); }
 
+#define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
+		 mx_init(), wrap_init(), track_init(), midi_init()
 static void ini0() {
 	const char * dfs = getenv("LF_DEBUGFLG"); if (dfs) debug_flags = atoi_h(dfs);
 	imp4097[0] = 1.0; vstring_set(v_major, v_minor);
 	extern void INI_LIST; INI_LIST;
-	CmdBuf::st_init();
-	jobq.init();
+	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
 	if (CFG_INI_ORDER.i) gui2.start();
 }
 
 static void rf(char ** nms, int n) {
-	Clock clk; memcpy(save_file_name, "unnamed.lf", 11);
-	for (int i=0, rwix=n-1; i<n; i++) {
+	Clock clk; for (int i=0, rwix=n-1; i<n; i++) {
 		if (!nms[i][0] || (nms[i][0]=='/' && !nms[i][1] && (rwix=i+1,1))) continue;
-		if (i==rwix) strncpy(save_file_name, nms[i], 1023);
 		clk.reset(); log("reading %s... (r%c)", nms[i], 111+8*(i>=rwix));
 		int ec = CmdBuf::read_batch(nms[i], NOF_BATCHF|(i<rwix)); if (ec<0) gui_errq_add(ec);
 		log("%s: %s (%d)", nms[i], ec<0 ? err_str(ec) : "ok", ec<0 ? ec : clk.get());
@@ -65,11 +62,11 @@ static void ini1() {
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
 	gui2.root_expand(); gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(1)));
 	                    gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(2)));
-	sl_cmd[2].sn("v50\n", 4);
-	log("###tpipe=%d", gui2.tpipe());
+	log("### tlp=%d i2m=%d, gcp=%d", gui2.tpipe(), pt_cp_i2m, gui2.outpipe());
 	if (getenv("LF_HITHERE")) snd0.w(-1);
-	snd0.cfg(gui2.tpipe(), 0); snd0.start();
-	snd0.cond_clk(asv_ts, 1);
+	if (CFG_DEVEL.i) pt_con_op(-1);
+	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
+	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1;
 }
 
 #define FOR_SLC for (int k,i=0; i<N_SLCMD; i++) if ((k=sl_cmd[i].fd()) >= 0)
@@ -87,8 +84,8 @@ static void sel_loop() {
 		if (gui2.pending()) snd0.mark('G'), gui2.flush_all();
 		if ((nj=jobq.nj())){ while (snd0.time4job()&&jobq.run());  jobq.upd_gui(0), nj=jobq.purge(); }
 		snd0.c_play();
-		if ((glob_flg&GLF_SILENCE) && (glob_flg&=~GLF_SILENCE, r=CFG_ASV_MIN.i) &&
-				snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
+		if ((r=glob_flg&GLF_SILENCE) && !((glob_flg^=r)&GLF_FSTATE) && (r=CFG_ASV_MIN.i) &&
+			   snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
 int main(int ac, char** av) { ini0(); rf(av+1, ac-1); ini1(); sel_loop(); }

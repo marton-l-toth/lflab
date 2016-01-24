@@ -8,6 +8,7 @@
 #include "mx.h"
 #include "util.h"
 #include "util2.h"
+#include "cfgtab.inc"
 
 /////// decl ////////////////////////////////////////////////////////////////
 
@@ -1120,7 +1121,7 @@ CH(wav){int k = 0, wf = p->m_node->winflg(2048);
 		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
 		case '2': k = WRF_W_CH2; goto flgs;
 		case '-': k = WRF_W_PLOT; goto flgs;
-		case 'W': return p->write_a20();
+		case 'W': case 0: return p->write_a20();
 		default: return BXE_CENUM;
 	}
 flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
@@ -1272,18 +1273,18 @@ void WrapGen::w_mini() {
 ///////////// box (tools) ////////////////////////////////////////////////////////
 
 int WrapGen::write_a20() {
-	int n, ec, ch2 = !!(m_bflg&WRF_W_CH2), mxr = mx1(ch2?0:WRF_MONO), nf = 0x7fffffff;
+	int n, ec, ch2 = !!(m_bflg&WRF_W_CH2), mxr = mx1(ch2?0:WRF_MONO), nf;
 	if (m_bflg&WRF_W_PLOT) {
 		float * q = m_sob.ro()->m_core.ro()->tf01;
 		int skip = (int)lround((double)q[0] * (double)sample_rate);
 		if  ((nf = (int)lround((double)q[1] * (double)sample_rate) - skip)<1) return BXE_ZEROWAV;
 		while (skip>1023) mx_calc(mxr, junkbuf, ch2?junkbuf:0, 1024, 0), skip -= 1024;
 		if    (skip)      mx_calc(mxr, junkbuf, ch2?junkbuf:0, skip, 0);
-	}
+	} else { nf = sample_rate * CFG_AO_TLIM.i; }
 	if (mx_r_isemp(mxr)) return BXE_ZEROWAV;
 	fa_writer out; if ((ec=fa_start(&out, 1+ch2))<0) return ec;
 	do n = min_i(nf, 1024), mx_calc_int(mxr, 0, 0, &out, n), nf -= n; while (nf && !mx_r_isemp(mxr));
-	mx_del(mxr); gui2.acv_open(out.id); return fa_end(&out)<0 ? EEE_ERRNO : 0;
+	mx_del(mxr); gui_acv_op(out.id); return fa_end(&out)<0 ? EEE_ERRNO : 0;
 }
 
 int WrapGen::batch_mono(double * to, int skip, int n) {

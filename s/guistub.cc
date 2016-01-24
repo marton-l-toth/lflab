@@ -10,7 +10,12 @@
 #include "cfgtab.inc"
 
 void gui_closewin(int x) { gui2.closewin(x); }
-void gui_errq_add(int x) { gui2.errq_add(x); }
+void gui_errq_add(int x, const char *s) { const char *s2 = (s&&x) ? err_str(x) : 0;
+					  gui2.errq_add(x); if (s2) log("%s:%s", s, s2); }
+
+int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
+	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
+
 void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0) {
 	gui2.cre(oid, 'J'); gui2.c1(hexc1(n));
 	for (int i=0; i<=n; i++) gui2.hdbl(lbl[i]);
@@ -43,15 +48,14 @@ int GuiStub::gui_dead(int pid, int stat, int td) {
 
 int GuiStub::start() {
         if (m_pid) return log("gui2 already started: pid %d", m_pid), PTE_WTF;
-	static const char * path = 0;
-	if (!path && !(path=getenv("LF_GUI"))) path = "./lf.gui";
+	static const char * path = 0; if (!path && !(path=getenv("LF_GUI"))) path = "./lf.gui";
 	int pfi, pfo, pft;
 	if ((m_pid = launch(path, "!><u>", &pfi, &pfo, &pft, (char*)0))<0) log("FATAL: %s\n", path), bye(1);
 	pt_reg(PT_GUI, m_pid, &gui_dead);
+	m_gf0 = glob_flg;
 	set_fd(&m_inpipe, pfi); set_fd(&m_outpipe, pfo); set_fd(&m_tpipe, pft);
-	log("m_tpipe = %d", m_tpipe);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor); 
-	savename(); set_tlog(); flush();
+	set_tlog(); savename(); vol(); flush();
 	return 0;
 }
 
@@ -150,8 +154,12 @@ void GuiStub::node_rm(int i, ANode * nd) {
 	c2(9, 'N'); hex5(dir->id()); c2(i+49, '-'); hex5(nd->id());
 }
 
-void GuiStub::acv_open(int j) { cre(ACV_WIN(j),'A'); sz(au_file_name(j, 0)); }
-void GuiStub::flush_all() { cfl(); slr_upd(); errq_cfl(); flush(); }
+void GuiStub::flush_all() { 
+	cfl(); slr_upd(); errq_cfl();
+	int x = glob_flg^m_gf0; m_gf0 = glob_flg;
+	if (x & GLF_FSTATE) savename();
+	flush();
+}
 
 void GuiStub::j_upd(int wwt, int st, int wwix) {
 	w0(); c1(wwt); if (wwix>=0) hexn(wwix, 2);
@@ -170,23 +178,35 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 	sn("(no ", 4); sz(defstr); sn(" box)", 5);
 }
 
-void GuiStub::set_tlog() {
-	c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
+void GuiStub::set_tlog() { c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
+void GuiStub::vol() { setwin(7,'.'); wupd_i2('v', snd0.vol() - 12); }
+
+void GuiStub::mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef) {
+	wupd_c0(wch, 't');
+	if (pc->i) sn("%%%ttt", 6), sn(pc->s, pc->i); else sn("ppp666(", 7), sn(sdef, ldef), c1(')'); }
 
 void GuiStub::mcfg_win(int flg) {
 	if (flg&   1) cre(0x57, 'F'); else setwin(0x57, 'F');
-	if (flg&   2) t0(), c1('s'), sz(save_file_name);
+	if (flg&   2) wupd_s('7', ","), sz(*save_file_name?save_file_name:"(no name)");
 	if (flg&   4) wupd_i1('s', CFG_SV_EXEC.i);
 	if (flg&   8) wupd_i2('a', CFG_ASV_MIN.i);
 	if (flg&  16) wupd_i1('t', CFG_TLOG_AUTO.i);
-	if (flg&  32) wupd_i1('S', CFG_SV_BACKUP.i);
-	if (flg&  64) wupd_i1('A', CFG_ASV_BACKUP.i);
-	if (flg& 128) wupd_i1('T', CFG_TLOG_BACKUP.i);
-	if (flg& 256) wupd_s ('k', CFG_AO_DIR.s);
-	if (flg& 512) wupd_i1('d', CFG_DEVEL.i);
+	if (flg&  32) wupd_i2('S', CFG_SV_BACKUP.i);
+	if (flg&  64) wupd_i2('A', CFG_ASV_BACKUP.i);
+	if (flg& 128) wupd_i2('T', CFG_TLOG_BACKUP.i);
+	if (flg& 256) mcfg_ud('k', &CFG_AO_DIR,  tmp_dir, tmp_dir_len);
+	if (flg& 512) mcfg_ud('w', &CFG_WAV_DIR, hsh_dir, hsh_dir_len);
+	if (flg&1024) wupd_ls('K', CFG_AO_ACTION.i);
+	if (flg&2048) wupd_i ('L', CFG_AO_TLIM.i);
+	if (flg&8192) wupd_i1('d', CFG_DEVEL.i);
 }
 
-void GuiStub::savename() { const char *p, *s = save_file_name;
-	mcfg_win(2);  for (p=s; *p; p++) if (*p=='/') s=p+1;  
-	setwin( 7,'.'); wupd_s('N',","); sz(s); setwin(23,'/'); wupd_s('1',save_file_name); }
-
+void GuiStub::savename() { 
+	char buf[64]; const char *p, *sb, *rgb = (glob_flg&GLF_EMPTY)?"%%%FFF":0, *sp = save_file_name;
+	int rf = glob_flg & GLF_RECOVER;
+	if (*sp) { if (!rgb) rgb="%%%%^^"; for (p=sb=sp; *p; p++) if (*p=='/') sb=p+1; if (rf) sb="BUG!"; }
+	else if (rf) { memcpy(buf,"(recover:0)",12); buf[9]=sp[2]; if (!rgb) rgb="zzz%%h"; sb=sp=buf; }
+	else { sp = sb = rgb ? "(empty)" : (rgb = "zz%z%%", "(unnamed)"); }
+	setwin( 7,'.'); wupd_c0('N','t'); sn(rgb, 6); sz(sb); 
+	setwin(23,'/'); wupd_c0('1','t'); sn(rgb, 6); sz(sp);  mcfg_win(2);
+}

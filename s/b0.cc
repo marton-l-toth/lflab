@@ -343,15 +343,16 @@ static void sel_ini(ANode *rn) {
 					256*(k-i)+i, inm, 256*k+1, "sel"); 
 		}}}
 
-static const char * help_d[] = { "", "0win", "0etc", "1icfg", "2midi", 0 };
+static const char * help_d[] = { "", "0win", "0etc", "1icfg", "2midi", "1fd", 0 };
 static const char * help_b[] = { "0abou.about", "0strt.getting started", "0plan.planned features",
 "0rbug.reporting bugs",
 "1wcl.clipboard", "1wma.main", "1wtr.tree", "1wtk.track", "1wgr.graph-box", "1wcc.calc-box", "1wcf.config",
 "1wwc.instrument(cfg)", "1wwp.instrument(play)", "1wacv.auconv", "1werr.errors", "1wau.audio",
 "2dtre.!b and !e", "2puls.pulseaudio", "2gui.gui (general)", "2file.save files", "2boxg.box (general)", 
-"2nanl.[lists]",
+"2nanl.[lists]", "2lib.libraries",
 "3wwcg.general(top)", "3wwav.autovol", "3wwsl.scale lines", "3wwsg.scale groups", 
-"4midd.new devices", 0 };
+"4midd.new devices",
+"5wFlo.load", "5wFll.load lib", "5wFsa.save as", "5wFsl.save lib", "5wFds.set directory", 0 };
 
 void b_help_init(ANode * rn) {
 	qmb_arg_t qa = QMB_ARG0(VersionBox);  const char *s, *s2; 

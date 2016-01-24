@@ -83,11 +83,12 @@ struct blk2k { unsigned short xp16, lo[818]; unsigned char rsrv, hi[409]; };
 struct fa_writer { blk2k blk; unsigned short toc[1024]; int fd,cnt,cur,nch,id; unsigned int buf[818]; };
 struct au16w_t { int ovf, rs4; unsigned char nch, oflg, vol, trg[5], cp[16]; };
 
-const char * au_file_name(int id, int j); // p2static, j= 0:a20 (2. 4~ 6tmp)+(0wav 1flac)
+const char * au_file_name(const char *dir, int dlen, int id, const char *a1, const char *a2, const char *ext);
 int fa_start(fa_writer * fa, int nch);
 int fa_add12(fa_writer * fa, const double * x, const double * y, int n);
 int fa_end(fa_writer * fa);
 void samp_stat(const double *p, int n, int k, bool dB, double dBy, double *pmin, double *pmax, double *pavg);
+int is_asv_name(const char *s);  // /.../__asv.lf /.../__asv--x.lf
 int coward(const char * fn);
 
 class Scale01 {

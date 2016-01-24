@@ -1,8 +1,6 @@
 #ifndef __qwe_uc1_h__
 #define __qwe_uc1_h__
 
-#define LOGPIPES "uxptks"
-#define CMDPIPES "gi"
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define TRK_DEF_GWFR ((const unsigned char*)"$%\0")
 
@@ -71,14 +69,17 @@ int find_dev(unsigned char *to, int midiflg, int max);
 #else
 
 int backup(const char *fn, int k) {
-        if (!k || !fn || !*fn) return 0; int l = strlen(fn);
-        char nm1[l+4], nm2[l+4];
-        memcpy(nm1, fn, l); memcpy(nm2, fn, l);
-        nm1[l] = nm1[l+1] = nm2[l] = nm2[l+1] = '-'; nm1[l+3] = nm2[l+3] = 0;
+        if (!k || !fn || !*fn) return 0; int ni, di, l = strlen(fn);
+        char nm1[l+4], nm2[l+4]; const char *s1 = nm1;
+	for (di=l-1; di>0; di--) { if (fn[di]=='/') break; if (fn[di]=='.') {
+		memcpy(nm1, fn, di); memcpy(nm1+di, "--0.", 4); memcpy(nm1+di+4, fn+di+1, l-di);
+		ni = di+2; goto ok1; }}
+	memcpy(nm1, fn, l); memcpy(nm1+l, "--0", 4); ni = l+2;
+ok1:	memcpy(nm2, nm1, l+4);
         while (k--) {
-                if (!k) nm1[l]=0; else nm1[l+2] = 48+k;
-                nm2[l+2] = 49+k;
-                if (rename(nm1, nm2)<0 && errno!=ENOENT) return -17; /*EEE_ERRNO*/
+                if (!k) s1 = fn; else nm1[ni] = i_to_b32(k);
+                nm2[ni] = i_to_b32(k+1);
+                if (rename(s1, nm2)<0 && errno!=ENOENT) return -17; /*EEE_ERRNO*/
         } return 0; }
 
 int bitcnt(unsigned int x) {

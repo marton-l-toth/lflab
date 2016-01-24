@@ -692,7 +692,7 @@ int mx_debug(const char *s) { switch(*s) {
 	default:  return MXE_INVDBG; }}
 
 void mx_init() {
-	log("sizB: %d sizF: %d", sizeof(MxItBox), sizeof(MxItFilt));
+	if (sizeof(MxItem)!=256) bug("mx/size");
 	TFunTab::f_init();  mx_v8_init();
 	for (int i=0; i<512; i++) mx_ptab[i] = (MxItem*)zeroblkC;
 	for (int i=0; i<255; i++) trec_bi[i] = i+1;

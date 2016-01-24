@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -142,7 +143,7 @@ static int a_main(int ac, char ** av) {
 //// console ////////////////////////////////////////////////////////////////
 
 int oops(const char *s) { if (*s==33) fprintf(stderr,"con/fatal: %s\n", s+1); else perror(s); 
-			  sleep(5); return 1; }
+			  sleep(1); return 1; }
 
 int c_main() {
 	const char * tdir = getenv("LF_TMPDIR"); if (!tdir) return oops("!LF_TMPDIR undefined");
@@ -175,9 +176,9 @@ int c_main() {
 
 /**************** log i/o ****************************************************/
 
-static int con_stat = 0, cxt_pid = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1;
+static void LOG(const char * fmt, ...), kill_con(), bye(int kf);
 
-void ts_9(char *to) {
+static void ts_9(char *to) {
         static time_t sec = 0; static char sbuf[8] = {48,48,48,48,48,46,0,0};
         struct timeval tv; gettimeofday(&tv, NULL);
         time_t sec2 = tv.tv_sec; if (sec2!=sec) {
@@ -189,21 +190,83 @@ void ts_9(char *to) {
 	memcpy(to, sbuf, 6); d999(to+6, tv.tv_usec/1000);
 }
 
+static int con_stat = 0, cxt_pid = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
+	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0;
+
+/*** shutdown --- shutdn_flg: 1-ppid 2-cmdin 4-.log 8-ulog */
+
+static int t_usec(int set) {
+	struct timeval tv; gettimeofday(&tv, NULL); if (set) return cl_sec = tv.tv_sec, cl_usec = tv.tv_usec;
+	int k = tv.tv_sec - cl_sec; return (k>2100) ? INT_MAX : 1000000*k + (tv.tv_usec - cl_usec); }
+
+static void shutdn(int ev) {
+	int oldf = shutdn_flg, st = -1, us = 0;
+	if (ev<0) shutdn_flg &= ev; else shutdn_flg |= ev;
+	if (!(shutdn_flg&1) && (getppid()!=der_alte)) shutdn_flg |= 1;
+	if (shutdn_flg & 3) {
+		if (!(oldf&3)) selwt=101000, t_usec(1);
+		else us = t_usec(0);
+		if (!(~shutdn_flg & 14) || ((shutdn_flg&1) && us > 500000)) st = 1;
+		else if (us > 1000000) st = 0;
+	}
+	if (shutdn_flg!=oldf || st>=0) LOG("shutdown (%d, %d)", shutdn_flg, us);
+	if (st>=0) bye(st);
+}
+
+static void search_and_destroy(int kfd) {
+        DIR * dir = opendir("/proc");
+        struct dirent * ent;
+        if (!dir) { perror("/proc"); return; }
+        char buf[256]; memcpy(buf, "/proc/", 6);
+        char kfb[64]; int kfb_l = snprintf(kfb, 63, "/fd/%d", kfd); kfb[kfb_l++] = 0;
+        const char *exe, *kf = getenv("LF_KILLER"); if (!kf) puts("???"), exit(1);
+        int pid, i, k, ec, kfl = strlen(kf)+1, mypid = getpid();
+        if (kfl>1023) return (void) puts("wtf");
+        char buf2[1024];
+        while ((ent = readdir(dir))) {
+                const char * s = ent->d_name;
+                for (i=pid=0; i<8 && (unsigned int)(k=s[i]-48)<10; i++) buf[6+i] = s[i], pid = 10*pid + k;
+                if ( k!=-48 || pid==mypid || (memcpy(buf+6+i,kfb,kfb_l), (ec=readlink(buf,buf2,kfl+1))<0) ||
+                    (buf2[ec]=0, memcmp(buf2, kf, kfl)) ) continue;
+                memcpy(buf+6+i, "/exe", 5); ec = readlink(buf,buf2,1023);
+                exe = (ec<0) ? "(readlink(exe) failed)" : (buf2[ec]=0, buf2);
+                switch(kill(pid, 9)) {  case 0:     ec = '+'; break;
+                                        case ESRCH: ec = '-'; break;
+                                        case EPERM: ec = '!'; break;
+                                        default:    ec = '?'; break; }
+                LOG("kill %5s %c %s", s, ec, exe);
+        }
+        closedir(dir);
+}
+
+static void del_n_log(const char *s, int f){ if ((f?rmdir:unlink)(s)<0) LOG("del %s: %s",s,strerror(errno));}
+static void del_workdir() {
+        const char *s, *s0 = getenv("LF_TMPDIR"); if (!s0) return;
+        int l0 = strlen(s0);
+        char buf[l0+16]; memcpy(buf, s0, l0); buf[l0] = '/'; buf[l0+2] = 0;
+        for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0);
+        memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0);
+        buf[l0] = 0; del_n_log(buf, 1);
+}
+
+static void close_all() {
+	struct rlimit rlim; rlim.rlim_cur=9999; getrlimit(RLIMIT_NOFILE, &rlim);
+	int i,n; for (i=0, n = (int)rlim.rlim_cur; i<n; i++) close(i); }
+
 /*** output buf ***************/
 static char logbuf[16384];
 static int log_ix = 0, log_ox = 0, log_flg = 0;
 
-static void LOG(const char * fmt, ...), kill_con();
 static void log_sn(const char *s, int n, int conpfx) {
 	int r = 0, ix0 = log_ix, n0 = n;
 	if (n<1) { switch(n) {
-		case -2: if (log_flg&1) write(msg_fd, logbuf+ix0, 16384-ix0);
+		case -2: if ((log_flg&1) && (r=write(msg_fd, logbuf+ix0, 16384-ix0))<0) goto err;
 			 if ((r = write(msg_fd, logbuf, ix0))<0) goto err; else return;
 		case -1: if ((n=ix0 - log_ox)>0 &&
 			      (r = write(2, logbuf+log_ox, n), log_ox=ix0, r<1)) goto lerr;
 		case 0: return;
 	}}
-	if ((log_ix+=n)>=16384 && (log_flg|=1, log_ix&=16383)) memcpy(logbuf, s+(n=16384-ix0), log_ix);
+	if ((log_ix+=n)>16383 && (log_flg|=1, log_ix&=16383)) memcpy(logbuf, s+(n=16384-ix0), log_ix);
 	if (n) memcpy(logbuf + ix0, s, n);
 	while ((log_ix^log_ox)&~4095) {
 		int op2 = (log_ox&~4095) + 4096;
@@ -211,17 +274,24 @@ static void log_sn(const char *s, int n, int conpfx) {
 		if (r<=0) { log_ox = log_ix; goto lerr; }
 		log_ox = op2 & 16383;
 	}
-	if (msg_fd<0 || (n = n0 + conpfx)<1) return; else ix0 = log_ix - n;
+	if (msg_fd<0 || !con_stat || (n = n0 + conpfx)<1) return; else ix0 = log_ix - n;
 	if (ix0<0 && (r=write(msg_fd, logbuf+(ix0&16383), -ix0), n+=ix0, ix0=0, r<1)) goto err;
 	if ((r=write(msg_fd, logbuf+ix0, n))>0) return;
-err:	kill_con(); return LOG("[console write err: %s]\n", r==-1 ? strerror(errno) : "zero ret");
+err:	kill_con(); return LOG("[console write err: %s]\n", r==-1 ? strerror(errno) : "zero ret"), log_sn(0, -1, 0);
 lerr:   if (!con_stat) return;
 	char errbuf[256]; n = snprintf(errbuf, 255, "log file write error: %d(%s)\n",
 			r ? errno : 0, r ? strerror(errno) : "zero ret.");
 	write(msg_fd, errbuf, n);
 }
 
+static void log_esc(int pfx, char *s) {
+	if (pfx!='u') return LOG("invalid esc-cmd src 0x%x", pfx);
+	if ((*s|1) != 49) return LOG("invalid gui esc-cmd 0x%x", *s);
+	shutdn(8 ^- (gui_stat=*s&1));
+}
+
 static void log_l(char *s, int n, int pfx) {
+	if (!memcmp(s, "&CMD", 4)) return log_esc(pfx, s+4);
 	char buf[12]; ts_9(buf); buf[9] = pfx; buf[10] = 32;
 	log_sn(buf, 11, INT_MIN); log_sn(s, n+1, *s=='`'?INT_MIN:11); 
 }
@@ -235,12 +305,17 @@ static void LOG(const char * fmt, ...) {
 }
 
 static void bye(int kf) {
-	kill_con(); if (!kf) exit(1); char * exe = getenv("LF_CLEANUP");
-	LOG("ioprc done, killer_fd = %d, cleanup script: \"%s\"", killer_fd, exe ? exe : "");
-	log_sn(0,-1,0); if (killer_fd) close(killer_fd);
-	if (exe) close(1), dup2(2,1), close(0), open("/dev/null", O_RDONLY),
-	         execlp(exe, exe, (char*)0), perror("exec failed");
-	exit(1);
+	if (!kf) kill_con(), exit(1);
+	con_stat = 0; 
+	search_and_destroy(killer_fd); del_workdir();
+	if (!rs_ts || time(NULL)>rs_ts+5) LOG("bye"), log_sn(0,-1,0), exit(0);
+	const char *es, *fn = getenv("LF_SCRIPT"); 
+	if (!fn) LOG("restart failed (missing env)"), log_sn(0,-1,0), exit(1);
+	LOG("restarting (%s)...", fn); log_sn(0, -1, 0); close_all();
+	execl(fn, fn, (char*)0); es = strerror(errno);
+	const char * log2 = getenv("LF_LOG"); if (!log2) exit(2);
+	int fd2 = open(log2, O_WRONLY|O_APPEND); if (fd2<0) exit(3);
+	write(fd2, es, strlen(es)); write(fd2, " (restart failed)\n", 18); close(fd2); exit(4);
 }
 
 /*** cmd **********************/
@@ -257,12 +332,13 @@ static int start_con() {
 		 (cxt_pid = launch("xterm", "!)x1", "-sb", "-e", sh, (char*)0))<0 ||
 		 (msg_fd = open(tpipe_name('m'), O_WRONLY|O_APPEND))<0); }
 
-static void kill_con() { if (cxt_pid)  kill(cxt_pid, 9); }
+static void kill_con() { con_stat = 0; if (cxt_pid)  kill(cxt_pid, 9); }
 
 static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'c': if (start_con()<0) LOG("start_con failed");    return;
 	case 'C': return con_stat = 1, log_sn(0, -2, 0);
 	case 'f': return log_sn(0, -1, 0);
+	case 'r': return (void) (rs_ts = time(NULL));
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 
@@ -292,7 +368,7 @@ static void ib_read(ibuf * b) {
 	char *q, *ql, *p = b->p;
 	int ag = b->arg, sz = b->siz, r = read(b->fd, p + b->cont, sz - b->cont);
 	if (r<1) { LOG("inpipe(%c): %s", ag?ag:48, r?strerror(errno):"zero returned");
-		   if (ag<65) { LOG("unnamed pipe fail, closing..."); b->fd = -1; return; }
+		   if (ag<65) { close(b->fd); b->fd = -1; shutdn(2+2*!!ag); return; }
 		   LOG("logpipe fail, errtemp=%d", errtemp);
 		   if (errtemp<99) errtemp+=10, close(b->fd),
 			           b->fd = open(tpipe_name(ag), O_RDWR);
@@ -305,13 +381,6 @@ static void ib_read(ibuf * b) {
 
 /*** main *****/
 
-static int orph = 0;
-static void tick(int k) {
-	static int cnt = 0; if ((cnt+=k)<10) return; else cnt = 0;
-	int pp = getppid(), flg = der_alte<0 ? (pp==1) : (pp!=der_alte);
-	if (orph ? ++orph : (orph = flg)) {
-		LOG("ioprc orphaned (%d!=%d), %c/3", pp, der_alte, 48+orph); if (orph>2) bye(1); }}
-
 static void hello() {
 	char buf[1024]; int k = (int)readlink("/proc/self/fd/2", buf, 1023);
 	if (k<0) LOG("ioprc started, /proc/self/fd/2: %s", strerror(errno));
@@ -320,30 +389,32 @@ static void hello() {
 
 #define FOR_IB for(i=0; i<N_IBUF; i++) if ((k=ib[i].fd)>=0)
 int i_main(int ac, char ** av) {
+	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN);
 	signal(SIGCHLD, io_chld);
 	hello();
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
 	killer_fd = (ac<3||*av[2]<48) ? 0 : qh4r(*(int*)av[2]);
-	der_alte = ac<4 ? -1 : qh4r(*(int*)av[3]);
+	der_alte = ac<4 ? getppid() : qh4r(*(int*)av[3]);
 	int i, k;
 	fd_set rset; struct timeval tv;
 	while(1) {
 		FD_ZERO(&rset);
 		int maxfd = 0;
 		FOR_IB { FD_SET(k, &rset); if (k>maxfd) maxfd = k; }
-		tv.tv_sec=0; tv.tv_usec = 250000;
+		tv.tv_sec=0; tv.tv_usec = selwt;
 		int r = select(maxfd+1, &rset, 0, 0, &tv);
 		if (r<0) { LOG("select(): %s", strerror(errno)); r = 0; }
-		tick(r?r:10);
+		shutdn(0);
 		if(!r){ if ((errtemp -= 20)<0) errtemp = 0;  continue; }
 		if ((errtemp -= r)<0) errtemp = 0;
 		FOR_IB if (FD_ISSET(k, &rset)) ib_read(ib+i);
 	}}
 
-/////////////////////////////////
+
+/*******************************/
 
 int usage(const char *s) { return fprintf(stderr, "lf.bb: name \"%s\"%s", s,
-		" unknown, valid names are lf.acv, lf.io and lf.con\n"), 1; }
+		" unknown, valid names are lf.acv, lf.io, lf.lic and lf.con\n"), 1; }
 
 int main(int ac, char ** av) {
 	const char *q, *s = *av;

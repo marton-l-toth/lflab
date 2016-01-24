@@ -51,6 +51,7 @@ class CmdBuf : public AOBuf {
 		int chunk(int len);
 		int bprep(int siz);
 		int line(char * s);
+		int fdok(int ec, int ty);
 
 		CmdTok m_c_tok;
 		ANode * m_c_node;

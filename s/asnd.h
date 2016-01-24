@@ -20,6 +20,7 @@ class ASnd {
 		int stat(unsigned int * to, int n);
 		int close();
 		void set_vol(int x) { m_cfg.vol = x; }
+		int vol() const { return m_cfg.vol; }
 		int hcp_start(int t);
 		int hcp_end(int f = 0);
 		int hcp() const { return m_hcp; }
@@ -40,8 +41,6 @@ class ASnd {
 
                 snd_pcm_t * m_hnd;
 		int m_state, m_n_chan, m_mxid;
-
-		double m_vol;
 
 		int m_avu_trg, m_sel_min, m_bsiz_ref;
 		int m_job_dl;

@@ -51,6 +51,7 @@
 #define DF_WRAP 16
 #define DF_BOXCONF 32
 #define DF_TRK 64
+#define DF_CWLU 128
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]));
@@ -138,7 +139,7 @@ typedef struct _ob_box {
 static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, mcfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel,
 		     tkcf_skel;
-static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, mcfg_cmd, tkcf_cmd;
+static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, tkcf_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel, dakcf_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
@@ -164,7 +165,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'E', TWF_YSIZE , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
 	{'S', 0         , acfg_skel, NULL },
-	{'F', 0         , mcfg_skel, mcfg_cmd },
+	{'F', 0         , mcfg_skel, NULL },
 	{'J', 0         , in01_skel, NULL },
 	{'k', 0         , tkcf_skel, tkcf_cmd },
 	{ 0 , 0, 0, NULL } };
@@ -208,16 +209,17 @@ static int conf_lbh = 18, conf_lbfh = 15, conf_lbfs = 15, conf_lbfh_s = 12, conf
 static int conf_nomwin = 0;
 static int conf_portwid;
 
-static int dflg = 0;
+static int tlog_c_onq = 0, tlog_c_bk = 0;
+static int dflg = 0, global_ec = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
-			     "40: track";
+			     "40:track 80:lookuperr-0x[56]7";
 // general
-#define MYPRINTF(nm, l)             			\
-void nm(const char * fmt, ...) {      			 \
+#define MYPRINTF(NM, L)             			\
+void NM(const char * fmt, ...) {      			 \
         va_list ap; va_start(ap, fmt); 			  \
-        int n = vsnprintf(pf_buf, 1023, fmt, ap);	   \
-        va_end(ap); if (n<=0) return; if (n>1023) n = 1023; \
-	pf_buf[n]='\n'; write(1+l, pf_buf, n+1); }
+        int n = vsnprintf(pf_buf+1, 1022, fmt, ap);        \
+        va_end(ap); if (n<=0) return; if (n>1022) n = 1022; \
+	pf_buf[n+1]='\n'; write(1+L, pf_buf+L, n+2-L); }
 
 static char pf_buf[1024];
 MYPRINTF(CMD,0)
@@ -257,7 +259,20 @@ static int get_dec(const char ** pp, int delim) {
 	return a;
 }
 
-static void bye(int ec) { gtk_main_quit(); exit(ec); }
+static void write_tlog();
+static void bye(int op) {
+	LOG("bye(0x%x)", op );
+	if (tlog_c_onq) write_tlog();
+	write(2, "bye\n&CMD0\n", 10);
+	if (op<32) exit(op);
+	CMD("q%c", 32+(op&31));
+	while(1) sleep(60); // patiently wait to be killed
+}
+
+static gboolean fifo_bye (GIOChannel *src, GIOCondition condition, gpointer data) {
+	int k = (char*)data - pf_buf;
+	return LOG("input pipe %d: %s", k>>1, "HUP\0ERR"+4*(k&1)), bye(1), TRUE; }
+
 static void hello2(GtkWidget *w, gpointer p) { LOG ("Hello bazmeg"); }
 
 static gboolean not_so_easy(GtkWidget *widget, GdkEvent *event, gpointer data) {
@@ -265,7 +280,7 @@ static gboolean not_so_easy(GtkWidget *widget, GdkEvent *event, gpointer data) {
     return TRUE;
 }
 
-static void mw_bye(GtkWidget *w, gpointer p) {  gtk_main_quit (); }
+static void mw_bye(GtkWidget *w, gpointer p) { bye(1); }
 #define OOPS gtk_button_new_with_label("oops");
 
 static void pv_skel(struct _ww_t * ww, const char **pp) { LOG("ERROR: pv_skel called!"); }
@@ -311,7 +326,7 @@ int smallnum(char * to, double v) {
         puts("hello2");
         int xp = atoi(buf+i+1) + 18;
         buf[i]='$'; buf[i+1]=0;
-        printf("xp=%d, buf=\"%s\"\n", xp, buf);
+        LOG("xp=%d, buf=\"%s\"", xp, buf);
         switch(xp % 3) {
                 case 0: break;
                 case 1:
@@ -525,8 +540,8 @@ static void cltab_init() {
 static void tw_bye(GtkWidget *w, gpointer p) {
 	topwin * tw = (topwin*)p;
 	if (dflg & DF_WCLOSE) LOG("tw_bye: 0x%x, cl=0x%x '%c'", tw->id, tw->cl->ch, tw->cl->ch);
-	if (tw->cl->ch=='J') CMD("~L%04xFF01", (tw->id>>4)&65535);
-	else CMD("~x%c%x", hexc1(tw->id&15), tw->id>>4);
+	if (tw->cl->ch=='J') CMD("L%04xFF01", (tw->id>>4)&65535);
+	else CMD("x%c%x", hexc1(tw->id&15), tw->id>>4);
 	tw_remove(tw); tw_free(tw);
 }
 
@@ -702,42 +717,46 @@ static void fw_cmd(topwin * tw, const char *s1, const char *s2) {
 	else s1=buf, ww=widg_lookup_p(tw, &s1), (ww->cl->cmd)(ww, s1);
 }
 
+static int cmd_esc(ww_t * ww, const char *s1, const char *s2) { switch(*s1) {
+	case '>': return fw_cmd(ww->top, s1+1, s2), 1;
+	case '!': return fw_cmd(NULL,    s1+1, s2), 1;
+	case '/': return gtk_window_present(GTK_WINDOW(ot_etc[1].w)), 1;
+	case '?': if (s1[1]) return CMD("W#2.%s", s1+1), 1;
+		  switch(ww->top->cl->ch) {
+			  case '.': s2 = "main";   break;
+			  case '/': s2 = "tree";   break;
+			  case 'F': s2 = "config"; break;
+			  case 'E': s2 = "errors"; break;
+			  case 'S': s2 = "audio";  break;
+			  case 'A': s2 = "auconv"; break;
+			  default: return LOG("builtin help not found"), 0; }
+		  return CMD("W#2.win.%s", s2), 1;
+	default: return 0; 
+}}
+
 static int widg_defcmd(ww_t * ww, const char * arg) {
 	char cmd[4096];
 	const char * s = ww->cmd;
 	topwin * tw = ww->top;
-	if (*s==36) { switch(s[1]) {
-		case '>': fw_cmd(tw,   s+2, arg); return 0;
-		case '!': fw_cmd(NULL, s+2, arg); return 0;
-			{ int k = 0, l = strlen(s); memcpy(cmd, s+2, l-2);
-			   if (arg && (k=strlen(arg))) memcpy(cmd+l-2, arg, k);
-			   cmd[k+l-2] = 0; s[1]==33 ? cmd1(cmd) : (*tw->cl->cmd)(tw, cmd); return 0; }
-		case '/': gtk_window_present(GTK_WINDOW(ot_etc[1].w)); return 0;
-		case '?': CMD("~W#2.%s", s+2); return 0;
-		default: LOG("invalid esc-cmd 0x%x(%c)", s[1], s[1]); return 0;
-	}}
+
+	if (*s==36) return cmd_esc(ww, s+1, arg) ? 0 : (LOG("invalid esc-cmd 0x%x(%c)", s[1], s[1]), 0);
 	cmd[0] =  '~';
 	int mode=0;
-	if (*s) {
-		cmd[1] = *(s++);
-	} else {
-		if (*arg==36) { switch(*++arg) {
-			case '>': fw_cmd(tw,   arg+1, 0); return 0;
-			case '!': fw_cmd(NULL, arg+1, 0); return 0;
+	if (*s) { cmd[1] = (*s=='~') ? (mode=1, s+=2, s[-1]) : *(s++); }
+	else {  if (*arg==36) { switch(*++arg) {
 			case '.': mode = -1; ++arg; break;
 			case '~': mode = 1; ++arg; break;
-			default: LOG("invalid esc-cmd 0x%x(%c)", s[1], s[1]); return 0;
+			default: return cmd_esc(ww, arg, NULL) ? 0 : 
+				 (LOG("invalid esc-cmd 0x%x(%c)", s[1], s[1]), 0);
 		}}
-		cmd[1] = *(arg++); 
+		cmd[1] = *(arg++); if (!*arg && !tw->cmdp_len) return cmd[2]='\n', write(1, cmd, 3);
 	}
 	int k, i = (mode<1) ? 2 + tw_defcmd(tw, cmd+2) : 2;
 	if (mode<0) cmd[i-1] = '.';
 	mode = 0;
 	while (1) {
 		if (i>3840) break;
-		if (!*s) {
-			if (mode || ww->cl->ch != 'M') break; else mode=1, s=arg;
-		}
+		if (!*s) { if (mode || ww->cl->ch != 'M') break; else mode=1, s=arg; }
 		if (*s=='%') {
 			if (!*++s) break;
 			ww_t * ww2; switch(*s) {
@@ -866,6 +885,83 @@ static void entry_skel(struct _ww_t * ww, const char **pp) {
 	g_signal_connect (ww->w, "changed", G_CALLBACK (entry_chg), (gpointer)ww);
 }
 
+///////////////// file/dir chooser dialog ////////////////////////////////////
+
+typedef struct { int ch, ty; const char *title, *b0, *b1, *c0, *c1; GtkWidget * pg; } choo_t;
+static void choo_cmd(choo_t *q, const char *s), local_error(int ec);
+
+static chtab choo_ch;
+static choo_t choo_tab[] = {{'?', 0, NULL, NULL, NULL, NULL, NULL, NULL},
+	{'<'|256, GTK_FILE_CHOOSER_ACTION_OPEN, "load",     "load", "see autosaves", ".", "$A", NULL},
+	{'l'|256, GTK_FILE_CHOOSER_ACTION_OPEN, "load lib", "load", NULL, "l.", "", NULL},
+	{'>'|256, GTK_FILE_CHOOSER_ACTION_SAVE, "save as",  "save", NULL, "s",  "", NULL},
+	{'L'|384, GTK_FILE_CHOOSER_ACTION_SAVE, "save lib", "save (R)", "save (L)", "S@R$", "S@L$", NULL},
+	{'k'|512, GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER,"a20(tmp) dir", "select","default", "ck","#ck",NULL},
+	{'w'|512, GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER,"WAV/FLAC dir", "select","default", "cw","#cw",NULL},
+	{0, 0, NULL, NULL, NULL, NULL, NULL}};
+
+static void choo_init() {
+	int i,j; for (i=0; (j=choo_tab[i].ch); i++) 
+		if (chtab_force(&choo_ch,j&127) != i) LOG("choo_init: ixw error"); }
+
+static void choo_ucmd(const char * cmd, char * uri) {
+	if (!uri) return local_error(EEE_FDNOSEL), LOG("choo_ucmd: missing uri");
+	if (memcmp(uri, "file://", 7)) return LOG("choo_ucmd: unexp uri \"%s\"", uri);
+	int clen = strlen(cmd), ulen = strlen(uri+7), cpos = 7 - clen;
+	if (cpos<1) return LOG("choo_ucmd: cmd too long/me too lazy");
+	uri[cpos-1] = '~'; memcpy(uri+cpos, cmd, clen); uri[7+ulen] = 10;
+	write(1, uri+cpos-1, ulen+clen+2); g_free(uri);
+}
+
+static void choo_bye(GtkWidget *w, gpointer p) { ((choo_t*)p)->pg = NULL; LOG("choo_bye: %c", ((choo_t*)p)->ch&127);}
+static void choo_resp(GtkDialog* choo, gint resp, void * p) {
+	GtkFileChooser * fc = GTK_FILE_CHOOSER(choo);
+	choo_t * q = (choo_t *)p;
+	LOG("choo choo resp %d \"%s\"", resp, choo ?  gtk_file_chooser_get_uri(fc) : "BUG"); 
+	switch(resp) {
+		case GTK_RESPONSE_HELP:   return CMD("W#2.win.fd.%s",(q->ch&512) ? "set directory" : q->title);
+		case GTK_RESPONSE_ACCEPT: return choo_ucmd(q->c0, gtk_file_chooser_get_uri(fc));
+		case GTK_RESPONSE_REJECT: case GTK_RESPONSE_OK:
+			switch(*q->c1) {
+				case 0:   return LOG("choo_resp: unexp rej for 0x%x'%c'", q->ch&127,q->ch&127);
+				case '$': if (*q->c1=='$') return choo_cmd(q, q->c1+1);
+				case '#': return CMD("%s\n", q->c1+1);
+				default:  return choo_ucmd(q->c1, gtk_file_chooser_get_uri(fc));     }
+		case GTK_RESPONSE_CANCEL: return gtk_widget_destroy(q->pg); //, (void)(q->pg = 0);
+		default: return LOG("choo_resp: unknown resp %d", resp);
+	}}
+
+#define GTBPAIR(X) GTK_STOCK_
+#define CHOO_ARGL q->title, NULL, q->ty, GTK_STOCK_CANCEL,GTK_RESPONSE_CANCEL, GTK_STOCK_HELP,GTK_RESPONSE_HELP
+static void choo_open(choo_t * q) {
+	GtkFileFilter * ffilt = NULL;
+	q->pg = q->b1 ? gtk_file_chooser_dialog_new(CHOO_ARGL, q->b1, (q->ch&128) ?
+					GTK_RESPONSE_OK : GTK_RESPONSE_REJECT, q->b0,GTK_RESPONSE_ACCEPT,NULL)
+		      : gtk_file_chooser_dialog_new(CHOO_ARGL, 		       q->b0,GTK_RESPONSE_ACCEPT,NULL);
+	GtkFileChooser * fc = GTK_FILE_CHOOSER(q->pg);
+	if (q->ch&256) { 
+		ffilt = gtk_file_filter_new(); gtk_file_filter_set_name(ffilt,"lflab saves");
+		gtk_file_filter_add_pattern(ffilt, "*.lf"); gtk_file_chooser_add_filter(fc, ffilt);
+		ffilt = gtk_file_filter_new(); gtk_file_filter_set_name(ffilt,"all files");
+		gtk_file_filter_add_pattern(ffilt, "*"); gtk_file_chooser_add_filter(fc, ffilt); }
+	g_signal_connect (q->pg, "response", G_CALLBACK(choo_resp), (gpointer)q);
+	g_signal_connect (q->pg, "destroy", G_CALLBACK(choo_bye), (gpointer)q);
+	gtk_file_chooser_set_do_overwrite_confirmation(fc, TRUE);
+	gtk_widget_show(GTK_WIDGET(fc));
+}
+
+static void choo_cmd(choo_t *q, const char *s) {
+	if (!q->title) return LOG("choo_cmd: unknown choo 0x%x/%c", q->ch, q->ch&127);
+	GtkFileChooser * fc = q->pg ? GTK_FILE_CHOOSER(q->pg) : NULL;
+	switch(*s) {
+		case 'W': if (fc) gtk_window_present(GTK_WINDOW(q->pg)); else choo_open(q);  return;
+		case 'A': if (q->pg) gtk_file_chooser_set_current_folder(fc, getenv("LF_USERDIR"));
+			  else LOG("choo_cmd/A: window not open");			     return;
+		case 'Z': return (q->pg) ? gtk_widget_destroy(q->pg)
+			  		 : LOG("choo_cmd/Z: nothing happens");
+		default: return LOG("choo_cmd: unknown cmd 0x%x/%c", *s, *s);
+	}}
+
 ///////////////// track div. TODO: fix prod //////////////////////////////////
 
 typedef struct { char i,d,s,f; } tdiv_idsf_t;
@@ -957,12 +1053,14 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
 {0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
-{'.',14,0,12,4, "filter disp.audio configmain config open consoleflush log   write tlog  save config "
-	        "------------exit(autosv)------------exit w/o a/sSIGABRT     SIGQUIT     SIGKILL     ",
-		"_F  A0W cW  _c-1*f  $!t c>  ####$!q1####$!q2#%$6#%$3#%$9"},
+{'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
+		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
+		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
+		"_F  A0W cW  _c-1_E  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
 {'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
-{0,  3, 0, 7, 6, "[save] save(L)save(R)", "s%1   S@L$%1S@R$%1"},
-{'#',4, 0, 8, 3, "[focus] config  help    redraw  ", "$>*W$ N??M9 "},
+{0,  9, 0,8,5,"load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
+	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
+{'#',5, 0, 8, 3, "[focus] config  help    redraw  wav/flac", "$>*W$ N??M9 XAW"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',6, 0, 7,2, "help   info1  info2  info*  GUI cfgdelete ", "N?I1I2I3EWNd"},
@@ -976,7 +1074,8 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 7, 0, 5, 6, "help info del/s-----cleardel  toWAV", "N?    I3    Kd    ##    KZ    Nd    $>W^1 "},
+{'K', 8, 0, 5, 6, "help info del/s-----cleardel  -----WAV/s", "N?    I3    Kd    ##    KZ    Nd    ######$.X*$AW"},
+{'k', 4, 1, 4, 1, "ask keepwav flac", "0123"},
 {'S', 1,0, 1,1, "??", "##" },
 {0, 3, 1, 5, 1, "availdelayretBS", "012"},
 {0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
@@ -1109,13 +1208,14 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
 	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0;
-	int i, n = cmenu_mt->ni, btn = ev->button;
+	int i, f, n = cmenu_mt->ni, btn = ev->button;
 	const char * lbl = cmenu_mt->lbl;
 	if (*lbl=='[' && btn==1) return (void) widg_defcmd(ww, cmenu_mt->cmd);
-	cmenu_gw = gtk_menu_new(); 
+	cmenu_gw = gtk_menu_new(); gtk_widget_set_name(cmenu_gw, "lflabPU");
 	if (n) { for (i=0; i<n; i++, lbl += cmenu_mt->lbll) {
 		if (msk & (1u<<i)) continue;
-		GtkWidget * it2 = gtk_menu_item_new_with_label(lbl);
+		GtkWidget * it2 = memcmp(lbl, "----", 4) ? gtk_menu_item_new_with_label(lbl) 
+							 : gtk_separator_menu_item_new();
 		gtk_menu_shell_append(GTK_MENU_SHELL(cmenu_gw), it2);
 		gtk_widget_show(it2);
 		g_signal_connect(it2, "activate", G_CALLBACK(menu_act), (char*)ww + i);
@@ -1403,11 +1503,12 @@ static cairo_surface_t * cpu_surf;
 static int cpu_austat = 1;
 static unsigned int tlog_dat[0x101000];
 static int tlog_ix_c = 0, tlog_ix_i = 0, tlog_wr = 0;
-static int tlog_c_onq = 0, tlog_c_bk = 0;
 
 static void dabmp_draw(ww_t * ww, cairo_t * cr2) {
 	static const double fg[2]={.2, 1.0}, bg[2]={.1,.3};
+	static int state = 0;
 	unsigned int * q = (unsigned int*)cpu_bmp;
+	if (!state && q[2]!=0x80000100) state=1, CMD("Rg");
 	int rf = !!(q[9]&0xf8000000), gf = !(q[3]&0xf8000000);
 	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE);
 	if (cpu_austat) cairo_set_source_rgb (cr2, bg[rf], bg[gf], *bg); 
@@ -1717,7 +1818,7 @@ static void dalbl_skel(struct _ww_t * ww, const char **pp) {
 static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 	char buf[256]; int force = 0;
 	if (**pp=='!') force=1, ++*pp;
-	if (!memcmp(*pp, "==> ", 4)) { 
+	if (!memcmp(*pp, "==> ", 4)) {
 		memcpy(ww->arg[2].c, "Azz666_", 6); ww->arg[3].i[0] = -1;
 	} else if (**pp=='('&&!(flg&8)) { 
 		++*pp; int x = 0; while (**pp&80) x = 16*x+hxd2i(**pp), ++*pp;
@@ -1727,6 +1828,8 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 	int l = get_tok(buf, 256, pp, ((flg&1)<<7)+36);
 	if (l) ++l; else buf[0]=32, buf[1]=0, l=2;
 	ww->etc = realloc(ww->etc, l); memcpy(ww->etc, buf, l);
+	if (ww->arg[3].i[0]<0) {
+		int l2 = 0; while (buf[l2] && memcmp(buf+l2, " -- ", 4)) ++l2; ww->arg[3].i[0] = -l2; }
 	if (force) {
 		if (buf[0]!='.') { LOG("daclb_set: path begins with 0x%x", buf[0]); return; }
 		int j; for (j=l-1; buf[j]!='.'; j--) ;
@@ -1738,7 +1841,8 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 
 static void daclb_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	int k = ww->arg[3].i[0]; if (!k) return;
-	if (k<0) { CMD("~W%s%s", (((char*)ww->etc)[4]=='.')?"":".!b.?.", (char*)ww->etc + 4); return; }
+	if(k<0){char * q = (char*)ww->etc; int c = q[-k]; q[-k] = 0;
+		CMD("W%s%s", (q[4]=='.')?"":".!b.?.", q + 4); q[-k] = c; return; }
 	int tid = ww->top->id, f = (k==(tid>>4));
 	char buf[16]; buf[0] = '~'; buf[1] = 87-10*f; buf[2] = '#';
 	int l = 3 + hx5(buf+3, k);
@@ -2487,7 +2591,7 @@ static trk_24 * tc_a24(tc_t * tc, unsigned short * to) {
 	trk_24 * r = tc_p24(tc, ((*to=tc->t24_f)||(*to=tc_mk_b3k(tc))||(tc->flg|=TCF_OOM),*to));
 	if (*to) tc->t24_f = r->b.nx;     return r; }
 
-static void tc_vw_cmd(tc_t * tc) { CMD("~X#%x$V%c%c$%x$%x",
+static void tc_vw_cmd(tc_t * tc) { CMD("X#%x$V%c%c$%x$%x",
 		tc->nid, tc->y0a+48, tc->y1a+48, tc->x0a, tc->x1a); }
 
 static void tc_clear(tc_t * tc, int re) {
@@ -2849,7 +2953,7 @@ static void trkclk_s(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
 static void trkclk_e(ww_t * ww, int b9, int cy) { LOG("trkclk_e: b%c y:%d", 48+b9, cy); }
 
 static void tsc_cc(int c) {
-	CMD("~X#%x$C%c%x$%x$%x", tsc_ww->top->id>>4, c, tsc_id, tsc_y, tsc_x);
+	CMD("X#%x$C%c%x$%x$%x", tsc_ww->top->id>>4, c, tsc_id, tsc_y, tsc_x);
 	if (dflg&DF_TRK) LOG("tsc_cmd:  id:0x%x, x:%d y:%d c:0x%x '%c'", tsc_id, tsc_x, tsc_y, c, c);
 }
 
@@ -3148,7 +3252,6 @@ static int help_hmsk;
 static char help_notfound[] = "4help$text$not$found";
 
 int help_readbuf(const char * fn) {
-	LOG("help_readbuf \"%s\"", fn);
         int fd = open(fn, O_RDONLY); ECHK(fd, fn);
         int len = lseek(fd, 0, SEEK_END); ECHK(len, "lseek");
         if (!len) return LOG("empty help file"), -1;
@@ -3172,7 +3275,7 @@ int help_readbuf(const char * fn) {
         }
         int hmin=(7*nw+2)>>2, hsiz=1;
         while (hsiz<hmin) hsiz+=hsiz;
-        LOG("read %d help windows, hsiz=%d", nw, hsiz);
+        LOG("help: \"%s\": %d help windows, hsiz=%d", fn, nw, hsiz);
         help_htab = calloc(hsiz, sizeof(char*)); help_hmsk = hsiz - 1;
         for (i=0, p=help_buf; i<nw; i++, p += 64*p[0]+p[1]-06060) {
                 int h0 = hfun3(p+3, help_hmsk);
@@ -3206,7 +3309,8 @@ static void doc_cmd (struct _topwin * tw, char * s) {
 	ww_t * w = widg_lookup_ps(tw, "D.");
 	if (*s=='!') s = help_lu(s+1);
 	int i, i0 = VB_WBASE(w), n = *(s++) - 48;
-	vbox_show_bv(w, (1<<n)-1); const char * ahh = s;
+	if (n>32) LOG("BUG: help txt has %d lines, cut to 32", n), n = 32;
+	vbox_show_bv(w, (n==32 ? 0 : (1<<n))-1); const char * ahh = s;
 	for (i=0; i<n; i++) daclb_set(widg_p(tw, i0+i), &ahh, 15), ahh+=(*ahh==36);
 }
 
@@ -3214,8 +3318,8 @@ static void doc_cmd (struct _topwin * tw, char * s) {
 
 GtkWidget * gconf_vbl (struct _ww_t * ww, int ix) {
 	topwin * tw = ww->top;
-	GtkWidget * rw = parse_w_s(tw, "({L0i.99}{e15$E00}" /*{L2=}{e316$X??}*/ 
-			"{L4o.99}{e55$E20}" /*{L6W}3{e79})*/ ); // TODO: def.v, desc
+	GtkWidget * rw = parse_w_s(tw, "({L0i.99}[{e15$E00}{_2}]"
+			"{L4o.99}[{e55$E20}{_3}])"); // TODO: def.v, desc
 	int ix0 = VB_WBASE(ww) + 8*ix,
 	    ten = ix<10 ? 48 : 49 + (ix>19), one = ix + 528 - 10 * ten;
 	char * s = DALBL_TXT(widg_p(tw, ix0  )); s[1] = ten; s[2] = one; s[3] = 0;
@@ -3790,6 +3894,10 @@ GtkWidget * err_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "{E0
 static int err_nl = 10, err_red = 31, err_annoy = 1, err_annoy_t = 0;
 static sthg err_tab[32];
 
+static void local_error(int ec) {
+	int buf[4]; buf[0]='>'<<24; buf[1]=qh4((ec>>16)&255); buf[2] = qh4(ec&65535); buf[3] = 0;
+	topwin_mk(0x47, 'E', (char*)buf+3); }
+
 static const char * daerr_txt(int i, int j) {
 	static char buf[128]; if (!buf[2]) buf[2] = buf[5] = ':', buf[8] = ' ';
 	time_t t = j; struct tm loct; localtime_r(&t, &loct);
@@ -3809,7 +3917,7 @@ static void err_upd_nl(struct _topwin * tw) {
 
 static void err_cmd (struct _topwin * tw, char * arg) {
 	ww_t *p, *ww = widg_lookup_pci(tw, 'E', -1);
-	int i, n, ix = 0, wi = VB_WBASE(ww), nl = err_nl, red = err_red, t = time(NULL);
+	int i, k, n, ix = 0, af = 0, wi = VB_WBASE(ww), nl = err_nl, red = err_red, t = time(NULL);
 	switch(*arg) {
 		case 0: return;
 		case 'N': if (arg[1]=='+') nl += (4*arg[2] - 191);
@@ -3823,8 +3931,8 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 		case 'X': red = 31; for (i=0; i<nl; i++) err_tab[i].i[0] = 0; break;
 		case 'A': err_annoy ^= 1; err_upd_flg(tw); break;
 		case '>': ++arg; for (n=0; arg[n]; n++);
-			  for (i=0; i<n; i+=8) ++red, red&=-(red<nl), 
-				  err_tab[red].i[0]=65536*qh4rs(arg+i)+qh4rs(arg+4+i),err_tab[red].i[1]=t;
+			  for (i=0; i<n; i+=8) if ((k = 65536*qh4rs(arg+i)+qh4rs(arg+4+i))!=0x01FFFFEA)
+				  ++red, red&=-(red<nl), err_tab[red].i[0]=k,err_tab[red].i[1]=t; else af = 1;
 			  break;
 		default: LOG("err_cmd: undef: 0x%x '%c'", *arg, *arg); break;
 	}
@@ -3832,12 +3940,13 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 	if (nl!=err_nl) err_nl = nl, err_upd_nl(tw);
 	for (i=0; i<nl; i++) if (p = widg_p(tw, wi+i), memcmp(p->arg+2, err_tab+i, 8))
 						       memcpy(p->arg+2, err_tab+i, 8), da_fullre(p);
+	if (af && !err_annoy) gtk_window_present(GTK_WINDOW(tw->w));
 }
 
 static void err_skel (struct _topwin * tw, char * arg) {
 	if (!tw->state) {
 		tw->arg[0].p = parse_w_s(tw,
-		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_console$_c-1}{B_?$?win.err}){:EeN10}]");
+		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_console$_c-1}{B_?$$?}){:EeN10}]");
 		memcpy(tw->title, "Errors\0", 8); 
 		err_upd_nl(tw); err_upd_flg(tw);
 	} else if (err_annoy) {
@@ -3849,31 +3958,17 @@ static void err_skel (struct _topwin * tw, char * arg) {
 
 ///////////////// main config ////////////////////////////////////////////////
 
-static const char * curdir; static int curdir_l = 0;
-
-static void mcfg_cmd (struct _topwin * tw, char * s) {
-	if (*s!='s') return LOG("mcfg_cmd: invalid c=0x%x '%c'", *s, *s);
-	int len = strlen(++s)+1, absf = (*s=='/'), ofs = absf ? 0 : curdir_l+1;
-	ww_t *ww = widg_lookup_pci(tw, '7', -1);
-	char * q = (char*)(ww->etc = realloc(ww->etc, ofs+len));
-	if (!absf) memcpy(q, curdir, curdir_l), q[curdir_l] = '/';
-	memcpy(q+ofs, s, len); da_fullre(ww);
-}
-
 static void mcfg_skel (struct _topwin * tw, char * arg) {
-	static const char *d[7], *v[6] = {NULL, "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR", "LF_TLOG"};
+	static const char *d[7], *v[6] = {"HOME", "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR", "LF_TLOG"};
 	if (!d[0]) {
-		char *s, buf[PATH_MAX+1]; buf[0] = 0; getcwd(buf, PATH_MAX);
-		int i, l = (curdir_l = strlen(buf))+1;
-		s = malloc(l); memcpy(s, buf, l); curdir = d[0] = s;
-		for (i=1; i<6; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>";
+		int i,l; char *s; for (i=0; i<6; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>";
 		l = strlen(d[1]); s = malloc(l+10); memcpy(s, d[1], l); memcpy(s+l, "/__asv.lf", 10); d[6]=s;
 	}
 	const char *ws="[(3[{C7,?}{C6,?}{C5,?}]0[{Yssv.exec$cs}{8amin/asv$2ca}{Ytau.tlog$ct}]"
-	"[{8Ssv.bkup$1cS}{8Aas.bkup$1cA}{8Ttl.bkup$1cT}][3{B_ ? $$?win.config}0{Yddev$cd}])"
-	"{C_,audio tmpfile directory: (defaults to tmp.dir when left empty)}({__}{ek60$ck}{__})"
-	"([{L_cur.dir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]3[{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}])"
-	"{B_saveCfg$c>}]";
+	"[{8Ssv.bkup$2cS}{8Aas.bkup$2cA}{8Ttl.bkup$2cT}][3{B_?$$?}0{Yddev$cd}])"
+	"([{B_wav-dir$$!fwW}{B_atmpdir$$!fkW}{L_homedir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]"
+	"3[(3[{Cw,/1234/6789/1234/6789/1234/6789/1234/6789/1234/6789}{Ck,?}]0[{MK$cK|k0}{8Llim$3cL}])"
+	"{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}]){B_saveCfg$c>}]";
 	if (!tw->state) { 
 		tw->arg[0].p = parse_w_s(tw, ws);
 		memcpy(tw->title, "config", 6);
@@ -3885,7 +3980,7 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio config ///////////////////////////////////////////////
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
-	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1c8A0r}{!ttry$114A0t}{!wt/w$1faA0w}"
+	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1faA0r}{!ttry$114A0t}{!wt/w$1faA0w}"
 	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
 	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "audio", 6);
@@ -3917,16 +4012,14 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio file dialog //////////////////////////////////////////
 
 static void a20_skel (struct _topwin * tw, char * arg) {
-	const char * ws = "[{CC300$1$rrr%%Ahe}({B_del$_D}{B_?$$?win.auconv}"
-	"{B_keep$_0}{__}[{B_~/wav$_4}{B_~/flac$_5}][{B_./wav$_2}{B_./flac$_3}][{B_t/wav$_6}{B_t/flac$_7}])]";
+	const char * ws = "({B_>>wav$w3}{B_>>flac$w7}3[({L_skip:}3{eF6}0{L_len:}3{eL6})" 
+	"3(3{B_keep$wf}{B_wav$w0$ %F$ %L}{B_flac$w4$ %F$ %L}{B_del$wd}{B_config$~cW})]0{B_?$$?})";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws); 
 	else   gtk_window_present(GTK_WINDOW(tw->w)); 
-	int l=0; if (arg && (l=strlen(arg)) >= FA_SUFFIX_ZLEN+7) {
-		char *cto = tw->cmdpref, *h8 = arg + l - (FA_SUFFIX_ZLEN+7);
-		cto[0] = 'W'; memcpy(cto+1, h8, 8); cto[9] = ':'; tw->cmdp_len = 10;
-		memcpy(tw->title, h8, 8); tw->title[8] = 0;
-		ww_t * ww = widg_lookup_ps(tw, "C"); 
-		memcpy (ww->etc = realloc(ww->etc, l+1), arg, l+1);
+	int l=0; if (arg && (l=strlen(arg)) == 8) {
+		char *cto = tw->cmdpref;
+		memcpy(tw->cmdpref, arg, 8); tw->cmdpref[8] = '$'; tw->cmdp_len = 9;
+		int i; for (i=0; i<8; i++) tw->title[i] = arg[i]|32; tw->title[8] = 0;
 	} else { LOG("auconv BUG: l=%d", l); }
 }
 ///////////////// calculator /////////////////////////////////////////////////
@@ -4062,7 +4155,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 
 static void mwin_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
-	"(3{B_unplot$_g}{B_?$$?win.main})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
+	"(3{B_unplot$_g}{B_?$$?})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
         tw->arg[0].p = parse_w(tw, &str);
 	memcpy(tw->title, "lf\0", 4);
 }
@@ -4121,7 +4214,7 @@ static int tree_recdel(int lr, ob_dir *p, GtkTreeIter * it, int flg, char ** pp)
 static void node_expand(GtkTreeView *tw, GtkTreeIter *it, GtkTreePath *path, gpointer _) {
 	TVIEW_IX(lr, node_expand); int id = tree_nd_id(lr, it);
 	if (dflg & DF_NEXP) LOG("expand: %c %x, %c", "LR"[lr], id, 48+expand_cmd_flg);
-	if (expand_cmd_flg) CMD("~D#%x$%c", id, 32*lr+'E');
+	if (expand_cmd_flg) CMD("D#%x$%c", id, 32*lr+'E');
 }
 
 static void node_coll2(int lr, ob_dir * p, GtkTreeIter * it, int keepflg) {
@@ -4148,14 +4241,14 @@ static void node_sel(GtkTreeView *tw, gpointer user_data)  {
 	TVIEW_IX(i, node_sel);
 	GtkTreePath * path; gtk_tree_view_get_cursor(tw, &path, NULL);
 	if (gtk_tree_model_get_iter(FORD(i), tsel+i, path)) 
-		CMD("~N#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), "LR"[i]);
+		CMD("N#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), "LR"[i]);
 	else    LOG("node_sel: lookup failed"); 
 }
 
 static void node_act(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn * col, gpointer _) {
 	TVIEW_IX(i, node_act);
 	if (gtk_tree_model_get_iter(FORD(i), tsel+i, path)) 
-		CMD("~D#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), 32*i+'W');
+		CMD("D#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), 32*i+'W');
 	else    LOG("node_act: lookup failed"); 
 }
 
@@ -4236,7 +4329,8 @@ static void t2sel_upd(int lr, int nid, int ty, const char * rgb, const char * s)
 
 static void t2win_skel (struct _topwin * tw, char * arg) {
 	static int iflg = 0; if (!iflg) { mk_tree_2(tw); iflg = 1; }
-	const char * str = "[({L_|file:}3{e130}0{M2save$|/1}{B_?$W.!b.?.win.tree}){__2}3(3[3TL0Tl]0{__4}3[3TR0Tr])]";
+	const char * str = "[(3{C1,(here comes the filename)}0{M2+$|/1}{B_?$W.!b.?.win.tree})"
+	"{__2}3(3[3TL0Tl]0{__4}3[3TR0Tr])]";
 	memcpy(r_panel, l_panel, sizeof(l_panel));
 	int i; for (i=0; i<sizeof(l_panel)-1; i++) {
 		switch(r_panel[i]) {
@@ -4429,7 +4523,8 @@ static void cmd_ob(int c0, int id, char * arg) {
 		default: break;
 	}
 	topwin * tw; ww_t * ww;
-	if (!(tw = tw_lookup(id))) {LOG("%c: lookup(0x%x) failed",c0,id);return;}
+	if (!(tw = tw_lookup(id))) { if ((dflg&DF_CWLU)|((id-0x57)&~16)) LOG("%c: lookup(0x%x) failed",c0,id);
+				     return;}
 	if (!*arg) { LOG("%c: missing twclass", c0); return; }
 	if (*arg!='?' && *arg!=tw->cl->ch) {
 		LOG("%c: exp:%c got:%c", c0, *arg, tw->cl->ch); return; }
@@ -4473,10 +4568,7 @@ static void cmd1(char * str) {
 	}
 	switch(k) {
 		case 0: return;
-		case 'q': switch(*s&7) { case 0: LOG("bye"), bye(0); return; 
-					 case 1: if (tlog_c_onq) write_tlog(); CMD("~qq"); return;
-					 case 2: if (tlog_c_onq) write_tlog(); CMD("~q!"); return;
-				         default: LOG("q: invalid subcmd"); return; }
+		case 'q': bye(*s);
 		case '#': return;
 		case '+': 
 			  i = *(s++) - 48; t = *(s++);
@@ -4492,6 +4584,7 @@ static void cmd1(char * str) {
 		case 't': switch(*s) { case 'w': case 0: write_tlog(); return;
 				       case 'c': tlog_c_onq = (s[1]>63), tlog_c_bk = s[1]&15; return;
 				       default: LOG("t: invalid subcmd"); return; }
+		case 'f': choo_cmd(choo_tab+chtab_get(&choo_ch, *s), s+1); return; 
 		case 'd':
 			switch(*s) {
 				case 'S': sleep(1); return;
@@ -4615,22 +4708,26 @@ static gboolean from_dot (GIOChannel *src, GIOCondition condition, gpointer data
 									                                                          
 ///////////////// guess what /////////////////////////////////////////////////
 
-void add_in(int fd, gboolean (*fun)(GIOChannel*,GIOCondition,gpointer), int flg) {
+static void add_in(int fd, gboolean (*fun)(GIOChannel*,GIOCondition,gpointer), int flg) {
 	if (fd<0) { const char * s = tpipe_name(-fd);
 		     if ((fd = open(s, O_RDWR))<0) return LOG("%s: %s", s, strerror(errno)); }
 	GError * err = 0;
 	GIOChannel * chan = g_io_channel_unix_new(fd); 
 	g_io_channel_set_encoding(chan, NULL, &err);
-	if (flg) g_io_channel_set_buffered (chan, FALSE);
-	g_io_add_watch(g_io_channel_unix_new(fd), G_IO_IN, fun, 0);
+	if (flg&1) g_io_channel_set_buffered (chan, FALSE);
+	if (flg&2) g_io_add_watch(chan, G_IO_HUP, &fifo_bye, pf_buf+(2*fd)),
+		   g_io_add_watch(chan, G_IO_ERR, &fifo_bye, pf_buf+(2*fd+1));
+	g_io_add_watch(chan, G_IO_IN, fun, 0);
 }	
 
 int main(int ac, char **av) {
+	if (getenv("LF_TMPDIR")) write(2, "&CMD1\n", 6), signal(SIGHUP, SIG_IGN), signal(SIGINT, SIG_IGN);
+	else LOG("(gui test mode)");
 	int tpipe_fd = ac<2 ? -1 : qh4r(*(int*)av[1]);
 	obidtab_ini(&oi_box, 0);
 	obidtab_ini(&oi_dir, 1); ot_dir[0].flg = 3; ot_dir[0].id = 0; ot_dir[0].clip = NULL;
 	obidtab_ini(&oi_etc, 0); // ot_etc[0].state = ot_etc[1].state = 0;
-	cltab_init(); txtm_init();
+	cltab_init(); txtm_init(); choo_init(); pf_buf[0] = '~';
 	gtk_init (&ac, &av);
 	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n'; 
 	const char * rcfn = getenv("LF_GTKRC"); if (!rcfn) rcfn = "lf.gtk.rc";
@@ -4652,9 +4749,8 @@ int main(int ac, char **av) {
 		topwin_mk(0x17, '/', NULL); 
 		memcpy(&(ot_dir[0].nd), troot, 2*sizeof(GtkTreeIter));
 	}
-	add_in(0,        &cmd_in,   0);
+	add_in(0,        &cmd_in,   2);
 	add_in(-'T',     &from_dot, 0);
-	add_in(tpipe_fd, &tpipe_in, 1);
-	gtk_main ();
-	return 0;
+	add_in(tpipe_fd, &tpipe_in, 3);
+	gtk_main (); write(2, "whaaat???\n&CMD0\n", 16); return 0;
 }

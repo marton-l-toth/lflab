@@ -1,5 +1,0 @@
-#!/bin/bash
-if [[ -z "$LF_TMPDIR" ]]; then echo "$0: LF_TMPDIR undefined"; exit 1; fi
-if [[ -f "$LF_KILLER" ]]; then fuser -k "$LF_KILLER"; sleep 1; fi
-rm -r "$LF_TMPDIR"
-echo "$0 done at $(date)"

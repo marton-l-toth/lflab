@@ -3,7 +3,7 @@ if [[ -z "$1" ]] || [[ -z "$2" ]]; then echo "usage: $0 <cfgtab> <sh-src>"; exit
 gl=$(grep -n '#=#=#=#' "$2" | cut -d: -f1)
 head -$(expr $gl - 1) "$2"
 echo "#####begin generated part ($0 at $(date))"
-awk '-F|' '{gsub(/ *$/,"",$3); gsub(/ *$/,"",$1); print "                     echo \"    -" $6 ($2=="s"?"s":"x") "   " $7 " [" $3 "/\x24LF_" $1 "]"  "\""}' < "$1"
+awk '-F|' '{gsub(/ *$/,"",$3); gsub(/ *$/,"",$1); print "                     echo \"    -" $6 ($2=="s"?"s":"x") "   " $7 " [" $3 "|\x24LF_" $1 "]"  "\""}' < "$1"
 echo "                    exit 0;;"
 sed 's/ *|/|/g' "$1" | awk '-F|' '{print "                 \"-" $6 "\") LF_" $1 "=\"$2\"; shift 2;; "}'
 echo '                 -*) echo "unknown option $1"; shift;;'

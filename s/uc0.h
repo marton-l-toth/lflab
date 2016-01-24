@@ -1,6 +1,8 @@
 #ifndef __qwe_uc0_h__
 #define __qwe_uc0_h__
 
+#define FIFO_LIST "ptuxmskACT"
+
 static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 
@@ -52,13 +54,15 @@ const char * tpipe_name(int c) {
 
 int launch(const char * exe, const char * iocfg, ...) {
         const char *av[256], *s;
-        int k, r, ac = 1, i, nf, fds[64], a0buf[64], a0cp = iocfg[0]=='!' && ++iocfg;
+        int k, ff, r, ac = 1, i, nf, fds[64], a0buf[64], a0cp = iocfg[0]=='!' && ++iocfg;
         for (i=0; i<64; i++) a0buf[i] = 0x45454545;
         va_list ap; va_start(ap, iocfg);
         for (i=0; i<60 && (k=iocfg[i]); i++) { switch(k) {
-                case '<': if (pipe(fds+i)<0) return -1;
+                case '<': if (pipe(fds+i)<0 || (ff=fcntl(fds[i],F_GETFD))<0
+					    ||     fcntl(fds[i],F_SETFD,ff|FD_CLOEXEC)<0) return -1;
                           *(va_arg(ap, int*)) = fds[i]; fds[i] = fds[i+1]; continue;
-                case '>': if (pipe(fds+i)<0) return -1;
+                case '>': if (pipe(fds+i)<0 || (ff=fcntl(fds[i+1],F_GETFD))<0
+					    ||     fcntl(fds[i+1],F_SETFD,ff|FD_CLOEXEC)<0) return -1; 
                           *(va_arg(ap, int*)) = fds[i+1]; continue;
                 case '-': case '+': case '*': case '=':
                           av[i] = va_arg(ap, const char*); if (!av[i]) av[i] = "/dev/null"; continue;
@@ -67,8 +71,10 @@ int launch(const char * exe, const char * iocfg, ...) {
         av[nf=i] = a0cp ? exe : va_arg(ap, const char*);
         if (nf>3) av[nf+ac++] = (const char*)a0buf, a0buf[nf-3] = 0;
         while ((av[nf+ac] = va_arg(ap, const char*))) ++ac;
-        va_end(ap); r = fork(); if (r) return r;
-        int md;
+        va_end(ap); r = fork(); if (r) { // parent
+		for (i=0; i<60 && (k=iocfg[i]); i++) if ((k|2)=='>') close(fds[i]);
+		return r; }
+        int md; //child
         for (i=0; i<nf; i++) {
                 if ((unsigned int)(r=(k=iocfg[i])-48)<10u && r<i) {
                         if (i<3) close(i), dup2(r,i); else a0buf[i-3] = r<3 ? qh4(r) : a0buf[r-3];
@@ -88,7 +94,7 @@ int launch(const char * exe, const char * iocfg, ...) {
 op:             k = open(av[i], md, 0600);
 fdchk:          if (k<0) k = open("/dev/null", md);
                 if (k<0) continue; // really impossible...
-                if (i<3) close(i), dup2(k, i);
+                if (i<3 && k!=i) close(i), dup2(k, i), close(k);
                 else a0buf[i-3] = qh4(k);
         }
         char abuf[16384], *av2[256], *q = abuf; av2[ac] = 0;

@@ -67,9 +67,10 @@
 #define NOF_IDX    0x000fffff
 #define NOF_BATCH  0x11400000
 #define NOF_BATCHV 0x11c00000
-#define NOF_BATCHF 0x11800000
+#define NOF_BATCHF 0x11a00000
 #define NOF_CLI    0x00800000
 #define NOF_GUI    0x04800000
+#define NOF_EXPEOF 0x00200000
 #define SVF_FORCE 1
 #define SVF_COPY  2
 #define SVF_WRAP  64
@@ -480,7 +481,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		virtual int cond_del() { return !m_map ? 0 : NDE_NONEMP; }
 		virtual int gui_list(char *to, int flg);
 		virtual int ccmd(CmdBuf * cb) { return cmd(cb); }
-		virtual ANode * sn(const char **pp) { int k = b32_to_i(**pp);
+		virtual ANode * sn(const char **pp) { int k = **pp=='*' ? m_sel : b32_to_i(**pp);
 			return k<0 || !(m_map&(1u<<k)) ? 0 : (++*pp, ent_j(k)); }
 		virtual ANode * sn_list(ANode ** pwl);
 		virtual void debug(int flg);

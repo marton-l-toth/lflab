@@ -35,6 +35,4 @@ style "mnui"
   	fg[NORMAL] = {1.0, 1.0, .5}
  	text[NORMAL] = {1.0, 1.0, .5}
 }
-class "GtkMenu" style "mnui"
-class "GtkMenuItem" style "mnui"
-class "GtkLabel" style "mnui"
+widget "*lflabPU*" style "mnui"

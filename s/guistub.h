@@ -13,14 +13,14 @@ class GuiStub {
 		static int gui_dead(int pid, int stat, int td);
 		GuiStub() : m_pid(0), m_inpipe(-1), m_outpipe(-1), m_tpipe(-1), m_lwi(-1), 
 			    m_errq_n(0), m_bufp(0) { m_errq_t0[0] = m_errq_t0[1] = 0; }
-		~GuiStub () { if (m_pid) stop(); }
+		// ~GuiStub () { if (m_pid) stop(); }
 		int start();
 		void stop();
 		int outpipe() const { return m_outpipe; }
 		int tpipe() const { return m_tpipe; }
 		int flush();
 		void flush_all();
-		int pending() const { return (m_bufp-m_buf0) || (m_errq_n | Node::slr_flg()); }
+		int pending() const {return m_bufp!=m_buf0 || glob_flg!=m_gf0 || (m_errq_n|Node::slr_flg());}
 		inline int cfl() { return ((m_bufp-m_buf0)&0xffff8000) && flush(); }
 		void invd() { m_lwi = -1; }
 		void brk() { *(m_bufp++)='\n'; m_lwi = -1; }
@@ -73,6 +73,7 @@ class GuiStub {
 		void wupd_i(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c1('x'); if (x&~0xfffff) hexn(x,8); else hex5(x); }
 		void wupd_i1(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('x', hexc1(x)); }
 		void wupd_c48(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('c', x+48); }
+		void wupd_ls(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('+', x+48); }
 		void wupd_i2(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c1('x'); c2(hexc1(x>>4), hexc1(x&15)); }
 		void wupd_d(int wwt, double x, int wwix = -1) { wupd(wwt,wwix); c1('@'); hdbl(x); }
 
@@ -92,13 +93,14 @@ class GuiStub {
 		void own_title(int flg = 3);
 		void ref_title(int wwt, ANode * nd, int wwix = -1, const char * defstr = 0);
 		void j_upd(int wwt, int st, int wwix = -1);
-		void acv_open(int j);
 		void errq_add(int ec);
+		void mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef);
 		void mcfg_win(int flg);
 		void savename();
+		void vol();
 		void set_tlog();
 	protected:
-		int m_pid, m_inpipe, m_outpipe, m_tpipe;
+		int m_pid, m_inpipe, m_outpipe, m_tpipe, m_gf0;
 		int m_cwt, m_lwi, m_cwi;
 		int m_th, m_wh;
 		int m_errq_v[32], m_errq_n, m_errq_t0[2];

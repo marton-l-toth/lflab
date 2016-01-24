@@ -64,22 +64,11 @@ class B91Writer {
 
 // arg: d<dec>|x<hex>|+i/-i|(i:0(1)|1(step1)|2(step2)|3(min/max))|<dec> 
 // ret: 0:nothing happened 1:changed 2+4*flg:conf 
-template <class T>
-int intv_cmd_t(T * p, const char * arg, int min, int max, int mul4=0x01010101) {
-        int x;
-        switch(arg[0]) {
-                case '+': x = *p + ((mul4>>(8*(arg[1]&3)))&255); break;
-                case '-': x = *p - ((mul4>>(8*(arg[1]&3)))&255); break;
-                case ',': return 2 + 4 * (arg[1] & 3);
-                case 'x': x = atoi_h(arg+1); break;
-                case 'd': ++arg;
-                default: x = atoi(arg); break;
-        }
-	if (x<min) x=min; else if (x>max) x=max;
-        return (x!=*p) && (*p=x, 1);
-}
-#define intv_cmd    intv_cmd_t<int>
-#define intv_cmd_c  intv_cmd_t<char>
-#define intv_cmd_uc intv_cmd_t<unsigned char>
+
+struct cfg_ent;
+int intv_cmd    (int           *p, const char * arg, int min, int max, int mul4=0x01010101);
+int intv_cmd_c  (char          *p, const char * arg, int min, int max, int mul4=0x01010101);
+int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4=0x01010101);
+int intv_cmd_cfg(cfg_ent       *p, const char * arg,                   int mul4=0x01010101);
 
 #endif // __qwe_util2_h__

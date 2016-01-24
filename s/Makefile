@@ -9,8 +9,8 @@ SRC2 = expr.cc wrap.cc nz.cc guistub.cc gp.cc combo.cc pzrf.cc trk.cc
 INC2 = expr.h  wrap.h  nz.h  guistub.h  gp.h  combo.h  pzrf.h  trk.h
 OBJ2 = expr.o  wrap.o  nz.o  guistub.o  gp.o  combo.o  pzrf.o  trk.o
 
-SRC3 = rf2.cc fe.cc arbox.cc grbox.cc in.cc b0.cc v.cc contrib.cc
-OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  in.o  b0.o  v.o  contrib.o
+SRC3 = rf2.cc fe.cc arbox.cc grbox.cc in.cc b0.cc v.cc
+OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  in.o  b0.o  v.o 
 
 INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h
 
@@ -19,7 +19,7 @@ OBJC = $(shell c/upd_contrib.sh o)
 
 SRCS = $(SRC1) $(SRC2) $(SRC3) $(SRCC)
 INCS = $(INC1) $(INC2) $(INCX)
-OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC)
+OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC) contrib.o
 
 GTKINC = -I/usr/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/ -I/usr/include/glib-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0/ -I/usr/include/gdk-pixbuf-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0
 GTKLIB = -lgtk-x11-2.0 -lgdk-x11-2.0 -lcairo -lgobject-2.0 -lglib-2.0 -lm
@@ -67,7 +67,7 @@ lf.bb:  bb.c uc0.h
 help.txt: helpm.txt $(SRCS)
 	cp helpm.txt help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
-deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.cleanup COPYING deb.sh 
+deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf COPYING deb.sh 
 	./deb.sh -v
 
 clean:

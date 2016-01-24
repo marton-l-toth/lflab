@@ -1,13 +1,17 @@
-
+#include <fcntl.h>
+#include <unistd.h>
 #include "node.h"
 #include "util2.h"
 #include "glob.h"
 #include "gp.h"
+#include "pt.h"
+#include "cfgtab.inc"
 
 void bye(int x) {
-	if (x&256 || (glob_flg&GLF_FINAL_ASV)) fprintf(stderr, "skipping autosave\n");
-	else glob_flg |= GLF_FINAL_ASV, Node::save_batch(Node::root(), "/", NOF_FORCE);
+	if (x&256 || (glob_flg&(GLF_FINAL_ASV|GLF_INI0|GLF_INI1))) fprintf(stderr, "skipping autosave\n");
+	else glob_flg|=GLF_FINAL_ASV, Node::save_batch(Node::root(), "//"+!(glob_flg&GLF_FSTATE), NOF_FORCE);
 	delete (Gnuplot::sg());
+	if (x&512) pt_iocmd_sn("r\n", 2);
 	exit(x&255);
 }
 
@@ -24,6 +28,31 @@ void bug(const char * fmt, ...) {
 	va_end(ap);
 	abort();
 }
+
+static unsigned int icv_stockmul[4] = { 0xf0f00501, 0xf0190501, 0xff400801, 0xf0640a01 };
+template <class T>
+int icmd_t(T * p, const char * arg, int min, int max, int mul4=0x01010101) {
+        int x; if ((mul4|3)==-1) mul4 = (int)icv_stockmul[mul4&3];
+        switch(arg[0]) {
+                case '+': x = *p + ((mul4>>(8*(arg[1]&3)))&255); break;
+                case '-': x = *p - ((mul4>>(8*(arg[1]&3)))&255); break;
+                case ',': return 2 + 4 * (arg[1] & 3);
+                case 'x': x = atoi_h(arg+1); break;
+                case 'd': ++arg;
+                default: x = atoi(arg); break;
+        }
+        if (x<min) x=min; else if (x>max) x=max;
+        return (x!=*p) && (*p=x, 1);
+}
+
+int intv_cmd    (int           *p, const char * arg, int min, int max, int mul4)  {
+   return icmd_t<int>(          p,		arg,	 min, 	  max, 	   mul4); }
+int intv_cmd_c  (char 	       *p, const char * arg, int min, int max, int mul4)  {
+   return icmd_t<char>(         p,		arg,	 min, 	  max, 	   mul4); }
+int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4)  {
+   return icmd_t<unsigned char>(p,		arg,	 min, 	  max, 	   mul4); }
+int intv_cmd_cfg(cfg_ent       *q, const char * arg, 		       int mul4)  {
+   return icmd_t<int>(        &q->i,	        arg,    q->i_m,  q->i_M,   mul4); }
 
 /////////////////////////////// voltab compression /////////////////////////////////////////////////
 

@@ -43,21 +43,24 @@ class CmdTab {
 
                 static int c_invalid(CmdBuf * p) { return GCE_WHAT; }
                 static int c_nop(CmdBuf * p) { return 0; }
-                static int c_bye(CmdBuf * p) { bye((p->m_c_a0[0]==33)<<8); return GCE_WTF; }
+                static int c_bye(CmdBuf * p) { bye((p->m_c_a0[0]&31)<<8); return GCE_WTF; }
                 static int c_stfu(CmdBuf * p) { mx_clear(0); return 0; }
                 static int c_debug(CmdBuf * p) { if (*p->m_c_a0=='?')
 			log("debug_flg=%d (%s)", debug_flags, DFLG_HELP);
 			else debug_flags = atoi_h(p->m_c_a0); return 0; }
                 static int c_gui2(CmdBuf * p) { gui2.brk(); gui2.pf("%s\n", p->m_c_a0); return 0; }
 		static int c_kfw(CmdBuf * p) { CMD_NODE(Clip); return nd->cmd(p); }
-		static int c_info(CmdBuf * p) { char * s = p->tok(); p->m_c_node->debug(s ? *s&7 : 7); return 0; }
-		static int c_source(CmdBuf * p) { return CmdBuf::read_batch(p->m_c_a0, p->m_c_nof); }
-                static int c_save(CmdBuf * p) { return Node::save_batch(Node::root(), p->m_c_a0, p->m_c_nof&NOF_FORCE); }
-                static int c_sv2(CmdBuf * p) { CMD_NODE(ADir); return Node::save_batch(nd, p->m_c_a1, p->m_c_nof&NOF_FORCE); }
-		static int c_iofw(CmdBuf * p) { return pt_iocmd(p->m_c_a0); }
+		static int c_info(CmdBuf * p) { char*s = p->tok(); p->m_c_node->debug(s ? *s&7 : 7); return 0;}
+		static int c_source(CmdBuf * p) { return p->fdok(CmdBuf::read_batch(p->m_c_a0,
+								  p->m_c_nof|NOF_BATCHF), '<'); }
+                static int c_save(CmdBuf * p) { return p->fdok(Node::save_batch(Node::root(), p->m_c_a0,
+						          p->m_c_nof&NOF_FORCE),'>'&-(p->m_c_a0&&*p->m_c_a0));}
+                static int c_sv2(CmdBuf * p) { CMD_NODE(ADir); return (!nd->id()) ? NDE_SLROOT :
+			p->fdok(Node::save_batch(nd,p->m_c_a1, p->m_c_nof&NOF_FORCE), 'L'); }
+		static int c_iofw(CmdBuf * p) { if (*p->m_c_a0=='f') fflush(stderr); return pt_iocmd(p->m_c_a0); }
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0-48; return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
-		static dfun_t c_cre, c_vol, c_misc, c_nadm, c_closewin, c_tree, c_stat, c_cfg,
-			      c_efw, c_wfw, c_xfw, c_win, c_job, c_pfx, c_cont, c_live;
+		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav, c_report,
+			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin;
 };
 
 char * CmdTok::t(char *s) {
@@ -81,7 +84,7 @@ void CmdBuf::st_init() { CmdTab::init(); }
 void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
 	m_fd = fd>-32 ? fd : open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
 	m_nof0 = nof; m_prefix = px; m_rsiz = rs; m_buf = (char*)malloc(m_bsiz = bs); 
-	m_lineno = m_rpos = m_cpos = 0;
+	m_lineno = m_rpos = m_cpos = m_try = 0;
 	memset(m_nd_var, 0, 8*sizeof(int));
 	m_iname = inm ? strdup(inm) : 0;
 	delete(m_cont); m_cont = 0;
@@ -90,8 +93,12 @@ void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
 int CmdBuf::read_batch(const char * name, int nof1) {
 	int ec, fd = open(name, O_RDONLY);
 	if (fd<0) return GCE_FOPEN;
-	if (nof1&1) Node::lib_start();
-	CmdBuf cb; cb.init(fd, nof1&NOF_FLAGS);
+	if (nof1&1) { if (!(glob_flg&GLF_EMPTY)) return NDE_EXPVIRG;  Node::lib_start(); }
+	else if(!*save_file_name) {
+		if ((ec=is_asv_name(name))) glob_flg|=GLF_RECOVER, save_file_name[2]=ec;
+		else strncpy(save_file_name, name, 1023), glob_flg &= ~GLF_RECOVER;
+		if (!(glob_flg & GLF_INI1)) gui2.savename(); }
+	CmdBuf cb; cb.init(fd, nof1&(NOF_FLAGS&~NOF_FGUI));
 	do ec = cb.read_f(); while (ec>=0);
 	if (nof1&1) Node::lib_end();
 	if (ec==GCE_EOF) ec = 0;
@@ -108,11 +115,14 @@ int CmdBuf::bprep(int siz) {
 
 int CmdBuf::read_f() {
         int r, len = bprep(m_rsiz);   if (len<1) return GCE_FULLBUF;
-        return ((r = read(m_fd, m_buf+m_rpos, len))>0) ? chunk(r)
-		:( log("read_f(): %s: %s (%cx)", m_fd?(m_iname?m_iname:"(unnamed)"):"(stdin)",
-		                                 r ? strerror(errno) : "EOF", ++m_try+48),
-		   (m_fd ? (close(m_fd), (m_iname&&m_try<5&&(m_fd=open(m_iname,O_RDWR))>=0))
-			 : (m_try<5 || (close(0),0))) ? 0 : (m_fd=-1, r ? GCE_FREAD:GCE_EOF) );}
+        if ((r = read(m_fd, m_buf+m_rpos, len))>0) return (m_try=0, chunk(r));
+	close(m_fd); if (!r && (m_nof0 & NOF_EXPEOF)) return GCE_EOF;
+	log("read_f(): %s: %s (%cx)", m_fd?(m_iname?m_iname:"(unnamed)"):"(stdin)",
+		                                 r ? strerror(errno) : "EOF", ++m_try+48);
+	if (!m_iname) return set_fd(&m_fd, open("/dev/null", O_RDWR)), r ? GCE_FREAD : GCE_EOF;
+	if (m_try>5) return m_fd = -1, r ? GCE_FREAD : GCE_EOF;
+	return (m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
+}
 
 int CmdBuf::vpf(const char * fmt, va_list ap) {
         int len = bprep(m_rsiz); if (len<1) return GCE_FULLBUF;
@@ -162,6 +172,9 @@ err:    if (m_c_nof & NOF_ERRMSG) show_error(ec);
 	if (is_gui()) gui2.errq_add(ec);
 	return ec;
 }
+
+int CmdBuf::fdok(int ec, int ty) {
+	if ( (ec|(ty-1))>=0 && is_gui() ) gui2.c4(9, 'f', ty, 'Z');     return ec; }
 
 void CmdBuf::show_error(int ec) {
 	// TODO: NOF_FGUI, NDE_CONFIRM
@@ -252,10 +265,8 @@ int CmdTab::c_vol(CmdBuf * p) {
 	int skipgui = (*p->m_c_a0=='G');
         const char *s = p->m_c_a0 + skipgui;
 	if (!*s) return GCE_ZARG0;
-	int x = (s[1]&80) ? hex2(s) : hxd2i(*s);
-	if ((unsigned int)x > 99u) x = 0;
-	snd0.set_vol(x+12);
-	if (!skipgui) gui2.setwin(7, '.'), gui2.wupd_i2('v', x);
+	int x = ivlim((s[1]&80) ? hex2(s) : hxd2i(*s), 0, 99);
+	snd0.set_vol(x+12); if (!skipgui) gui2.vol();
 	return 0;
 }
 
@@ -276,20 +287,39 @@ int CmdTab::c_stat(CmdBuf * p) {
 static void log_load(int n) { for (int i=0; i<n; i++) log("log load test ------------------------- #%d", i); }
 
 int CmdTab::c_cfg(CmdBuf * p) {
-	const char *s = p->m_c_a0; int f = 0; switch(*(s++)) {
+	const char *s = p->m_c_a0; int fd = 0, f = 0; switch(*(s++)) {
 		case '>': return cfg_write();
 		case 's': CFG_SV_EXEC.i = *s&1; f = 4; break;
-		case 'a': intv_cmd(&CFG_ASV_MIN.i, s, 0, 35, 0x33330501); f = 8; break;
 		case 't': CFG_TLOG_AUTO.i = *s&1; f = 16; gui2.set_tlog(); break;
-		case 'S': intv_cmd(&CFG_SV_BACKUP.i,   s, 0, 9); f =  32; break;
-		case 'A': intv_cmd(&CFG_ASV_BACKUP.i,  s, 0, 9); f =  64; break;
-		case 'T': intv_cmd(&CFG_TLOG_BACKUP.i, s, 0, 9); f = 128; gui2.set_tlog(); break;
-		case 'k': return (f=strlen(s))<255 ? (cfg_setstr(&CFG_AO_DIR, s),0) : EEE_LONGSTR;
-		case 'd': CFG_DEVEL.i = *s&1; f = 512; break;
+		case 'a': intv_cmd_cfg(&CFG_ASV_MIN,     s, -4); f =   8; break;
+		case 'S': intv_cmd_cfg(&CFG_SV_BACKUP,   s, -4); f =  32; break;
+		case 'A': intv_cmd_cfg(&CFG_ASV_BACKUP,  s, -4); f =  64; break;
+		case 'T': intv_cmd_cfg(&CFG_TLOG_BACKUP, s, -4); f = 128; gui2.set_tlog(); break;
+		case 'L': intv_cmd_cfg(&CFG_AO_TLIM,     s, -1); f =2048; break;
+		case 'k': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_AO_DIR,  s);fd=1; break;
+		case 'w': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_WAV_DIR, s);fd=2; break;
+		case 'K': CFG_AO_ACTION.i = *s & 3; f = 1024; break;
+		case 'd': CFG_DEVEL.i = *s&1; f = 8192; break;
 		case 'W': f = -1; break;
 		default:  return GCE_UCFG;
 	}
+	if (fd) f |= fd<<8, gui2.c4(9, 'f', s[-1], 'Z');
 	return gui2.mcfg_win(f), 0;
+}
+
+int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
+		case 'g': glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
+		default: return GCE_UREPORT;
+	}}
+
+int CmdTab::c_wav(CmdBuf * p) {
+	int id = atoi_h(p->m_c_a0), op = atoi_h(p->m_c_a1);
+	const char *s1 = 0, *s2 = 0;
+	if ((op|4)==4){ if ((s1=p->tok())) { while (*s1==32) ++s1; if (!*s1) s1 = 0; } 
+		 	if ((s2=p->tok())) { while (*s2==32) ++s2; if (!*s2) s2 = 0; } 
+			op += s1 ? (1+!!s2) : 2*(s2 && (s1="0")); }
+	log("c_wav 0x%x 0x%x '%s' '%s'", id, op, s1?s1:"NULL", s2?s2:"NULL");
+	return pt_acv_op(id, op, s1, s2);
 }
 
 int CmdTab::c_misc(CmdBuf * p) {
@@ -299,7 +329,6 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
 		case 'w': i = p->m_c_a0[1]&1 ? snd0.hcp_start(20903400) : snd0.hcp_end();
 			  gui2.setwin(7,'.'); gui2.wupd_i1('W',!!snd0.hcp()); return i;
-		case 'W': return sscanf(p->m_c_a0+1, "%x:%x", &i, &j)==2 ? pt_acv_op(i, j) : GCE_PARSE;
 		case 'c': return pt_con_op(atoi_h(p->m_c_a0+1)); // TODO
 		case 'L': log_load(atoi(p->m_c_a0+1)); return 0;
 		case 'l': return pt_show_lic();
@@ -310,6 +339,8 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'M': return mx_debug(p->m_c_a0+1);
 		case '_': return midi_cmd(p->m_c_a0+1);
 		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
+		case 'G': return log("glob_flg = 0x%x", glob_flg), 0;
+		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
 		default: return GCE_UMISC;
 	}}
 
@@ -340,6 +371,13 @@ int CmdTab::c_job(CmdBuf * p) {
 	return (n = *a1) ? jobq.cmd(nd, (n&7)-(n&8), a1+1) : JQE_PARSE;
 }
 
+int CmdTab::c_lib(CmdBuf *p) {
+	char *s = p->m_c_a0;
+	switch(*s) {
+		case 'W': return (glob_flg&GLF_EMPTY) ? (gui2.sn("\tflW",4), 0) : NDE_EXPVIRG;
+		case '.': return p->fdok(CmdBuf::read_batch(s+1, p->m_c_nof|NOF_BATCHF|1), 'l');
+		default:  return GCE_ULIB; }}
+
 int CmdTab::c_pfx(CmdBuf * p) {  // --RC TEFG
 	static const int pfxtab[8] = {0,0,NOF_OVRRD,NOF_YES,NOF_THROW,NOF_STRICT,NOF_FORCE,NOF_FGUI};
 	int x, y;
@@ -358,9 +396,9 @@ int CmdTab::c_live(CmdBuf *p) {
 
 char CmdTab::m0_chtab[128];
 CmdTab::ent_t CmdTab::m0_tab[] = {
-{'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2}, {'c', c_cfg},
+{'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2}, {'c', c_cfg}, {'l',c_lib},
 {'/',c_stat}, {'C'|CF_NODE1,c_cre}, {'N'|CF_NODE1,c_nadm}, {'I'|CF_NODE,c_info}, {'S'|CF_NODE1,c_sv2},
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
-{'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {0,0} };
-
+{'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {'R', c_report},
+{'w'|CF_TOK1,c_wav}, {0,0} };

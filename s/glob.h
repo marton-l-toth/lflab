@@ -2,8 +2,14 @@
 #define __qwe_glob_h__
 
 #define GLF_LIBMODE   0x100000
-#define GLF_FINAL_ASV 0x200000
-#define GLF_SILENCE   0x400000
+#define GLF_EMPTY     0x200000
+#define GLF_RECOVER   0x400000
+#define GLF_FSTATE    (GLF_EMPTY|GLF_RECOVER)
+#define GLF_FINAL_ASV 0x2000000
+#define GLF_SILENCE   0x4000000
+#define GLF_INI0      0x8000000
+#define GLF_INI1      0x10000000
+#define GLF_GUIOK     0x20000000
 
 #define DFLG_RFINST 1
 #define DFLG_MODELDEL 2
@@ -32,7 +38,7 @@ extern char mostly_zero[0x8080];
 extern double junkbuf[4096];
 extern char save_file_name[1024];
 
-extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name;
+extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 extern int 	   tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 extern int v_major, v_minor;
@@ -45,6 +51,7 @@ void ini_err(int ec);
 void log(const char * fmt, ...);
 void log_n(const char * fmt, ...);
 
-void gui_errq_add(int ec), gui_closewin(int oid),
+void gui_errq_add(int ec, const char * s = 0), gui_closewin(int oid),
      gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0);
+int  gui_acv_op(int j, int opw = -1);
 #endif // __qwe_glob_h__

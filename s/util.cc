@@ -457,6 +457,21 @@ static int fa_w2k(fa_writer * fa, int fl) {
         return 0;
 }
 
+const char * au_file_name(const char *dir, int dlen, int id, const char *a1, const char *a2, const char *ext) {
+	static char * bptr[2];  static int blen[2];
+	int hx[2], j, al1, al2, ix = !memcmp(ext, "a20", 4), elen = ix ? 4 : strlen(ext),
+	    siz = dlen + (al1=a1?strlen(a1)+1:0) + (al2=a2?strlen(a2)+1:0) + elen + 16;
+	if (blen[ix]<siz) { for (blen[ix] += 8*!blen[ix]; blen[ix] < siz; blen[ix] <<= 1); 
+		 	    free(bptr[ix]); bptr[ix] = (char*)malloc(blen[ix]); }
+	char * q = bptr[ix]; memcpy(q, dir, dlen); q[dlen]='/';
+	hx[0] = qh4((unsigned int)id>>16u) | 0x20202020; 
+	hx[1] = qh4(	         id&65535) | 0x20202020; memcpy(q+dlen+1, hx, 8); j = dlen+9;
+	if (al1) q[j] = '_', memcpy(q+j+1, a1, al1-1), j += al1;
+	if (al2) q[j] = '_', memcpy(q+j+1, a2, al2-1), j += al2;
+	q[j] = '.'; memcpy(q+j+1, ext, elen+1);
+	return q;
+}
+
 const char * au_file_name(int id, int j) {
 	static char *srcp = 0, *dstp = 0;
 	const char *dir, *ext; int dlen, elen;
@@ -544,9 +559,17 @@ double Scale01::f(double x) { double z; switch(m_ty) {
                 default: return 0.0;
 }}
 
-///
+// file util
+int is_asv_name(const char *s) { // /.../__asv.lf /.../__asv--x.lf
+	int c, l = strlen(s);   const char * as = autosave_name;
+	if (!memcmp(s, as, l+1)) return '0';
+	return (!memcmp(s,as,l-6) && !memcmp(s+l-6,"--",2) && (c=s[l-4]) && !memcmp(s+l-3,".lf",4)) ? c : 0; }
+
 int coward(const char * fn) {
-	int r, fd = open(fn, O_RDONLY); if (fd<0) return 0;
+	int r,fd; struct stat st;
+	if ((r = stat(fn, &st))<0) return errno!=ENOENT && (gui_errq_add(EEE_ERRNO, fn), 1);
+	if ((st.st_mode&S_IFMT)!=S_IFREG) return 1;
+	if ((fd = open(fn, O_RDONLY)) < 0) return gui_errq_add(EEE_ERRNO, fn), 1;
 	char buf[32]; memset(buf, 0, 32);
 	r = (read(fd,buf,32)>0) && memcmp(buf, "# lflab save file\n_V", 20)
 				&& memcmp(buf, "#!/usr/bin/lflab\n_V", 19)

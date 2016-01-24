@@ -55,8 +55,8 @@ int ASnd::start() {
 
 int ASnd::start1(int sc_lim) {
 	if (CFG_AU_KILL_PA.i) gui2.errq_add(pt_kill_pa(CFG_AU_KILL_PA.i));
-        int e = snd_pcm_open(&m_hnd, CFG_AU_NAME.s, SND_PCM_STREAM_PLAYBACK, 0);
-        if (e<0) return err(e, CFG_AU_NAME.s); else log("snd: \"%s\" opened OK", CFG_AU_NAME.s);
+        int qw, e = snd_pcm_open(&m_hnd, CFG_AU_NAME.s, SND_PCM_STREAM_PLAYBACK, 0);
+        if (e<0) return err(e, CFG_AU_NAME.s); 
         snd_pcm_hw_params_t *hwpar;
         if ((e=snd_pcm_hw_params_malloc(&hwpar))<0) return err(e, "allocpar");
         if ((e=snd_pcm_hw_params_any(m_hnd,hwpar))<0) return err(e, "initpar");
@@ -64,14 +64,16 @@ int ASnd::start1(int sc_lim) {
         if ((e=snd_pcm_hw_params_set_format (m_hnd,hwpar,SND_PCM_FORMAT_S16_LE))<0) return err(e, "format");
         unsigned int rate = 44100; snd_pcm_uframes_t bsiz = 8192;
         if ((e=snd_pcm_hw_params_set_rate_near (m_hnd,hwpar,&rate,0))<0) return err(e, "rate");
-        log("rate=%d", sample_rate = (int)rate);
 	unsigned int chan = strlen(CFG_AU_CHCFG.s);
 	if ((e=snd_pcm_hw_params_set_channels_min (m_hnd, hwpar, &chan))<0) return err(e, "#chan");
         if ((e=snd_pcm_hw_params_set_buffer_size_min(m_hnd, hwpar, &bsiz))<0) return err(e, "bufsiz/m");
 //        if ((e=snd_pcm_hw_params_set_buffer_size_near(m_hnd, hwpar, &bsiz))<0) return err(e, "bufsiz/n");
         if ((e=snd_pcm_hw_params(m_hnd, hwpar))<0) return err(e,"setpar");
+	chan=rate=999888777;
 	if ((e=snd_pcm_hw_params_get_channels(hwpar, &chan))<0) err(e, "get_nchan");
-	log("#chan=%d",m_n_chan = (int)chan); if (chan>16) return log("snd/init2: #chan=%d, WTF???"), -1;
+	if ((e=snd_pcm_hw_params_get_rate(hwpar, &rate, &qw))<0) err(e, "get_rate");
+	if (chan>16) return log("snd/init2: #chan=%d, WTF???"), -1;
+	log("snd: open(%s) OK, #chan=%d, rate=%d", CFG_AU_NAME.s, m_n_chan=(int)chan, sample_rate=(int)rate);
 	mx_au16_cfg(&m_cfg, m_n_chan, CFG_AU_CHCFG.s);
 	if ((e=snd_pcm_hw_params_get_buffer_size(hwpar, &bsiz))<0) err(e, "get_bufsiz");
 	if (bsiz < 8192) return log("alsa/bsiz: ret(%d) < rq(8192)", bsiz), -1;
@@ -83,7 +85,7 @@ int ASnd::start1(int sc_lim) {
 
 int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
 		(m_hcp = t, m_hcp_s0 = 0x7fffffff, memcpy(m_hcp_lbl, "R --:--", 8), 0)); }
-int ASnd::hcp_end(int f) { return !(f|m_hcp) ? EEE_NOEFF : (m_hcp = 0, gui2.acv_open(fa_wr.id),
+int ASnd::hcp_end(int f) { return !(f|m_hcp) ? EEE_NOEFF : (m_hcp = 0, gui_acv_op(fa_wr.id),
 	gui2.setwin(7,'.'), gui2.wupd_s('W',"rec"), fa_end(&fa_wr)<0 ? EEE_ERRNO : 0); }
 
 int ASnd::set_clk(int lim) {

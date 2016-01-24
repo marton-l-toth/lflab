@@ -17,13 +17,20 @@ S0__________ __________________________________________________________(BUG)__
 EEE_ERRNO    syscall/stdlib error
 EEE_ZEROLEN  read/write returned unexpected zero (unexp.EOF/disk full?)
 EEE_ENVUNDEF missing environment variable
+EEE_MKFAIL_M main build failed (unless using prod. script this is a BUG)
+EEE_MKFAIL_G GUI build failed (unless using prod. script this is a BUG)
+EEE_TWNTYTWO this error message is supposed to be invisible (22, BUG)
 EEE_NOPRC    process missing
 EEE_STATE    either you can click very fast or you have found a bug
 EEE_SUM      errors in save file (see console/log for details)
 EEE_COWARD   file doesn't look like an lflab save -- refusing to overwrite
+EEE_OVWASV   refusing to overwrite autosave file
 EEE_BACKUP   backup failed
 EEE_A20      tmp audio open/write failed (path/permission problem?)
 EEE_LONGSTR  string too long
+EEE_NONAME   no name for save
+EEE_ASVFAIL  autosave failed
+EEE_FDNOSEL  file dialog: nothing selected
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
@@ -99,13 +106,15 @@ NDE_USVCONT  attempting to save box before container box (BUG)
 NDE_NOSVTRG  invalid save target (BUG)
 NDE_SOBCP0   no shared object to copy
 NDE_DIR255   sorry, max. 255 directories can be open
-NDE_BOX63    sorry, max. 63 boxes can be open
+NDE_BOX63    sorry, max. 63 boxes/instrs. can be open
 NDE_LOCK     global node lock is active (see job queue)
 NDE_QMKCAST  qmk/dyncast failed
 NDE_NOGUI    this box has no UI to configure
 NDE_LEAF     this box cannot have sub-nodes
 NDE_GUARD    invalid usage of guard node 
 NDE_NOLIB    a complete save cannot be loaded as library
+NDE_EXPVIRG  loading of libraries only possible in empty state
+NDE_SLROOT   whole object tree (root node) cannot be saved as library
 NDE_SORRY    sorry not yet implemented (node)
 S2__________ __________________________________________________________(BUG)__
 GCE_WTF      you just have found a bug (cmd)
@@ -116,6 +125,9 @@ GCE_UTREE    undefined tree-cmd
 GCE_UCLIP    undefined clipb-cmd
 GCE_UNADM    undefined n-adm-cmd
 GCE_UCFG     undefined cfg-cmd
+GCE_ULIB     undefined lib-cmd
+GCE_UREPORT  undefined report source
+GCE_GREPORT  GUI report parse error
 GCE_VOLARG   volume: expected 'x' or '0'...'9'
 GCE_UMISC    undefined misc (_?) command
 GCE_SORRY    sorry not yet implemented (cmd)
@@ -140,6 +152,7 @@ GCE_NOPFX    prefix character expected
 GCE_NOCONT   '<' without continued command
 GCE_EXWR     commands expects wrapbox
 GCE_JRUN     job already running
+GCE_ROUTE    a right command at the wrong place (BUG)
 GCE_PARSE    command parse error
 S3__________ __________________________________________________________(BUG)__
 BXE_WTF      you just have found a bug (box)
