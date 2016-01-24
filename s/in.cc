@@ -112,7 +112,7 @@ void b_in_init(ANode *r) {
 	char nm[8]; memcpy(nm, "vls01", 6);
 	qmk_box(dv, nm, qa, 1, 4, 1, "slg", "i-i:R*1", 2, "titl$[s0]", 2, 2, "lb$vl", "%zzz%%"); ++nm[4];
 	for (int i=2; i<=7; i++) qmk_box(dv, nm, qa, i, 2+2*i, i, "slg", "1"), ++nm[4];
-	qmk_box(dv, nm, qa, 8, 13, 8, "slg", "1i-i:R*", 3, "titl$[s0]$[s1]", 3, 3, "vl$lb");
+	qmk_box(dv, nm, qa, 8, 13, 8, "slg", "1i-i:", 3, "titl$[s0]$[s1]", 3, 3, "vl$lb");
 	for (int i=9; i<=13; i++) (i==10?(nm[3]=49,nm[4]=48):++nm[4]), 
 				  qmk_box(dv, nm, qa, i, 3+2*i, i, "slg", "1");
 }
