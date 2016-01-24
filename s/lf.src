@@ -69,7 +69,7 @@ LF_LOGPEND=""
 LF_UDIR_OK=""
 
 if [[ -d "$LF_USERDIR" ]]; then
-	LF_UDIROK="y";
+	LF_UDIR_OK="y";
 elif [[ -n "$LF_OLDINI_FOUND" ]]; then
 	LF_LOGPEND="found old user dir '$LF_OLDDIR', renaming to '$LF_USERDIR'..."
 	if mv "$LF_OLDDIR" "$LF_USERDIR"; then LF_UDIR_OK="y"; else LF_LOGPEND="mv $LF_OLDDIR $LF_USERDIR failed, "; fi
