@@ -86,6 +86,7 @@ class TrackGen : public BoxGen {
 		int start_rec();
 		int stop_rec() { trk_rec_trg = 0; if (wnfl()) w_rec(); return 0; }
 		int gui_h4(int * to);
+		int del_n_sel(int d, int nof);
 		int play(int op, int pos);
 		void w_bpm() { gui2.setwin(w_oid(), 't'); gui2.wupd_i('b', m_bp10m); }
 		void w_ply() { gui2.setwin(w_oid(), 't'); gui2.wupd_i1('p', !!m_mxctl); }
@@ -288,11 +289,23 @@ int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y
 		case 'M': ec = (id=TR_SEL_ID) ? Node::move(ANode::lookup_n_q(TR_SEL_ID), m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;
 			  if (ec>=0) sel0w(bxw_rawptr, y, x), TR_SEL_ID=id, w_sel(bxw_rawptr);    return ec;
 		case 'N': return Node::mk(0, m_node, 0, 'w', y|cb->cnof(), x);
-		case 'v': return (nd = ClipNode::kcp(2)->ent_sel()) ? Node::copy(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;
+		case 'v': if (!(nd = ClipNode::kcp(2)->ent_sel())) return EEE_NOEFF;
+			  if ((id = Node::copy(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) return id;
+			  return TR_SEL_ID=id, sel0w(bxw_rawptr, y, x), w_sel(bxw_rawptr), 0;
 		case 'c': return nd ? Node::copy(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
 		case 'x': return nd ? Node::move(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
 		default: return BXE_CENUM;
 }}
+
+int TrackGen::del_n_sel(int d, int nof) {
+	BXW_GET; if (!TR_SEL_ID) return EEE_NOEFF;
+	ANode *nd0 = ANode::lookup_n_q(TR_SEL_ID), *nd = d ? nd0->cth()->pv : nd0->next();
+	int ec = Node::move(nd0, ClipNode::kcp(1), 0, NOF_NOIDX|nof); if (ec<0) return ec;
+	if (d) while (nd && nd->cl_id()!='w') nd=nd->cth()->pv;
+	else   while (nd->cl_id()!='w' && nd->cth()->j<0x7fffffff) nd=nd->next();
+	if (nd && nd->cl_id()=='w') TR_SEL_ID=nd->id(), sel0wn(bxw_rawptr, nd), w_sel(bxw_rawptr);
+	return ec;
+}
 
 int TrackGen::play(int op, int pos) {
 	if (!m_mxctl) { if (!op) return EEE_NOEFF; }
@@ -312,14 +325,12 @@ CH(upp){BXW_GETP(p); TR_UPP = atoi_h(s+1); return 0; }
 CH(gcf){return trk_g_parse(s+1, p->m_div, p->m_gwfr), 0; }
 CH(pl) {return s[1]>47 ? p->play(s[1]-48, atoi_h(s+2)) : BXE_PARSE; }
 CH(qk) {BXW_GETP(p); return p->grab_gsel(bxw_rawptr), ClipNode::kcp(2)->keyop_f(atoi_h(s+1),5,0,cb->cnof()); }
-CH(cky){int x = atoi_h(s+1); log("trk_qk: atoi_h(s+1) = %d", x); if (x!=53) return BXE_CENUM;
-	BXW_GETP(p); if (!TR_SEL_ID) return EEE_NOEFF;
-	ANode *nd0 = ANode::lookup_n_q(TR_SEL_ID), *nd = nd0->next();
-	int ec = Node::move(nd0, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()); if (ec<0) return ec;
-	while (nd->cth()->j<0x7fffffff && nd->cl_id()!='w') nd=nd->next();
-	if (nd->cl_id()=='w') TR_SEL_ID=nd->id(), p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr);
-	return ec;
-}
+
+CH(cky){switch(s[1]) {
+	case 'x': return p->del_n_sel(0, cb->cnof());
+	case 'X': return p->del_n_sel(1, cb->cnof());
+	default:  return EEE_NOEFF; 
+}}
 
 CH(bpm){if (!intv_cmd(&p->m_bp10m,s+1,1,9999,0x64640a01)) return 0;
 	if (p->wnfl()) p->w_bpm(); if (p->m_mxctl) mx_c_bpm_ugly_hack(p->m_mxctl, p->m_bp10m); return 0; }
@@ -396,8 +407,9 @@ int TrackGen::cond_pm(ANode * wb, int pm) {
 	if (pm=='+' && !wb->box0()) return wb->winflg_or(8), 0;
 	BXW_GET; const trk_24 * th = wb->cth();
 	if (pm=='-' && wb->id()==TR_SEL_ID) TR_SEL_ID = 0, w_sel(bxw_rawptr);
-	log("trk/cond_pm: i=%d, rng: %d...%d j=%d, rng: %d...%d", th->i, 128*TR_V_XY01[2], 128*TR_V_XY01[3]+127,
-			th->j, (TR_V_XY01[0]<<18)-20000, (TR_V_XY01[1]<<18)+262143);
+	if (debug_flags & DFLG_TRK) log("trk/cond_pm: i=%d, rng: %d...%d j=%d, rng: %d...%d",
+			th->i, 128*TR_V_XY01[2],         128*TR_V_XY01[3]+127,
+			th->j,    (TR_V_XY01[0]<<18)-20000, (TR_V_XY01[1]<<18)+262143);
 	if (th->i<128*TR_V_XY01[2] || th->i>128*TR_V_XY01[3]+127) return 0;
 	if (th->j<(TR_V_XY01[0]<<18)-20000 || th->j>(TR_V_XY01[1]<<18)+262143) return 0;
 	gui2.setwin(w_oid(), 't'); gui2.wupd('t'); w1b_pm(wb, pm); return 1;

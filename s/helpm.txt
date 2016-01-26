@@ -530,21 +530,21 @@ way is to write individual sounds (or perhaps simple loops) to
 .wav files, and use a more full-featured tracker to compose
 your 4-hour opera :)
 ---
-a more complete description (along with more feautures) will
-come in later versions, right now some of the non-trivial bits:
-"rec" is for recording to this track at current position
-"ali" is align clicks to dividing lines (and not pixels)
-at the top right you can set pixel/beat and default values for
-divisor/subdivisor
-there is a context menu at the top/bottom of each column, where
-you can play/loop a part of the track
+Top line: prev/snd menu/next, turn align (to vertical lines)
+on/off, move selected sound, start/stop playing & recording,
+set default divide & pixel/beat. Under p/b, from the "clip"
+button you can drag a sound from the current (p.src) clipboard.
+On the left column, divide per line can be set, the arrows are
+for scrolling. On the top and bottom (beat #) lines you can
+click for context menus (play/loop some # of beats).
 ---
 every track can be used as a box (in graphs or instruments),
 with BPM and from-to-repeat as input (BPM can be non-constant)
 ---
-'keym' selects keyboard mode -- when off, keys select sounds
-from the active clipboard, when on, they work as edit commands
-(currently only 'x' words for 'cut and select next')
+keyboard:
+0...9 and a...v - select sound from curr. p. src. clipboard
+x - cut & select next
+X or backspace - cut & select previous
 {{{?._wwcg}}}
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
@@ -664,7 +664,7 @@ source/target for copy/paste operations.
 "re" - redraw
 "+"  - menu (you can delete objects here)
 (*) at any time, there is one source clipboard and one target
-clipboard; at start both are set to the default clipb. "!b.[]"
+clipboard; at start both are set to the default clipb. "!b.[]",
 ---
 left-cl:sel, right-cl:open(play) ctrl+right-cl:open(cfg)
 middle-click: copy

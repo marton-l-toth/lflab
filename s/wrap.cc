@@ -1080,10 +1080,10 @@ CH(gr){	int k, i = s[2] & 7, wdf = 65536;
 	WrapCore * core = SOB_RWP(p,sob)->core_rw();
 	switch (s[1]) {
 		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
-		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 63; wdf |= 131072 << (2*i); break;
+		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
 		case '*':
 			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
-			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 63,
+			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
 				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
 			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
 		default: return BXE_CENUM;

@@ -1326,21 +1326,20 @@ int Node::copy(ANode * p, ANode * to, const char * name, int i, int j) {
 	ANode *up = p->up(), *to2 = to ? to : up; 
 	if (!up) return NDE_NOROOT;
 	if (!(i&NOF_FORCE) && !(to2->perm_ed())) return NDE_PERM;
+	ANode * trg = 0; int tid, ec;
 	switch(p->cl_id()) {
 		case '_': return NDE_BTCOPY;
-		case 'w': return mk(0, to2, name, 'W', i, j, p->box0());
+		case 'w': return (ec=mk(&trg, to2, name, 'W', i, j, p->box0()))<0 ? ec : trg->id();
 		default: break;
 	}
-	ANode * trg = 0;
 	SvArg * sv = &ANode::m0_sv; if (sv->rn) return NDE_LOCK;
-	int tid, ec = Node::mk(&trg, to2, name, p->cl_id(), i, j, 0); 
-	if (ec<0) return ec; else tid = trg->id();
+	if ((ec = Node::mk(&trg, to2, name, p->cl_id(), i, j, 0))<0) return ec; else tid = trg->id();
 	CmdBuf * cb = new CmdBuf(); 
 	cb->init(-1, NOF_FORCE|NOF_STRICT);
 	cb->setvar(0, tid); cb->setvar(1, tid); 
 	ANode::sv_start(cb, p, SVF_COPY);
 	ec = ANode::sv_write(-1); ANode::sv_end();
-	return ec;
+	return ec<0 ? ec : tid;
 }
 
 int Node::del(ANode * p, int flg) {

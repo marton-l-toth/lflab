@@ -192,7 +192,7 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'*', dakcf_skel, NULL, dakcf_cmd, dakcf_clk, WF_RESIZE|WF_BIGDA1|WF_KEYEV|WF_XM1EV},
 	{'#', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_KEYEV|WF_XM1EV},
 	{'+', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_XM1EV},
-	{'t', datrk_skel,  NULL, datrk_cmd, datrk_clk, WF_RESIZE | WF_BIGDA2 | WF_DTOR | WF_KEYEV},
+	{'t', datrk_skel,  NULL, datrk_cmd, datrk_clk, WF_RESIZE|WF_BIGDA2|WF_DTOR|WF_KEYEV|WF_XM1EV},
 	{'g', dagraph_skel, dagraph_get, dagraph_cmd, dagraph_clk, WF_SURF | WF_CONT | WF_FULLSURF },
 	{ 0, NULL, NULL, NULL } };
 
@@ -210,7 +210,7 @@ static int conf_nomwin = 0;
 static int conf_portwid;
 
 static int tlog_c_onq = 0, tlog_c_bk = 0;
-static int dflg = 0, global_ec = 0;
+static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
 			     "40:track 80:lookuperr-0x[56]7";
 // general
@@ -1053,6 +1053,8 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
 {0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
+{0,  32,1,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  2:77:23:55:32:84:48:22:93:66:39:24:55:4"
+	       "3:77:33:84:66:48:35:5", "pqrstuvwxyz{5X;I6B`7<QhCJ=Y>DRaK" /*"}"*/ },
 {'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
@@ -1137,8 +1139,11 @@ static int menutab_lu(int t, int j) {
 	return i;
 }
 
-static int  tsc_mi;
+static int tsc_mi, tsc_x, tsc_y, tsc_id, tsc_md,  // trk
+	   tsc_drag_id, tsc_drag_xd, tsc_drag_x, tsc_drag_y;
+static ww_t * tsc_ww;
 static void tsc_act(ww_t * ww, int ix);
+
 static void menutab_init() {
 	int i, j, w, k = 0, n = 0;
 	chtab_ini(&menu_ctab, 0);
@@ -1733,15 +1738,15 @@ static void daclb_draw(ww_t * ww, cairo_t * cr2) {
 
 static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return dalbl_draw(ww, (cairo_t*)ww->arg[0].p);
-	int k, ch = ww->cl->ch; char *s;
+	int k, ch = ww->cl->ch; char *s = DALBL_TXT(ww);
 	switch(arg[0]) {
-		case '+': if (ch!='M') goto err;
-			  s = DALBL_TXT(ww); k = menutab[ch = DLM_MT(ww)].lbll;
-			  memcpy(DALBL_TXT(ww), menutab[ch].lbl+(arg[1]-48)*k, k);
-			  goto draw;
 		case 'c': if (ch!='M') goto err;
-			  s = DALBL_TXT(ww); k = arg[1] - 48;
-			  s[0] = ((k>>3)&7) + 50; s[1] = ':'; s[2] = (k&7) + 50; s[3] = 0; goto draw;
+			  if (arg[1]<'p') { k = arg[1] - 48; s[0] = ((k>>3)&7) + 50; s[1] = ':';
+			  		    s[2] = (k&7) + 50; s[3] = 0; goto draw; }
+		case '+': if (ch!='M') goto err;
+			  k = menutab[ch = DLM_MT(ww)].lbll;
+			  memcpy(s, menutab[ch].lbl+((arg[1]-48)&31)*k, k);
+			  goto draw;
 		case 'C': s = ww->arg[4].c; s[6] = 1; ++arg;
 			  for (k=0; arg[k] && k<6; k++) s[k] = arg[k];
 			  if (k<6 || *(arg+=k)!=':') goto draw;
@@ -2190,7 +2195,7 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
-"({80x|$2X#d0}{M8$X#R0|W5}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
+"({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})",
 "({L0later}{L1...})"}; return parse_w_s(ww->top, str[ix]); }
@@ -2241,6 +2246,7 @@ static void wrap_skel (struct _topwin * tw, char * arg) {
 #define GRID_EY(x)  ((x)->arg[3].c[3])
 #define GRID_KX(x)  ((x)->arg[3].c[4])
 #define GRID_KY(x)  ((x)->arg[3].c[5])
+#define GRID_PM(x)  ((x)->arg[3].c[1])
 #define GRID_WH1(W) int wid1 = GRID_SX(W) = (DA_W(W)-5) / GRID_X(W), \
 			hgt1 = GRID_SY(W) = (DA_H(W)-5) / GRID_Y(W); \
 		    if (wid1<1 || hgt1<1) return; \
@@ -2285,8 +2291,14 @@ static void dagrid_draw(ww_t * ww, cairo_t * cr2) {
 	    y0 = max_i(a4[1], y00), y1 = min_i(a4[3], y00+GRID_Y(ww)*hgt1),
 	    x0s = (x0-x00) / wid1, x1s = (x1-x00-1) / wid1,
 	    y0s = (y0-y00) / hgt1, y1s = (y1-y00-1) / hgt1,
-	    cx, cy, i, j, j0;
+	    y_r = (GRID_YRY(ww)&7)+2, y_y = y_r * ((GRID_YRY(ww)>>3)+2), lxy[52],
+	    cx, cy, i, j, j0, x_ry = GRID_XRY(ww), x_r = 0, x_y = 0, pm;
 	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE); cairo_set_line_width(cr2, 1.0);
+	if (x_ry<64) { x_r = (x_ry&7)+2, x_y = x_r*((x_ry>>3)+2), pm = 0; }
+	else {  pm = (x_ry&63)+1; cairo_set_source_rgb(cr2,.333,.333,.333);
+		for (i=x0s; i<=x1s; i++) if ((1<<((i-1+pm)%12))&0xab5)
+			cairo_rectangle(cr2, x00+i*wid1, y0, wid1, y1-y0+1), cairo_fill(cr2);
+	}
 	cairo_set_source_rgb(cr2,0.1,0.2,1.0);
 	GRSQ_LOOP(128, (cairo_rectangle(cr2, cx, cy, wid1, hgt1), cairo_fill(cr2)))
 	int ex = GRID_EX(ww), ey = GRID_EY(ww);
@@ -2302,16 +2314,16 @@ static void dagrid_draw(ww_t * ww, cairo_t * cr2) {
 	CONDK1(3) cairo_set_source_rgb(cr2, 0.3, 1.0, 1.0),
 		  cairo_move_to(cr2, (double)cx+.5, (double)cy+.5*h1d+.5), cairo_rel_line_to(cr2,w1d,0.0),
 		  cairo_rel_move_to(cr2,-.5*w1d,-.5*h1d), cairo_rel_line_to(cr2,0.0,h1d), cairo_stroke(cr2);
-	int x_r = (GRID_XRY(ww)&7)+2, x_y = x_r * ((GRID_XRY(ww)>>3)+2),
-	    y_r = (GRID_YRY(ww)&7)+2, y_y = y_r * ((GRID_YRY(ww)>>3)+2), lxy[52];
 	cairo_set_source_rgb(cr2, .5, .5, .5);
-	grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, wid1, x_r*wid1), y0, y1);
+	if (!pm) grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, wid1, x_r*wid1), y0, y1);
 	grid_hl(cr2, lxy, grid_lpos(lxy, y0, y1, y00, hgt1, y_r*hgt1), x0, x1);
 	cairo_set_source_rgb(cr2, 1.0, .0, .0);
-	grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, x_r*wid1, x_y*wid1), y0, y1);
+	if (pm) grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00+wid1*((18-pm)%12),  12*wid1, 0), y0, y1);
+	else    grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, x_r*wid1, x_y*wid1), y0, y1);
 	grid_hl(cr2, lxy, grid_lpos(lxy, y0, y1, y00, y_r*hgt1, y_y*hgt1), x0, x1);
 	cairo_set_source_rgb(cr2, 1.0, 1.0, .0);
-	grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, x_y*wid1, 0), y0, y1);
+	if (pm) grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00+wid1*((13-pm)%12), 12*wid1, 0), y0, y1);
+	else	grid_vl(cr2, lxy, grid_lpos(lxy, x0, x1, x00, x_y*wid1, 0), y0, y1);
 	grid_hl(cr2, lxy, grid_lpos(lxy, y0, y1, y00, y_y*hgt1, 0), x0, x1);
 }
 
@@ -2358,6 +2370,7 @@ static void dagrid_cmd(struct _ww_t * ww, const char * s) {
 				i = hex2(s) & 127, k = 64*s[2]+s[3] - 3120, j = 51*s[2]+s[3]-2547,
 				((gr_keytab_t*)ww->etc)->xy2k[j] = i, ((gr_keytab_t*)ww->etc)->k2xy[i] = k;
 			s += (*s=='.'); continue;
+		case 'P': GRID_PM(ww) = hxd2i(s[1]); da_fullre(ww); s+=2; continue;
 		default: LOG("dagrid: invalid cmd 0x%x(%c)", *s, *s); return;
 	}}
 
@@ -2757,14 +2770,12 @@ static void trk_ns(ww_t * ww, cairo_t * cr2, int * blim, int * bclip) {
 	if (flg) { for (i=0; i<4; i++) { c = 4*"MCXI"[i];
 		if (c=4*"MCXI"[i], j=20*i+60, xll<j&&j<xul) arrow(cr2, j, blim[2], c);
 		if (j = DA_W(ww)+40-j,        xll<j&&j<xul) arrow(cr2, j, blim[2], c+2); }}
-	else if (xll<(j=DA_W(ww)-20)) {
-		cairo_set_source_rgb(cr2, .1, .2, .2);
-		cairo_rectangle(cr2, (double)(j+1), 1.0, 18.0, 18.0); cairo_fill(cr2);
-		cairo_set_source_rgb (cr2, .6667, .6667, .6667);
-		cairo_rectangle(cr2, (double)(j+.5), .5, 19.0, 19.0); cairo_stroke(cr2);
+	else if (xll-30<(j=DA_W(ww)-50)) {
 		cairo_set_source_rgb(cr2, .5, 1.0, 1.0);
-		cairo_rectangle(cr2, (double)(j+3), 3.0, 14.0, 14.0); cairo_fill(cr2);
-		cairo_set_source_rgb(cr2, .5, .0, .0); tx_box(cr2, j+3, 3, 14, 14, conf_lbfs, "*");
+		cairo_rectangle(cr2, (double)(j+1), 1.0, 49.0, 19.0); cairo_fill(cr2);
+		cairo_set_source_rgb (cr2, .6667, .6667, .6667);
+		cairo_rectangle(cr2, (double)(j+.5), .5, 50.0, 20.0); cairo_stroke(cr2);
+		cairo_set_source_rgb(cr2, .0, .0, .0); tx_box(cr2, j+3, 3, 46, 16, conf_lbfs, "clip");
 	}
 }
 
@@ -2930,15 +2941,16 @@ static void trk_mv(ww_t * ww, int dx, int dy) {
 	tc->x0 += dx; tc->y0 += dy; da_fullre(ww);
 }
 
-static int tsc_x, tsc_y, tsc_id, tsc_md;
-static ww_t * tsc_ww;
-
 static void trk_ns_playm(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
 	tc_t * tc = (tc_t*) ww->etc; tsc_x = tc->x0 + (cx - 60) / TC_PPB(tc); 
 	tsc_ww = ww; tsc_md = 3; popup2(ww, tsc_mi+4, 0, ev); }
 
 static void trkclk_n(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
+	tc_t * tc;
 	if (cx<60) trk_mv(ww, 0, -((0621201>>((cx/20)*6))&63));
+	else if (DA_W(ww)-cx<50) tsc_drag_id = tsc_drag_x = tsc_drag_y = -1, tc = (tc_t*)ww->etc,
+		tsc_ww = ww, tsc_drag_xd = (cx -= 60),
+		CMD("X#%x$Cv0$%x0$%x", ww->top->id>>4, tc->y0, 40320*tc->x0 + TC_UPP(tc)*(cx-9));
 	else trk_ns_playm(ww, b9, cx, ev);
 }
 
@@ -2977,22 +2989,44 @@ static void trkclk_w(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) { 
         tc_t * tc = (tc_t*) ww->etc;
 	int k, y1 = (cy/48+tc->y0), y = 16*y1;
-	if (tc->gwfr[2]&1) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,y1)].d, cx = k*((2*cx/k+1)/2);
+	//if (tc->gwfr[2]&1) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,y1)].d, cx = k*((2*cx/k+1)/2);
 	int r, tz = 40320*tc->x0, upp = TC_UPP(tc), t0 = max_i(0,tz+upp*(cx-18)), t1 = tz+upp*cx;
 	if (!((t0^t1)&0xffff8000)) r = tc_bx_cmd(tc, y, t0, (t1-t0)|TBXF_RNG|TBXF_CLK, 0);
 	else if (!(r = tc_bx_cmd(tc, y, t1&0xffff8000, (t1&32767)|TBXF_RNG|TBXF_CLK, 0)))
 		   r = tc_bx_cmd(tc, y, t0, (32768-(t0&32767))|TBXF_RNG|TBXF_CLK, 0);
+	if (!r && (tc->gwfr[2]&1)) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,y1)].d,
+			           cx = k*((2*cx/k+1)/2), t1 = tz+upp*cx;
 	tsc_md = 0; tsc_x = t1; tsc_y = y; tsc_id = r; tsc_ww = ww;
-	if (b9!=3) return tsc_cc(48+b9);
-	popup2(ww, tsc_mi, r ? 1 : 0x37, ev);
 	if (dflg&DF_TRK) LOG("trkclk_c: b%c x:%d(%d) y:%d(%d) --> 0x%x", 48+b9, cx, t1, cy, y, r);
+	if (b9==3) return popup2(ww, tsc_mi, r ? 1 : 0x37, ev);
+	tsc_cc(48+b9); 
+	if (r && b9==1) tsc_drag_id = tsc_drag_x = tsc_drag_y = -1, tsc_drag_xd = cx;
+}
+
+static gboolean trk_rel(GtkWidget *w, GdkEventButton * ev, gpointer p) { tsc_drag_id=0; return TRUE; }
+
+static gboolean trk_drag(GtkWidget *w, GdkEventMotion * ev, gpointer p) {
+	if (tsc_drag_id <= 0) return TRUE;
+	if (tsc_ww != (ww_t*)p) return LOG("trk_drag: wigdet mismatch"), tsc_drag_id = 0, TRUE;
+	tc_t * tc = (tc_t*)tsc_ww->etc;
+	int cx = ivlim((int)lround(ev->x)-60-tsc_drag_xd, 0, DA_W(tsc_ww)-78), k,
+	    cy = ivlim((int)lround(ev->y)-20, 		  0, DA_H(tsc_ww)-41), ty = cy/48+tc->y0;
+	if (tc->gwfr[2]&1) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,ty)].d, cx = k*((2*cx/k+1)/2);
+	int tx = 40320*tc->x0+TC_UPP(tc)*cx;
+	if (!((tx-tsc_drag_x)|(ty-tsc_drag_y))) return; else tsc_drag_x = tx, tsc_drag_y = ty;
+	LOG("drag (%d,%d) --> (%x:%x) (x0=%d, y0=%d, upp=%d)", cx, cy, ty, tx, tc->x0, tc->y0, TC_UPP(tc));
+	CMD("X#%x$CM%x$%x0$%x", tsc_ww->top->id>>4, tsc_drag_id, ty, tx);
+	return TRUE;
 }
 
 static void datrk_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	if (b9<0) { if (b9!=-1) return;
-		    int kch = DABOOL(widg_lookup_pci(ww->top, 'K', 0)) ? 'K' : 'Q';
-		    char buf[8]; buf[0]='X'; buf[1]=kch; *(int*)(buf+2) = qh4(cx); 
-		    buf[6] = 0; widg_defcmd(ww, buf); return; }
+	tsc_drag_id = 0;
+	if (b9<0) { if (b9!=-1) return;  // TODO: 'Q' (?)
+		    LOG("trk_key: 0x%x 0x%x", cx, cy);
+		    int k = b32_to_i(cy); if (k>=0) return CMD("K@p$1%c", k+48);
+		    if ((cy&=255)==8) cy = 'X';
+		    else if (cy<32 || cy>126) return LOG("trk: unknown key %d", cy);
+		    k = (cy<<16) + 0x4b58; widg_defcmd(ww, (char*)&k); return;  }
 	int wx = DA_W(ww), wy = DA_H(ww);
 	if (cy<20)    return trkclk_n(ww, b9, cx, ev); 
 	if (cy>wy-21) return trkclk_s(ww, b9, cx, ev); else cy -= 20;
@@ -3007,6 +3041,7 @@ static void trk_sel(ww_t * ww, int i, int j, int id, const char * s14) {
 	if (i<0) f = 3, i = tc->sely, j = tc->selx; 
 	else tsr_op(ww,tc->sely,tc->selx), f=(tc->selx!=j&&(tc->selx=j,1))|(3*(tc->sely!=i&&(tc->sely=i,1))),
 	     tsr_op(ww,tc->sely,tc->selx);
+	if (tsc_drag_id==-1) tsc_drag_id = id, tsc_drag_xd -= (j-40320*tc->x0)/TC_UPP(tc);
 	int k, d = tdiv_idsf[tc_effdiv(tc, i>>4)].d, d2 = 40320/d;
 	if (f&2) dacnt_set_x(widg_lookup_ps(tw,"L"), i, 256), d99(DACNT_LBL(widg_lookup_ps(tw,"D")), d);
 	if(f&1){int a[4]; k=TC_UPP(tc), a[0]=j/40320; j%=40320; a[1]=j/d2; j%=d2; a[2]=j/k; a[3]=1000*(j%k)/k;
@@ -3160,6 +3195,8 @@ static void datrk_skel(struct _ww_t * ww, const char **pp) {
 	int i;  tc->x0 = 0; tc->y0 = 1;
 	tc->div[0] = 3; for (i=1; i<256; i++) tc->div[i] = 0;
 	da_skel(ww, 425, 232);
+	g_signal_connect (ww->w, "button-release-event", G_CALLBACK(trk_rel), (gpointer)ww);
+	g_signal_connect (ww->w, "motion-notify-event", G_CALLBACK(trk_drag), (gpointer)ww);
 }
 
 static void tc_adj_gd(tc_t * tc, int k) {
@@ -3200,7 +3237,8 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 			return (*wt->cl->cmd)(wt, s);
 		case '1': tc_adj_d(tc, tsc_y, tsc_x); goto done;
 		case '2': tc_adj_s(tc, tsc_y, tsc_x); goto done;
-		case 'g': ++s; s += trk_g_parse(s, tc->div, tc->gwfr); continue;
+		case 'g': ++s; s += trk_g_parse(s, tc->div, tc->gwfr); 
+			  DABOOL(wn=widg_lookup_ps(tw,"A")) = tc->gwfr[2]&1; da_fullre(wn); continue;
 		case '*':
 			memcpy(buf, "Xmd", 3); memcpy(buf+3, s+1, 2);
 			k = TC_PPB(tc) / tdiv_idsf[tc_effdiv(tc, tc->sely>>4)].d;
@@ -3211,11 +3249,9 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 			case 'S': tc_adj_s(tc, 0, s[2]-48); goto done;
 			case 'W': tc_adj_w(tc, s[2]^s[3]); goto done;
 			case 'M': tc_adj_gd(tc, s[2]); goto done;
-			case 'A': DABOOL(wn=widg_lookup_ps(tw,"A")) = !!((tc->gwfr[2]^=1)&1);
+			case 'A': DABOOL(wn=widg_lookup_ps(tw,"A")) = (tc->gwfr[2]^=1)&1;
 				  da_fullre(wn); tsr_op(wt, 4098, -2); goto done;
 			default: break; }
-		case 'K':
-			wn = widg_lookup_pci(tw, 'K', 0); DABOOL(wn)^=1; da_fullre(wn); return; // TODO
 		default: LOG("ttrk: invalid cmd 0x%x \"%s\"", *s, s); goto done;
 	}}
 done:	tsr_op(wt, TSR_END, 0);
@@ -3226,7 +3262,7 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 	"[(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
 	  "({B<`<$Xs<}{MS*QWEQWE$Xc|T0}{B>`>$Xs>}{YAali$$>GA}"
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
-	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW}{YKkeym$$>K})3{tt}]";
+	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW})3{tt}]";
 	if (!tsc_mi) tsc_mi = menutab_lu('T', 0);
 	if (tw->state) { if (arg) ttrk_cmd(tw, arg); return; }
 	tw->arg[0].p = parse_w(tw, &str);
