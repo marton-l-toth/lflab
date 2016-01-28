@@ -1,6 +1,7 @@
 #!/bin/bash
-SDIR=$HOME/g/lflab/s
-PDIR=$HOME/lf-prod/s
+SDIR="$HOME/g/lflab/s"
+PDIR="$HOME/lf-prod/s"
+mkdir -p "$PDIR/c"
 OKCMD=""; FAILCMD="";
 if [[ "$1" == "-okcmd"   ]]; then OKCMD="$2";   shift 2; fi
 if [[ "$1" == "-failcmd" ]]; then FAILCMD="$2"; shift 2; fi

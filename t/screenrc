@@ -1,5 +1,3 @@
-# Original version by Sven Guckes
-# http://www.guckes.net/Setup/screenrc
 escape ^xx  # default
   autodetach            on              # default: on
   crlf                  off             # default: off
@@ -22,7 +20,7 @@ shell                 -bash
   bind .
   bind ^\
   bind \\
-# shift-0 ... shift-7 on US keyb.
+bind ; displays
 bind ) select 10
 bind ! select 11
 bind @ select 12
@@ -31,6 +29,8 @@ bind $ select 14
 bind % select 15
 bind \^ select 16
 bind & select 17
+bind * select 18
+bind ( select 19
    bind K
   bind P paste .
   caption splitonly 'current window: %{= wr}%{+b}%n%f %t%{= wb}'
