@@ -508,7 +508,7 @@ int ADirNode::ccmd(CmdBuf * cb) {
 int ADirNode::save1() {
 	if (debug_flags & DFLG_SAVE) sv_dump1("dir");
 	char * pst = &m0_sv.st;
-	if (*pst || !perm(DF_SAVE)) return m0_sv.nxup(1);
+	if (*pst || (!perm(DF_SAVE) && !(m0_sv.flg&SVF_COPY))) return m0_sv.nxup(1);
 	int ec = 0; ANode * snl = sn_list(&m0_sv.wl);
 	if (snl) return m0_sv.cn = snl, ec + size() + 1;
 	if ((ec = sv_cre()) < 0) return (ec==NDE_NOSVTRG) ? m0_sv.nxup(1) : ec;
