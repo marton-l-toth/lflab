@@ -1,0 +1,11 @@
+#!/bin/bash
+fname="$1.h"
+cppvar="__qwe_$1_h__"
+if [[ -e "$fname" ]]; then
+	echo "'$fname' already exists!"
+	exit 1
+fi
+echo "#ifndef $cppvar" > $fname
+echo "#define $cppvar" >> $fname
+echo "" >> $fname
+echo "#endif // $cppvar" >> $fname
