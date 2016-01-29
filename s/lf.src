@@ -87,7 +87,7 @@ fi
 [[ -f "$LF_LOG--1" ]] && mv "$LF_LOG--1" "$LF_LOG--2"
 [[ -f "$LF_LOG"    ]] && mv "$LF_LOG"    "$LF_LOG--1"
 (echo "lflab start script - log start at $(date "+%F %T.%3N")"
- [[ -n "LF_$LOGPEND" ]] && echo "$LF_LOGPEND"
+ [[ -n "$LF_LOGPEND" ]] && echo "$LF_LOGPEND"
  mkdir -p "$LF_TMPDIR" 
  echo hahahaha > "$LF_KILLER"
  if [[ ! -f "$LF_INIFILE" ]]; then echo "copying ini file..."; cp "$LF_PKGINI" "$LF_INIFILE"; fi) 2>&1 | tee "$LF_LOG"
