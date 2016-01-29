@@ -13,6 +13,7 @@ class CmdBuf;
 class BoxGen {
 	public:
 		friend void boxg_init();
+		inline static ABoxNode* node0(const BoxGen *p) { return p?p->m_node:0; }
 		BoxGen() : m_model(0), m_node(0) {}
 		BoxGen(ABoxNode * nd) : m_model(0), m_node(nd) {}
 		virtual ~BoxGen();
@@ -40,8 +41,7 @@ class BoxGen {
 		virtual void mxc_notify(int ky, int f) { log("BUG: mxc_notify undefined"); }
 
 		inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_node->id(); }
-		ABoxNode* node() const { return m_node; }
-		ABoxNode* node0() const { return this?m_node:0; }
+		inline ABoxNode* node() const { return m_node; }
 		inline int id() { return m_node->id(); }
 		inline int w_oid(int k = 11) { return 16 * m_node->id() + k; }
 		inline int get_ionm(char *to, int io, int j) { return m_node->get_ionm(to, io, j); }

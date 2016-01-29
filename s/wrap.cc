@@ -279,8 +279,8 @@ class WrapGen : public BoxGen {
 		inline void qrst(qsav_t * q) { m_bflg = q->f; memcpy(m_xys6, q->xy, 8); }
 		inline int qset(const char *s, int l) { for (int k,i=0; i<l; m_xys6[i++] = k) 
 			                if ((unsigned int)(k=s[i]-48)>50u) return BXE_PARSE; return 0;}
-		void upd_conn() { Node::set_conn_2(m_node, m_sob.ro()->m_scl[0].ro()->bx->node0(),
-				                           m_sob.ro()->m_scl[1].ro()->bx->node0()); }
+		void upd_conn() { Node::set_conn_2(m_node, BoxGen::node0(m_sob.ro()->m_scl[0].ro()->bx),
+				                           BoxGen::node0(m_sob.ro()->m_scl[1].ro()->bx)); }
 		BXCMD_DECL(WrapGen) c_in, c_bw, c_sf, c_c2k, c_tf, c_gcl, c_ud, 
 			c_pl, c_gr, c_win, c_vt, c_so, c_gmd, c_ky, c_stp, c_wav;
 		void w_mini();
