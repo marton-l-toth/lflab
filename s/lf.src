@@ -2,8 +2,8 @@
 export LF_SCRIPT="$(readlink -f "$0")"
 export LF_DIR="$(dirname "$LF_SCRIPT")"
 export LF_USERDIR="$HOME/.lflab"
-LF_TMPROOT="/run/shm"
-[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="/tmp"
+LF_TMPROOT="$(readlink -f /run/shm)"
+[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /tmp)"
 export LF_TMPROOT
 export LF_IO="$LF_DIR/lf.io"
 export LF_BIN="$LF_DIR/lf.bin"
