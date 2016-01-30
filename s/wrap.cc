@@ -256,7 +256,8 @@ class WrapGen : public BoxGen {
 		virtual int mini(char * to);
 		virtual void set_model() { bug("wr: set_model() called"); }
 		virtual bool io_alias_perm() const { bug("wr: io_alias_perm() called"); return 0; }
-		virtual void mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0; }
+		virtual int mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0;
+						     return 0; }
 		int plot_t(double t0, double t1, int n);
 		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
 		WrapAutoVol * avol() { return m_sob.ro()->m_avol.ro(); }

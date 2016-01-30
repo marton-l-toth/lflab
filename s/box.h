@@ -38,7 +38,7 @@ class BoxGen {
 		virtual int start_job_3(JobQ::ent_t * ent, char * arg) { return JQE_UNDEF; }
 		virtual int mini(char * to) { memcpy(to, "B!U!G!a:zz%z%%", 14); return 14; }
 		virtual int df_ui_ix() const { return 0; }
-		virtual void mxc_notify(int ky, int f) { log("BUG: mxc_notify undefined"); }
+		virtual int mxc_notify(int ky, int f) { return log("BUG: mxc_notify undefined"), BXE_WTF; }
 
 		inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_node->id(); }
 		inline ABoxNode* node() const { return m_node; }

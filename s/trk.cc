@@ -65,7 +65,7 @@ class TrackGen : public BoxGen {
 		virtual void box_window();
 		virtual void wdat_cons(sthg * bxw_rawptr);
 		virtual int save2(SvArg * sv);
-		virtual void mxc_notify(int k,int f) { if(f&64) m_mxctl=0; if (wnfl()) w_ply(); }
+		virtual int mxc_notify(int k,int f) { if(f&64) m_mxctl=0; if (wnfl()) w_ply(); return 0; }
 		ANode* bkm_find(int j);
 		void   bkm_add(ANode * nd);
 		void   bkm_rm (ANode * nd);

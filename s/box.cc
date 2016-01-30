@@ -5,7 +5,7 @@
 #include "pt.h"
 
 BoxGen * box_bookmark[8];
-void box_mxc_notify(BoxGen *p, int ky, int flg) { p->mxc_notify(ky, flg); }
+int box_mxc_notify(BoxGen *p, int ky, int flg) { return p->mxc_notify(ky, flg); }
 
 void BoxInst::rmcon(int flg, double **pp, int n) { BVFOR_JM(flg) {
 	double *p=pp[j], x=*p; for (int t=1; t<n; t++) p[t] = x; }}
