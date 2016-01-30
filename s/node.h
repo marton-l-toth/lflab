@@ -115,6 +115,7 @@ class ANode {
                                                  return p->m_u24.u[0] ? p : 0; }
                 static void sv_dump1(const char *s);
 		static void wi_clear();
+		static void wi_debug();
         protected:
                 typedef int (*nm_fun_t)(char*,const union u24_t*), (nm_fun_dt)(char*,const union u24_t*);
                 static char * blk64();

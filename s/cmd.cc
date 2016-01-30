@@ -341,6 +341,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
 		case 'G': return log("glob_flg = 0x%x", glob_flg), 0;
 		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
+		case 'W': return ANode::wi_debug(), 0;
 		default: return GCE_UMISC;
 	}}
 

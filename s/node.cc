@@ -322,6 +322,17 @@ void ANode::wi_clear() { const int msk = ~(WF_OID|WF_WI8);
 	for (int k,i=1; i<64; i++) if ((k=m0_wi_b[4*i].i[0])<1048576) lookup_n_q(k)->winflg_and(msk);
 	wi_init(); }
 
+void ANode::wi_debug() {
+	int dfc = 0, bfc = 0;  ANode * nd;
+	log_n("dir:");
+	for (int k,i=1; i<255; i++) if ((k=m0_wi_d[i])>1048575)  ++dfc; else
+		nd = lookup_n_q(k), log_n(" 0x%x(%s)", k, nd->cl_id() ? nd->s_name() : "...0");
+	log_n(" (free: %d)\nbox:", dfc);
+	for (int k,i=1; i< 64; i++) if ((k=m0_wi_b[4*i].i[0])>1048575)  ++bfc; else
+		nd = lookup_n_q(k), log_n(" 0x%x(%s)", k, nd->cl_id() ? nd->s_name() : "...0");
+	log(" (free: %d)", bfc);
+}
+
 void ANode::st_init() {
         static int cnt = 0; if (++cnt>1) bug("WTF: ANode::st_init() called %d times", cnt);
         for (int i=0; i<4096; i++) m0_pnb[i] = zeroblkC;
