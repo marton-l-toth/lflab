@@ -354,7 +354,7 @@ int CmdTab::c_closewin(CmdBuf * p) {
 		if (!*s) return 0;
 		int id = 0; while (*s & 80) id = 16*id + hxd2i(*(s++));
 		ANode * nd = Node::lookup_n(id);
-		if (nd) nd -> winflg_and(msk);
+		if (nd) nd -> close_window(ty); //winflg_and(msk);
 	}
 	return 0; // TODO (?)
 }

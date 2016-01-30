@@ -384,7 +384,7 @@ int ANode::draw_window(int x) {
 
 void ANode::close_window(int x) {
         int m1 = 1 << (x&15);
-        if ((m_winflg&m1) && !((m_winflg&=~m1)&65535)) wdat_free(); }
+        if ((m_winflg&m1) && !((m_winflg&=~m1)&WF_OID)) wdat_free(); }
 
 int ANode::title_arg(char * to, int wid) {
         char * p = to;
