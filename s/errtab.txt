@@ -84,6 +84,7 @@ NDE_RMWHAT   attempted remove from wrong container (BUG)
 NDE_EXPBOX   box expected (no dir/clip allowed)
 NDE_EXPNULL  new object expected (BUG)
 NDE_EXPWRAP  wrapbox expected
+NDE_NOTLIM   time limit can only be set in trk/clip
 NDE_TRGLU    target lookup failed
 NDE_BOXCRE   create box failed
 NDE_LOOPB1   refused to self-reference box
@@ -183,6 +184,11 @@ BXE_RANGE    box parameter out of range
 BXE_UNDEFKEY key undefined (instr/grid)
 BXE_ZEROWAV  all zero audio -- no file written
 BXE_AVZERO   autovol failed because of zero output
+BXE_FILTOUT  a filter has to have exactly one output
+BXE_FILTIN   a filter has to have at least one input
+BXE_FILTRM   filter removed due to invalid input/output count
+BXE_NOOUT    this object cannot be used as a box
+BXE_WLGDONE  wrap linegrp done (BUG)
 BXE_SORRY    sorry not yet implemented (box)
 S4__________ __________________________________________________________(BUG)__
 MDE_SEVEN    got MIDI data byte where cmd expected

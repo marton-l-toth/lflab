@@ -16,6 +16,10 @@
 #define WRF_PASS   0x40000000 // bx 
 #define WRF_W_CH2  0x20000000 // bx
 #define WRF_W_PLOT 0x10000000 // bx
+#define WRF_S_NI   0x0000007c // bx
+#define WRF_S_NO   0x00000f80 // bx
+#define WRF_F_NI   0x0001f000 // bx
+#define WRF_F_NO   0x003e0000 // bx
 #define WRF_W_ALL  0x30000000
 #define WRF_W_SH   28
 #define WRF_SKIPV0 0x02000000 // 2m
@@ -39,7 +43,7 @@
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk);
 // 1:lbl 2:src 4:fun 8:xf  32:c 64:v0 128:v1   256:(xf=='=') 512: slref 1024: unflg
 
-class WrapGen;
+class DWrapGen;
 class WrapScale {
         public:
                 static void st_init();
@@ -49,7 +53,8 @@ class WrapScale {
                         return (m_xop=='.') ? x : x * p[8+(m_xop>64)+(m_xop&1)]; }
                 inline bool noncon() const { return !!m_fch; }
 		inline int uses_xf() const { return m_xop != '.'; }
-                int cmd(const char *s, char * slref);
+		inline int si() const { return m_si; }
+                int cmd(const char *s);
 		void draw(int oid, int ix, int flg, const double * pc, BoxGen * bx);
 		void ini_default(int k);
 		int save(SvArg * sv, int i);
@@ -72,7 +77,7 @@ class WrapScale {
 		inline const char * snm() const { return "x\0 y\0 s1\0s2\0s3\0s4\0s5\0s6" + 3*m_si; }
 		inline int sch() const { return m_si + (m_si>1 ? 47 : 120); }
 		inline int fch() const { return m_fch ? m_fch : 'c'; }
-                int ssrc(int c, char * slref);
+                int ssrc(int c);
                 static sfun_p m0_sfun[17];
                 double m_v0, m_v1, m_vx;
                 char m_fch, m_fi, m_si, m_xop, rsrv[4];
@@ -81,21 +86,20 @@ class WrapScale {
 class WrapScVec : public SOB {
 	public: 
 		SOBDEF_64(WrapScVec);
-		WrapScVec(int arg) : SOB(arg), bx(0) { memcpy(updnnino, "-A\0\01", 4);
-				memset(sl_ref, 0, 6);  pps[0] = pps[1] = pps[2] = 0; }
+		WrapScVec(int arg) : SOB(arg) { memcpy(updn, "-A", 2);
+				memset(qs, 0, 20);  pps[0] = pps[1] = pps[2] = 0; }
 		WrapScVec(const WrapScVec * that, int arg);
 		~WrapScVec() { clear(); }
 		int save2(SvArg * sv);
 		void clear();
-		void nioupd() { updnnino[2]=bx->n_in(); updnnino[3]=bx->n_out(); }
-		int nioupd_c(BoxGen * b) { return b==bx && (nioupd(), 1); }
 		WrapScale * item(int ix, int f);
 		void w_ud(int oid, int flg);
 		void ini_default(int k);
 		void debug2();
+		int cmdi(int ix, const char * cmd);
 
-		BoxGen * bx;
-		char updnnino[4], sl_ref[6], rsrv[6];
+		char updn[2], rsrv[2];
+		unsigned char qs[20]; // rsss rsss
 		WrapScale ** pps[3];
 };
 
@@ -179,12 +183,12 @@ class WrapAVReader : public AReader {
 
 class WrapAVJob : public Job {
         public: 
-                WrapAVJob(JobQ::ent_t * ent, WrapGen * wbx, WrapAutoVol * vtab, int mxid);
+                WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid);
                 virtual ~WrapAVJob() {}
                 virtual int run1();
 		virtual void abort();
         protected:
-                WrapGen * m_bx;
+                DWrapGen * m_bx;
                 WrapAutoVol * m_vt;
                	int m_mxid; 
                 double m_fst, m_fstep;
@@ -202,26 +206,16 @@ class WrapSOB : public SOB {
 		void ini_default(int k);
                 int save2(SvArg * p) { return p->st2=-1, 1; }
                 void debug2();
-		int add2mx(int trg, int flg, double *v11, const char *i8, int dly = 0);
-		int add2mx_i(int trg, int flg, const char *i8) { double v[11]; return add2mx(trg, flg, v, i8); }
-		int icmd(const char * s, int flg, int gui9, const char * i8);
+		int icmd(const char * s, int flg, int gui9, const char * i8, BoxGen ** sf);
 		void v(double *to, double * v11, int ix, int nf);
 		void prep11(double *v11, int flg, const char * i8);
 		WrapScale * sit_ro(int tix) { return m_scl[(tix>>6)&1].ro()->item(tix, 0); }
 		WrapScale * sit_rw(int tix) { return SOB_RW(scl[(tix>>6)&1])->item(tix, 1); }
-		int get_nm2(char * to);
-		int sit_cmd(int tix, const char * s) { WrapScVec * scl = SOB_RW(scl[(tix>>6)&1]);
-			return scl->item(tix, 1)->cmd(s, scl->sl_ref); }
-		int slflg() const { return m_u8_refcnt&0x7f000000; }
-		int slf_conv(int f0);
-		void slf_cmd() { gui2.c1('+'); gui2.hexn(slf_conv(m_u8_refcnt), 3); }
+		int sit_cmd(int tix, const char * s) {  return SOB_RW(scl[(tix>>6)&1]) -> cmdi(tix, s); }
+		int slflg_upd(int bflg);
+		int sl_bv() const { return m_u8_refcnt >> 24; }
 		void unflg();
-		int slflg_upd();
-		void wl(int oid, int ix0, int n, int flg, const char *i8);
-		int wlg(sthg * bxw_rawptr, int ix, int flg, const char *i8);
-		void grdr_tail(const char * i8) { WrapCore * cr = m_core.ro();
-		 	cr->slcmd(i8, 4095); slf_cmd(); cr->grcmd(i8);
-			if (cr->ktab) gui2.c1('B'), gui2.wr_keylist(cr->ktab->bv, cr->ktab->pk); }
+		void wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen * bx);
 		SOB_RW_F0(core, WrapCore) SOB_RW_F0(avol, WrapAutoVol)
 		SOB_RW_F1(con, DblVec)    SOB_RW_F1(scl, WrapScVec)
 
@@ -231,86 +225,108 @@ class WrapSOB : public SOB {
 		SOB_p<WrapScVec> m_scl[2];
 };
 
-class WrapGen : public BoxGen {
+class AWrapGen : public BoxGen {
 	public:
-		static void st_init() { cmd_init(); }
 		friend void wrap_set_trec(BoxGen * bx, int v);
-		WrapGen(ABoxNode * nd);
-		WrapGen(ABoxNode * nd, const WrapGen * that);
-                virtual ~WrapGen();
+		AWrapGen(ABoxNode * nd);
+		AWrapGen(ABoxNode * nd, const AWrapGen * that);
+                virtual ~AWrapGen();
+		virtual int add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs) = 0;
+		virtual const char * eff_rgb() = 0;
                 virtual int n_in() const { return 0; }
                 virtual int n_out() const { return 0; }
                 virtual const char * cl_name() { return "wrap"; }
-		virtual int save2(SvArg * sv); 
-		virtual void spec_debug();
-		virtual void notify_nio(BoxGen * bx);
-		virtual int save_sob(SvArg *p);
+		virtual int  aux_window();
 		virtual void box_window();
-		virtual int aux_window() { gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.nname(m_node); gui2.c1(36);
-			gr_rgbc(); m_sob.ro()->grdr_tail(m_xys6); 
-			if (m_mxctl) gui2.c1('L'), gui2.mx_keylist(m_mxctl), gui2.c1('.');
-			return 16*'#' + 9; }
-		virtual void wdat_cons(sthg * p);
-		virtual int start_job_3(JobQ::ent_t * ent, char * arg);
+		virtual bool io_alias_perm() const { bug("wr: io_alias_perm() called"); return 0; }
 		virtual int df_ui_ix() const { return 2; }
 		virtual int mini(char * to);
 		virtual void set_model() { bug("wr: set_model() called"); }
-		virtual bool io_alias_perm() const { bug("wr: io_alias_perm() called"); return 0; }
 		virtual int mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0;
 						     return 0; }
-		int plot_t(double t0, double t1, int n);
-		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
-		WrapAutoVol * avol() { return m_sob.ro()->m_avol.ro(); }
-		int avj_state() { return jobq.jst(m_node, 1); }
 		inline int pflg() { return m_bflg & WRF_PASS; }
-		int add2mx(int t, int f=0, int dly = 0, int mxky = 0);
-		int add2mx_v(int t, int f, double *v) {    return m_sob.ro()->add2mx(t, m_bflg|f, v, m_xys6); }
-		int mx1(int f = 0) { int k, r = mx_mkroot(); return r<0 ? r : ((k=add2mx(r,f))<0 ? (mx_del(r),k) : r); }
-		int qdiff(WrapGen * that); 
-		int sob_from(int ix, BoxGen * bx0);
-		AReader * avreader() { return new WrapAVReader(SOB_RW(sob)->avol_rw()); }
-		const char * eff_rgb();
+		inline int add2mx_txdkl(int trg, int xflg, int dly, int mxky, int lim) {
+			return add2mx_tfdklv(trg, pflg()|xflg, dly, mxky, lim, 0);     }
 		void delayed_clip_upd();
-		void w_gr_xyk(int x0, int y0, int f);
 		int key_op(int k, int op, const char * xys, int nof);
-		void cut_time(int t);
-        protected:
+	protected:
+		static int slf_conv(int k);
 		typedef struct { int f; char xy[8]; } qsav_t;
+		virtual WrapCore * core_ro() = 0; 
+		virtual WrapCore * core_rw() = 0;
+		virtual int get_nm2(char * to) = 0;
+		virtual int sl_bv() = 0;
+		virtual int show_tab_2(sthg * bxw_rawptr, int i) = 0;
+		virtual int wlg(sthg * bxw_rawptr, int ix, int flg) = 0;
+		virtual void w_col0(int flg) = 0;
 		inline void qsav(qsav_t * q) { q->f = m_bflg; memcpy(q->xy, m_xys6, 8); }
 		inline void qrst(qsav_t * q) { m_bflg = q->f; memcpy(m_xys6, q->xy, 8); }
 		inline int qset(const char *s, int l) { for (int k,i=0; i<l; m_xys6[i++] = k) 
 			                if ((unsigned int)(k=s[i]-48)>50u) return BXE_PARSE; return 0;}
-		void upd_conn() { Node::set_conn_2(m_node, BoxGen::node0(m_sob.ro()->m_scl[0].ro()->bx),
-				                           BoxGen::node0(m_sob.ro()->m_scl[1].ro()->bx)); }
-		BXCMD_DECL(WrapGen) c_in, c_bw, c_sf, c_c2k, c_tf, c_gcl, c_ud, 
-			c_pl, c_gr, c_win, c_vt, c_so, c_gmd, c_ky, c_stp, c_wav;
-		void w_mini();
-		int batch_mono(double * to, int skip, int n);
-		int write_a20();
-		int show_tab(int i);
-		int wlg(int ix) { return m_sob.ro()->wlg(m_node->wdat_raw(), ix, pflg(), m_xys6); }
-		int set_sf(int ff, BoxGen * bx);
-		void upd_updn(int flg);
-		int grid_cmd(const char * s);
-		void gr_rgbc() { char buf[4]; gui2.c1('M'); m_sob.ro()->get_nm2(buf); gui2.sn(buf, 2); 
+		void gr_rgbc() { char buf[4]; gui2.c1('M'); get_nm2(buf); gui2.sn(buf, 2); 
 			         gui2.sn(eff_rgb(), 6); }
-		void w_col0(int flg);
-		void w_dim(int f20);
-		void w_sob(int ix, int sl);
-		void w_tab0(int f20);
-//		void w_tab1();
-		void w_avol(int f, unsigned char * s);
-		void w_gmd() { gui2.setwin(w_oid(), 'w'); gui2.wupd('m'); gui2.c2('+', 48+(m_bflg&3)); }
-		void w_a20(int flg);
-		int wupd1(int col, int ix1, int ix2 = 333);
-		int av_guiconf(int c, const char * s);
-		int avj_cmd(int stp);
+		void slf_cmd() { gui2.c1('+'); gui2.hexn(slf_conv(sl_bv()), 3); }
+		int plot_t(double t0, double t1, int n);
+		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
+		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
+			return (k=add2mx_tfdklv(r,f,0,0,0,0))<0 ? (mx_del(r),k) : r; }
 		int qcopy(int tf, int nof) { return tf ? trk_glob_paste(this, nof)
 				: Node::mk(0, ClipNode::kcp(1), 0, 'W', nof|NOF_NOIDX, 0, this); }
-		SOB_p<WrapSOB> m_sob;
+		int batch_mono(double * to, int skip, int n);
+		int write_a20();
+		void w_gr_xyk(int x0, int y0, int f);
+		void w_mini();
+		void w_gmd() { gui2.setwin(w_oid(), 'w'); gui2.wupd('m'); gui2.c2('+', 48+(m_bflg&3)); }
+		void w_a20(int flg);
+		void w_dim(int f20);
+		void w_tab0(int f20);
+		int show_tab(int i);
 		char m_xys6[8];
 		int m_bflg; 
 		unsigned short m_mxctl; unsigned char m_trec, m_rsrv;
+};
+
+class DWrapGen : public AWrapGen {
+	public:
+		static void st_init() { cmd_init(); }
+		DWrapGen(ABoxNode * nd);
+		DWrapGen(ABoxNode * nd, const DWrapGen * that);
+                virtual ~DWrapGen() {}
+		virtual int add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs);
+		virtual int save2(SvArg * sv); 
+		virtual void spec_debug();
+		virtual void notify_nio(BoxGen * bx);
+		virtual int save_sob(SvArg *p);
+		virtual void wdat_cons(sthg * p);
+		virtual int start_job_3(JobQ::ent_t * ent, char * arg);
+		virtual const char * eff_rgb();
+		WrapAutoVol * avol() { return m_sob.ro()->m_avol.ro(); }
+		int avj_state() { return jobq.jst(m_node, 1); }
+		int qdiff(DWrapGen * that); 
+		int sob_from(int ix, BoxGen * bx0, int bxf);
+		AReader * avreader() { return new WrapAVReader(SOB_RW(sob)->avol_rw()); }
+        protected:
+		virtual WrapCore * core_ro() { return m_sob.ro()->m_core.ro(); } 
+		virtual WrapCore * core_rw() { return SOB_RW(sob)->core_rw(); }
+		virtual int get_nm2(char * to);
+		virtual int sl_bv() { return m_sob.ro()->sl_bv()>>24; }
+		virtual int show_tab_2(sthg * bxw_rawptr, int i);
+		virtual int wlg(sthg * bxw_rawptr, int ix, int flg);
+		virtual void w_col0(int flg);
+		void upd_conn() {Node::set_conn_2(m_node, BoxGen::node0(m_sfbx[0]),BoxGen::node0(m_sfbx[1]));}
+		BXCMD_DECL(DWrapGen) c_in, c_bw, c_sf, c_c2k, c_tf, c_gcl, c_ud, 
+			c_pl, c_gr, c_win, c_vt, c_so, c_gmd, c_ky, c_stp, c_wav;
+		int set_sf(int ff, BoxGen * bx);
+		void upd_updn(int flg);
+		int grid_cmd(const char * s);
+		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(eff_rgb(),6); }
+		void w_sob(int ix, int sl);
+		void w_avol(int f, unsigned char * s);
+		int wupd1(int col, int ix1, int ix2 = 333);
+		int av_guiconf(int c, const char * s);
+		int avj_cmd(int stp);
+		SOB_p<WrapSOB> m_sob;
+		BoxGen * m_sfbx[2];
 };
 
 /////// core SOB (grid config) //////////////////////////////////////////////
@@ -443,22 +459,18 @@ void WrapScale::ini_default(int k) { switch(k) {
 	default: m_v0 =                      m_v1 = 0.0; m_si = 0; m_xop = '.'; sfun('\'');return; 
 }}
 
-int WrapScale::ssrc(int c, char * slref) {
+int WrapScale::ssrc(int c) {
         if ((c = ((c+(c<64))&7)) == m_si) return 0;
-        int rv = 34, o = m_si-2; m_si = c; c -= 2;
-        if (o>=0 && !(--slref[o])) slref[6] &= ~(1<<o), rv |= 512;
-        if (c>=0 && !(slref[c]++)) slref[6] |=  (1<<c), rv |= 512;
-        return rv;
-}
+	m_si = c; return 0x222; }
 
-int WrapScale::cmd(const char *s, char * slref) { switch(*(s++)) {
+int WrapScale::cmd(const char *s) { switch(*(s++)) {
         case '<': m_v0 = at0f(s); updf(); return 32;
         case '>': m_v1 = at0f(s); updf(); return 32;
-        case 's': return ssrc(*s, slref);
+        case 's': return ssrc(*s);
         case 'F': return sxop(*s);
         case 'f': return sfun(*s);
 	case '*': return s += parse_num(&m_v0, s), s += parse_num(&m_v1, s), 
-                         s += parse_sep(s, ':'), ssrc(s[0],slref) | sfun(s[1]) | sxop(s[2]);
+                         s += parse_sep(s, ':'), ssrc(s[0]) | sfun(s[1]) | sxop(s[2]);
 	case '?': return log("v0:%.15g v0:%.15g v0:%.15g fi:%d fch:'%c' sch:'%c'",
 				  m_v0, m_v1, m_vx, m_fi, fch(), sch()), 0;
 	default: log("wrscale: invalid command: \"%s\"", s-1); return BXE_CENUM;
@@ -475,8 +487,8 @@ void WrapScale::wl_2(int flg) { if (flg & 64) gui2.hdbl(m_v0);
 
 /////// scl-vec /////////////////////////////////////////////////////////////
 
-WrapScVec::WrapScVec(const WrapScVec * that, int arg) : SOB(arg), bx(that->bx) {
-	memcpy(updnnino, that->updnnino, 4); memcpy(sl_ref, that->sl_ref, 6);
+WrapScVec::WrapScVec(const WrapScVec * that, int arg) : SOB(arg) {
+	memcpy(updn, that->updn, 2); memcpy(qs, that->qs, 20);
 	for (int i=0; i<3; i++) { 
 		if (!that->pps[i]) { pps[i] = 0; continue; }
 		pps[i] = (WrapScale**) ANode::a64(); 
@@ -484,7 +496,7 @@ WrapScVec::WrapScVec(const WrapScVec * that, int arg) : SOB(arg), bx(that->bx) {
 	}}
 
 void WrapScVec::ini_default(int k) {
-	if (!k) item(0,1)->ini_default(0), item(5,1)->ini_default(5), sl_ref[4]=sl_ref[5]=1; }
+	if (!k) item(0,1)->ini_default(0), item(5,1)->ini_default(5), qs[0]=6, qs[2]=80; }
 
 SOB_INIFUN(WrapScVec, 2)
 
@@ -494,9 +506,8 @@ void WrapScVec::clear() { for (int i=0; i<3; i++) { if (pps[i]) {
 
 int WrapScVec::save2(SvArg * sv) {
 	int ec, r = 0, k = sv->st&1;
-	if (!k) { if (updnnino[0] != '-') { CHKERR(sv->out->pf("X$U%c\n", updnnino[0])); }
-		  if (updnnino[1] != 'A') { CHKERR(sv->out->pf("X$D%c\n", updnnino[1])); }}
-	if (bx) { CHKERR(sv->out->sn("X$b X$>"+4*k, 3)); CHKERR(bx->node()->sv_path(10)); }
+	if (!k) { if (updn[0] != '-') { CHKERR(sv->out->pf("X$U%c\n", updn[0])); }
+		  if (updn[1] != 'A') { CHKERR(sv->out->pf("X$D%c\n", updn[1])); }}
 	for (int i0=64*k, i=0; i<3; i++, i0+=16) {
 		WrapScale ** pp = pps[i]; if (!pp) continue;
 		for (int j=0; j<8; j++) { if (pp[j]) { CHKERR(pp[j][0].save(sv,wr_ixtr_r(i0+2*j)));
@@ -511,6 +522,14 @@ WrapScale * WrapScVec::item(int ix, int f) {
 mk:     return (pps[i][j] = (WrapScale*)ANode::cp64(dummy_sc)) + (ix&1);
 }
 
+int WrapScVec::cmdi(int ix, const char * s) {
+	WrapScale * it = item(ix, 1);
+	int i, j, r = it->cmd(s); 
+	if (r&2) i=ix>>1, j=4*(ix&1), qs[i] &= ~(7<<j),
+		 qs[i] |= ((it->si()&7)<<j);
+	return r;
+}
+
 WrapScale::sfun_p WrapScale::m0_sfun[17] = {
         /* 0 */ &sc1, &slin, &slg, /* 3 */ &ssq0, &ssq1, &ssq0z, &ssq1z,
         /* 7 */ &scb0, &scb1, &scb0z, &scb1z, /* 11 */ &shrm0, &shrm1,
@@ -522,13 +541,11 @@ TAB7_DEF(WrapScale, sfi) { {'\'',{&icon, "con"}}, {'"', {&ic1,  "cn1"}}, {'-', {
 			   {0, {0,0}} };
 
 void WrapScVec::w_ud(int oid, int flg) { gui2.setwin(oid,'w');
-	if (flg&1) gui2.wupd_c0('E', 't', 2), gui2.c2('/',  updnnino[0]);
-	if (flg&2) gui2.wupd_c0('E', 't', 3), gui2.c2('\\', updnnino[1]); }
+	if (flg&1) gui2.wupd_c0('E', 't', 2), gui2.c2('/',  updn[0]);
+	if (flg&2) gui2.wupd_c0('E', 't', 3), gui2.c2('\\', updn[1]); }
 
 void WrapScVec::debug2() {
-	if (bx) log_n("WrapScVec: 0x%x \"%s\" %d %d %d %d", bx->node()->id(), bx->node()->s_name(), 
-			updnnino[0], updnnino[1], updnnino[2], updnnino[3]);
-	else log_n("WrapScVec: no box");
+	log_n("WrapScVec: u:%d d:%d", updn[0],updn[1]);
 	for (int i=0; i<3; i++) { if (pps[i]) {
 		for (int j=0; j<8; j++) { WrapScale * q = pps[i][j]; if (q) {
 			if (q[0].noncon()) log_n(" %d", 16*i+2*j  ), q[0].debug();
@@ -666,7 +683,7 @@ double WrapAutoVol::vol(double x, double y, double z, double w) {
         return exp ((1.0-tt[2])*val[0] + tt[2]*val[1]);
 }
 
-WrapAVJob::WrapAVJob(JobQ::ent_t * ent, WrapGen * wbx, WrapAutoVol * vtab, int mxid) :
+WrapAVJob::WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid) :
 	Job(ent), m_bx(wbx), m_vt(vtab), m_mxid(mxid), m_fst(0.0), m_max(0.0), m_trg(vtab->dat()) {
 	memset(m_xy12ij, 0, 8); vtab->get_xy12rt(m_xy12ij_lim); 
 	int t = 1; for (int i=0; i<6; i++) t *= m_xy12ij_lim[i];
@@ -684,7 +701,7 @@ int WrapAVJob::run1() {
                 case 4: 
 			for (i=0; i<4; i++) buf[i] = m_ixmul[i] * (double)m_xy12ij[i];
 			mx_clear(m_mxid);
-			m_bx -> add2mx_v(m_mxid, WRF_AVJOB|WRF_NOCON, buf);
+			m_bx -> add2mx_tfdklv(m_mxid, WRF_AVJOB|WRF_NOCON, 0, 0, 0, buf);
                 default:
 			r = mx_calc(m_mxid, buf, buf+441, 441, 0);
                         mv = m_max; for (int i=0,n=r*441; i<n; i++) {
@@ -724,33 +741,11 @@ WrapSOB::WrapSOB(const WrapSOB * that, int uarg) : SOB(uarg) {
 	for (int i=0; i<2; i++) m_con[i].from(that->m_con[i]), m_scl[i].from(that->m_scl[i]);
 }
 
-int WrapSOB::icmd(const char * s, int flg, int gui9, const char * i8) {
-	WrapCore * core = m_core.ro(); 
-	int ix0 = 16*(s[0]&7) + hxd2i(s[1]), ix = wr_ixtr(ix0), k,
-	    i = (ix>>6)&1, j = ix&63, cf, r=2*(ix==core->xfd);
-	if (j > 39) return BXE_IDX; else s += 2;
-	if (*s=='X') return SOB_RW(core)->xfd = ix, 0; // save file only
-	else if (*s=='=') r |= (flg & WRF_NOCON) ? (unflg(), flg &= ~WRF_NOCON, 1) : 0,
-		     cf = (s[1]=='x' && !s[2]) ? (SOB_RW(con[i])->rm(j), s+=2, 4) 
-				    	       : (parse_num(SOB_RW(con[i])->addp(j), s+1), 0);
-	else         cf = sit_cmd(ix, s);
-	if (cf<0) return cf;
-	if (cf&8) {
-		if (!(cf & 256)) (r&2) && (SOB_RW(core)->xfd = 63);
-		else if ( ((r^=2)&2) && (k = core->xfd, SOB_RW(core)->xfd = ix, gui9&1)) 
-			wl(gui9|11, wr_ixtr_r(k), 1, 8, 0);
-	}
-	if (gui9 & 1) wl(gui9|11, ix0, 1, cf+(flg&WRF_PASS), i8);
-	if ((cf & 512) && slflg_upd() && (gui9 & 8)) gui2.setwin(gui9|9, '#'), gui2.t0(), slf_cmd();
-	return r;
-}
-
 void WrapSOB::unflg() {
 	for (int i=0; i<2; i++) {
 		WrapScVec * scl = m_scl[i].ro();
 		DblVec    * con = SOB_RW(con[i]);
-		int n = scl->updnnino[2] + 6 - 5*i;
-		for (int j=0; j<n; j++) {
+		for (int j=0; j<40; j++) {
 			WrapScale ** psi = scl->pps[j>>4], *sit;
 			if (psi && (sit=psi[(j>>1)&7]) && sit[j&1].noncon() && 
 				(con->bv[j>>3] & (1<<(j&7))) ) con->rm(j);
@@ -768,7 +763,7 @@ void WrapSOB::prep11(double *v11, int flg, const char * i8) {
 	else v(v11+8, v11, core->xfd, (flg&WRF_PASS)+1), v11[9] = 1.0 / v11[8];
 }
 
-void WrapSOB::wl(int oid, int ix0, int n, int flg, const char *i8) {
+void WrapSOB::wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen *bx) {
 	log("wr/wl: ix0=%d n=%d flg=0x%x", ix0, n, flg);
 	if (n<=0) return;
 	int ix = wr_ixtr(ix0), i = (ix>>6) & 1, j = ix & 63;
@@ -791,72 +786,44 @@ void WrapSOB::wl(int oid, int ix0, int n, int flg, const char *i8) {
 		if (skf && !(vfl[(i2>>3)&7]&(1u<<(i2&7)))) continue;
 		gui2.t0(); gui2.hexn(ix0=wr_ixtr_r(i2), 2); gui2.hexn(flg&255, 2);
 		WrapScale * sit = sit_ro(i2);
-		if (flg & 1 & ~(ix0>>5)) gui2.ionm(scl->bx->node(), 0, ix0), gui2.c1(36);
+		if (flg & 1 & ~(ix0>>5)) gui2.ionm(bx->node(), 0, ix0), gui2.c1(36);
 		sit -> wl_1(flg);
 		if (flg & 8) gui2.c2(i2==core->xfd ? '=' : sit->xop(), 36);
 		if (flg & 32)  gui2.hdbl(in[k]);
-		sit->wl_2(flg);
+		sit -> wl_2(flg);
 	}
 }
 
-int WrapSOB::wlg(sthg * bxw_rawptr, int ix, int flg, const char *i8) {
-	if (!bxw_rawptr) return NDE_NOWIN; if ((unsigned int)ix > 2u) return BXE_RANGE;
-	int oid = 16*bxw_rawptr->i[0] + 11, gc = (0x605a5345>>8*ix) & 127,
-	    of = (flg & WRF_SETOC) ? ((flg&WRF_OC) ? (WR_WLG|=(1<<ix),1) : (WR_WLG&=~(1<<ix),0))
-		    		   : (WR_WLG >> ix) & 1;
-	gui2.setwin(oid, 'w'); 
-	if (of)                      gui2.wupd_0(gc, "S><$XW", 4), gui2.c1(48 + ix);
-	else gui2.wupd_0(gc, ".+1"), gui2.wupd_0(gc, "S<>$XW", 4), gui2.c1(52 + ix);
-	if (ix) {
-		WrapScVec * scl = m_scl[--ix].ro(); int ni = scl->updnnino[2]; ni -= (ni && ix);
-		if (of) gui2.wupd_0(gc, ".+"), gui2.c1(49+ni), wl(oid, 65*ix, ni, flg|255, i8);
-		gui2.ref_title(gc, scl->bx ? scl->bx->node() : 0, 3, "source\0 filter"+8*ix);
-	} else {
-		m_scl[0].ro()->w_ud(oid, 3);
-		if (of) gui2.wupd_0(gc, ".+9"), wl(oid, 32, 6, flg|254, i8),
-						wl(oid, 96, 2, flg|254, i8);
+int WrapSOB::icmd(const char * s, int flg, int gui9, const char * i8, BoxGen ** sf) {
+	WrapCore * core = m_core.ro(); 
+	int ix0 = 16*(s[0]&7) + hxd2i(s[1]), ix = wr_ixtr(ix0), k,
+	    i = (ix>>6)&1, j = ix&63, cf, r=2*(ix==core->xfd);
+	if (j > 39) return BXE_IDX; else s += 2;
+	if (*s=='X') return SOB_RW(core)->xfd = ix, 0; // save file only
+	else if (*s=='=') r |= (flg & WRF_NOCON) ? (unflg(), flg &= ~WRF_NOCON, 1) : 0,
+		     cf = (s[1]=='x' && !s[2]) ? (SOB_RW(con[i])->rm(j), s+=2, 4) 
+				    	       : (parse_num(SOB_RW(con[i])->addp(j), s+1), 0);
+	else         cf = sit_cmd(ix, s);
+	if (cf<0) return cf;
+	if (cf&8) {
+		if (!(cf & 256)) (r&2) && (SOB_RW(core)->xfd = 63);
+		else if ( ((r^=2)&2) && (k = core->xfd, SOB_RW(core)->xfd = ix, gui9&1)) 
+			wl(gui9|11, wr_ixtr_r(k), 1, 8, 0, sf[i]);
 	}
-	return 0;
+	if (gui9 & 1) wl(gui9|11, ix0, 1, cf+(flg&WRF_PASS), i8, sf[i]);
+	return r | ((cf>>7)&4);
 }
 
-int WrapSOB::add2mx(int trg, int flg, double *v11, const char *i8, int dly) {
-	int ni, pflg = flg & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0);
-	prep11(v11, flg | (768^(v0f<<9)), i8);
-	double in[36]; 
-	WrapScVec *sc0 = m_scl[0].ro(), *sc1 = m_scl[1].ro();
-	if (sc1->bx) {
-		v(in, v11, 64, pflg + (ni = sc1->updnnino[2]) + 1);
-		if (debug_flags & DFLG_MX) log("add2mx/in01:%.15g %.15g ni=%d", in[0], in[1], ni);
-		int ocf = 0x7c01; // TODO
-		if ((trg = mx_add_filter(trg, sc1->bx->model(), ni, in, ocf)) < 0) return trg;
-	}
-	v(in + v0f, v11, v0f, pflg + sc0->updnnino[2] + 6 - v0f);
-	if (v0f) in[0] = in[1] = 1.0;
-	if (flg & WRF_MONO) in[5] = 0.0, in[0] *= M_SQRT2;
-	int ocb = sc0->updnnino[3]>1 ? 0x402 : 0x7c01; // TODO
-	return mx_add_box(trg, (sc0->bx ? sc0->bx : box_bookmark[0])->mk_box(), sc0->updnnino, in, ocb, dly);
-}
-
-int WrapSOB::get_nm2(char * to) {
-	BoxGen *bxs = m_scl[0].ro()->bx,
-	       *bxf = m_scl[1].ro()->bx;
-	if (!bxs) return to[0]=to[1]=63, 2;;
-	if (!bxf) return bxs->node()->get_nm2(to);
-	if (bxs==box_bookmark[1] || bxs==box_bookmark[2]) return bxf->node()->get_nm2(to);
-	char buf[4]; bxs->node()->get_nm2(to); bxf->node()->get_nm2(buf); to[1] = buf[0]; return 2;
-}
-
-int WrapSOB::slf_conv(int f0) {
-	int v = 0, k = f0 >> 24, d = (k&64) ? (03221111 >> (3*bitcnt_8(k&63))) & 7 : 9;
-	for (int i=0; i<6; i++) if (k&(1<<i)) v |= 1 << (2*i+(--d<0));    return v; }
-
-int WrapSOB::slflg_upd() {
-	char *p = m_scl[0].ro()->sl_ref,
-	     *q = m_scl[1].ro()->sl_ref;
-	int f0 = (m_u8_refcnt&0x7f000000) , r = 0, y = m_core.ro()->grdim[1];
-	for (int i=0; i<6; i++) r |= (0x1000000&-p[i]) << i;
-	for (int i=0; i<6; i++) r |= (0x1000000&-q[i]) << i;
-	r |= (0x40000000 & (((0x0e13173f>>(4*(bitcnt_8(r>>24)&6)))&63) - y));
+int WrapSOB::slflg_upd(int bflg) {
+	unsigned char *p = m_scl[0].ro()->qs,
+	     	      *q = m_scl[1].ro()->qs;
+	int sni=((bflg>>2)&31)+5, fni=((bflg>>12)&31)+2,
+	    f0 = (m_u8_refcnt&0x7f000000), r = 0, y = m_core.ro()->grdim[1];
+	for (int i=0; i<sni; i+=2) r |= 1<<( p[i]    &7);
+	for (int i=1; i<sni; i+=2) r |= 1<<((p[i]>>4)&7);
+	for (int i=0; i<fni; i+=2) r |= 1<<( q[i]    &7);
+	for (int i=1; i<fni; i+=2) r |= 1<<((q[i]>>4)&7);
+	r>>=2; r |= (0x40000000 & (((0x0e13173f>>(4*(bitcnt_8(r>>24)&6)))&63) - y));
 	return (r==f0) ? 0 : (m_u8_refcnt &= 0xffffff, m_u8_refcnt |= r, 262144);
 }
 
@@ -869,139 +836,57 @@ void WrapSOB::ini_default(int k) {
 	m_core.set(WrapCore_default(k));
 	for (int i=0; i<2; i++) m_con[i].set(DblVec_default(i+1)),
 			        m_scl[i].set(WrapScVec_default(i));
-	slflg_upd(); //log("slflg: %p 0x%x", this, m_u8_refcnt>>24);
+	slflg_upd(0); //log("slflg: %p 0x%x", this, m_u8_refcnt>>24);
 }
 
 SOB_INIFUN(WrapSOB, 1)
 
-/////// box (core) ///////////////////////////////////////////////////////////
+/////// box (abs) ////////////////////////////////////////////////////////////
 
-#define GR_DIM_DFLT "\031\025333333"
-
-WrapGen::WrapGen(ABoxNode * nd) : BoxGen(nd), m_bflg(0), m_mxctl(0) {
-	memcpy(m_xys6, "\0\0\0\0\0\0\031\062", 8); m_sob.set(WrapSOB_default(0)); 
+AWrapGen::AWrapGen(ABoxNode * nd) : BoxGen(nd), m_bflg(0), m_mxctl(0) {
+	memcpy(m_xys6, "\0\0\0\0\0\0\031\062", 8);
 	nd->set_ui_d(2); nd->setbx_0(this); delayed_clip_upd(); }
 
-WrapGen::WrapGen(ABoxNode * nd, const WrapGen * p) : 
+AWrapGen::AWrapGen(ABoxNode * nd, const AWrapGen * p) : 
 	BoxGen(nd), m_bflg(p->m_bflg), m_mxctl(0) {
 	memcpy(m_xys6, p->m_xys6, 8); 
-	m_sob.from(p->m_sob); nd->set_ui_f(p->node()); nd->setbx_0(this);
-	upd_conn(); delayed_clip_upd();
+	nd->set_ui_f(p->node()); nd->setbx_0(this);
 }
 
-WrapGen::~WrapGen() { if (m_mxctl) mx_c_unlink(m_mxctl);
-			    if (m_trec) mx_tr_rm(m_trec);  }
+AWrapGen::~AWrapGen() { if (m_mxctl) mx_c_unlink(m_mxctl);
+		        if (m_trec) mx_tr_rm(m_trec);  }
 
-int WrapGen::add2mx(int t, int f, int dly, int mxky) { 
-	double v[11];
-	int r = m_sob.ro()->add2mx(t, pflg()|f, v, m_xys6, dly); if (r<0) return r;
-	if (!t && trk_rec_trg) trk_rec(m_node, r);
-	return (mxky && r>=0) ? mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), r, mxky) : r;
+int AWrapGen::slf_conv(int k) {
+	int v = 0, d = (k&64) ? (03221111 >> (3*bitcnt_8(k&63))) & 7 : 9;
+	for (int i=0; i<6; i++) if (k&(1<<i)) v |= 1 << (2*i+(--d<0));    return v; }
+
+int AWrapGen::aux_window() {
+	gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.nname(m_node);
+	gui2.c1(36); gr_rgbc();
+	WrapCore * cr = core_ro();
+	cr->slcmd(m_xys6, 4095); slf_cmd(); cr->grcmd(m_xys6);
+	if (cr->ktab) gui2.c1('B'), gui2.wr_keylist(cr->ktab->bv, cr->ktab->pk); 
+	return 16*'#'+9;
 }
 
-int WrapGen::qdiff(WrapGen * that) {
-	return (this!=that) && (m_sob.ro() != that->m_sob.ro() || memcmp(m_xys6, that->m_xys6, 8)); }
+int AWrapGen::show_tab(int i) {
+	BXW_GET; if (i<0) i=WR_TAB; else if (i==WR_TAB) return 0; else WR_TAB=i;
+	gui2.setwin(w_oid(), 'w'); gui2.wupd_0('Y', ".W"); gui2.c1(48+i);
+	return show_tab_2(bxw_rawptr, i); }
 
-int WrapGen::set_sf(int ff, BoxGen * bx) {
-	BoxGen * bx0 = m_sob.ro()->m_scl[ff].ro()->bx;
-	if (bx==this || bx==bx0) return 0;
-	int ec = 0, wf = wnfl(2048);
-	if (!bx) {
-		WrapSOB * sob = SOB_RW(sob);
-		sob->m_scl[ff].set(WrapScVec_default(ff));
-		sob->m_con[ff].set(DblVec_default(ff+1));
-		if (bx0) Node::disconn(m_node, bx0->node());
-		w_mini(); if (wf) wlg(ff+1);
-	} else if (bx->node()->cl_id()=='w') {
-		WrapGen * wbx = static_cast<WrapGen*>(bx);
-		WrapScVec * scl = wbx->m_sob.ro()->m_scl[ff].ro();
-		if ((ec = set_boxp(&bx0, scl->bx)) < 0) return ec;
-		WrapSOB * sob = SOB_RW(sob);
-		sob->m_scl[ff].set(scl);
-		sob->m_con[ff].from(wbx->m_sob.ro()->m_con[ff]);
-		w_mini(); if (wf) wlg(0), wlg(ff+1);
-	} else {
-		WrapScVec * scl = SOB_RW(sob)->scl_rw(ff);
-		if ((ec = set_boxp(&scl->bx, bx)) < 0) return ec;
-		scl->updnnino[2] = bx->n_in();
-		scl->updnnino[3] = bx->n_out();
-		w_mini(); if (wf) wlg(ff+1);
-	}
-	return ec;
-}
-
-void WrapGen::notify_nio(BoxGen * bx) {
-	log("wr%d/notify_nio: %d", id(), bx->id());
-	WrapSOB * sob = m_sob.ro();
-	int flg = (  sob->m_scl[0].ro()->nioupd_c(bx) +
-		   2*sob->m_scl[1].ro()->nioupd_c(bx)) & (3*(wnfl()>>11));
-	if (flg&1) wlg(1); if (flg&2) wlg(2);
-}
-
-int WrapGen::sob_from(int ix, BoxGen * bx0) {
-	WrapGen * that = dynamic_cast<WrapGen*> (bx0);
-	if (!that) return bx0 ? BXE_TYDIFF : BXE_ARGNBX;
-	if (!ix) return m_sob.from(that->m_sob), upd_conn(), 0;
-	WrapSOB *sob = SOB_RW(sob), *sob2 = that->m_sob.ro();
-	switch (ix) {
-		case 1: 	sob->m_core     .from(sob2->m_core);	  return 0;
-		case 4: case 5: sob->m_con[ix&1].from(sob2->m_con[ix&1]); return 0;
-		case 6: 	sob->m_avol     .from(sob2->m_avol);	  return 0;
-		case 2: case 3: sob->m_scl[ix&1].from(sob2->m_scl[ix&1]); 
-				sob->slflg_upd(); upd_conn(); return 0;
-		default: return BXE_IDX;
-	}}
-
-int WrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
-	int ec; switch(ent->i3f) {
-		case 1:
-			ent->plttwwii = 0x6b775910;
-			WrapAutoVol * av; av = SOB_RW(sob)->avol_rw();
-			if (arg && *arg && *arg!='w') {
-				if ((ec = av->parse_dim(arg))<0) return ec;
-			} else {
-				BXW_GET; if ((ec = av->upd_xy12rt(WR_AVCONF))<0) return ec;
-			}
-			ec = mx_mkroot();
-			return ec<0 ? ec : (ent->p = new WrapAVJob(ent, this, av, ec), 0);
-		case 9: return NDE_PERM;
-		default: return JQE_UNDEF;
-	}}
-
-int WrapGen::save_sob(SvArg *p) { switch(p->st) {
-	case 16:	  return m_sob.save(p);
-	case 17:	  return m_sob.ro()->m_core.save(p);
-	case 18: case 19: return m_sob.ro()->m_scl[p->st&1].save(p);
-	case 20: case 21: return m_sob.ro()->m_con[p->st&1].save(p);
-	case 22:	  return m_sob.ro()->m_avol.save(p);
-	case 23: case 24: p->st = 3; return 1;
-	default: log("wr: invalid SOB state %d, skipping", p->st); return p->st2=-1, 1;
-}}
-
-int WrapGen::save2(SvArg * sv) {
-	BXSV2_HEAD; int k, l = 12;
-	char buf[24]; memcpy(buf, "X$G", 3); buf[3] = 51 + 3*!(m_bflg&WRF_NOCON);
-	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
-	if ((k=m_bflg&3)) memcpy(buf+l, "\nX$m", 4), buf[16] = 48 + (m_bflg&3), l = 17;
-	buf[l] = 10; CHKERR(f->sn(buf, l+1));
-	return r;
-}
-
-void WrapGen::spec_debug() {
-	log("wrap: flg=0x%x", m_bflg);
-	m_sob.debug();
-}
-
-void WrapGen::cut_time(int t) {
-	WrapSOB * sob = SOB_RW(sob);
-	if (m_bflg & WRF_NOCON) sob->unflg(), m_bflg &= ~WRF_NOCON;
-	DblVec * con = sob->con_rw(0);
-	if (sob->m_scl[0].ro()->updnnino[1]=='A') *con->addp(4) = INFINITY;
-	*con->addp(3) = t*sample_length; m_trec = 0;
+void AWrapGen::box_window() {
+	gui2.cre(w_oid(), 'w'); gui2.own_title(); show_tab(-1); w_mini(); w_gmd();
+	WrapCore * cr = core_ro();
+	const float * p = cr->tf01;
+	for (int i=0; i<4; i++) gui2.wupd_d((0x46665474>>(8*i))&127, (double)p[i]);
+	cr->upd_grid(m_xys6, w_oid(1));
+	sthg * q = m_node->wdat_raw();
+	int ec; for (int i=0; (ec=wlg(q, i, pflg()))>=0; i++) ;
+	if (ec!=BXE_WLGDONE) gui_errq_add(ec, "wrap/wlg");
 }
 
 // rel b1 cp set   sb1 cp2 set* cb1   kill stop tggl ply  uniq rsrv rsrv nop
-int WrapGen::key_op(int k, int op, const char * xys, int nof) {
+int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 	static const unsigned int optr[4] = { 0xc65a32bf, 0xc65a32b9, 0xc65b32af, 0xb65a32cf };
 	if (op<8) { if (op<0) return BXE_CENUM; else op = (optr[m_bflg&3]>>(4*op)) & 15; }
 	if (op==15) return 0;
@@ -1010,7 +895,7 @@ int WrapGen::key_op(int k, int op, const char * xys, int nof) {
 		nb = 2+6*(k&1); for (int j,i=0;i<nb;i++) if ((j=xys[i]-48)<0) return BXE_PARSE; else buf[i]=j;
 		k = 64*buf[1]+buf[0]+64;
 	} else {
-		if (k&65536) { WrapCore *cr = m_sob.ro()->m_core.ro(); k &= 65535;
+		if (k&65536) { WrapCore *cr = core_ro(); k &= 65535;
 			       if (!cr->has_key(k)) return BXE_UNDEFKEY; else k = cr->get_key(k); }
 		if (k<64) nb = 0; else nb = 2, buf[0] = k&63, buf[1] = (k>>6)-1;
 	}
@@ -1027,126 +912,15 @@ int WrapGen::key_op(int k, int op, const char * xys, int nof) {
 			 if (wnfl()) w_col0(pflg());
 			 return 1;
 		case  5: ec = qcopy(1, nof & ~NOF_FGUI); break;
-		case 11: ec = add2mx(0, 0, 0, k); break;
-		case 12: ec = add2mx(0, 0, 0, k|65536); break;
+		case 11: ec = add2mx_tfdklv(0, 0, 0, k, 0, 0); break;
+		case 12: ec = add2mx_tfdklv(0, 0, 0, k|65536, 0, 0); break;
 		default: ec = BXE_CENUM; break;
 	}
 	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
 	return ec;
 }
 
-/////// box (cmd) ///////////////////////////////////////////////////////////
-#define CH(X) BXCMD_H(WrapGen, X)
-
-CH(gcl){return (s[1]=='.') ? (s[2]==51 ? p->m_node->draw_window(25) 
-			               : p->key_op(-2, s[2]-48, s+3, cb->cnof()))
-			   : p->key_op(-1, s[1]-48, s+2, cb->cnof()); }
-	
-CH(gmd){p->m_bflg&=~3, p->m_bflg|=(s[1]&3); if (p->wnfl()) p->w_gmd(); return 0; }
-CH(c2k){return Node::mk(0, ClipNode::kcp(1), 0, 'W', cb->cnof()|NOF_NOIDX, 0, p); }
-CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
-
-CH(in){ int g9 = p->m_node->gui9(), r = SOB_RWP(p,sob)->icmd(s+1, p->pflg(), g9, p->m_xys6);
-	return r<0 ? r : ((r&1) && (p->m_bflg&=~WRF_NOCON), (r&2) && (g9&1) && (p->w_col0(p->pflg()|1), 0)); }
-
-CH(bw){	WrapScVec * scv = p->m_sob.ro()->m_scl[(s[1]>>2)&1].ro();
-	if (scv && scv->bx) scv->bx->node()->draw_window(16);
-	return 0; }
-
-CH(sf){ ANode * nd = 0; BoxGen * bx = 0;
-	if (s[1]!=48||s[2]) {   if (!(nd = cb->lookup(s+1))) return BXE_ARGLU;
-				if (!(bx = nd->box0())) return BXE_ARGNBX; }
-	return p->set_sf((*s&16)>>4, bx); }
-
-CH(tf){	float *q = SOB_RWP(p,sob)->core_rw()->tf01; int flg = s[1]; double x; s += 2;
-	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
-	return 0; }
-
-CH(ud){	int ix = (*s & 1) ^ 1, k = s[1];
-	if ( (k<66) ? (k!=45+20*ix) : (k>122 || !((1<<(k&31))&0xa10a0)) ) return BXE_CENUM;
-	SOB_RWP(p,sob)->scl_rw(0)->updnnino[ix] = k;
-	if (p->wnfl()) p->m_sob.ro()->m_scl[0].ro()->w_ud(p->w_oid(), 1+ix);
-	return 0; }
-
-CH(pl){	WrapSOB * sob = p->m_sob.ro(); 
-	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
-	if (s[1]=='P') return sob->add2mx_i(0, p->m_bflg, p->m_xys6);
-	const float * q = sob->m_core.ro()->tf01; switch(s[1]) {
-		case 'T': return p->plot_t(q[0], q[1], 512);
-		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
-		default: return BXE_CENUM;
-}}
-
-CH(gr){	int k, i = s[2] & 7, wdf = 65536;
-	WrapCore * core = SOB_RWP(p,sob)->core_rw();
-	switch (s[1]) {
-		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
-		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
-		case '*':
-			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
-			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
-				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
-			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
-		default: return BXE_CENUM;
-	}
-	p->w_dim(wdf); return 0;
-}
-
-CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 
-			   : p->m_sob.ro()->wlg(p->m_node->wdat_raw(), s[1]&3,
-					        p->pflg()|((8+(s[1]&4))<<20), p->m_xys6); }
-
-CH(so){	if (!s[1]||!s[2]) return BXE_NOARG;
-	ANode * nd = cb->lookup(s+2);
-	int i = s[1]&7,  ec = nd ? p->sob_from(i, nd->box0()) : BXE_ARGLU;
-	if (ec>=0) p->w_sob(i, 1); return ec; }
-
-CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
-	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
-	switch(s[1]) {
-		case 'D': sob->m_avol.set(0); break;
-		case ':': ec = sob->avol_rw()->parse_dim(s+2); break;
-		default:  return BXE_UCMD;
-	}
-	if (ec<0 || !p->wnfl()) return ec;
-	BXW_GETP(p); if (WR_TAB==2) p->w_sob(6, 0);
-	return ec;
-}
-
-CH(ky){ WrapCore * cr = SOB_RWP(p,sob)->core_rw();
-	for (++s; s[0]>47 && s[1]>47 && s[2]>47 && s[3]>47; s+=4)
-		cr->set_key(hex2(s)&127, 64*s[2] + s[3] - 3120);   return 0; }
-
-CH(wav){int k = 0, wf = p->m_node->winflg(2048);
-	switch(s[1]) {
-		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
-		case '2': k = WRF_W_CH2; goto flgs;
-		case '-': k = WRF_W_PLOT; goto flgs;
-		case 'W': case 0: return p->write_a20();
-		default: return BXE_CENUM;
-	}
-flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
-flgw:	if (wf) p->w_a20(k);
-	return 0;
-}
-
-BXCMD_DEF(WrapGen) {    {8192+'\\', 0},  {'B', c_bw}, {'t', c_tf}, {'V',c_vt},
-	{'+'+256, c_c2k}, {'P'+256, c_pl }, {'U', c_ud}, {'b', c_sf}, {'i',c_in},
-	{'G'+256, c_gcl}, {'W'+256, c_win}, {'D', c_ud}, {'>', c_sf}, {'m',c_gmd},
-	{'.'+256, c_stp}, {'A'+256, c_wav}, {'k', c_ky}, {'O', c_so}, {'#', c_gr}, {0, 0}   };
-
-///////////// box (gui) //////////////////////////////////////////////////////////
-
-void WrapGen::box_window() {
-	gui2.cre(w_oid(), 'w'); gui2.own_title(); show_tab(-1);
-	w_mini(); w_gmd();
-	const float * p = m_sob.ro()->m_core.ro()->tf01;
-	for (int i=0; i<4; i++) gui2.wupd_d((0x46665474>>(8*i))&127, (double)p[i]);
-	m_sob.ro()->m_core.ro()->upd_grid(m_xys6, w_oid(1)); 
-	for (int i=0; i<3; i++) wlg(i); 
-}
-
-void WrapGen::delayed_clip_upd() {
+void AWrapGen::delayed_clip_upd() {
 	if (!wnfl(8)) return; else m_node->winflg_and(~8);
 	ANode * cl = m_node->up(); switch(cl->cl_id()) {
 		case 'C': static_cast<ClipNode*>(cl)->show_newbox(m_node); return;
@@ -1154,8 +928,24 @@ void WrapGen::delayed_clip_upd() {
 		default:  log("BUG: wr/delayed_clip_upd: up() is no clipb or trk"); return;
 	}}
 
+int AWrapGen::mini(char *to) {
+	get_nm2(to); for (int i=0; i<4; i++) to[i+2] = i2aA(m_xys6[i]);
+	to[6] = i2aA(m_xys6[7]); to[7] = ':';
+	memcpy(to+8, eff_rgb(), 6); return 14;
+}
+
+void AWrapGen::w_a20(int flg) { int k; gui2.setwin(w_oid(),'w'); 
+	if (flg&(k=WRF_W_CH2 )) gui2.wupd_i1('Y', !!(m_bflg&k),  20);
+	if (flg&(k=WRF_W_PLOT)) gui2.wupd_i1('Y', !!(m_bflg&k),  21); }
+
+void AWrapGen::w_mini() {
+	if (wnfl()) gui2.setwin(w_oid(), 'w'), gui2.wupd_c0('w', 's'), gui2.bxmini(this);
+	ANode * up = m_node->up(); 
+	if (up->cl_id()=='C' && up->winflg(8)) static_cast<ClipNode*>(up)->draw_1(m_node); // TODO: trk
+}
+
 // f: 1-sel 2-on 4-off 8-uniq
-void WrapGen::w_gr_xyk(int x0, int y0, int f) {
+void AWrapGen::w_gr_xyk(int x0, int y0, int f) {
 	for (int g9 = m_node->gui9(), i=1, x=x0+48, y=y0+48; i<9; i+=7) { if (g9 & i) {
 		int c = 0x91623ee >> i; gui2.setwin(g9|((c>>16)&15), c&127); gui2.wupd('#');
 		if (f&1) gui2.c3('b', x, y);
@@ -1163,61 +953,20 @@ void WrapGen::w_gr_xyk(int x0, int y0, int f) {
 		if (f&8) gui2.c3('u', (f&4)?33:x, y);
 	}}}
 
-const char * WrapGen::eff_rgb() { 
-	WrapSOB* sob = m_sob.ro(); BoxGen * bx;
-	if ((bx = sob->m_scl[1].ro()->bx)) return bx->node()->own_rgb();
-	if ((bx = sob->m_scl[0].ro()->bx)) return bx->node()->own_rgb();
-	return m_node->own_rgb();
-}
-
-void WrapGen::wdat_cons(sthg * bxw_rawptr) {
-	WR_TAB = 0; WR_WLG = 0;
-	WrapAutoVol * av = m_sob.ro()->m_avol.ro();
-	memcpy(WR_AVCONF, av ? av->xy12rt() : (const unsigned char*)"\x9\x9\x9\x9\x1\x32", 6);
-}
-
-void WrapGen::w_sob(int ix, int sl) {
-	int wf = wnfl(2560); if (!wf) return;
-	if (ix<2) { if (wf&512) aux_window(); if (wf&2048) box_window(); return; }
-	if (wf&512) {
-		if (ix==1) aux_window();
-		if (sl) gui2.setwin(w_oid(9), '#'), gui2.t0(), m_sob.ro()->slf_cmd();
-		if (wf==512) return;
-	}
-	BXW_GETV("wr/w_sob");
-	switch (ix) {
-		case 1: if (!WR_TAB) w_tab0(-1); return;
-		case 2: case 3: wlg(0); wlg(ix-1); return;
-		case 4: case 5: w_col0(pflg()); return;
-		case 6:	memcpy(WR_AVCONF, m_sob.ro()->m_avol.ro()->xy12rt(), 6); w_avol(63, WR_AVCONF); return;
-		default:	log("WTF: invalid index for w_sob (%d)", ix); return;
-	}}
-
-void WrapGen::w_tab0(int f20) { gui2.setwin(w_oid(), 'w'); const char *s = m_sob.ro()->m_core.ro()->grdim;
+void AWrapGen::w_tab0(int f20) { gui2.setwin(w_oid(), 'w'); const char *s = core_ro()->grdim;
 	for (int i=0,j=2; i<10; i++,j*=4) if (f20&j) gui2.wupd_c48('Y', s[i], i); }
 
-void WrapGen::w_col0(int flg) {
-	BXW_GETV("w_col0"); WrapSOB * sob = m_sob.ro();
-	int gf = WR_WLG; if (!gf) return;
-	int wlf = 32 + WRF_CFILT + ((flg&1) << WRF_XFILT_SH); flg &= WRF_PASS; flg |= wlf;
-	int oid = w_oid(), gf1 = gf & 1, ns = (gf&2) ? sob->m_scl[0].ro()->updnnino[2] : 0,
-	    				 nf = (gf&4) ? sob->m_scl[1].ro()->updnnino[2]-1 : 0;
-	log("w_col: gf=%d, ns=%d, nf=%d", gf, ns, nf);
-	if (gf&3) sob->wl(oid,    32*gf1, 6*gf1+ns, flg, m_xys6);
-	if (gf&5) sob->wl(oid, 65+31*gf1, 2*gf1+nf, flg, m_xys6);
-}
-					     
 // flg: 16:slupd 17:xry 18:slf 19:yry
-void WrapGen::w_dim(int f20) {
+void AWrapGen::w_dim(int f20) {
 	int wf = wnfl(2560); if (!wf) return;
-	WrapSOB * sob = m_sob.ro(); WrapCore * cr = sob->m_core.ro();
+	WrapCore * cr = core_ro();
 	int grf = f20 & 0xa000f;
 	if (f20 & 0x14055) w_mini();
 	if (wf & 512) {
 		gui2.setwin(w_oid(9), '#'); gui2.t0();
 		int slf = (f20>>4) & (f20&65536 ? 0xfff : 0xaaa);
 		if (slf) cr->slcmd(m_xys6, slf);
-		if (f20&0x40000) sob->slf_cmd();
+		if (f20&0x40000) slf_cmd();
 		if (grf) cr->grcmd(m_xys6);
 	}
 	if (wf & 2048) {
@@ -1227,56 +976,10 @@ void WrapGen::w_dim(int f20) {
 		if (f20 & 0x5555) w_col0(pflg());
 	}}
 
-int WrapGen::av_guiconf(int c, const char * s) {
-	BXW_GET; int i, k = 0x8040109;
-	switch(c) {
-		case 'x': case 'y': case 'z': i = c-'x'; break;
-		case 'w': i = 3; break;  
-		case 'r': i = 4; break;
-		case 't': i = 5; k = 0x320a01ff; break;
-		default: return BXE_UCMD;
-	}
-	intv_cmd_uc(WR_AVCONF+i, s, 1, k&255, k>>8);
-        if (wnfl() && WR_TAB==1) w_avol(1<<i, WR_AVCONF);
-	return 0;
-}
-
-//void WrapGen::w_tab1() { gui2.setwin(w_oid(), 'w'); BXW_GETV("wr/tab1");
-//	for (int j=0; j<5; j++) gui2.wupd_c48('Y', WR_AVCONF[j], j+10);
-//	gui2.wupd_i('Y', WR_AVCONF[5], 15); }
-
-void WrapGen::w_avol(int f, unsigned char * s) { gui2.setwin(w_oid(), 'w');
-	BVFOR_JM(f) gui2.wupd_i('Y', s[j], j+10); }
-
-void WrapGen::w_a20(int flg) { int k; gui2.setwin(w_oid(),'w'); 
-	if (flg&(k=WRF_W_CH2 )) gui2.wupd_i1('Y', !!(m_bflg&k),  20);
-	if (flg&(k=WRF_W_PLOT)) gui2.wupd_i1('Y', !!(m_bflg&k),  21); }
-
-int WrapGen::show_tab(int i) {
-	BXW_GET;
-	if (i<0) i=WR_TAB; else if (i==WR_TAB) return 0; else WR_TAB=i;
-	gui2.setwin(w_oid(), 'w'); gui2.wupd_0('Y', ".W"); gui2.c1(48+i);
-	switch(i) {
-		case 0: w_tab0(0xaaaaa); return 0;
-		case 1: w_avol(63, WR_AVCONF); return 0;
-		case 2: w_a20(-1); return 0;
-		case 4: return 0; // TODO: conf
-	}
-	return 0;
-}
-
-void WrapGen::w_mini() {
-	if (wnfl()) gui2.setwin(w_oid(), 'w'), gui2.wupd_c0('w', 's'), gui2.bxmini(this);
-	ANode * up = m_node->up(); 
-	if (up->cl_id()=='C' && up->winflg(8)) static_cast<ClipNode*>(up)->draw_1(m_node);
-}
-
-///////////// box (tools) ////////////////////////////////////////////////////////
-
-int WrapGen::write_a20() {
+int AWrapGen::write_a20() {
 	int n, ec, ch2 = !!(m_bflg&WRF_W_CH2), mxr = mx1(ch2?0:WRF_MONO), nf;
 	if (m_bflg&WRF_W_PLOT) {
-		float * q = m_sob.ro()->m_core.ro()->tf01;
+		float * q = core_ro()->tf01;
 		int skip = (int)lround((double)q[0] * (double)sample_rate);
 		if  ((nf = (int)lround((double)q[1] * (double)sample_rate) - skip)<1) return BXE_ZEROWAV;
 		while (skip>1023) mx_calc(mxr, junkbuf, ch2?junkbuf:0, 1024, 0), skip -= 1024;
@@ -1288,7 +991,7 @@ int WrapGen::write_a20() {
 	mx_del(mxr); gui_acv_op(out.id); return fa_end(&out)<0 ? EEE_ERRNO : 0;
 }
 
-int WrapGen::batch_mono(double * to, int skip, int n) {
+int AWrapGen::batch_mono(double * to, int skip, int n) {
 	Clock clk; clk.reset();
 	int mxid = mx1(WRF_MONO); if (mxid<0) return mxid;
 	while (skip>=1024) mx_calc(mxid, junkbuf, 0, 1024, 1), skip -= 1024;
@@ -1298,7 +1001,7 @@ int WrapGen::batch_mono(double * to, int skip, int n) {
 	mx_del(mxid); return log("batch_mono: %d", clk.get()), 0;
 }
 
-int WrapGen::plot_t(double t0, double t1, int n) {
+int AWrapGen::plot_t(double t0, double t1, int n) {
 	log("plot_t: %.15g %.15g %d", t0, t1, n);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0;
         if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
@@ -1324,7 +1027,7 @@ int WrapGen::plot_t(double t0, double t1, int n) {
         delete[] (res); return 0;
 }
 
-int WrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpad) {
+int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpad) {
 	log("plot_f: %.15g %.15g %.15g %.15g %d %c", t0, t1, f0, f1, n, "ny"[zpad]);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0;
         if (len<1) return log("plot_f: length = %d samples, sorry.", len), BXE_RANGE;
@@ -1369,30 +1072,353 @@ int WrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpad
         delete[] (res); delete[] (stat); return 0;
 }
 
-int WrapGen::mini(char *to) {
-	m_sob.ro()->get_nm2(to);
-	for (int i=0; i<4; i++) to[i+2] = i2aA(m_xys6[i]);
-	to[6] = i2aA(m_xys6[7]); to[7] = ':';
-	memcpy(to+8, eff_rgb(), 6);
-	return 14;
+/////// box (wr) ////////////////////////////////////////////////////////////
+
+DWrapGen::DWrapGen(ABoxNode * nd) : AWrapGen(nd) {
+	m_sob.set(WrapSOB_default(0)); m_sfbx[0] = m_sfbx[1] = 0;
+	delayed_clip_upd(); }
+
+DWrapGen::DWrapGen(ABoxNode * nd, const DWrapGen * p) : AWrapGen(nd, p) {
+	m_sob.from(p->m_sob); memcpy(m_sfbx, p->m_sfbx, 2*sizeof(BoxGen*));
+	upd_conn(); delayed_clip_upd(); }
+
+int DWrapGen::get_nm2(char * to) {
+	BoxGen *bxs = m_sfbx[0], *bxf = m_sfbx[1];
+	if (!bxs) return to[0]=to[1]=63, 2;;
+	if (!bxf) return bxs->node()->get_nm2(to);
+	if (bxs==box_bookmark[1] || bxs==box_bookmark[2]) return bxf->node()->get_nm2(to);
+	char buf[4]; bxs->node()->get_nm2(to); bxf->node()->get_nm2(buf); to[1] = buf[0]; return 2;
 }
+
+int DWrapGen::add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs) {
+	if (!m_sfbx[0]) return EEE_NOEFF;
+	double in[36], v11[11];
+	int ni, no, nv = 0, ncf = flg & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0);
+	BVFOR_JM(flg&255) v11[j] = vs[nv++];
+	WrapSOB * sob = m_sob.ro();
+	sob->prep11(v11, flg | (768^(v0f<<9)), m_xys6);
+	if (m_sfbx[1]) {
+		sob->v(in, v11, 64, ncf + (ni=(m_bflg>>12)&31) + 1);
+		int ocf = 0x7c01; // TODO (?)
+		if ((trg = mx_add_filter(trg, m_sfbx[1]->model(), ni, in, ocf)) < 0) return trg;
+	}
+	char udio[4], *uds = sob->m_scl[0].ro()->updn; udio[0] = uds[0]; udio[1] = uds[1];
+	udio[2] = ni = (m_bflg>>2)&31; 
+	udio[3] = no = (m_bflg>>7)&31;
+	sob->v(in + v0f, v11, v0f, ncf + ni + 6 - v0f);
+	if (v0f) in[0] = in[1] = 1.0;
+	if (flg & WRF_MONO) in[5] = 0.0, in[0] *= M_SQRT2;
+	int ocb = no>1 ? 0x402 : 0x7c01; // TODO
+	int r = mx_add_box(trg, m_sfbx[0]->mk_box(), udio, in, ocb, dly); if (r<0) return r;
+	if (!trg && trk_rec_trg) trk_rec(m_node, r);
+	return mxky ? mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), r, mxky) : r;
+}
+	
+int DWrapGen::qdiff(DWrapGen * that) {
+	return (this!=that) && (m_sob.ro() != that->m_sob.ro() || memcmp(m_xys6, that->m_xys6, 8)); }
+
+int DWrapGen::set_sf(int ff, BoxGen * bx) {
+	BoxGen ** ppbx = m_sfbx + (ff&=1);
+	if (bx==this || bx==*ppbx) return 0;
+	int ec = 0, wf = wnfl(2048), sh = 2 + (10 &- ff), msk = ~(1023<<sh);
+	if (!bx) {
+		set_boxp(ppbx, 0); m_bflg &= msk; SOB_RW(sob)->slflg_upd(m_bflg);
+		w_mini(); if (wf) { BXW_GET; wlg(bxw_rawptr, ff+1, 0); }
+	} else if (bx->node()->cl_id()=='w') {
+		DWrapGen * that = dynamic_cast<DWrapGen*> (bx); if (!that) return BXE_SORRY;
+		if ((ec=set_boxp(ppbx, that->m_sfbx[ff]))<0) return ec;
+		m_bflg &= msk; m_bflg |= (that->m_bflg & ~msk);
+		sob_from(4+ff, bx, 1);
+		sob_from(2+ff, bx, 1);
+		w_mini(); if (wf) { BXW_GET; wlg(bxw_rawptr, 0, 0); wlg(bxw_rawptr, ff+1, 0); }
+	} else {
+		int ni = bx->n_in(), no = bx->n_out();
+		if (ff) { if (!ni) return BXE_FILTIN; if (no!=1) return BXE_FILTOUT; }
+		else if (!no) { return BXE_NOOUT; }
+		if ((ec = set_boxp(ppbx, bx)) < 0) return ec;
+		m_bflg &= msk; m_bflg |= ((32*no+ni) << sh);
+		SOB_RW(sob)->slflg_upd(m_bflg);
+		w_mini(); if (wf) {  BXW_GET; wlg(bxw_rawptr, ff+1, 0); }
+	}
+	return ec;
+}
+
+void DWrapGen::notify_nio(BoxGen * bx) {
+	log("wr%d/notify_nio: %d", id(), bx->id());
+	int ec = 0, ni, no, flg = (bx==m_sfbx[0]) + 2*(bx==m_sfbx[1]);
+	if (flg&1) m_bflg &= ~0xffc, m_bflg |= 4*(32*bx->n_out()+bx->n_in());
+	if (flg&2) ((no=bx->n_out())==1 && (ni=bx->n_in())) ? 
+		(m_bflg&=~0x3ff000, m_bflg |= (32*no+ni)<<12) : (set_sf(1, 0), ec = BXE_FILTRM);
+	if (ec) gui_errq_add(ec, "wrap/nio"); if (!flg || !wnfl()) return;
+	sthg * q = m_node->wdat_raw(); if (!q) return gui_errq_add(BXE_WTF, "wrap/nio/w");
+	if (flg&1) wlg(q,1,0); if (flg&2) wlg(q,2,0); 
+}
+
+int DWrapGen::sob_from(int ix, BoxGen * bx0, int bxf) {
+	DWrapGen * that = dynamic_cast<DWrapGen*> (bx0);
+	if (!that) return bx0 ? BXE_TYDIFF : BXE_ARGNBX;
+	if (!ix) { m_sob.from(that->m_sob);
+		   if (bxf) memcpy(m_sfbx, that->m_sfbx, 2*sizeof(BoxGen*)), upd_conn();
+		   return 0; }
+	WrapSOB *sob = SOB_RW(sob), *sob2 = that->m_sob.ro();
+	switch (ix) {
+		case 1: 	sob->m_core     .from(sob2->m_core);	  return 0;
+		case 4: case 5: sob->m_con[ix&1].from(sob2->m_con[ix&1]); return 0;
+		case 6: 	sob->m_avol     .from(sob2->m_avol);	  return 0;
+		case 2: case 3: sob->m_scl[ix&1].from(sob2->m_scl[ix&1]);
+				if (bxf) set_boxp(m_sfbx+(ix&1), that->m_sfbx[ix&1]);
+				sob->slflg_upd(m_bflg); return 0;
+		default: return BXE_IDX;
+	}}
+
+int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
+	int ec; switch(ent->i3f) {
+		case 1:
+			ent->plttwwii = 0x6b775910;
+			WrapAutoVol * av; av = SOB_RW(sob)->avol_rw();
+			if (arg && *arg && *arg!='w') {
+				if ((ec = av->parse_dim(arg))<0) return ec;
+			} else {
+				BXW_GET; if ((ec = av->upd_xy12rt(WR_AVCONF))<0) return ec;
+			}
+			ec = mx_mkroot();
+			return ec<0 ? ec : (ent->p = new WrapAVJob(ent, this, av, ec), 0);
+		case 9: return NDE_PERM;
+		default: return JQE_UNDEF;
+	}}
+
+int DWrapGen::save_sob(SvArg *p) { switch(p->st) {
+	case 16:	  return m_sob.save(p);
+	case 17:	  return m_sob.ro()->m_core.save(p);
+	case 18: case 19: return m_sob.ro()->m_scl[p->st&1].save(p);
+	case 20: case 21: return m_sob.ro()->m_con[p->st&1].save(p);
+	case 22:	  return m_sob.ro()->m_avol.save(p);
+	case 23: case 24: p->st = 3; return 1;
+	default: log("wr: invalid SOB state %d, skipping", p->st); return p->st2=-1, 1;
+}}
+
+int DWrapGen::save2(SvArg * sv) {
+	BXSV2_HEAD; int k, l = 12;
+	char buf[24]; memcpy(buf, "X$G", 3); buf[3] = 51 + 3*!(m_bflg&WRF_NOCON);
+	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
+	if ((k=m_bflg&3)) memcpy(buf+l, "\nX$m", 4), buf[16] = 48 + (m_bflg&3), l = 17;
+	buf[l] = 10; CHKERR(f->sn(buf, l+1));
+	if (m_sfbx[0]) { CHKERR(sv->out->sn("X$b", 3)); CHKERR(m_sfbx[0]->node()->sv_path(10)); }
+	if (m_sfbx[1]) { CHKERR(sv->out->sn("X$>", 3)); CHKERR(m_sfbx[1]->node()->sv_path(10)); }
+	return r;
+}
+
+void DWrapGen::spec_debug() {
+	log("wrap: flg=0x%x", m_bflg);
+	m_sob.debug();
+}
+
+int DWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
+	if (!bxw_rawptr) return NDE_NOWIN; if ((unsigned int)ix > 2u) return ix<0 ? BXE_RANGE : BXE_WLGDONE;
+	int oid = w_oid(), gc = (0x605a5345>>8*ix) & 127, pf = pflg(),
+	    of = (flg & WRF_SETOC) ? ((flg&WRF_OC) ? (WR_WLG|=(1<<ix),1) : (WR_WLG&=~(1<<ix),0))
+		    		   : (WR_WLG >> ix) & 1;
+	WrapSOB * sob = m_sob.ro();
+	gui2.setwin(oid, 'w'); 
+	if (of)                      gui2.wupd_0(gc, "S><$XW", 4), gui2.c1(48 + ix);
+	else gui2.wupd_0(gc, ".+1"), gui2.wupd_0(gc, "S<>$XW", 4), gui2.c1(52 + ix);
+	if (ix) {
+		BoxGen * bx = m_sfbx[--ix];
+		int ni = (m_bflg>>(2+10*ix))&31; ni -= (ni && ix);
+		if (of) gui2.wupd_0(gc, ".+"), gui2.c1(49+ni), 
+			sob->wl(oid, 65*ix, ni, pf|255, m_xys6, bx);
+		gui2.ref_title(gc, bx ? bx->node() : 0, 3, "source\0 filter"+8*ix);
+	} else {
+		sob->m_scl[0].ro()->w_ud(oid, 3);
+		if (of) gui2.wupd_0(gc, ".+9"), sob->wl(oid, 32, 6, pf|254, m_xys6, 0),
+						sob->wl(oid, 96, 2, pf|254, m_xys6, 0);
+	}
+	return 0;
+}
+
+/////// box (cmd) ///////////////////////////////////////////////////////////
+#define CH(X) BXCMD_H(DWrapGen, X)
+
+CH(gcl){return (s[1]=='.') ? (s[2]==51 ? p->m_node->draw_window(25) 
+			               : p->key_op(-2, s[2]-48, s+3, cb->cnof()))
+			   : p->key_op(-1, s[1]-48, s+2, cb->cnof()); }
+	
+CH(gmd){p->m_bflg&=~3, p->m_bflg|=(s[1]&3); if (p->wnfl()) p->w_gmd(); return 0; }
+CH(c2k){return Node::mk(0, ClipNode::kcp(1), 0, 'W', cb->cnof()|NOF_NOIDX, 0, p); } // TODO
+CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
+CH(bw){	BoxGen * bx = p->m_sfbx[(s[1]>>2)&1]; return bx ? bx->node()->draw_window(16) : EEE_NOEFF; }
+
+CH(tf){	float *q = SOB_RWP(p,sob)->core_rw()->tf01; int flg = s[1]; double x; s += 2;
+	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
+	return 0; }
+
+CH(pl){	WrapSOB * sob = p->m_sob.ro(); 
+	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
+	if (s[1]=='P') return p->add2mx_txdkl(0, 0, 0, 0, 0);
+	const float * q = sob->m_core.ro()->tf01; switch(s[1]) {
+		case 'T': return p->plot_t(q[0], q[1], 512);
+		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
+		default: return BXE_CENUM;
+}}
+
+CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 
+			   : p->wlg(p->m_node->wdat_raw(), s[1]&3, (8+(s[1]&4))<<20); }
+
+CH(ky){ WrapCore * cr = SOB_RWP(p,sob)->core_rw();
+	for (++s; s[0]>47 && s[1]>47 && s[2]>47 && s[3]>47; s+=4)
+		cr->set_key(hex2(s)&127, 64*s[2] + s[3] - 3120);   return 0; }
+
+CH(wav){int k = 0, wf = p->m_node->winflg(2048);
+	switch(s[1]) {
+		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
+		case '2': k = WRF_W_CH2; goto flgs;
+		case '-': k = WRF_W_PLOT; goto flgs;
+		case 'W': case 0: return p->write_a20();
+		default: return BXE_CENUM;
+	}
+flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
+flgw:	if (wf) p->w_a20(k);
+	return 0;
+}
+
+//
+ 
+CH(in){ WrapSOB * sob = SOB_RWP(p,sob); 
+	int g9 = p->m_node->gui9(), r = sob->icmd(s+1, p->m_bflg, g9, p->m_xys6, p->m_sfbx);
+	if (r<0) return r;
+	if ((r&4) && sob->slflg_upd(p->m_bflg) && (g9&8)) gui2.setwin(g9|9, '#'), gui2.t0(), p->slf_cmd();
+	if ( r&1) p->m_bflg &= ~WRF_NOCON;
+	if ((r&2) && (g9&1)) p->w_col0(p->pflg()|1);    return 0; }
+
+
+CH(sf){ ANode * nd = 0; BoxGen * bx = 0;
+	if (s[1]!=48||s[2]) {   if (!(nd = cb->lookup(s+1))) return BXE_ARGLU;
+				if (!(bx = nd->box0())) return BXE_ARGNBX; }
+	return p->set_sf((*s&16)>>4, bx); }
+
+CH(ud){	int ix = (*s & 1) ^ 1, k = s[1];
+	if ( (k<66) ? (k!=45+20*ix) : (k>122 || !((1<<(k&31))&0xa10a0)) ) return BXE_CENUM;
+	SOB_RWP(p,sob)->scl_rw(0)->updn[ix] = k;
+	if (p->wnfl()) p->m_sob.ro()->m_scl[0].ro()->w_ud(p->w_oid(), 1+ix);
+	return 0; }
+
+CH(gr){	int k, i = s[2] & 7, wdf = 65536;
+	WrapCore * core = SOB_RWP(p,sob)->core_rw();
+	switch (s[1]) {
+		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
+		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
+		case '*':
+			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
+			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
+				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
+			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
+		default: return BXE_CENUM;
+	}
+	p->w_dim(wdf); return 0;
+}
+
+CH(so){	if (!s[1]||!s[2]) return BXE_NOARG;
+	ANode * nd = cb->lookup(s+2);
+	int i = s[1]&7,  ec = nd ? p->sob_from(i, nd->box0(), cb->before(0,5)) : BXE_ARGLU;
+	if (ec>=0) p->w_sob(i, 1); return ec; }
+
+CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
+	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
+	switch(s[1]) {
+		case 'D': sob->m_avol.set(0); break;
+		case ':': ec = sob->avol_rw()->parse_dim(s+2); break;
+		default:  return BXE_UCMD;
+	}
+	if (ec<0 || !p->wnfl()) return ec;
+	BXW_GETP(p); if (WR_TAB==2) p->w_sob(6, 0);
+	return ec;
+}
+
+BXCMD_DEF(DWrapGen) {    {8192+'\\', 0},  {'B', c_bw}, {'t', c_tf}, {'V',c_vt},
+	{'+'+256, c_c2k}, {'P'+256, c_pl }, {'U', c_ud}, {'b', c_sf}, {'i',c_in},
+	{'G'+256, c_gcl}, {'W'+256, c_win}, {'D', c_ud}, {'>', c_sf}, {'m',c_gmd},
+	{'.'+256, c_stp}, {'A'+256, c_wav}, {'k', c_ky}, {'O', c_so}, {'#', c_gr}, {0, 0}   };
+
+///////////// box (gui) //////////////////////////////////////////////////////////
+
+const char * DWrapGen::eff_rgb() {
+	return (m_sfbx[1] ? m_sfbx[1]->node() : (m_sfbx[0] ? m_sfbx[0]->node() : m_node)) -> own_rgb(); }
+
+void DWrapGen::wdat_cons(sthg * bxw_rawptr) {
+	WR_TAB = 0; WR_WLG = 0;
+	WrapAutoVol * av = m_sob.ro()->m_avol.ro();
+	memcpy(WR_AVCONF, av ? av->xy12rt() : (const unsigned char*)"\x9\x9\x9\x9\x1\x32", 6);
+}
+
+void DWrapGen::w_sob(int ix, int sl) {
+	int wf = wnfl(2560); if (!wf) return;
+	if (ix<2) { if (wf&512) aux_window(); if (wf&2048) box_window(); return; }
+	if (wf&512) {
+		if (ix==1) aux_window();
+		if (sl) gui2.setwin(w_oid(9), '#'), gui2.t0(), slf_cmd();
+		if (wf==512) return;
+	}
+	BXW_GETV("wr/w_sob");
+	switch (ix) {
+		case 1: if (!WR_TAB) w_tab0(-1); return;
+		case 2: case 3: wlg(bxw_rawptr, 0, 0); wlg(bxw_rawptr, ix-1, 0); return;
+		case 4: case 5: w_col0(pflg()); return;
+		case 6:	memcpy(WR_AVCONF, m_sob.ro()->m_avol.ro()->xy12rt(), 6); w_avol(63, WR_AVCONF); return;
+		default:	log("WTF: invalid index for w_sob (%d)", ix); return;
+	}}
+
+void DWrapGen::w_col0(int flg) {
+	BXW_GETV("w_col0"); WrapSOB * sob = m_sob.ro();
+	int gf = WR_WLG; if (!gf) return;
+	int wlf = 32 + WRF_CFILT + ((flg&1) << WRF_XFILT_SH); flg &= WRF_PASS; flg |= wlf;
+	int oid = w_oid(), gf1 = gf & 1, ns = (gf&2) ? ((m_bflg>> 2) & 31)     : 0,
+	    				 nf = (gf&4) ? ((m_bflg>>12) & 31) - 1 : 0;
+	log("w_col: gf=%d, ns=%d, nf=%d", gf, ns, nf);
+	if (gf&3) sob->wl(oid,    32*gf1, 6*gf1+ns, flg, m_xys6, m_sfbx[0]);
+	if (gf&5) sob->wl(oid, 65+31*gf1, 2*gf1+nf, flg, m_xys6, m_sfbx[1]);
+}
+					     
+int DWrapGen::av_guiconf(int c, const char * s) {
+	BXW_GET; int i, k = 0x8040109;
+	switch(c) {
+		case 'x': case 'y': case 'z': i = c-'x'; break;
+		case 'w': i = 3; break;  
+		case 'r': i = 4; break;
+		case 't': i = 5; k = 0x320a01ff; break;
+		default: return BXE_UCMD;
+	}
+	intv_cmd_uc(WR_AVCONF+i, s, 1, k&255, k>>8);
+        if (wnfl() && WR_TAB==1) w_avol(1<<i, WR_AVCONF);
+	return 0;
+}
+
+void DWrapGen::w_avol(int f, unsigned char * s) { gui2.setwin(w_oid(), 'w');
+	BVFOR_JM(f) gui2.wupd_i('Y', s[j], j+10); }
+
+int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
+	case 0: w_tab0(0xaaaaa); return 0;
+	case 1: w_avol(63, WR_AVCONF); return 0;
+	case 2: w_a20(-1); return 0;
+	case 4: return 0; // TODO: conf
+	default:return BXE_CENUM;
+}}
 
 ///////////// export /////////////////////////////////////////////////////////////
 
-#define WARG (static_cast<WrapGen*>(bx))
-int setbox_wrap(ABoxNode * nd, BoxGen * _) { return new (ANode::a64()) WrapGen(nd), 3; }
-int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) WrapGen(nd, WARG), 3; }
+#define WARG  (static_cast<AWrapGen*>(bx))
+#define WARGD (static_cast<DWrapGen*>(bx))
+int setbox_wrap(ABoxNode * nd, BoxGen * _) { return new (ANode::a64()) DWrapGen(nd), 3; }
+int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) DWrapGen(nd, WARGD), 3; }
 const char * wrap_rgb(BoxGen * bx) { return WARG -> eff_rgb(); }
-int wrap_2mx(BoxGen * bx, int trg, int f, int dly) { return WARG -> add2mx(trg, f, dly); }
-int wrap_2mx_v(BoxGen * bx, int trg, int f, double *v) { return WARG -> add2mx_v(trg,f,v); }
-int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARG -> qdiff(static_cast<WrapGen*>(b2)); }
-AReader * wrap_avreader(BoxGen * bx) { return WARG -> avreader(); }
+int wrap_2mx_txdkl(BoxGen * bx, int trg, int xflg, int dly, int mxky, int lim) { 
+	return WARG -> add2mx_txdkl(trg, xflg, dly, mxky, lim); }
+int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
+AReader * wrap_avreader(BoxGen * bx) { return WARGD -> avreader(); } // TODO: typechk(?)
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 	int v, n = 0; for (int i=0; i<4; i++) BVFOR_JM(bv[i])
 		to[n] = hexc1(2*i+(j>>4)), to[n+1] = hexc1(j&15), v = pk[i][j],
 		to[n+2] = 48+(v>>6), to[n+3] = 48+(v&63), n += 4;
 	return n; }
 int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof) { return WARG -> key_op(ky,op,s,nof); }
-void wrap_cut_time(BoxGen * bx, int t) { WARG -> cut_time(t); }
 void wrap_set_trec(BoxGen * bx, int j) { WARG->m_trec = j; }
-void wrap_init() { WrapScale::st_init(); WrapGen::st_init(); }
+void wrap_init() { WrapScale::st_init(); DWrapGen::st_init(); }

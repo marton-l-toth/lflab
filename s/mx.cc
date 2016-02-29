@@ -6,7 +6,7 @@
 #include "wrap.h"
 
 class BoxGen;
-int box_mxc_notify(BoxGen *p, int ky, int flg);
+int box_mxc_notify(BoxGen *p, int ky, int flg), box_set_tlim(BoxGen *p, int t);
 typedef void (*tfunini_t) (double *, int, int);
 typedef void (*tfunmul1_t) (double *, double *, int);
 typedef void (*tfunmul2_t) (double *, double *, double *, int);
@@ -152,7 +152,7 @@ static void trec_free(int j) { trec_bx[j] = 0; trec_bi[j] = *trec_bi; *trec_bi =
 static void trec_fin_1(int j) { wrap_set_trec(trec_bx[j], 0); trec_free(j); }
 static void trec_fin_2(MxItem * b, int j) { b->u.b.trec = 0, trec_fin_1(j); }
 static void trec_fin_t(MxItem * b, int j, int t) {
-	wrap_cut_time(trec_bx[j], t); b->u.b.trec = 0; trec_free(j); }
+	box_set_tlim(trec_bx[j],t); b->u.b.trec = 0; trec_free(j); }
 
 /////// alloc / aux //////////////////////////////////////////////////////
 

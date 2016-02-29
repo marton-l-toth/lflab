@@ -90,9 +90,9 @@ struct SvArg {
 	int nxup(int x);
 };
 
-struct trk_24 { char ty, ct; short i; int j; ANode * pv; void * rsrv; }; 
+struct trk_24 { char ty, ct; short i; int j; ANode * pv; int tlim, rsrv; }; 
 struct dir_24 { char ty, ct, n, s[21]; };
-struct clp_24 { char ty, ct, i, rsrv[21]; };
+struct clp_24 { char ty, ct, i, rs1; int tlim, rs16[4]; };
 
 class ANode {
         public: // static
@@ -185,6 +185,8 @@ class ANode {
                 void set_job_result(int ix3, int res);
                 int kill_job(int ix, int ec = JQE_KILL) { return jobq.kill(this, ix, ec); }
 		const trk_24* cth() const { return &m_u24.t; }
+		int tlim() const;
+		int set_tlim(int t);
         protected:
                 ANode() : m_winflg(0), m_visitor(0), m_up(0), m_next(0) { }
                 virtual int add(ANode * that, const char * nm, int i = NOF_PARSE, int j = -1) = 0;

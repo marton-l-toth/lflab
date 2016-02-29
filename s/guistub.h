@@ -93,7 +93,7 @@ class GuiStub {
 		void own_title(int flg = 3);
 		void ref_title(int wwt, ANode * nd, int wwix = -1, const char * defstr = 0);
 		void j_upd(int wwt, int st, int wwix = -1);
-		void errq_add(int ec);
+		void errq_add(int ec, const char * s = 0);
 		void mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef);
 		void mcfg_win(int flg);
 		void savename();

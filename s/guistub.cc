@@ -10,8 +10,7 @@
 #include "cfgtab.inc"
 
 void gui_closewin(int x) { gui2.closewin(x); }
-void gui_errq_add(int x, const char *s) { const char *s2 = (s&&x) ? err_str(x) : 0;
-					  gui2.errq_add(x); if (s2) log("%s:%s", s, s2); }
+void gui_errq_add(int x, const char *s) { gui2.errq_add(x, s); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
 	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
@@ -22,7 +21,8 @@ void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0)
 	for (int i=0; i< n; i++) gui2.c2(hexc1(v0[i]>>4), hexc1(v0[i]&15));
 }
 
-void GuiStub::errq_add(int ec) {
+void GuiStub::errq_add(int ec, const char *s) {
+	if (ec && s) log("%s: %s", s, err_str(ec));
 	if (!ec || ec==EEE_NOEFF || ec==RTE_IWCLOSE) return; 
 	ec = (ec==EEE_ERRNO) ? errno&0xffffff : ec&0xffffff;
 	for (int v, i=0; i<m_errq_n; i++) if (((v=m_errq_v[i])&0xffffff)==ec && v<0x63000000)
