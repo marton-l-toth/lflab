@@ -211,7 +211,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 		for (; vti>nextvt; nd=nd->next(), nextvt=nd->cth()->j) {
 			int ci = nd->cth()->i; if (ci>15) {
 				if (nd->cl_id()!='w') return unexp_node(nd);
-				wrap_2mx_txdkl(static_cast<ABoxNode*>(nd)->box(), m_mxid, 0, i, 0, 0);
+				wrap_2mx_txdlv(static_cast<ABoxNode*>(nd)->box(), m_mxid, 0, i, 0, 0);
 				if (debug_flags & DFLG_TRK) log("trk2mx: %d", m_mxid);   continue; }
 			if (ci==15) return (void) (m_md = 3);
 			if (nd!=m_tn) continue; 
@@ -282,7 +282,7 @@ int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y
 	int ec; switch(c) {
 		case '1': return (TR_SEL_ID=id) ? sel0w(bxw_rawptr, nd->cth()->i, nd->cth()->j)
 			  			: sel0w(bxw_rawptr,y, x),  w_sel(bxw_rawptr);
-		case '4': return nd ? wrap_2mx_txdkl(nd->box0(), 0, 0, 0, 0, 2*sample_rate) : EEE_NOEFF;
+		case '4': return nd ? wrap_2mx_txdlv(nd->box0(), 0, 0, 0, 2*sample_rate, 0) : EEE_NOEFF;
 		case '6': return nd ? nd->draw_window(0x1b) : BXE_NOARG;
 		case '9': return nd ? nd->draw_window(0x19) : BXE_NOARG;
 		case 'C': return TR_SEL_ID ? Node::copy(ANode::lookup_n_q(TR_SEL_ID), m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;

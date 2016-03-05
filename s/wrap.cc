@@ -230,7 +230,7 @@ class AWrapGen : public BoxGen {
 		AWrapGen(ABoxNode * nd);
 		AWrapGen(ABoxNode * nd, const AWrapGen * that);
                 virtual ~AWrapGen();
-		virtual int add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs) = 0;
+		virtual int add2mx_txdlv(int trg, int xflg, int dly, int lim, const double *vs) = 0;
 		virtual const char * eff_rgb() = 0;
                 virtual int n_in() const { return 0; }
                 virtual int n_out() const { return 0; }
@@ -244,8 +244,6 @@ class AWrapGen : public BoxGen {
 		virtual int mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0;
 						     return 0; }
 		inline int pflg() { return m_bflg & WRF_PASS; }
-		inline int add2mx_txdkl(int trg, int xflg, int dly, int mxky, int lim) {
-			return add2mx_tfdklv(trg, pflg()|xflg, dly, mxky, lim, 0);     }
 		void delayed_clip_upd();
 		int key_op(int k, int op, const char * xys, int nof);
 	protected:
@@ -263,12 +261,14 @@ class AWrapGen : public BoxGen {
 		inline int qset(const char *s, int l) { for (int k,i=0; i<l; m_xys6[i++] = k) 
 			                if ((unsigned int)(k=s[i]-48)>50u) return BXE_PARSE; return 0;}
 		inline void wdat_cons_aw(sthg * bxw_rawptr) { WR_TAB=0; WR_WLG=0; WR_SLFLG=64; }
+		inline int add2ctl(int mxbi, int mxky) {
+			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
 		void gr_rgbc() { char buf[4]; gui2.c1('M'); get_nm2(buf); gui2.sn(buf, 2); 
 			         gui2.sn(eff_rgb(), 6); }
 		int plot_t(double t0, double t1, int n);
 		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
-			return (k=add2mx_tfdklv(r,f,0,0,0,0))<0 ? (mx_del(r),k) : r; }
+			return (k=add2mx_txdlv(r,f,0,0,0))<0 ? (mx_del(r),k) : r; }
 		int qcopy(int tf, int nof) { return tf ? trk_glob_paste(this, nof)
 				: Node::mk(0, ClipNode::kcp(1), 0, 'W', nof|NOF_NOIDX, 0, this); }
 		int batch_mono(double * to, int skip, int n);
@@ -292,7 +292,7 @@ class DWrapGen : public AWrapGen {
 		DWrapGen(ABoxNode * nd);
 		DWrapGen(ABoxNode * nd, const DWrapGen * that);
                 virtual ~DWrapGen() {}
-		virtual int add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs);
+		virtual int add2mx_txdlv(int trg, int xflg, int dly, int lim, const double *vs);
 		virtual int save2(SvArg * sv); 
 		virtual void spec_debug();
 		virtual void notify_nio(BoxGen * bx);
@@ -704,7 +704,7 @@ int WrapAVJob::run1() {
                 case 4: 
 			for (i=0; i<4; i++) buf[i] = m_ixmul[i] * (double)m_xy12ij[i];
 			mx_clear(m_mxid);
-			m_bx -> add2mx_tfdklv(m_mxid, WRF_AVJOB|WRF_NOCON, 0, 0, 0, buf);
+			m_bx -> add2mx_txdlv(m_mxid, WRF_AVJOB|WRF_NOCON, 0, 0, buf);
                 default:
 			r = mx_calc(m_mxid, buf, buf+441, 441, 0);
                         mv = m_max; for (int i=0,n=r*441; i<n; i++) {
@@ -900,8 +900,8 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 			 if (wnfl()) w_col0(pflg());
 			 return 1;
 		case  5: ec = qcopy(1, nof & ~NOF_FGUI); break;
-		case 11: ec = add2mx_txdkl(0, 0, 0, k, 0); break;
-		case 12: ec = add2mx_txdkl(0, 0, 0, k|65536, 0); break;
+		case 11: ec = add2mx_txdlv(0,0,0,0,0); if (ec>=0) ec = add2ctl(ec, k);       break;
+		case 12: ec = add2mx_txdlv(0,0,0,0,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
 		default: ec = BXE_CENUM; break;
 	}
 	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
@@ -1098,10 +1098,10 @@ int DWrapGen::sl_bv() {
 	return slbv_2(r, y);
 }
 
-int DWrapGen::add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const double *vs) {
+int DWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs) {
 	if (!m_sfbx[0]) return EEE_NOEFF;
 	double in[36], v11[11];
-	int ni, no, nv = 0, ncf = flg & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0);
+	int ni, no, nv = 0, ncf = (flg|=pflg()) & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0);
 	BVFOR_JM(flg&255) v11[j] = vs[nv++];
 	WrapSOB * sob = m_sob.ro();
 	sob->prep11(v11, flg | (768^(v0f<<9)), m_xys6);
@@ -1119,9 +1119,9 @@ int DWrapGen::add2mx_tfdklv(int trg, int flg, int dly, int mxky, int lim, const 
 	int ocb = no>1 ? 0x402 : 0x7c01; // TODO
 	int r = mx_add_box(trg, m_sfbx[0]->mk_box(), udio, in, ocb, dly); if (r<0) return r;
 	if (!trg && trk_rec_trg) trk_rec(m_node, r);
-	return mxky ? mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), r, mxky) : r;
+	return r;
 }
-	
+
 int DWrapGen::qdiff(DWrapGen * that) {
 	return (this!=that) && (m_sob.ro() != that->m_sob.ro() || memcmp(m_xys6, that->m_xys6, 8)); }
 
@@ -1261,7 +1261,7 @@ CH(tf){	float *q = SOB_RWP(p,sob)->core_rw()->tf01; int flg = s[1]; double x; s 
 
 CH(pl){	WrapSOB * sob = p->m_sob.ro(); 
 	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
-	if (s[1]=='P') return p->add2mx_txdkl(0, 0, 0, 0, 0);
+	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,0,0);
 	const float * q = sob->m_core.ro()->tf01; switch(s[1]) {
 		case 'T': return p->plot_t(q[0], q[1], 512);
 		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
@@ -1415,8 +1415,8 @@ int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
 int setbox_wrap(ABoxNode * nd, BoxGen * _) { return new (ANode::a64()) DWrapGen(nd), 3; }
 int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) DWrapGen(nd, WARGD), 3; }
 const char * wrap_rgb(BoxGen * bx) { return WARG -> eff_rgb(); }
-int wrap_2mx_txdkl(BoxGen * bx, int trg, int xflg, int dly, int mxky, int lim) { 
-	return WARG -> add2mx_txdkl(trg, xflg, dly, mxky, lim); }
+int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) { 
+	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
 AReader * wrap_avreader(BoxGen * bx) { return WARGD -> avreader(); } // TODO: typechk(?)
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
