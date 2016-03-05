@@ -394,8 +394,8 @@ int ANode::title_arg(char * to, int wid) {
 }
 
 int ANode::is_save_trg() {
-        if (m_visitor==m0_sv.vis || !perm(DF_SAVE)) return 0;
-        if (!(m0_sv.flg&SVF_COPY)) return 1;
+        if (m_visitor==m0_sv.vis) return 0; 
+        if (!(m0_sv.flg&SVF_COPY)) return !!perm(DF_SAVE); 
         ANode * q; for (q = this; !q->winflg(WF_ROOT); q = q->m_up);
         return (q==m0_sv.rn);
 }
@@ -444,7 +444,8 @@ int ANode::sv_cre(int flg) {
         out->sn("C", 1); p->sv_path();
         char buf[24]; buf[0] = 36;
         for (int i=nn-1; i>=0; i--) {
-                if ( ((buf[1] = pp[i]->cl_id())&120) != 64 && i ) return NDE_USVCONT;
+		int ty = pp[i]->cl_id(); if (ty=='_') return NDE_BTCOPY;
+                if ( ((buf[1] = ty)&120) != 64 && i ) return NDE_USVCONT;
                 pp[i]->m_visitor = vis; pp[i]->m_winflg |= WF_SVNC; 
 		if (debug_flags & DFLG_SAVE) log("svnc_flg set: 0x%x", pp[i]->m_id); 
                 int l = pp[i]->get_name(buf+2); out->sn(buf, l+2); r += l + 2;

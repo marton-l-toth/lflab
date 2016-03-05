@@ -834,7 +834,7 @@ SOB_INIFUN(WrapSOB, 1)
 
 AWrapGen::AWrapGen(ABoxNode * nd) : BoxGen(nd), m_bflg(0), m_mxctl(0) {
 	memcpy(m_xys6, "\0\0\0\0\0\0\031\062", 8);
-	nd->set_ui_d(2); nd->setbx_0(this); delayed_clip_upd(); }
+	nd->set_ui_d(2); nd->setbx_0(this); }
 
 AWrapGen::AWrapGen(ABoxNode * nd, const AWrapGen * p) : 
 	BoxGen(nd), m_bflg(p->m_bflg), m_mxctl(0) {
