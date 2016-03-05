@@ -247,8 +247,10 @@ class AWrapGen : public BoxGen {
 		void delayed_clip_upd();
 		int key_op(int k, int op, const char * xys, int nof);
 	protected:
-		static int slf_conv(int k);
 		typedef struct { int f; char xy[8]; } qsav_t;
+		typedef int (acmd_t) (AWrapGen *, const char *, CmdBuf *);
+		static int slf_conv(int k);
+		static acmd_t c_c2k, c_gcl, c_gmd, c_gr, c_ky, c_pl, c_stp, c_tf, c_wav, c_win;
 		virtual WrapCore * core_ro() = 0; 
 		virtual WrapCore * core_rw() = 0;
 		virtual int get_nm2(char * to) = 0;
@@ -314,8 +316,7 @@ class DWrapGen : public AWrapGen {
 		virtual int wlg(sthg * bxw_rawptr, int ix, int flg);
 		virtual void w_col0(int flg);
 		void upd_conn() {Node::set_conn_2(m_node, BoxGen::node0(m_sfbx[0]),BoxGen::node0(m_sfbx[1]));}
-		BXCMD_DECL(DWrapGen) c_in, c_bw, c_sf, c_c2k, c_tf, c_gcl, c_ud, 
-			c_pl, c_gr, c_win, c_vt, c_so, c_gmd, c_ky, c_stp, c_wav;
+		BXCMD_DECL(DWrapGen) c_in, c_bw, c_sf, c_ud, c_vt, c_so;
 		int set_sf(int ff, BoxGen * bx);
 		int set_sf_2(int ff, BoxGen * bx);
 		void upd_updn(int flg);
@@ -1068,6 +1069,67 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpa
         delete[] (res); delete[] (stat); return 0;
 }
 
+#define CH(X) BXCMD_H(AWrapGen, X)
+
+CH(gcl){return (s[1]=='.') ? (s[2]==51 ? p->m_node->draw_window(25) 
+			               : p->key_op(-2, s[2]-48, s+3, cb->cnof()))
+			   : p->key_op(-1, s[1]-48, s+2, cb->cnof()); }
+
+CH(gmd){p->m_bflg&=~3, p->m_bflg|=(s[1]&3); if (p->wnfl()) p->w_gmd(); return 0; }
+CH(c2k){return Node::mk(0, ClipNode::kcp(1), 0, 'W', cb->cnof()|NOF_NOIDX, 0, p); } // TODO
+CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
+
+CH(tf){	float *q = p->core_rw()->tf01; int flg = s[1]; double x; s += 2;
+	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
+	return 0; }
+
+CH(pl){	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
+	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,0,0);
+	const float * q = p->core_ro()->tf01; switch(s[1]) {
+		case 'T': return p->plot_t(q[0], q[1], 512);
+		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
+		default: return BXE_CENUM;
+}}
+
+CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 
+			   : p->wlg(p->m_node->wdat_raw(), s[1]&3, (8+(s[1]&4))<<20); }
+
+CH(ky){ WrapCore * cr = p->core_rw();
+	for (++s; s[0]>47 && s[1]>47 && s[2]>47 && s[3]>47; s+=4)
+		cr->set_key(hex2(s)&127, 64*s[2] + s[3] - 3120);   return 0; }
+
+CH(wav){int k = 0, wf = p->m_node->winflg(2048);
+	switch(s[1]) {
+		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
+		case '2': k = WRF_W_CH2; goto flgs;
+		case '-': k = WRF_W_PLOT; goto flgs;
+		case 'W': case 0: return p->write_a20();
+		default: return BXE_CENUM;
+	}
+flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
+flgw:	if (wf) p->w_a20(k);
+	return 0;
+}
+
+CH(gr){	int k, i = s[2] & 7, wdf = 65536;
+	WrapCore * core = p->core_rw();
+	switch (s[1]) {
+		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
+		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
+		case '*':
+			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
+			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
+				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
+			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
+		default: return BXE_CENUM;
+	}
+	p->w_dim(wdf); return 0;
+}
+
+#define AW_CTAB {'+'+256, (cmd_t)c_c2k}, {'P'+256, (cmd_t)c_pl }, {'t', (cmd_t)c_tf}, \
+	        {'W'+256, (cmd_t)c_win}, {'A'+256, (cmd_t)c_wav}, {'#', (cmd_t)c_gr}, \
+	        {'.'+256, (cmd_t)c_stp}, {'G'+256, (cmd_t)c_gcl}, {'k', (cmd_t)c_ky}, {'m', (cmd_t)c_gmd}
+
 /////// box (wr) ////////////////////////////////////////////////////////////
 
 DWrapGen::DWrapGen(ABoxNode * nd) : AWrapGen(nd) {
@@ -1243,110 +1305,6 @@ int DWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 	return 0;
 }
 
-/////// box (cmd) ///////////////////////////////////////////////////////////
-#define CH(X) BXCMD_H(DWrapGen, X)
-
-CH(gcl){return (s[1]=='.') ? (s[2]==51 ? p->m_node->draw_window(25) 
-			               : p->key_op(-2, s[2]-48, s+3, cb->cnof()))
-			   : p->key_op(-1, s[1]-48, s+2, cb->cnof()); }
-	
-CH(gmd){p->m_bflg&=~3, p->m_bflg|=(s[1]&3); if (p->wnfl()) p->w_gmd(); return 0; }
-CH(c2k){return Node::mk(0, ClipNode::kcp(1), 0, 'W', cb->cnof()|NOF_NOIDX, 0, p); } // TODO
-CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
-CH(bw){	BoxGen * bx = p->m_sfbx[(s[1]>>2)&1]; return bx ? bx->node()->draw_window(16) : EEE_NOEFF; }
-
-CH(tf){	float *q = SOB_RWP(p,sob)->core_rw()->tf01; int flg = s[1]; double x; s += 2;
-	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
-	return 0; }
-
-CH(pl){	WrapSOB * sob = p->m_sob.ro(); 
-	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
-	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,0,0);
-	const float * q = sob->m_core.ro()->tf01; switch(s[1]) {
-		case 'T': return p->plot_t(q[0], q[1], 512);
-		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
-		default: return BXE_CENUM;
-}}
-
-CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 
-			   : p->wlg(p->m_node->wdat_raw(), s[1]&3, (8+(s[1]&4))<<20); }
-
-CH(ky){ WrapCore * cr = SOB_RWP(p,sob)->core_rw();
-	for (++s; s[0]>47 && s[1]>47 && s[2]>47 && s[3]>47; s+=4)
-		cr->set_key(hex2(s)&127, 64*s[2] + s[3] - 3120);   return 0; }
-
-CH(wav){int k = 0, wf = p->m_node->winflg(2048);
-	switch(s[1]) {
-		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
-		case '2': k = WRF_W_CH2; goto flgs;
-		case '-': k = WRF_W_PLOT; goto flgs;
-		case 'W': case 0: return p->write_a20();
-		default: return BXE_CENUM;
-	}
-flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
-flgw:	if (wf) p->w_a20(k);
-	return 0;
-}
-
-CH(gr){	int k, i = s[2] & 7, wdf = 65536;
-	WrapCore * core = p->core_rw();
-	switch (s[1]) {
-		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
-		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
-		case '*':
-			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
-			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
-				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
-			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
-		default: return BXE_CENUM;
-	}
-	p->w_dim(wdf); return 0;
-}
-
-//
- 
-CH(in){ WrapSOB * sob = SOB_RWP(p,sob); 
-	int g9 = p->m_node->gui9(), r = sob->icmd(s+1, p->m_bflg, g9, p->m_xys6, p->m_sfbx);
-	if (r<0) return r;
-	if  (r&4) p->w_slbv(2); 
-	if  (r&1) p->m_bflg &= ~WRF_NOCON;
-	if ((r&2) && (g9&1)) p->w_col0(p->pflg()|1);    return 0; }
-
-CH(sf){ ANode * nd = 0; BoxGen * bx = 0;
-	if (s[1]!=48||s[2]) {   if (!(nd = cb->lookup(s+1))) return BXE_ARGLU;
-				if (!(bx = nd->box0())) return BXE_ARGNBX; }
-	return p->set_sf((*s&16)>>4, bx); }
-
-CH(ud){	int ix = (*s & 1) ^ 1, k = s[1];
-	if ( (k<66) ? (k!=45+20*ix) : (k>122 || !((1<<(k&31))&0xa10a0)) ) return BXE_CENUM;
-	SOB_RWP(p,sob)->scl_rw(0)->updn[ix] = k;
-	if (p->wnfl()) p->m_sob.ro()->m_scl[0].ro()->w_ud(p->w_oid(), 1+ix);
-	return 0; }
-
-CH(so){	if (!s[1]||!s[2]) return BXE_NOARG;
-	ANode * nd = cb->lookup(s+2);
-	int i = s[1]&7,  ec = nd ? p->sob_from(i, nd->box0(), cb->before(0,5)) : BXE_ARGLU;
-	if (ec>=0) p->w_sob(i, 1), p->w_slbv(2); return ec; }
-
-CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
-	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
-	switch(s[1]) {
-		case 'D': sob->m_avol.set(0); break;
-		case ':': ec = sob->avol_rw()->parse_dim(s+2); break;
-		default:  return BXE_UCMD;
-	}
-	if (ec<0 || !p->wnfl()) return ec;
-	BXW_GETP(p); if (WR_TAB==2) p->w_sob(6, 0);
-	return ec;
-}
-
-BXCMD_DEF(DWrapGen) {    {8192+'\\', 0},  {'B', c_bw}, {'t', c_tf}, {'V',c_vt},
-	{'+'+256, c_c2k}, {'P'+256, c_pl }, {'U', c_ud}, {'b', c_sf}, {'i',c_in},
-	{'G'+256, c_gcl}, {'W'+256, c_win}, {'D', c_ud}, {'>', c_sf}, {'m',c_gmd},
-	{'.'+256, c_stp}, {'A'+256, c_wav}, {'k', c_ky}, {'O', c_so}, {'#', c_gr}, {0, 0}   };
-
-///////////// box (gui) //////////////////////////////////////////////////////////
-
 const char * DWrapGen::eff_rgb() {
 	return (m_sfbx[1] ? m_sfbx[1]->node() : (m_sfbx[0] ? m_sfbx[0]->node() : m_node)) -> own_rgb(); }
 
@@ -1407,6 +1365,51 @@ int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
 	case 4: return 0; // TODO: conf
 	default:return BXE_CENUM;
 }}
+
+#undef CH
+#define CH(X) BXCMD_H(DWrapGen, X)
+
+CH(bw){	BoxGen * bx = p->m_sfbx[(s[1]>>2)&1]; return bx ? bx->node()->draw_window(16) : EEE_NOEFF; }
+
+CH(in){ WrapSOB * sob = SOB_RWP(p,sob); 
+	int g9 = p->m_node->gui9(), r = sob->icmd(s+1, p->m_bflg, g9, p->m_xys6, p->m_sfbx);
+	if (r<0) return r;
+	if  (r&4) p->w_slbv(2); 
+	if  (r&1) p->m_bflg &= ~WRF_NOCON;
+	if ((r&2) && (g9&1)) p->w_col0(p->pflg()|1);    return 0; }
+
+CH(sf){ ANode * nd = 0; BoxGen * bx = 0;
+	if (s[1]!=48||s[2]) {   if (!(nd = cb->lookup(s+1))) return BXE_ARGLU;
+				if (!(bx = nd->box0())) return BXE_ARGNBX; }
+	return p->set_sf((*s&16)>>4, bx); }
+
+CH(ud){	int ix = (*s & 1) ^ 1, k = s[1];
+	if ( (k<66) ? (k!=45+20*ix) : (k>122 || !((1<<(k&31))&0xa10a0)) ) return BXE_CENUM;
+	SOB_RWP(p,sob)->scl_rw(0)->updn[ix] = k;
+	if (p->wnfl()) p->m_sob.ro()->m_scl[0].ro()->w_ud(p->w_oid(), 1+ix);
+	return 0; }
+
+CH(so){	if (!s[1]||!s[2]) return BXE_NOARG;
+	ANode * nd = cb->lookup(s+2);
+	int i = s[1]&7,  ec = nd ? p->sob_from(i, nd->box0(), cb->before(0,5)) : BXE_ARGLU;
+	if (ec>=0) p->w_sob(i, 1), p->w_slbv(2); return ec; }
+
+CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
+	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
+	switch(s[1]) {
+		case 'D': sob->m_avol.set(0); break;
+		case ':': ec = sob->avol_rw()->parse_dim(s+2); break;
+		default:  return BXE_UCMD;
+	}
+	if (ec<0 || !p->wnfl()) return ec;
+	BXW_GETP(p); if (WR_TAB==2) p->w_sob(6, 0);
+	return ec;
+}
+
+BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB, 
+	{'U', c_ud}, {'b', c_sf}, {'V',c_vt},  {'i',c_in}, {'B'+256, c_bw}, 
+	{'D', c_ud}, {'>', c_sf}, {'O', c_so}, {0, 0}    };
+
 
 ///////////// export /////////////////////////////////////////////////////////////
 
