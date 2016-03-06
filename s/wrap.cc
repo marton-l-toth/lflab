@@ -861,7 +861,12 @@ int AWrapGen::aux_window() {
 int AWrapGen::show_tab(int i) {
 	BXW_GET; if (i<0) i=WR_TAB; else if (i==WR_TAB) return 0; else WR_TAB=i;
 	gui2.setwin(w_oid(), 'w'); gui2.wupd_0('Y', ".W"); gui2.c1(48+i);
-	return show_tab_2(bxw_rawptr, i); }
+	switch(i) {
+		case 0: w_tab0(0xaaaaa); return 0;
+		case 1: w_a20(-1); return 0;
+		case 2: return 0; // TODO: conf
+		default: return show_tab_2(bxw_rawptr, i);
+	}}
 
 void AWrapGen::box_window() {
 	gui2.cre(w_oid(), 'w'); gui2.own_title(); show_tab(-1); w_mini(); w_gmd();
@@ -924,8 +929,8 @@ int AWrapGen::mini(char *to) {
 }
 
 void AWrapGen::w_a20(int flg) { int k; gui2.setwin(w_oid(),'w'); 
-	if (flg&(k=WRF_W_CH2 )) gui2.wupd_i1('Y', !!(m_bflg&k),  20);
-	if (flg&(k=WRF_W_PLOT)) gui2.wupd_i1('Y', !!(m_bflg&k),  21); }
+	if (flg&(k=WRF_W_CH2 )) gui2.wupd_i1('Y', !!(m_bflg&k),  10);
+	if (flg&(k=WRF_W_PLOT)) gui2.wupd_i1('Y', !!(m_bflg&k),  11); }
 
 void AWrapGen::w_mini() {
 	if (wnfl()) gui2.setwin(w_oid(), 'w'), gui2.wupd_c0('w', 's'), gui2.bxmini(this);
@@ -1243,7 +1248,7 @@ int DWrapGen::sob_from(int ix, BoxGen * bx0, int bxf) {
 int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
 	int ec; switch(ent->i3f) {
 		case 1:
-			ent->plttwwii = 0x6b775910;
+			ent->plttwwii = 0x6b775924;
 			WrapAutoVol * av; av = SOB_RW(sob)->avol_rw();
 			if (arg && *arg && *arg!='w') {
 				if ((ec = av->parse_dim(arg))<0) return ec;
@@ -1351,18 +1356,15 @@ int DWrapGen::av_guiconf(int c, const char * s) {
 		default: return BXE_UCMD;
 	}
 	intv_cmd_uc(WR_AVCONF+i, s, 1, k&255, k>>8);
-        if (wnfl() && WR_TAB==1) w_avol(1<<i, WR_AVCONF);
+        if (wnfl() && WR_TAB==3) w_avol(1<<i, WR_AVCONF);
 	return 0;
 }
 
 void DWrapGen::w_avol(int f, unsigned char * s) { gui2.setwin(w_oid(), 'w');
-	BVFOR_JM(f) gui2.wupd_i('Y', s[j], j+10); }
+	BVFOR_JM(f) gui2.wupd_i('Y', s[j], j+30); }
 
 int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
-	case 0: w_tab0(0xaaaaa); return 0;
-	case 1: w_avol(63, WR_AVCONF); return 0;
-	case 2: w_a20(-1); return 0;
-	case 4: return 0; // TODO: conf
+	case 3: w_avol(63, WR_AVCONF); return 0;
 	default:return BXE_CENUM;
 }}
 
