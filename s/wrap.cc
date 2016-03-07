@@ -266,6 +266,7 @@ class AWrapGen : public BoxGen {
 		inline void wdat_cons_aw(sthg * bxw_rawptr) { WR_TAB=0; WR_WLG=0; WR_SLFLG=64; }
 		inline int add2ctl(int mxbi, int mxky) {
 			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
+		int save2_aw(SvArg * sv);
 		void gr_rgbc() { char buf[4]; gui2.c1('M'); get_nm2(buf); gui2.sn(buf, 2); 
 			         gui2.sn(eff_rgb(), 6); }
 		int plot_t(double t0, double t1, int n);
@@ -860,6 +861,16 @@ int AWrapGen::aux_window() {
 	return 16*'#'+9;
 }
 
+int AWrapGen::save2_aw(SvArg * sv) {
+	BXSV2_HEAD; int k, l = 12;
+	char buf[24]; memcpy(buf, "X$G", 3); buf[3] = 51 + 3*!(m_bflg&WRF_NOCON);
+	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
+	if ((k=m_bflg&3)) memcpy(buf+l, "\nX$m", 4), buf[16] = 48 + (m_bflg&3), l = 17;
+	buf[l] = 10; CHKERR(f->sn(buf, l+1));
+	if ((k=m_node->etc()->i[0])) { CHKERR(sv->out->pf("X$T%x\n", k)); }
+	return r;
+}
+
 void AWrapGen::w_tlim(int f) {
 	int k = m_node->etc()->i[0], t = k&INT_MAX, mf = k<0;
 	gui2.setwin(w_oid(), 'w'); 
@@ -1292,14 +1303,9 @@ int DWrapGen::save_sob(SvArg *p) { switch(p->st) {
 }}
 
 int DWrapGen::save2(SvArg * sv) {
-	BXSV2_HEAD; int k, l = 12;
-	char buf[24]; memcpy(buf, "X$G", 3); buf[3] = 51 + 3*!(m_bflg&WRF_NOCON);
-	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
-	if ((k=m_bflg&3)) memcpy(buf+l, "\nX$m", 4), buf[16] = 48 + (m_bflg&3), l = 17;
-	buf[l] = 10; CHKERR(f->sn(buf, l+1));
-	if (m_sfbx[0]) { CHKERR(sv->out->sn("X$b", 3)); CHKERR(m_sfbx[0]->node()->sv_path(10)); }
-	if (m_sfbx[1]) { CHKERR(sv->out->sn("X$>", 3)); CHKERR(m_sfbx[1]->node()->sv_path(10)); }
-	if ((k=m_node->etc()->i[0])) { CHKERR(sv->out->pf("X$T%x\n", k)); }
+	BXSV2_HEAD; CHKERR(save2_aw(sv));
+	if (m_sfbx[0]) { CHKERR(f->sn("X$b", 3)); CHKERR(m_sfbx[0]->node()->sv_path(10)); }
+	if (m_sfbx[1]) { CHKERR(f->sn("X$>", 3)); CHKERR(m_sfbx[1]->node()->sv_path(10)); }
 	return r;
 }
 
