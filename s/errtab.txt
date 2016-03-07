@@ -233,5 +233,6 @@ TKE_WTF      you just have found a bug (trk)
 TKE_NOROOM   only 16 boxes can be at the same track position
 TKE_RANGEI   track line out of range (exp. 16...4079)
 TKE_RANGEJ   track pos. out of range (exp. 0...2147483520)
+TKE_INVCUT   invalid trk/cut time op. (BUG)
 S6__________ __________________________________________________________(BUG)__
 ERRTAB_LAST  this error message is supposed to be invisible (BUG)

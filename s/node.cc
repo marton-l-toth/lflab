@@ -77,7 +77,7 @@ class TBoxNode : public ABoxNode {
 		virtual int add(ANode * that, const char * nm, int i = -1, int j = -1);
 		virtual int rm(ANode * that);
 		void chk_ord(ANode * p, ANode *q, const char * s);
-		void do_ins(ANode * q, int i, int j, int tlim, ANode *nx);
+		void do_ins(ANode * q, int i, int j, ANode *nx);
 		void do_cut(ANode * q);
 		void ins_guard(ANode * that, int j, ANode * nx);
 };
@@ -413,16 +413,6 @@ int ANode::start_job(int ix, char * arg, int flg) {
         if (ec>=0) m_winflg &= ~WF_JOB5, m_winflg |= 1 + ((ec&31)<<24);
         return ec;
 }
-
-int ANode::tlim() const { switch(m_u24.s[1]) {
-		case 'c': return m_u24.c.tlim;
-		case 't': return m_u24.t.tlim;
-		default:  return 0;  }}
-
-int ANode::set_tlim(int t) { switch(m_u24.s[1]) {
-	case 'c': return m_u24.c.tlim = t, 0;
-	case 't': return m_u24.t.tlim = t, 0;
-	default:  return NDE_NOTLIM; }}
 
 int ANode::sv_cre(int flg) {
         if (!m_up) return NDE_NOROOT;
@@ -817,11 +807,11 @@ int ClipNode::add(ANode * that, const char * nm, int i, int j) {
 		if (ix < 0 && (ix = __builtin_ffs(~m_map)-1) < 0) return NDE_WTF;
 		m1 = 1u << ix;
 	}
-	int tlim = that->tlim(); RMTHAT; m_map |= m1;
+	RMTHAT; m_map |= m1;
 	if (ix<0 || ix>31) bug("clip/add: ix=%d", ix);
 	m_eh[ix] = (unsigned short) (that->m_id >> 8);
 	m_el[ix] = (unsigned char) (that->m_id & 255);
-	that->m_u24.c.tlim = tlim; that->m_u24.c.ct = 'c'; that->m_u24.c.i = ix; that->m_up = this;
+	that->m_u24.c.ct = 'c'; that->m_u24.c.i = ix; that->m_up = this;
 	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, that);
 	if (winflg(8) || (i&NOF_FGUI)) show_newbox(ent_j(ix));
 	return sel(ix);
@@ -1140,7 +1130,7 @@ ANode * TBoxNode::sn(const char **pp) {
 	int i, j, ec = trkn_parse(&i, &j, pp);
 	return ec<0 ? 0 : find_ijf(i, j, 0); }
 
-void TBoxNode::do_ins(ANode * q, int i, int j, int tlim, ANode *nx) {
+void TBoxNode::do_ins(ANode * q, int i, int j, ANode *nx) {
 	ANode * pv=0; trk_24 *ti, *tn;
 	if (!nx || !(pv=(tn=&nx->m_u24.t)->pv)) return bug("trk/do_ins: nx=%p, pv=%p", nx, pv);
 	ti = &q->m_u24.t; pv->m_next = tn->pv = q; 
@@ -1163,7 +1153,7 @@ int TBoxNode::rm(ANode * that) {
 
 int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
 	int ty = that->m_u24.c.ty; if (ty!='w') return NDE_EXPWRAP;
-	int k, ec, sf = !!(i&NOF_STRICT), wf = m_winflg & 2048, tlim = that->tlim();
+	int k, ec, sf = !!(i&NOF_STRICT), wf = m_winflg & 2048;
 	if (!(i&NOF_PARSE)) i&=NOF_IDX; else if ((ec = trkn_parse(&i, &j, &nm)) < 0) return ec;
 	if ((unsigned int)(i-16)>4079u) return TKE_RANGEI;
 	if ((unsigned int)(j) > 2147483520u) return TKE_RANGEJ;
@@ -1180,7 +1170,7 @@ iok:    ;}
 			  	    if (wf)trk_cond_pm(m_box, that, '-');
 				    that->m_u24.t.i = i; that->m_u24.t.j = j;	
 				    chk_ord(that->cth()->pv,that,"lmv1"); chk_ord(that,that->next(),"lmv2"); }
-	else { if  (debug_flags&DFLG_TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, tlim, nx); }
+	else { if  (debug_flags&DFLG_TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
 	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+'); return 0;
 }
 
@@ -1191,7 +1181,7 @@ void TBoxNode::ins_guard(ANode * that, int j, ANode * nx) {
 	nx = find_ijf(th->i, j, 1, nx);
 	if (nx==that || nx->cth()->pv==that) return (void) (that->m_u24.t.j = j);
 	if (that->m_next) do_cut(that); 
-	do_ins(that, th->i, j, 0, nx);
+	do_ins(that, th->i, j, nx);
 }
 
 void TBoxNode::chk_ord(ANode * p, ANode *q, const char * dsc) {
@@ -1317,11 +1307,12 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'C':           nd = new (ANode::aN()) ClipNode(); break;
 		case 'D': case 'd': nd = new (ANode::aN()) NDirNode(); break;
 		case 'w': nd = bnd = new (ANode::aN()) LBoxNode('w'); sbf = setbox_wrap; break;
-		case 'W': nd = bnd = new (ANode::aN()) LBoxNode('w'); sbf = setbox_wrap_qcp; break;
 		case 'g': nd = bnd = new (ANode::aN()) LBoxNode('g'); sbf = setbox_graph; break;
 		case 'c': nd = bnd = new (ANode::aN()) LBoxNode('c'); sbf = setbox_calc; break;
 		case '_': nd = bnd = new (ANode::aN()) LBoxNode('_'); sbf = sb_btin; break;
 		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk; break;
+		case 'W': nd = bnd = new (ANode::aN()) LBoxNode('w');
+			  memcpy(bnd->etc(), from->node()->etc(), 8); sbf = setbox_wrap_qcp; break;
 		case '!': nd	   = new (ANode::aN()) TGuardNode(); 
 			  log("BUG: Node::mk(tguard)"); gui2.errq_add(NDE_WTF); break;
 		default: return NDE_UTYPE;

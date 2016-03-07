@@ -90,9 +90,9 @@ struct SvArg {
 	int nxup(int x);
 };
 
-struct trk_24 { char ty, ct; short i; int j; ANode * pv; int tlim, rsrv; }; 
+struct trk_24 { char ty, ct; short i; int j; ANode * pv; int rsrv[2]; }; 
 struct dir_24 { char ty, ct, n, s[21]; };
-struct clp_24 { char ty, ct, i, rs1; int tlim, rs16[4]; };
+struct clp_24 { char ty, ct, i, rsrv[21]; };
 
 class ANode {
         public: // static
@@ -185,8 +185,6 @@ class ANode {
                 void set_job_result(int ix3, int res);
                 int kill_job(int ix, int ec = JQE_KILL) { return jobq.kill(this, ix, ec); }
 		const trk_24* cth() const { return &m_u24.t; }
-		int tlim() const;
-		int set_tlim(int t);
         protected:
                 ANode() : m_winflg(0), m_visitor(0), m_up(0), m_next(0) { }
                 virtual int add(ANode * that, const char * nm, int i = NOF_PARSE, int j = -1) = 0;
@@ -447,6 +445,7 @@ class ABoxNode : public ANode {
 		int get_ionm(char *to, int io, int j) { return m_ui.ro()->m_nm[io&1].ro()->get_nm(to, j); }
 		int dsc(char * to);
 		void ab_debug(int flg);
+		sthg * etc() { return &m_etc; }
 	protected:
 		ABoxNode(int ty) : m_box(0), m_ef0(0), m_efz(0), m_et0(0), m_etz(0) { m_u24.s[0] = ty; }
 		virtual void del2();
@@ -464,6 +463,7 @@ class ABoxNode : public ANode {
 		unsigned char * rgb_rw();
 		BoxGen * m_box;
 		BoxEdge *m_ef0, *m_efz, *m_et0, *m_etz;
+		sthg m_etc;
 		SOB_p<BoxUI> m_ui;
 }; 
 

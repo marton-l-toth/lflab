@@ -56,6 +56,7 @@ class TrackModel : public BoxModel {
 class TrackGen : public BoxGen {
 	public:
 		friend void track_init();
+		friend int trk_cut_time(BoxGen *bx, int t);
 		TrackGen(ABoxNode * nd, ANode * g0, ANode * g1);
 		virtual int n_in () const { return 6; }
 		virtual int n_out() const { return 2; }
@@ -211,7 +212,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 		for (; vti>nextvt; nd=nd->next(), nextvt=nd->cth()->j) {
 			int ci = nd->cth()->i; if (ci>15) {
 				if (nd->cl_id()!='w') return unexp_node(nd);
-				wrap_2mx_txdlv(static_cast<ABoxNode*>(nd)->box(), m_mxid, 0, i, 0, 0);
+				wrap_nd_2mx(static_cast<ABoxNode*>(nd), m_mxid, *bpm, i);
 				if (debug_flags & DFLG_TRK) log("trk2mx: %d", m_mxid);   continue; }
 			if (ci==15) return (void) (m_md = 3);
 			if (nd!=m_tn) continue; 
@@ -282,7 +283,7 @@ int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y
 	int ec; switch(c) {
 		case '1': return (TR_SEL_ID=id) ? sel0w(bxw_rawptr, nd->cth()->i, nd->cth()->j)
 			  			: sel0w(bxw_rawptr,y, x),  w_sel(bxw_rawptr);
-		case '4': return nd ? wrap_2mx_txdlv(nd->box0(), 0, 0, 0, 2*sample_rate, 0) : EEE_NOEFF;
+		case '4': return nd ? wrap_nd_2mx(static_cast<ABoxNode*>(nd),0,.1*(double)m_bp10m,0):EEE_NOEFF;
 		case '6': return nd ? nd->draw_window(0x1b) : BXE_NOARG;
 		case '9': return nd ? nd->draw_window(0x19) : BXE_NOARG;
 		case 'C': return TR_SEL_ID ? Node::copy(ANode::lookup_n_q(TR_SEL_ID), m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;
@@ -472,6 +473,12 @@ ANode * trk_bkm_find(BoxGen * abx, int j) { return static_cast<TrackGen*>(abx)->
 void trk_bkm_add(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_add(nd); }
 void trk_bkm_rm(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_rm(nd); }
 int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*>(abx)->cond_pm(nd, pm); }
+
+int trk_cut_time(BoxGen *bx, int t) {
+	ABoxNode * p = bx->node();  if (memcmp(p->cth(), "wt", 2)) return TKE_INVCUT;
+	int bp10m = static_cast<TrackGen*>(static_cast<ABoxNode*>(p->up())->box())->m_bp10m;
+	p->etc()->i[0] = (int)lround((double)t * (double)bp10m*.1/natural_bpm);  return 0; }
+		
 int trk_glob_paste(BoxGen *bx, int nof) { return !trgp_node ? EEE_NOEFF : 
 	Node::mk(0, trgp_node, 0, 'W', trgp_i|nof, trgp_j, bx); }
 

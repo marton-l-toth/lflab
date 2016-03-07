@@ -5,8 +5,8 @@
 #include "glob.h"
 #include "wrap.h"
 
-class BoxGen;
-int box_mxc_notify(BoxGen *p, int ky, int flg), box_set_tlim(BoxGen *p, int t);
+class BoxGen; 
+int box_mxc_notify(BoxGen *p, int ky, int flg), trk_cut_time(BoxGen *p, int t);
 typedef void (*tfunini_t) (double *, int, int);
 typedef void (*tfunmul1_t) (double *, double *, int);
 typedef void (*tfunmul2_t) (double *, double *, double *, int);
@@ -111,7 +111,7 @@ struct MxItem {
 		struct { BoxModel * m; short fi[120]; } m;
 		struct { BoxInst * bxi; int flg; unsigned char dat[224]; } l;
 	} u;
-	void b_ini(const char * updnnino, const double * arg, int delay);
+	void b_ini(const char * updnnino, const double * arg, int delay, int tlim);
 	int b_calc(double *to1, double * to2, double * tmp, int n);
 	int b_evp(double *p, double *q, int n);
 	void b_ccut();
@@ -152,7 +152,7 @@ static void trec_free(int j) { trec_bx[j] = 0; trec_bi[j] = *trec_bi; *trec_bi =
 static void trec_fin_1(int j) { wrap_set_trec(trec_bx[j], 0); trec_free(j); }
 static void trec_fin_2(MxItem * b, int j) { b->u.b.trec = 0, trec_fin_1(j); }
 static void trec_fin_t(MxItem * b, int j, int t) {
-	box_set_tlim(trec_bx[j],t); b->u.b.trec = 0; trec_free(j); }
+	trk_cut_time(trec_bx[j],t); b->u.b.trec = 0; trec_free(j); }
 
 /////// alloc / aux //////////////////////////////////////////////////////
 
@@ -225,9 +225,9 @@ static void mx_fdel(MxItem * p) { p->f_reset(); p->u.f.in.del2(); mx_free(p); }
 
 /////// box /////////////////////////////////////////////////////////
 
-void MxItem::b_ini(const char * updnnino, const double * arg, int delay) {
+void MxItem::b_ini(const char * updnnino, const double * arg, int delay, int tlim) {
 	u.b.flg = (updnnino[3])>1; int t3d = sec2samp(arg[4]);
-	u.b.t1 = sec2samp(arg[2]); u.b.t2 = sec2samp(arg[3]); 
+	u.b.t1 = sec2samp(arg[2]); u.b.t2 = tlim ? min_i(sec2samp(arg[3]), tlim) : sec2samp(arg[3]);
 	     u.b.up = TFunTab::ini(u.b.upx, updnnino[0], u.b.t1, 0);
 	if ((u.b.dn = TFunTab::ini(u.b.dnx, updnnino[1], t3d   , 1))) u.b.t3 = u.b.t2 + t3d;
 	else u.b.t3 = 0, u.b.dnx[0] = arg[4];
@@ -566,7 +566,7 @@ int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel) {
 }
 
 // arg: v1 v2 u h d lr x[0] ... x[ni-1]
-int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * arg, int ocf, int delay) {
+int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * arg, int ocf,int delay,int tlim){
 	if (trgi & ~65535) return MXE_WRONGID;
 	MxItem *up = mx_ptr(trgi); 
 	int ty = up->m_ty, ff = (ty=='f'), o2f = (updnnino[3]-1);
@@ -584,7 +584,7 @@ int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * ar
 		if (!(*prf&1) && ((*pff&3)>1 || fabs(up->u.f.lr-.25*M_PI)>=1e-12)) *prf |= 1; }
 	else if (o2f) { pv[0] = pv[1] = v0; *prf |= 1; }
 	else { pv[0] = v0*cos(lr); pv[1] = v0*sin(lr); if (!(*prf&1) && fabs(lr-.25*M_PI)>=1e-12) *prf|=1; }
-	rn->b_ini(updnnino, arg, delay);
+	rn->b_ini(updnnino, arg, delay, tlim);
 	if (debug_flags & DFLG_MX) log("addbx(%d) res: %d, ocfg:0x%x, x8:0x%x", trgi, rn->m_id, rn->u.b.ocfg, rn->m_x8);
 	return rn->m_id;
 }
