@@ -4,6 +4,7 @@
 #include "guistub.h"
 #include "asnd.h"
 #include "util2.h"
+#include "cfgtab.inc"
 
 #define TR_SEL_ID (bxw_rawptr[0].i[1])
 #define TR_SEL_XY (bxw_rawptr[1].i)
@@ -15,6 +16,8 @@ static long long rec_t0;
 static int rec_line, rec_x0, rec_mode;
 static double rec_rate;
 static ANode * trgp_node = 0; static int trgp_i, trgp_j;
+static double trk_ctx_bpm = 60.0;
+static int trk_ctx_n = 0;
 
 struct BKMK128 { int n, rsrv; unsigned char * lo; unsigned short * hi[4]; unsigned int bv[4];
                  int find(int i), set(int i, int v); void del(); };
@@ -201,10 +204,7 @@ void TrackInst::unexp_node(ANode * nd) {
 void TrackInst::mxprep(int bflg, double* bpm, int n) {
 	ANode * nd = m_pn -> next();
 	int vti = m_pn->cth()->j, nextvt = nd->cth()->j, vti_d = nextvt - vti;
-	double vtf = m_vtf, vtlim = natural_bpm * (double)vti_d;;
-	// vti+x/nbpm > nextvt  
-	// x/nbpm > nextvt-vti
-	//   x > (nextvt-vti)*nbpm
+	double vtf = m_vtf, vtlim = natural_bpm * (double)vti_d;
 	for (int i=0; i<n; i++, vtf+=*bpm, bpm+=bflg) {
 		if (vtf <= vtlim) continue;
 		int k = max_i(vti_d+1, (int)ceil(vtf * natural_bpm_r));
@@ -229,14 +229,19 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 
 int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
 	//log("trk/calc: md=%d, n=%d", m_md, n);
-	int ec;switch (m_md) {
-		case 0: if ((ec = ini(inb))<0) return m_md = 4, ec;  sane(111);
-		case 1: case 2: mxprep(inflg&1, *inb, n);
+	int ec, bpm_f = inflg&1; 
+	double sbpm, cbpm, *bpm = (bpm_f||**inb>0) ? *inb : (cbpm=-**inb*trk_ctx_bpm, &cbpm);
+	if (trk_ctx_n >= CFG_TRK_NLEV.i) return outb[0][0] = outb[1][0] = 0.0, 0;
+	switch (m_md) {
+		case 0: if ((ec = ini(inb))<0) return m_md = 4, ec;
+		case 1: case 2: mxprep(bpm_f, bpm, n);
 		case 3: break;
 		case 4: outb[0][0] = outb[1][0] = 0.0; return 0;
 		default: bug("trk: invalid m_md (%d)", m_md); return 0;
 	}
-	switch(ec = mx_calc(m_mxid, outb[0], outb[1], n, 0)) {
+	++trk_ctx_n; sbpm = trk_ctx_bpm; trk_ctx_bpm = *bpm; // TODO: var bpm, time? 
+	ec = mx_calc(m_mxid, outb[0], outb[1], n, 0); --trk_ctx_n; trk_ctx_bpm = sbpm;
+	switch(ec) {
 		case 0:	if (m_md==3 && mx_r_isemp(m_mxid)) m_md=4, mx_del(m_mxid), m_mxid=-1;
 			outb[0][0] = outb[1][0] = 0.0; return 0;
 		case 1: if (outb[1]!=junkbuf) memcpy(outb[1], outb[0], 8*n);

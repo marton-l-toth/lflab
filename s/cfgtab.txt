@@ -18,4 +18,5 @@ AO_ACTION   |i|0          |0   |3    |aoact |default action for tmp audio (0:ask
 AO_TLIM     |i|60         |15  |900  |aolim |time limit for (auto mode) audio writing
 AO_DIR      |s|           |0   |255  |aodir |directory for tmp. audio output (default /run/shm or /tmp)
 WAV_DIR     |s|           |0   |255  |wvdir |directory for WAV / FLAC output (default is home dir.)
+TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
