@@ -3275,7 +3275,7 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 #define ECHK(v,e) if ((v)<0) return perror(e), -1
 #define SCHK(v,s,l) if (memcmp((v),(s),(l))) return fprintf(stderr,"help: '%s' expected\n", (s)), -1
 
-#define HFUN(L,R) inline int hfun##L(const char *s, int m) {               \
+#define HFUN(L,R) inline static int hfun##L(const char *s, int m) {        \
         unsigned int r = 0; while (*s) r = (r<<L) + (r>>R) + *(s++);        \
         (m<65536) && (r^=(r>>16), m<256) && (r^=(r>>8), m<16) && (r^=(r>>4));\
         return m & (int)r; }
