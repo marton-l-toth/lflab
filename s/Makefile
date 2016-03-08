@@ -67,7 +67,7 @@ lf.bb:  bb.c uc0.h
 help.txt: helpm.txt $(SRCS)
 	cp helpm.txt help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
-deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf COPYING deb.sh 
+deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
 	./deb.sh -v
 
 clean:
