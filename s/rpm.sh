@@ -11,7 +11,7 @@ rm -rf $rpmdir
 mkdir -p $rpmdir/SOURCES
 tar -C$tmpr -cf $rpmdir/SOURCES/lf_pk.tar $nmv
 dscf=$tmpr/$nm-$vers2-dsc.txt
-sum=$(echo -n $(head -2 $dscf | tail -1))
+sum=$(echo -n $(head -2 lf.dsc.txt | tail -1))
 tail -n +4 lf.dsc.txt > $dscf
 
 rpmbuild -bb -D "_topdir $rpmdir" -D "LF_DIR $trgdir" -D "LF_DSC $dscf" -D "LF_NM $nm" \
