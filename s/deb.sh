@@ -3,6 +3,7 @@
 set -e
 rm -f deb
 . pkg.sh
+libdep=$(ldd $bin | awk '/=>.*\//{print $3}' | sort -u)
 arch=$(dpkg-architecture -qDEB_HOST_ARCH)
 pkgnm=$nm-$vers-$arch
 pkgdir=$tmpr/$pkgnm

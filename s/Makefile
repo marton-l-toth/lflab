@@ -70,6 +70,9 @@ help.txt: helpm.txt $(SRCS)
 deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
 	./deb.sh -v
 
+rpm:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING rpm.sh lf.spec pkg.sh
+	./rpm.sh 
+
 clean:
 	rm -f $(OBJS) lf.gui lf.bin lf.bb lf help.txt cfgtab.inc errtab.inc deb lflab-*.deb contrib.cc
 
