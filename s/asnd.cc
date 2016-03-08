@@ -50,7 +50,7 @@ int ASnd::start() {
 	int e=-1, us = 1000 * CFG_AU_TRY_MS.i, sclim = CFG_AU_CLK.i ? 999999 : CFG_AU_CLKLIM.i;
 	for (int i=CFG_AU_TRY_N.i; i>0; u_sleep(us), i--, sclim*=5, sclim>>=2)
 		if ((e=start1(sclim))>=0) return m_state = 1, w(1024), e;
-	return err(e, "start", AUE_START), w(-1), close();
+	return err(e, "start", AUE_START), w(-1), AUE_START;
 }
 
 int ASnd::start1(int sc_lim) {
@@ -92,9 +92,11 @@ int ASnd::set_clk(int lim) {
 	struct timeval tv0, tv1;
 	if (gettimeofday(&tv0, 0)<0) return log("gettimeofday failed"), -1;
 	if (!m_hnd) return m_clk_sec = tv0.tv_sec, m_clk_usec = tv0.tv_usec, m_clk_buf = m_t_half, 0;
-	int e1 = snd_pcm_writei(m_hnd, zeroblkC, 64); if (e1<0) return err(e1, "write 64*zero"), -1;
-	int av = avail();
-	if (gettimeofday(&tv1, 0)<0) return log("gettimeofday failed"), -1;
+	int av, e1 = snd_pcm_writei(m_hnd, zeroblkC, 64); if (e1<0) return err(e1, "write 64*zero"), -1;
+	for (int k=5; k>0; k++) { if ((av = snd_pcm_avail(m_hnd))>=0) goto av_ok;
+			          if ((e1 = snd_pcm_recover(m_hnd, av, 1))) return err(e1, "setclk/av/re"); }
+	return err(av, "setclk/av/5x");
+av_ok:	if (gettimeofday(&tv1, 0)<0) return log("gettimeofday failed"), -1;
 	m_buftot = m_bsiz_ref ? m_bsiz_ref : av+64;  m_clk_buf = m_buf64;
 	m_clk_sec = tv0.tv_sec; m_clk_usec = tv0.tv_usec; m_clk_frac = 0.0;
 	m_ca_min = m_ca_max = m_ca_acc = m_ca_cnt = 0; m_ev_arg = 'K';
@@ -180,7 +182,7 @@ int ASnd::recover(int ec, const char * from, int ec2) {
 		return log("snd: %s: %s (cannot recover from: %s)", from, snd_strerror(ec), s0), close(),
 		       gui2.errq_add(ec2), -1;
 	log("snd: %s: recovered from %s", from, s0); gui2.errq_add(AUE_RECOVER);
-	int e = set_clk(10000); if (e<0) { return err(e, "recover/clk", AUE_RE_CLK), close(), start(), 0; }
+	int e = set_clk(10000); if (e<0) { return err(e, "recover/clk", AUE_RE_CLK), close(), -(start()<0); }
 	return 0;
 }
 
