@@ -10,6 +10,7 @@
 #define TR_SEL_XY (bxw_rawptr[1].i)
 #define TR_V_XY01 (bxw_rawptr[2].s)
 #define TR_UPP    (bxw_rawptr[3].s[0])
+#define DBGC (debug_flags&DFLG_TRK)
 
 BoxGen * trk_rec_trg = 0;
 static long long rec_t0;
@@ -169,11 +170,10 @@ void BKMK1M::set(int i, int v) {
 }
 
 TrackInst::TrackInst (TrackModel * m) : m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0) {
-	log("trki: hello");
-	BoxModel::ref(m); m_mxid=mx_mkroot(); }
+	if (DBGC) log("trki: hello"); BoxModel::ref(m); m_mxid=mx_mkroot(); }
 
 TrackInst::~TrackInst() { if (m_mxid>0) mx_del(m_mxid); 
-	log("trki: bye"); tgn_del(m_m->tn, m_pn); tgn_del(m_m->tn, m_tn); tgn_del(m_m->tn, m_fn);
+	if (DBGC) log("trki: bye"); tgn_del(m_m->tn, m_pn); tgn_del(m_m->tn, m_tn); tgn_del(m_m->tn, m_fn);
 	BoxModel::unref(m_m); }
 
 #define VTARG(x) ((int)lround(40320.0*inb[x][0]))
@@ -213,7 +213,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 			int ci = nd->cth()->i; if (ci>15) {
 				if (nd->cl_id()!='w') return unexp_node(nd);
 				wrap_nd_2mx(static_cast<ABoxNode*>(nd), m_mxid, *bpm, i);
-				if (debug_flags & DFLG_TRK) log("trk2mx: %d", m_mxid);   continue; }
+				if (DBGC) log("trk2mx: %d", m_mxid);   continue; }
 			if (ci==15) return (void) (m_md = 3);
 			if (nd!=m_tn) continue; 
 			if (!m_rpc) return (void)(m_md=3);
@@ -228,7 +228,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 }
 
 int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
-	//log("trk/calc: md=%d, n=%d", m_md, n);
+	if (debug_flags & DFLG_TRK_C) log("trk/calc: md=%d, n=%d", m_md, n);
 	int ec, bpm_f = inflg&1; 
 	double sbpm, cbpm, *bpm = (bpm_f||**inb>0) ? *inb : (cbpm=-**inb*trk_ctx_bpm, &cbpm);
 	if (trk_ctx_n >= CFG_TRK_NLEV.i) return outb[0][0] = outb[1][0] = 0.0, 0;
@@ -413,7 +413,7 @@ int TrackGen::cond_pm(ANode * wb, int pm) {
 	if (pm=='+' && !wb->box0()) return wb->winflg_or(8), 0;
 	BXW_GET; const trk_24 * th = wb->cth();
 	if (pm=='-' && wb->id()==TR_SEL_ID) TR_SEL_ID = 0, w_sel(bxw_rawptr);
-	if (debug_flags & DFLG_TRK) log("trk/cond_pm: i=%d, rng: %d...%d j=%d, rng: %d...%d",
+	if (DBGC) log("trk/cond_pm: i=%d, rng: %d...%d j=%d, rng: %d...%d",
 			th->i, 128*TR_V_XY01[2],         128*TR_V_XY01[3]+127,
 			th->j,    (TR_V_XY01[0]<<18)-20000, (TR_V_XY01[1]<<18)+262143);
 	if (th->i<128*TR_V_XY01[2] || th->i>128*TR_V_XY01[3]+127) return 0;

@@ -35,6 +35,7 @@
 #define WRF_V10    512        // v11
 #define WRF_V11A   768        // v11
 #define WRF_GRMODE 3	      // bx
+#define DBGC (debug_flags&DFLG_WRAP)
 
 #define WR_AVCONF ((unsigned char*)(bxw_rawptr[1].c))
 #define WR_TAB   (bxw_rawptr[2].c[6])
@@ -110,7 +111,7 @@ class WrapCore : public SOB {
 		typedef struct { short * pk[4]; unsigned int n5, bv[4]; } key_t;
 		WrapCore(int uarg) : SOB(uarg) {}
 		WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd) { 
-			log("wrcore copy: %p -> %p", that, this);
+			if (DBGC) log("wrcore copy: %p -> %p", that, this);
 			memcpy(tf01, that->tf01, 16); memcpy(grdim, that->grdim, 10); }
 		~WrapCore() { del_keytab(); }
 		void ini_default(int _) { tf01[0]=tf01[2]=0.0; tf01[1]=1.0; tf01[3]=22050.0;
@@ -213,7 +214,8 @@ class WrapSOB : public SOB {
 		void prep11(double *v11, int flg, const char * i8);
 		WrapScale * sit_ro(int tix) { return m_scl[(tix>>6)&1].ro()->item(tix, 0); }
 		WrapScale * sit_rw(int tix) { return SOB_RW(scl[(tix>>6)&1])->item(tix, 1); }
-		int sit_cmd(int tix, const char * s) { log("sit_cmd: 0x%x, \"%s\"", tix, s);  return SOB_RW(scl[(tix>>6)&1]) -> cmdi(tix, s); }
+		int sit_cmd(int tix, const char * s) { if (DBGC) log("sit_cmd: 0x%x, \"%s\"", tix, s); 
+						       return SOB_RW(scl[(tix>>6)&1]) -> cmdi(tix, s); }
 		void unflg();
 		void wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen * bx);
 		SOB_RW_F0(core, WrapCore) SOB_RW_F0(avol, WrapAutoVol)
@@ -494,7 +496,7 @@ void WrapScale::wl_2(int flg) { if (flg & 64) gui2.hdbl(m_v0);
 /////// scl-vec /////////////////////////////////////////////////////////////
 
 WrapScVec::WrapScVec(const WrapScVec * that, int arg) : SOB(arg) {
-	log("scvec copy: %p -> %p", that, this);
+	if (DBGC) log("scvec copy: %p -> %p", that, this);
 	memcpy(updn, that->updn, 2); memcpy(qs, that->qs, 20);
 	for (int i=0; i<3; i++) { 
 		if (!that->pps[i]) { pps[i] = 0; continue; }
@@ -720,14 +722,14 @@ int WrapAVJob::run1() {
 	mx_clear(m_mxid);
         if (++m_xy12ij[4]<m_xy12ij_lim[4]) return rv; else m_xy12ij[4] = 0;
         if (m_max==0.0) {
-                log("av: max=0 at %d,%d,%d,%d", m_xy12ij[0], m_xy12ij[1], m_xy12ij[2], m_xy12ij[3]);
+                log("ERROR: av: max=0 at %d,%d,%d,%d", m_xy12ij[0], m_xy12ij[1], m_xy12ij[2], m_xy12ij[3]);
 		gui2.errq_add(BXE_AVZERO); return JQE_FAIL; }
         int vi = (int)lround(-46.0 * log(m_max));
         if (vi>32767) vi = 32767; else if (vi<-32767) vi = -32767;
         *(m_trg++) = vi;
         for (int i=3; i>=0; i--)
                 if (++m_xy12ij[i]<m_xy12ij_lim[i]) return rv; else m_xy12ij[i] = 0;
-	log("m_fst = %.13g", m_fst);
+	log("av: m_fst = %.13g", m_fst);
         return JQE_DONE;
 }
 
@@ -744,7 +746,7 @@ int WrapAVReader::line(char *s) {
 /////// main shared obj /////////////////////////////////////////////////////
 
 WrapSOB::WrapSOB(const WrapSOB * that, int uarg) : SOB(uarg) {
-	log("wrsob copy: %p -> %p", that, this);
+	if (DBGC) log("wrsob copy: %p -> %p", that, this);
 	m_core.from(that->m_core); m_avol.from(that->m_avol); m_u8_refcnt |= (that->m_u8_refcnt&0x7f000000);
 	for (int i=0; i<2; i++) m_con[i].from(that->m_con[i]), m_scl[i].from(that->m_scl[i]);
 }
@@ -772,7 +774,7 @@ void WrapSOB::prep11(double *v11, int flg, const char * i8) {
 }
 
 void WrapSOB::wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen *bx) {
-	log("wr/wl: ix0=%d n=%d flg=0x%x", ix0, n, flg);
+	if (DBGC) log("wr/wl: ix0=%d n=%d flg=0x%x", ix0, n, flg);
 	if (n<=0) return;
 	int ix = wr_ixtr(ix0), i = (ix>>6) & 1, j = ix & 63;
 	int skf = flg & WRF_CFILT;
@@ -1249,7 +1251,7 @@ int DWrapGen::set_sf(int ff, BoxGen * bx) {
 }
 
 void DWrapGen::notify_nio(BoxGen * bx) {
-	log("wr%d/notify_nio: %d", id(), bx->id());
+	if (DBGC) log("wr%d/notify_nio: %d", id(), bx->id());
 	int ec = 0, ni, no, flg = (bx==m_sfbx[0]) + 2*(bx==m_sfbx[1]);
 	if (flg&1) m_bflg &= ~0xffc, m_bflg |= 4*(32*bx->n_out()+bx->n_in());
 	if (flg&2) ((no=bx->n_out())==1 && (ni=bx->n_in())) ? 
@@ -1368,7 +1370,7 @@ void DWrapGen::w_col0(int flg) {
 	int wlf = 32 + WRF_CFILT + ((flg&1) << WRF_XFILT_SH); flg &= WRF_PASS; flg |= wlf;
 	int oid = w_oid(), gf1 = gf & 1, ns = (gf&2) ? ((m_bflg>> 2) & 31)     : 0,
 	    				 nf = (gf&4) ? ((m_bflg>>12) & 31) - 1 : 0;
-	log("w_col: gf=%d, ns=%d, nf=%d", gf, ns, nf);
+	if (DBGC) log("w_col: gf=%d, ns=%d, nf=%d", gf, ns, nf);
 	if (gf&3) sob->wl(oid,    32*gf1, 6*gf1+ns, flg, m_xys6, m_sfbx[0]);
 	if (gf&5) sob->wl(oid, 65+31*gf1, 2*gf1+nf, flg, m_xys6, m_sfbx[1]);
 }
@@ -1450,8 +1452,9 @@ int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) 
 	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {
 	BoxGen * bx = bnd->box(); if (!bx) return 0;
-	int tf = bnd->etc()->i[0]; if(tf) { log("nd2mx: tf0=%d, bpm=%g", tf, bpm); if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm);}
-	return log("nd2mx: tf=%d", tf), WARG -> add2mx_txdlv(trg, 0, dly, tf, 0); }
+	int tf = bnd->etc()->i[0]; if(tf){ if (DBGC) log("nd2mx: tf0=%d, bpm=%g", tf, bpm); 
+				           if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm); }
+	if (DBGC) log("nd2mx: tf=%d", tf); return  WARG -> add2mx_txdlv(trg, 0, dly, tf, 0); }
 int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
 AReader * wrap_avreader(BoxGen * bx) { return WARGD -> avreader(); } // TODO: typechk(?)
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {

@@ -18,16 +18,18 @@
 #define DFLG_AUDIO 16
 #define DFLG_PLOT2 32
 #define DFLG_EXPR 64
-#define DFLG_TRK 128
+#define DFLG_TRK  128
 #define DFLG_GUI2 256
 #define DFLG_SAVE 512
 #define DFLG_MX 0x400
 #define DFLG_JQ 0x800 
-#define DFLG_GRTMP 0x1000
+#define DFLG_GRTMP  0x1000
 #define DFLG_RWMIDI 0x2000
-#define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk\n"\
-		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only)"
-
+#define DFLG_WRAP   0x4000
+#define DFLG_TRK_C  0x8000
+#define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk "\
+		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
+		  "4000-wrap 8000-trkcalc"
 extern int glob_flg;
 extern int debug_flags;
 extern int sample_rate;

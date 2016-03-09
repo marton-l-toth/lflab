@@ -68,9 +68,13 @@ class LBoxNode : public ABoxNode {
 class TBoxNode : public ABoxNode {
 	public:
 		virtual ANode * sn(const char **pp);
-		virtual ANode * sn_list(ANode ** pwl) { ANode * dbg; if (pwl) (dbg=trk_bkm_find(m_box, INT_MAX))->m_next = *pwl,
-							   *pwl= trk_bkm_find(m_box, 0),
-							log("TBox->snl: last=%p(0x%x) new=%p", dbg, dbg->m_id,*pwl);	  return 0; }
+		virtual ANode * sn_list(ANode ** pwl) {
+			if (!pwl) return 0;
+			ANode *g1 = trk_bkm_find(m_box, INT_MAX),
+			      *w0 = trk_bkm_find(m_box, 0); 
+			if (debug_flags&DFLG_TRK) log("tb/snl: w0=%p g1=%p pwl=%p", w0, g1, pwl);
+			g1->m_next = *pwl; *pwl = w0; return 0;
+		}
 		virtual void debug(int flg);
 		ANode * find_ijf(int i, int j, int flg, ANode * nd = 0);
 		TBoxNode(int ty) : ABoxNode(ty) {}

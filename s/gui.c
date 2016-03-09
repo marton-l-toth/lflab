@@ -52,6 +52,9 @@
 #define DF_BOXCONF 32
 #define DF_TRK 64
 #define DF_CWLU 128
+#define DF_GRAPH 256
+#define DF_WIDG 512
+#define DF_MENU 1024
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]));
@@ -212,7 +215,7 @@ static int conf_portwid;
 static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
-			     "40:track 80:lookuperr-0x[56]7";
+			     "40:track 80:lookuperr-0x[56]7 100:graph 200:widg 400:menu";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -319,14 +322,12 @@ int smallnum(char * to, double v) {
                 return j; 
         }
         if (v>=(sg ? .0995 : .09995) &&  v < (sg ? 9999.5 : 99999.5)) return sg+sprintf(to+sg, fmt1[sg], v);
-        puts("hello1");
         k = sprintf(buf, fmt2[sg], v);
         for (i=0; i<k; i++) if ((buf[i]|33)=='e') break;
         if (i==k) { memcpy(to+sg, buf, i); buf[i+sg] = '?'; return i+sg+1; }
-        puts("hello2");
         int xp = atoi(buf+i+1) + 18;
         buf[i]='$'; buf[i+1]=0;
-        LOG("xp=%d, buf=\"%s\"", xp, buf);
+        if (dflg & DF_GRAPH) LOG("xp=%d, buf=\"%s\"", xp, buf);
         switch(xp % 3) {
                 case 0: break;
                 case 1:
@@ -1187,7 +1188,7 @@ static int add_dyn(const char * nm, const char * cmd, int x) {
 }
 
 static void lsr_popup(int flg) {
-	LOG("lsr_popup: flg = 0x%x", flg);
+	if (dflg & DF_MENU) LOG("lsr_popup: flg = 0x%x", flg);
 	int k = flg & 3, zf = (flg>>2)&1;
 	if (k==3) { LOG("lsr_popup: invalid ix: 3"); return; }
 	noderef_t * np = lsr_nodes + 32 * k;
@@ -1280,7 +1281,7 @@ static void vbox_show_bv(struct _ww_t * ww, int bv) {
 
 static void upd_flgvec(topwin * tw, const char* s, int n, int oldbv, int newbv);
 static void vbox_cmd(struct _ww_t * ww, const char * arg) {
-	LOG("vbox_cmd=\"%s\"", arg);
+	if (dflg&DF_WIDG) LOG("vbox_cmd=\"%s\"", arg);
 	int k=0; switch(*arg) {
 		case 'W': upd_flgvec(ww->top, "G", 4, VB_LBV(ww), k = 1<<(arg[1]-48)); break;
 		case '.': k = (1<<(arg[1]-48)); break;
@@ -3611,7 +3612,7 @@ static void dagraph_sel(ww_t * ww, int t, int i, int j) {
 }
 
 static void dagraph_draw(ww_t * ww) {
-	LOG("dagraph_draw %dx%d", DA_W(ww), DA_H(ww));
+	if (dflg&DF_GRAPH) LOG("dagraph_draw %dx%d", DA_W(ww), DA_H(ww));
         cairo_surface_t * surf = DA_SURF(ww);
         cairo_t * cr2 = cairo_create(surf);
         cairo_set_source_rgb (cr2, .3, .3, .3);
@@ -3629,7 +3630,7 @@ static void dagraph_draw(ww_t * ww) {
 }
 
 static void dagraph_ini(ww_t * ww, int cd, const char * s) {
-	LOG("dagraph_ini(%d,\"%s\")", cd, s);
+	if (dflg&DF_GRAPH) LOG("dagraph_ini(%d,\"%s\")", cd, s);
 	gr_dat * dat; int m1 = 3*cd + 1;
 	int seq= 0; for(; *s>47 && *s!='_'; s++) seq = 16*seq + hxd2i(*s);
 	if (*s=='_') ++s; else goto ex_;
@@ -3752,7 +3753,7 @@ static void dagraph_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButto
 	if (x<0 || y<0 || x>dat->bxp || y>dat->byp) {
 		LOG("dagraph_click: click outside graph"); return; }
 	char buf[8];
-	LOG("dagraph_click: b%d %d,%d", b9, x, y);
+	if (dflg&DF_GRAPH) LOG("dagraph_click: b%d %d,%d", b9, x, y);
 	int i; gr_node * nd;
 	for (i = 0, nd = dat->node; i<dat->nn; i++,nd++) 
 		if (nd->x0<x && x<nd->x1 && nd->y0<y && y<nd->y1) goto found;
@@ -3765,7 +3766,7 @@ found:
 	else if (y < nd->y02) buf[5] = 42;
 	else buf[5] = 80 + (256*x)/nd->ow8;
 	buf[6] = 0;
-	LOG("dagraph_click: \"%s\"", buf); 
+	if (dflg&DF_GRAPH) LOG("dagraph_click: \"%s\"", buf); 
 	widg_defcmd(ww, buf);
 	return;
 }
@@ -3801,7 +3802,7 @@ static void dagraph_done(ww_t * ww, int cd) {
 	dat->byp = 12 + (int)(dat->scy * dat->by);
 	dat->x0 = 6.0; dat->y0 = (double)dat->byp - 6.0; 
 	dat->scy = -dat->scy;
-	LOG("dagraph_done: sx:%g sy:%g", dat->scx, dat->scy);
+	if (dflg&DF_GRAPH) LOG("dagraph_done: sx:%g sy:%g", dat->scx, dat->scy);
   	int i=0; for (; i<dat->nn; i++) gr_node_geom(dat, i);
 	dagraph_resize(ww, dat->bxp, dat->byp);	
 }
