@@ -397,8 +397,8 @@ A folder can contain up to 32 named objects (of any type).
 Name: up to 20 ASCII characters except dot(.) and dollar sign.
 (up to 20 ASCII characters except dot(.) and dollar sign)
 Folders can be opened by double-clicking on the name or
-clicking on the little arrow. (clipboards can also be opened
-as folders (arrow) but in most cases it is more convenient to
+clicking on the little +/arrow. (clipboards can also be opened
+as folders (+/>) but in most cases it is more convenient to
 open their own window (double-click)).
 ---
 On the bottom, there are buttons for rename/local copy/
@@ -560,10 +560,10 @@ developers!) in a specified time interval, and also the
 frequency spectrum (FFT) in a time interval and freq. range.
 ---
 The four labels below the plot parameters select the config
-line below them: [#] is grid dimensions config, "cfg" is 
-currently defunct, for "av" and "wav" see:
-==> win.icfg.autovol
-==> win.auconv
+line below them: [#] is grid dimensions config, "tlim" is time
+limit (affects only sounds in a track, in beats not seconds)
+==> win.icfg.autovol -- "a.v" tab (auto volume adjust)
+==> win.auconv -- "wav" tab (write to WAV)
 Note: changing grid dimensions can change the selected sound
 (known bug: left col. in scl.grps. is not updated in this case)
 {{{?._wwav}}}
