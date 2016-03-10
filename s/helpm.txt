@@ -538,13 +538,17 @@ On the left column, divide per line can be set, the arrows are
 for scrolling. On the top and bottom (beat #) lines you can
 click for context menus (play/loop some # of beats).
 ---
-every track can be used as a box (in graphs or instruments),
-with BPM and from-to-repeat as input (BPM can be non-constant)
+Every track can be used as a box (in graphs or instruments),
+with BPM and from-to-repeat as input (BPM can be non-constant).
+If you set a negative number "-x" for BPM, the BPM of the
+containing track will be multiplied by x. (so -1.0 means simply
+equal to parent track BPM, useful for track-in-track.)
 ---
 keyboard:
-0...9 and a...v - select sound from curr. p. src. clipboard
 x - cut & select next
 X or backspace - cut & select previous
+0...9 and a...v - select sound from curr. paste src. clipboard
+(that sound can be dragged out of the top right "clip" button)
 {{{?._wwcg}}}
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
