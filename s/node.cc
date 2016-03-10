@@ -289,12 +289,11 @@ NMFUN(nm_T) { *(int*)to = qh4(16*u->t.i)+0xa000000; *(int*)(to+4) = qh4(u->t.j>>
 					            *(int*)(to+8) = qh4(u->t.j&65535); return 12; }
 NMFUN(n2_T) { to[0] = to[1] = '+'; return 2; }
 
-int SvArg::nxup(int x) { 
-	ANode * q = cn -> next();
-	if (flg&SVF_WRAP) goto skip_g;
-	if (q) return cn = q, st = 0, x;
-	if (!cn->winflg(WF_ROOT)) return cn = cn->up(), st = 1, x;
-	flg |= SVF_WRAP; q = wl;
+int SvArg::nxup(int x) {
+	ANode * q;      if (cn->winflg(WF_ROOT)) goto root;
+	q = cn->next(); if (flg&SVF_WRAP) 	 goto skip_g;
+	return q ? (cn = q, st = 0, x) : (cn = cn->up(), st = 1, x);
+root: 	flg |= SVF_WRAP; q = wl;
 skip_g: while (q && q->cl_id()<48) q = q->next(); 
 	return (cn=q) ? (st = 0, x) : 0;
 }
@@ -965,8 +964,10 @@ s5:	CHKERR(sv_cre()); m_winflg |= WF_SVNC; if (debug_flags & DFLG_SAVE) log("svn
 s3:	if ((snl = sn_list(&m0_sv.wl))) log("BUG: unexp. non-wrap subbox 0x%x, skipped", snl->id()); // TODO
 	p->st = 1;
 s1:	if ((ec=m_box->save2(&m0_sv)) < 0) return ec; else r += ec;
+	if (debug_flags & DFLG_SAVE) log("bxsv/s1: 0x%x: from: %d, nx:%p", m_id, m_winflg & WF_SVFR, m_next);
 	if (!(m_winflg & WF_SVFR)) return m0_sv.nxup(r);
 	for (eg = m_et0->fr_n; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg;
+	if (debug_flags & DFLG_SAVE) log("bxsv/s1: 0x%x: ret 0x%p", m_id, m_et0->fr);
 	p->cn = m_et0->fr; p->st = 5; return r;
 edg:	Node::eg_splice(eg); p->st = 2; p->cn = eg->to; return r + 5;
 }
