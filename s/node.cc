@@ -473,7 +473,7 @@ void ANode::sv_start(AOBuf * out, ANode * nd, int flg) {
 	ClipNode::kcp(0)->m_visitor = ++m0_sv.vis; 
 	ClipNode::kcp(0)->m_winflg |= WF_SVNC; 
 	m0_sv.flg = flg; m0_sv.out = out; m0_sv.wl = 0;
-        (m0_sv.rn = m0_sv.cn = nd) -> winflg_or(WF_ROOT);
+        (m0_sv.rn = m0_sv.cn = nd) -> winflg_or(WF_ROOT); nd->winflg_and(~WF_SVFR);
         m0_sv.st = 0;
 }
 
