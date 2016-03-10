@@ -7,7 +7,6 @@ License: GPL 2.0
 URL: %{LF_URL}
 Source0: lf_pk.tar
 
-#BuildRequires:
 Requires: gnuplot graphviz
 %define debug_package %{nil}
 
@@ -31,9 +30,7 @@ ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.lic
 
 %postun
 rm /usr/bin/%{LF_NM} /usr/bin/lf.acv %{LF_DIR}/lf.con %{LF_DIR}/lf.io %{LF_DIR}/lf.lic
+rmdir %{LF_DIR}
 
 %files
 %{LF_DIR}
-
-#%changelog
-
