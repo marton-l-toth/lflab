@@ -1,0 +1,34 @@
+--- quick test ---
+[ ] clean install (remove .lflab), start empty
+[ ] set audio, save cfg, exit, check cfg
+[ ] lflab -iord 1 / t/t1.lf t/tc1.cmd
+[ ] unplot (2 plots disappear)
+[ ] s0-c: append "/2" to y0, remove & close
+[ ] edit r/w graph (e.g. e8 -> list), back, close
+[ ] change bpm
+[ ] stop, close trk-in-trk
+[ ] set autosave to 1min, tlog on, save config, check ini file
+[ ] try to edit r/o graph (errmsg), try to edit 1.a, !e.1 (del, move, setcp)
+[ ] make copies of 1.a (clip, cfg/small, grid) until def.cb is full
+[ ] edit copy of 1.a -> lr:x, open grid
+[ ] lcp emptytrk
+[ ] start rec2wav & rec->emptytrk
+[ ] play 1...,3..., and copy of 1.a
+[ ] stop rec (both)
+[ ] rename emptytrk to rectrk
+[ ] make new wrap (t1.k), set rectrk (shortlist!)
+[ ] write mono/stereo, st+fr-to
+[ ] write & check all 4 wav/flacs (mute)
+[ ] lcp t1, cp t1 to e2, move t1 to e2(auto_rename)
+[ ] new dir, calc, graph, wrap, clip
+[ ] calc: y0=x0*x1*x2*x3 graph: tr-imp*calc
+[ ] wrap: calc w/o f, av, check
+[ ] copy wrap, simple LP (1par), av, check
+[ ] save (different name), exit
+[ ] check copy of 1.a (shared objs), glance at diffs (old/autosave*/new)
+[ ] start empty, load autosave, check config, wait 1 min (no asv.), exit
+[ ] start, load saved file, check new (recorded) track, new wrap (with AV)
+[ ] loop rectrk, edit (move, cp, paste), copy trk (while played), check copy
+[ ] browse help (tree/menu/?button)
+[ ] kill -9, check log
+[ ] remove package
