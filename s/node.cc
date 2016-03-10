@@ -905,7 +905,7 @@ int ClipNode::cmd(CmdBuf * cb) {
 		default:  return GCE_UCLIP;
 	}
 xcg:
-	return xchg(m_sel, k);
+	return cb->cperm(DF_EDDIR) ? xchg(m_sel, k) : NDE_PERM;
 flg:
 	if (s[1]&1) m_flg |= k; else m_flg &= ~k;
 	if (winflg(8)) gui2.clip_flg(m_id, s[0], s[1]&1);
@@ -913,6 +913,7 @@ flg:
 io:
 	if (s[1]&1) {
 		if (*q==this) return 0;
+		if (k==4 && !cb->cperm(DF_EDDIR)) return NDE_PERM;
 		ClipNode *old = *q; *q = this;
 		if (old->winflg(8)) gui2.clip_flg(old->id(),*s,0);
 		if (winflg(8)) gui2.clip_flg(m_id,*s,1); 
