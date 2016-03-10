@@ -52,6 +52,7 @@ class TrackInst : public BoxInst {
 class TrackModel : public BoxModel {
 	public:
 		TrackModel(ANode * t_n, ANode * g_0, ANode * g_1) : BoxModel(2), tn(t_n), g0(g_0), g1(g_1) {}
+		virtual ~TrackModel() { ANode::fN(g0); ANode::fN(g1); bkm.del(); }
 		virtual BoxInst * mk_box() { return new TrackInst(this); }
 		ANode *tn, *g0, *g1;
 		BKMK1M bkm;
@@ -71,6 +72,7 @@ class TrackGen : public BoxGen {
 		virtual void wdat_cons(sthg * bxw_rawptr);
 		virtual int save2(SvArg * sv);
 		virtual int mxc_notify(int k,int f) { if(f&64) m_mxctl=0; if (wnfl()) w_ply(); return 0; }
+		virtual int cond_del() { return m_m.g0->next() == m_m.g1 ? 0 : TKE_NONEMP; }
 		ANode* bkm_find(int j);
 		void   bkm_add(ANode * nd);
 		void   bkm_rm (ANode * nd);
