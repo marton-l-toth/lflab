@@ -285,7 +285,7 @@ int RQOsc::calc(int inflg, double** inb, double** outb, int n) {
 inline int ixround(double x, int n) { int r = (int)lround(x);
 	return ((unsigned int)r<(unsigned int)n) ? r : (r<0?0:n-1); }
 
-//? {{{_sel}}}
+//? {{{!._sel}}}
 //? this box selects the sel-th of the inputs in0...in<n-1>
 //? (sel is rounded to nearest integer and limited to 0...n-1)
 STATELESS_BOX_1(Sel1Box) {
@@ -302,6 +302,11 @@ STATELESS_BOX_1(Sel1Box) {
 	return 1;
 }
 
+//? {{{!._sel2}}}
+//? this box selects the sel-th group of inputs, copying
+//? a<sel>, b<sel>, ... z<sel> to a, b, ... z
+//? (sel is rounded to nearest integer and limited to 0...n-1,
+//? where n is number of input groups)
 STATELESS_BOX_1(Sel2Box) { // TODO: io-ali
 	int igl = m_arg>>4, nig = m_arg&15, itot = nig * igl, ixm = 1<<itot;
 	double *pv, *po, *pi = inb[itot];
@@ -327,19 +332,19 @@ static void sel_ini(ANode *rn) {
 	for (int i=3; i<30; i++) nm[3] = 48+i/10, nm[4] = 48+i%10,
 		qmk_box(sd[0],nm,qa, i, i+1, 33 ,"sel", "1i-", 1+256*i, "sel");
 	memcpy(nm, "sel02x2", 8); qa = QMB_ARG1(Sel2Box);
-	qmk_box(sd[1], nm, qa, 0x22, 5, 2, "sel", "i:o*R*1i-", 1, 0, "a$b", "a$b", "uu%99%", 1025, "sel");
+	qmk_box(sd[1], nm, qa, 0x22, 5, 2, "sel2", "i:o*R*1i-", 1, 0, "a$b", "a$b", "uu%99%", 1025, "sel");
 	for (int i=3; i<15; i++) nm[3] = 48+i/10, nm[4] = 48+i%10,
-		qmk_box(sd[1],nm,qa, 32+i, 2*i+1, 2, "sel", "1i-", 1+512*i, "sel");
+		qmk_box(sd[1],nm,qa, 32+i, 2*i+1, 2, "sel2", "1i-", 1+512*i, "sel");
 	nm[4] = 'x'; nm[6] = 0; char inm[48], onm[16];
 	for (int i=3; i<8; i++) {
 		nm[3] = 50; nm[5] = 48+i;
 		for (int j=0; j<i; j++) inm[3*j] = onm[2*j] = inm[24+3*j] = 97+j, 
 			inm[3*j+1]=49, inm[3*j+25]=48,  inm[3*j+2]=onm[2*j+1]=inm[3*j+26]=36;
-		qmk_box(sd[i-1], nm, qa, 16*i+2, 2*i+1, i, "sel", "i-i-i-o*R*1", i, inm+24, 257*i, inm,
+		qmk_box(sd[i-1], nm, qa, 16*i+2, 2*i+1, i, "sel2", "i-i-i-o*R*1", i, inm+24, 257*i, inm,
 				512*i+1, "sel", onm, "uu%99%");
 		for (int j=3, k=3*i; k<30; j++, k+=i) {
 			++nm[3]; for (int v=0; v<i; v++) ++inm[3*v+1];
-			qmk_box(sd[i-1], nm, qa, 16*i+j, k+1, i, "sel", "1i-i-R1",
+			qmk_box(sd[i-1], nm, qa, 16*i+j, k+1, i, "sel2", "1i-i-R1",
 					256*(k-i)+i, inm, 256*k+1, "sel"); 
 		}}}
 
