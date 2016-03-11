@@ -20,6 +20,7 @@
 [ ] write mono/stereo, st+fr-to
 [ ] write & check all 4 wav/flacs (mute)
 [ ] lcp t1, cp t1 to e2, move t1 to e2(auto_rename)
+[ ] lcp & del (non-emp, ref'd, RO), check uses/used-by
 [ ] new dir, calc, graph, wrap, clip
 [ ] calc: y0=x0*x1*x2*x3 graph: tr-imp*calc
 [ ] wrap: calc w/o f, av, check
