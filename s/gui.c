@@ -3015,7 +3015,8 @@ static gboolean trk_drag(GtkWidget *w, GdkEventMotion * ev, gpointer p) {
 	if (tc->gwfr[2]&1) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,ty)].d, cx = k*((2*cx/k+1)/2);
 	int tx = 40320*tc->x0+TC_UPP(tc)*cx;
 	if (!((tx-tsc_drag_x)|(ty-tsc_drag_y))) return; else tsc_drag_x = tx, tsc_drag_y = ty;
-	LOG("drag (%d,%d) --> (%x:%x) (x0=%d, y0=%d, upp=%d)", cx, cy, ty, tx, tc->x0, tc->y0, TC_UPP(tc));
+	if (dflg&DF_TRK) LOG("drag (%d,%d) --> (%x:%x) (x0=%d, y0=%d, upp=%d)", 
+			            cx,cy,      ty,tx, tc->x0, tc->y0,TC_UPP(tc));
 	CMD("X#%x$CM%x$%x0$%x", tsc_ww->top->id>>4, tsc_drag_id, ty, tx);
 	return TRUE;
 }
