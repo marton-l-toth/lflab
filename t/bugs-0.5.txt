@@ -1,0 +1,3 @@
+trk: sel: QWEQWE, <> errmsg
+trk: sel. snd is ignored (can be "hidden") for click/ctxmenu 
+graph: smallnum too long (e.g.  1.000m)
