@@ -565,7 +565,8 @@ frequency spectrum (FFT) in a time interval and freq. range.
 ---
 The four labels below the plot parameters select the config
 line below them: [#] is grid dimensions config, "tlim" is time
-limit (affects only sounds in a track, in beats not seconds)
+limit (affects only sounds in a track, in beats not seconds,
+-1 means no limit, auto filled from record-to-track)
 ==> win.icfg.autovol -- "a.v" tab (auto volume adjust)
 ==> win.auconv -- "wav" tab (write to WAV)
 Note: changing grid dimensions can change the selected sound

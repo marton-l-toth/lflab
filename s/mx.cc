@@ -227,7 +227,7 @@ static void mx_fdel(MxItem * p) { p->f_reset(); p->u.f.in.del2(); mx_free(p); }
 
 void MxItem::b_ini(const char * updnnino, const double * arg, int delay, int tlim) {
 	u.b.flg = (updnnino[3])>1; int t3d = sec2samp(arg[4]);
-	u.b.t1 = sec2samp(arg[2]); u.b.t2 = tlim ? min_i(sec2samp(arg[3]), tlim) : sec2samp(arg[3]);
+	u.b.t1 = sec2samp(arg[2]); u.b.t2 = min_i(sec2samp(arg[3]), tlim);
 	     u.b.up = TFunTab::ini(u.b.upx, updnnino[0], u.b.t1, 0);
 	if ((u.b.dn = TFunTab::ini(u.b.dnx, updnnino[1], t3d   , 1))) u.b.t3 = u.b.t2 + t3d;
 	else u.b.t3 = 0, u.b.dnx[0] = arg[4];

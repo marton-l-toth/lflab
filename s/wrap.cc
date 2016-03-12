@@ -274,7 +274,7 @@ class AWrapGen : public BoxGen {
 		int plot_t(double t0, double t1, int n);
 		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
-			return (k=add2mx_txdlv(r,f,0,0,0))<0 ? (mx_del(r),k) : r; }
+			return (k=add2mx_txdlv(r,f,0,INT_MAX,0))<0 ? (mx_del(r),k) : r; }
 		int qcopy(int tf, int nof) { return tf ? trk_glob_paste(this, nof)
 				: Node::mk(0, ClipNode::kcp(1), 0, 'W', nof|NOF_NOIDX, 0, this); }
 		int batch_mono(double * to, int skip, int n);
@@ -710,7 +710,7 @@ int WrapAVJob::run1() {
                 case 4: 
 			for (i=0; i<4; i++) buf[i] = m_ixmul[i] * (double)m_xy12ij[i];
 			mx_clear(m_mxid);
-			m_bx -> add2mx_txdlv(m_mxid, WRF_AVJOB|WRF_NOCON, 0, 0, buf);
+			m_bx -> add2mx_txdlv(m_mxid, WRF_AVJOB|WRF_NOCON, 0, INT_MAX, buf);
                 default:
 			r = mx_calc(m_mxid, buf, buf+441, 441, 0);
                         mv = m_max; for (int i=0,n=r*441; i<n; i++) {
@@ -869,7 +869,7 @@ int AWrapGen::save2_aw(SvArg * sv) {
 	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
 	if ((k=m_bflg&3)) memcpy(buf+l, "\nX$m", 4), buf[16] = 48 + (m_bflg&3), l = 17;
 	buf[l] = 10; CHKERR(f->sn(buf, l+1));
-	if ((k=m_node->etc()->i[0])) { CHKERR(sv->out->pf("X$T%x\n", k)); }
+	if ((k=m_node->etc()->i[0])!=INT_MAX) { CHKERR(sv->out->pf("X$T%x\n", k)); }
 	return r;
 }
 
@@ -877,7 +877,7 @@ void AWrapGen::w_tlim(int f) {
 	int k = m_node->etc()->i[0], t = k&INT_MAX, mf = k<0;
 	gui2.setwin(w_oid(), 'w'); 
 	if (f&1) gui2.wupd_i1('Y', mf,  20);
-	if (f&2) gui2.wupd_d('Y', (double)t/40320.0, 22);
+	if (f&2) gui2.wupd_d('Y', t==INT_MAX ? -1.0 : (double)t/40320.0, 22);
 }
 
 int AWrapGen::show_tab(int i) {
@@ -928,8 +928,8 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 			 if (wnfl()) w_col0(pflg());
 			 return 1;
 		case  5: ec = qcopy(1, nof & ~NOF_FGUI); break;
-		case 11: ec = add2mx_txdlv(0,0,0,0,0); if (ec>=0) ec = add2ctl(ec, k);       break;
-		case 12: ec = add2mx_txdlv(0,0,0,0,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
+		case 11: ec = add2mx_txdlv(0,0,0,INT_MAX,0); if (ec>=0) ec = add2ctl(ec, k);       break;
+		case 12: ec = add2mx_txdlv(0,0,0,INT_MAX,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
 		default: ec = BXE_CENUM; break;
 	}
 	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
@@ -1111,7 +1111,7 @@ CH(tf){	float *q = p->core_rw()->tf01; int flg = s[1]; double x; s += 2;
 	return 0; }
 
 CH(pl){	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
-	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,0,0);
+	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,INT_MAX,0);
 	const float * q = p->core_ro()->tf01; switch(s[1]) {
 		case 'T': return p->plot_t(q[0], q[1], 512);
 		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, false);
@@ -1142,7 +1142,7 @@ CH(cut){int *q = p->m_node->etc()->i; double x = 0.0;
 	switch(s[1]) {
 		case '_': (s[2]&1) ? (*q|=INT_MIN) : (*q&=INT_MAX); break;
 		case 'T': *q &= INT_MIN; parse_num(&x, s+2);
-			  *q |= (INT_MAX & (int)lround(x*40320.0)); return 0;
+			  *q |= (x<-1e-5 ? INT_MAX : (INT_MAX & (int)lround(x*40320.0))); return 0;
 		default : *q = atoi_h(s+1); break;
 	}
 	if (p->m_node->winflg(2048)) p->w_tlim(1);    return 0;
@@ -1445,15 +1445,16 @@ BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB,
 
 #define WARG  (static_cast<AWrapGen*>(bx))
 #define WARGD (static_cast<DWrapGen*>(bx))
-int setbox_wrap(ABoxNode * nd, BoxGen * _) { return new (ANode::a64()) DWrapGen(nd), 3; }
+int setbox_wrap(ABoxNode *nd, BoxGen*_) { return new (ANode::a64()) DWrapGen(nd), nd->etc()->i[0]=INT_MAX, 3; }
 int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) DWrapGen(nd, WARGD), 3; }
 const char * wrap_rgb(BoxGen * bx) { return WARG -> eff_rgb(); }
 int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) { 
 	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {
 	BoxGen * bx = bnd->box(); if (!bx) return 0;
-	int tf = bnd->etc()->i[0]; if(tf){ if (DBGC) log("nd2mx: tf0=%d, bpm=%g", tf, bpm); 
-				           if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm); }
+	int tf = bnd->etc()->i[0]; if(tf != INT_MAX) {
+		if (DBGC) log("nd2mx: tf0=%d, bpm=%g", tf, bpm); 
+		if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm); }
 	if (DBGC) log("nd2mx: tf=%d", tf); return  WARG -> add2mx_txdlv(trg, 0, dly, tf, 0); }
 int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
 AReader * wrap_avreader(BoxGen * bx) { return WARGD -> avreader(); } // TODO: typechk(?)

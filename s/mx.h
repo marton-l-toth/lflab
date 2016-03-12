@@ -14,7 +14,8 @@ int mx_clear(int ix);
 int mx_del(int ix);
 // arg: tlim vlim x[1] ... x[ni-1]
 int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel);
-int mx_add_box(int trgi, BoxInst * bxi, const char * udio, const double * arg, int osel,int dly=0,int tlim=0);
+int mx_add_box(int trgi, BoxInst * bxi, const char * udio, const double * arg, int osel,
+							     int dly=0, int tlim=0x7fffffff);
 int mx_calc(int ix, double *to1, double *to2, int n, int f);
 int mx_r_isemp(int ix);
 int mx_c_add(int ci, int bi, int ky);
