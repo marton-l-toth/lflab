@@ -37,7 +37,7 @@ void hi() { log("lflab: linear filter based audio lab %d.%02d\n%s\n%s\n%s", v_ma
 	    "see the file \"COPYING\" for details"); }
 
 #define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
-		 mx_init(), wrap_init(), track_init(), midi_init()
+		 mx_init(), wrap_init(), track_init(), itb_init(), midi_init()
 static void ini0() {
 	const char * dfs = getenv("LF_DEBUGFLG"); if (dfs) debug_flags = atoi_h(dfs);
 	imp4097[0] = 1.0; vstring_set(v_major, v_minor);

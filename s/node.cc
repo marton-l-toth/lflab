@@ -943,6 +943,10 @@ void ClipNode::debug(int flg) {
 int ABoxNode::ccmd(CmdBuf * cb) { return m_box->cmd(cb); }
 int ABoxNode::start_job_2(JobQ::ent_t * ent, char * arg) { return m_box->start_job_3(ent, arg); }
 
+int ABoxNode::get_ionm(char *to, int io, int j) {
+	if (m_box) { int k = m_box->v_get_ionm(to, io, j); if (k) return k; }
+	return m_ui.ro()->m_nm[io&1].ro()->get_nm(to, j); }
+
 void ABoxNode::del2() { 
 	BoxEdge * p; while ((p = m_ef0)) Node::disconn(this, p->to);
 	if (m_u24.s[0]=='w') f64(m_box); else delete(m_box); }
@@ -1292,7 +1296,7 @@ int Node::obj_help(int cl) {
 	return nd->draw_window(16);
 }
 
-sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc;
+sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc, setbox_it;
 
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
@@ -1315,6 +1319,7 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'w': nd = bnd = new (ANode::aN()) LBoxNode('w'); sbf = setbox_wrap; break;
 		case 'g': nd = bnd = new (ANode::aN()) LBoxNode('g'); sbf = setbox_graph; break;
 		case 'c': nd = bnd = new (ANode::aN()) LBoxNode('c'); sbf = setbox_calc; break;
+		case 'i': nd = bnd = new (ANode::aN()) LBoxNode('i'); sbf = setbox_it; break;
 		case '_': nd = bnd = new (ANode::aN()) LBoxNode('_'); sbf = sb_btin; break;
 		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk; break;
 		case 'W': nd = bnd = new (ANode::aN()) LBoxNode('w');

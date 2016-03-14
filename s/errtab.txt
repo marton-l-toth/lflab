@@ -184,7 +184,7 @@ BXE_RANGE    box parameter out of range
 BXE_UNDEFKEY key undefined (instr/grid)
 BXE_ZEROWAV  all zero audio -- no file written
 BXE_AVZERO   autovol failed because of zero output
-BXE_FILTNIO  a filter has to have at least one input and exactly one output
+BXE_FILTNIO  invalid number of inputs/outputs for filter 
 BXE_FILTRM   filter removed due to invalid input/output count
 BXE_NOOUT    this object cannot be used as a box
 BXE_WLGDONE  wrap linegrp done (BUG)

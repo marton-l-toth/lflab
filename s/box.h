@@ -20,13 +20,13 @@ class BoxGen {
 		virtual int n_in() const = 0;
 		virtual int n_out() const = 0;
 		virtual int in_mask() { return 0; }
+		virtual const char * cl_name() = 0;
+		virtual bool io_alias_perm() const = 0;
 		virtual int cmd(CmdBuf* cbf) { return BXE_NOCMD; }
 		virtual int gui_cmd(CmdBuf* cbf) { return BXE_NOGCMD; }
-		virtual const char * cl_name() = 0;
-		virtual void upd_subbox(BoxGen * sub) {}
+		virtual int v_get_ionm(char *to, int io, int j) { return 0; }
 		virtual int cond_del() { return 0; }
 		virtual int save2(SvArg * sv) { return 1; } // nonemp:save2(0)==BXE_NOARG
-		virtual bool io_alias_perm() const = 0;
 		virtual void spec_debug();
 		virtual void notify_nio(BoxGen * bx) {}
 		virtual void box_window();

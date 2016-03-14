@@ -9,8 +9,8 @@ SRC2 = expr.cc wrap.cc nz.cc guistub.cc gp.cc combo.cc pzrf.cc trk.cc
 INC2 = expr.h  wrap.h  nz.h  guistub.h  gp.h  combo.h  pzrf.h  trk.h
 OBJ2 = expr.o  wrap.o  nz.o  guistub.o  gp.o  combo.o  pzrf.o  trk.o
 
-SRC3 = rf2.cc fe.cc arbox.cc grbox.cc in.cc b0.cc v.cc
-OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  in.o  b0.o  v.o 
+SRC3 = rf2.cc fe.cc arbox.cc grbox.cc it.cc in.cc b0.cc v.cc
+OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  it.o  in.o  b0.o  v.o 
 
 INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h
 

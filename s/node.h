@@ -83,6 +83,9 @@
 class ANode; class ADirNode; class NDirNode; class ClipNode; class ABoxNode;
 class BoxEdge; class BoxGen; class CmdBuf;
 
+typedef int (sbfun_t)(ABoxNode *nd, BoxGen *bx),
+	    (*sbfun )(ABoxNode *nd, BoxGen *bx);
+
 struct SvArg {
         ANode *cn, *rn, *r2n, *wl;
         AOBuf * out;
@@ -409,9 +412,7 @@ class ADirNode : public ANode {
 class ABoxNode : public ANode {
 	public:
 		friend class Node;
-		friend int setbox_graph(ABoxNode * nd, BoxGen * _);
-		friend int setbox_wrap (ABoxNode * nd, BoxGen * _);
-		friend int setbox_calc (ABoxNode * nd, BoxGen * _);
+		friend sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc, setbox_it;
 		friend ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no,
 				                                    const char * cl, const char * fmt, ...);
 		virtual int perm(int msk = DF_ALL) { return perm_b(msk); }
@@ -442,7 +443,7 @@ class ABoxNode : public ANode {
 		void set_ui_f(ABoxNode * nd) { m_ui.from(nd->m_ui); }
 		const char * rgb2() { return m_u24.s[0]=='w' ? wrap_rgb(m_box) : own_rgb(); }
 		const char * own_rgb() { return m_ui.ro()->m_rgb; }
-		int get_ionm(char *to, int io, int j) { return m_ui.ro()->m_nm[io&1].ro()->get_nm(to, j); }
+		int get_ionm(char *to, int io, int j);
 		int dsc(char * to);
 		void ab_debug(int flg);
 		sthg * etc() { return &m_etc; }
@@ -523,8 +524,6 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		unsigned char m_el[32];
 };
 
-typedef int (sbfun_t)(ABoxNode *nd, BoxGen *bx),
-	    (*sbfun )(ABoxNode *nd, BoxGen *bx);
 class Node {
 	public:
 		static void init();
