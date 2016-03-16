@@ -502,6 +502,24 @@ usage will increase rapidly).
 Because an external program is started, opening the first 
 graph box window may cause an audio buffer underrun.
 ==> win.tree
+{{{?._wit}}}
+An iterated filter is a filter chain consisting of multiple
+instances of the same "simple" filter.
+In the current version, all instances of the filter have the
+same parameters. The first input (in) is the input of the
+first filter, #b is the number of filter boxes, all the other
+inputs are "inherited" from the simple filter.
+#b is expected to be constant, it is rounded and limited to
+the interval [0...1024].
+If #b rounds to zero or the simple filter is undefined, the
+result is an empty filter which copies its input (in) to the 
+output unchanged. CPU cost is only a little more than #b times
+the cost of the simple filter.
+---
+Currently the only modifiable parameter is the simple filter.
+This box has no configurable GUI -- the colors and the in/out
+labels (except for "in" and "#b") are inherited from the simple
+filter.
 {{{?._wcc}}}
 Calculator boxes are stateless boxes (each set of outputs only
 depends on the current set of inputs, not previous ones),

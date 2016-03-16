@@ -118,6 +118,7 @@ class CalcBoxGen : public BoxGen {
 		virtual void spec_debug() { log("=======calcbox:%p=======",this); m_l.dump(stderr); }
 		virtual int df_ui_ix() const { return 1; }
 		virtual bool io_alias_perm() const { return false; }
+		virtual int ifflg() const { return BIF_GC; }
 
 		int n_tmp() const { return m_l.nx('z'); }
 		void set_n_in(int n) { m_l.set_nx(n); }

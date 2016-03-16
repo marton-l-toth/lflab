@@ -234,7 +234,6 @@ class AWrapGen : public BoxGen {
 		AWrapGen(ABoxNode * nd, const AWrapGen * that);
                 virtual ~AWrapGen();
 		virtual int add2mx_txdlv(int trg, int xflg, int dly, int lim, const double *vs) = 0;
-		virtual const char * eff_rgb() = 0;
                 virtual int n_in() const { return 0; }
                 virtual int n_out() const { return 0; }
                 virtual const char * cl_name() { return "wrap"; }
@@ -270,7 +269,7 @@ class AWrapGen : public BoxGen {
 			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
 		int save2_aw(SvArg * sv);
 		void gr_rgbc() { char buf[4]; gui2.c1('M'); get_nm2(buf); gui2.sn(buf, 2); 
-			         gui2.sn(eff_rgb(), 6); }
+			         gui2.sn(v_rgb(), 6); }
 		int plot_t(double t0, double t1, int n);
 		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
@@ -306,7 +305,7 @@ class DWrapGen : public AWrapGen {
 		virtual int save_sob(SvArg *p);
 		virtual void wdat_cons(sthg * p);
 		virtual int start_job_3(JobQ::ent_t * ent, char * arg);
-		virtual const char * eff_rgb();
+		virtual const char * v_rgb();
 		WrapAutoVol * avol() { return m_sob.ro()->m_avol.ro(); }
 		int avj_state() { return jobq.jst(m_node, 1); }
 		int qdiff(DWrapGen * that); 
@@ -326,7 +325,7 @@ class DWrapGen : public AWrapGen {
 		int set_sf_2(int ff, BoxGen * bx);
 		void upd_updn(int flg);
 		int grid_cmd(const char * s);
-		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(eff_rgb(),6); }
+		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(v_rgb(),6); }
 		void w_sob(int ix, int sl);
 		void w_avol(int f, unsigned char * s);
 		int wupd1(int col, int ix1, int ix2 = 333);
@@ -947,7 +946,7 @@ void AWrapGen::delayed_clip_upd() {
 int AWrapGen::mini(char *to) {
 	get_nm2(to); for (int i=0; i<4; i++) to[i+2] = i2aA(m_xys6[i]);
 	to[6] = i2aA(m_xys6[7]); to[7] = ':';
-	memcpy(to+8, eff_rgb(), 6); return 14;
+	memcpy(to+8, v_rgb(), 6); return 14;
 }
 
 void AWrapGen::w_a20(int flg) { int k; gui2.setwin(w_oid(),'w'); 
@@ -1339,8 +1338,9 @@ int DWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 	return 0;
 }
 
-const char * DWrapGen::eff_rgb() {
-	return (m_sfbx[1] ? m_sfbx[1]->node() : (m_sfbx[0] ? m_sfbx[0]->node() : m_node)) -> own_rgb(); }
+const char * DWrapGen::v_rgb() {
+	if (m_sfbx[1]) return m_sfbx[1]->v_rgb();
+	if (m_sfbx[0]) return m_sfbx[0]->v_rgb(); return "KKK%%%"; }
 
 void DWrapGen::wdat_cons(sthg * bxw_rawptr) {
 	WrapAutoVol * av = m_sob.ro()->m_avol.ro();
@@ -1447,7 +1447,6 @@ BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB,
 #define WARGD (static_cast<DWrapGen*>(bx))
 int setbox_wrap(ABoxNode *nd, BoxGen*_) { return new (ANode::a64()) DWrapGen(nd), nd->etc()->i[0]=INT_MAX, 3; }
 int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) DWrapGen(nd, WARGD), 3; }
-const char * wrap_rgb(BoxGen * bx) { return WARG -> eff_rgb(); }
 int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) { 
 	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {

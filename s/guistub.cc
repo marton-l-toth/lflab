@@ -107,7 +107,7 @@ void GuiStub::cre(int oid, int ty, const char *s) {
 
 void GuiStub::t2_sel(int lr, ANode *nd) {
 	m_bufp[0] = 9; m_bufp[1] = '+'; m_bufp[2] = 48+(lr&1); m_bufp[3] = nd->cl_id();
-	m_bufp += 4; hex5(nd->id()); c1(36); sn(Node::rgb(nd), 6);
+	m_bufp += 4; hex5(nd->id()); c1(36); sn(nd->rgb(), 6);
 	int k = nd -> get_path_uf(m_bufp, 256);
 	if (k) m_bufp += k; else *(m_bufp++) = '.';
 }

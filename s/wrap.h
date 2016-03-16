@@ -5,7 +5,6 @@ class BoxGen; class AReader; class ABoxNode;
 static inline int wr_ixtr(int ix) { return (ix&95) + ((0x106>>((ix>>3)&12))&15); }
 static inline int wr_ixtr_r(int ix) { int k = ix>>6; return ix + (ix<6+60*k ? 32 : 5*k-6); }
 // these fns *assume* that arg is a wrbox
-const char * wrap_rgb(BoxGen * bx);
 int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v);
 int wrap_nd_2mx(ABoxNode * bn, int trg, double bpm, int dly);
 int wrap_qdiff(BoxGen * b1, BoxGen * b2);

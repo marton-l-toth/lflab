@@ -161,6 +161,7 @@ class ANode {
                 virtual int ccmd(CmdBuf * cb) = 0;
                 virtual int wdat_alloc() = 0;
                 virtual int wdat_free() = 0;
+		virtual const char * rgb() { return "zz%z%%"; }
                 virtual int start_job_2(JobQ::ent_t * ent, char * arg) { return JQE_UNDEF; }
                 inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_id; }
                 int id() const { return m_id; }
@@ -399,6 +400,7 @@ class ADirNode : public ANode {
 		virtual int save1(); // ret: measure / error
 		virtual int wdat_alloc();
 		virtual int wdat_free();
+		virtual const char * rgb() { return "%%%ppp  %%pppp"+8*(m_u24.s[0]&1); }
 		ADirNode * get_hroot() {
 			for (ADirNode * p = this; 1; p=static_cast<ADirNode*>(p->up()))
 				if (p->m_pm_msk&p->m_pm_val&DF_HROOT) return p; }
@@ -421,6 +423,7 @@ class ABoxNode : public ANode {
 							       : perm_b(DF_EDBOX); }
 		virtual int cond_del();
 		virtual BoxGen * box0() { return m_box; }
+		virtual const char * rgb();
 		virtual int ccmd(CmdBuf * cb);
 		virtual int save1(); // ret: measure / error
 		virtual int wdat_alloc();
@@ -441,7 +444,6 @@ class ABoxNode : public ANode {
 		sthg * wdat_raw() { int i = (m_winflg>>16)&255; return i ? m0_wi_b + 4*i : 0; }
 		void set_ui_d(int k) { m_ui.set(BoxUI_default(k)); }
 		void set_ui_f(ABoxNode * nd) { m_ui.from(nd->m_ui); }
-		const char * rgb2() { return m_u24.s[0]=='w' ? wrap_rgb(m_box) : own_rgb(); }
 		const char * own_rgb() { return m_ui.ro()->m_rgb; }
 		int get_ionm(char *to, int io, int j);
 		int dsc(char * to);
@@ -489,7 +491,6 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 			return k<0 || !(m_map&(1u<<k)) ? 0 : (++*pp, ent_j(k)); }
 		virtual ANode * sn_list(ANode ** pwl);
 		virtual void debug(int flg);
-		virtual const unsigned char * rgb() { return (const unsigned char *) "\0\0\x80\xe0\xe0\xe0"; }
 		ABoxNode * ent_j(int j) { return (ABoxNode*)(m0_pnb[(int)m_eh[j]] + 128*m_el[j]); }
 		ABoxNode * ent_jv(int j){ return (m_map&(1u<<j)) ? ent_j(j) : 0; }
 		ABoxNode * ent_sel() { return ent_jv(m_sel); }
@@ -553,9 +554,6 @@ class Node {
 		static int slr_upd_2(char * to);
 		static int chkwin(int oid);
 		static bool being_crawled() { return !!ANode::m0_sv.rn; }
-		static const char * rgb(ANode * p) { return p->is_box() ? static_cast<ABoxNode*>(p)->rgb2()
-								 : "%%%ppp  %%Pppp"+8*(p->m_u24.s[0]&1); }
-
 		static void trk_chk_ord(ANode *tn, ANode *p, ANode *q, const char * msg);
 
 		static int obj_help(int cl);

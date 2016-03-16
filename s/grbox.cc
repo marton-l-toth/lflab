@@ -53,6 +53,7 @@ class GraphBoxGen : public BoxGen {
                 virtual int save2(SvArg * sv);
                 virtual void notify_nio(BoxGen * bx);
                 virtual void box_window();
+		virtual int ifflg() const { return BIF_GC; }
                 int n_subbox() { return m_nodes.n() - 1; }
                 BoxGen * subbox(int i) { return m_nodes[i]->box; }
                 int set_n_in(int n);

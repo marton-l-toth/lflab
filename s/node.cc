@@ -23,7 +23,6 @@ class NDirNode : public ADirNode {
                 virtual int gui_list(char *to, int flg);
                 virtual int size() const { return m_siz; }
                 virtual int start_job_2(JobQ::ent_t * ent, char * arg);
-                virtual const unsigned char * rgb() { return (const unsigned char *) "\0\0\0\xe0\xe0\xe0"; }
                 virtual void debug(int flg);
         protected:
                 static int hash2(const char * s, int sep);
@@ -392,7 +391,7 @@ void ANode::close_window(int x) {
 int ANode::title_arg(char * to, int wid) {
         char * p = to;
         *(p++) = '('; p += hx5(p, m_id); *(p++) = ')';
-        memcpy(p, Node::rgb(this), 6); p += 6;
+        memcpy(p, rgb(), 6); p += 6;
         return (p-to) + get_path(p, wid);
 }
 
@@ -947,6 +946,8 @@ int ABoxNode::get_ionm(char *to, int io, int j) {
 	if (m_box) { int k = m_box->v_get_ionm(to, io, j); if (k) return k; }
 	return m_ui.ro()->m_nm[io&1].ro()->get_nm(to, j); }
 
+const char * ABoxNode::rgb() { return m_box ? m_box->v_rgb() : "zz%z%%"; }
+
 void ABoxNode::del2() { 
 	BoxEdge * p; while ((p = m_ef0)) Node::disconn(this, p->to);
 	if (m_u24.s[0]=='w') f64(m_box); else delete(m_box); }
@@ -1027,7 +1028,7 @@ int ABoxNode::draw_window_2(int x) {
 		case 0: case 0xb: return m_box->box_window(), 16*cl_id() + 0xb;
 		case 0x9: return m_box->aux_window();
 		case 0xe: return m_box->extra_window();
-		case 0xc: return ((m_u24.s[0]|32)>'v') ? NDE_NOGUI : m_ui.ro()->draw_window_2(this);
+		case 0xc: return (m_box->ifflg()&BIF_GC) ? m_ui.ro()->draw_window_2(this) : NDE_NOGUI;
 		default: return BXE_CENUM;
 	}}
 
@@ -1043,7 +1044,7 @@ int ABoxNode::find_fw_2(ABoxNode * to, LWArr<int>* rpath) {
 void ABoxNode::mwin_head(int wid) {
 	int oid = 16*m_id + 11;
 	if (!winflg(8)) gui2.cre(oid, m_u24.s[0]); else gui2.setwin(oid, m_u24.s[0]);
-	gui2.wupd('_',0); gui2.c1('!'); gui2.sn(Node::rgb(this), 6);
+	gui2.wupd('_',0); gui2.c1('!'); gui2.sn(rgb(), 6);
 	gui2.npath(this, wid);
 }
 
@@ -1289,7 +1290,9 @@ int Node::obj_help(int cl) {
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
+		case 'i': s = "iterated filter"; break;
 		case 'w'+256: s = "instrument(play)"; break;
+		case '_': return EEE_NOEFF;
 		default: return NDE_WTF;
 	}
 	nd = nd->sn(&s); if (!nd) return NDE_WTF;

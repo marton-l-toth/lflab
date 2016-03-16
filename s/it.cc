@@ -44,10 +44,13 @@ class ItBoxGen : public BoxGen {
 		virtual int save2(SvArg * sv);
 		virtual void notify_nio(BoxGen * bx) { set_bx1(bx); }
 		virtual int v_get_ionm(char *to, int io, int j);
+		virtual void box_window() { upd_window(-1); }
 		virtual void spec_debug() { log("itbox: sb=#%x, ni = %d", 
 						m_bx1 ? m_bx1->node()->id() : 0, m_ni); }
+		virtual const char * v_rgb() { return m_bx1 ? m_bx1->v_rgb() : "KKK%%%"; }
 	protected:
 		BXCMD_DECL(ItBoxGen) c_bx1;
+		void upd_window(int flg);
 		int set_bx1_2(BoxGen * bx, int ni);
 		int set_bx1(BoxGen * bx);
 
@@ -92,7 +95,8 @@ int ItBoxGen::save2(SvArg * sv) {
 
 int ItBoxGen::set_bx1_2(BoxGen * bx, int ni) { 
 	int r = set_boxp(&m_bx1,bx);
-	if (r>=0) unset_model(), m_ni=ni, m_node->nio_change(); return r; }
+	if (r>=0) unset_model(), m_ni=ni, m_node->nio_change(), upd_window(6);
+	return r; }
 
 int ItBoxGen::set_bx1(BoxGen * bx) {
 	if (!bx) return set_bx1_2(0, 2);
@@ -106,6 +110,12 @@ int ItBoxGen::v_get_ionm(char *to, int io, int j) {
 	switch(j) { case 0: return to[0]='i', to[1]='n', 2;
 		    case 1: return to[0]='#', to[1]='b', 2;
 		    default:return m_bx1 ? m_bx1->node()->get_ionm(to,io,j-1) : 0; }}
+
+void ItBoxGen::upd_window(int flg) {
+	if (flg&1) gui2.cre(w_oid(), 'i'); else if (wnfl()) gui2.setwin(w_oid(), 'i'); else return;
+	if (flg&2) gui2.own_title();
+	if (flg&4) gui2.ref_title('3', m_bx1 ? m_bx1->node() : 0, -1, "filter");
+}
 
 #define CH(X) BXCMD_H(ItBoxGen, X)
 

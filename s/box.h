@@ -4,6 +4,8 @@
 #include "node.h"
 #include "box0.h"
 
+#define BIF_GC 1
+
 #define BXW_GET     sthg * bxw_rawptr =      m_node->wdat_raw(); if (!bxw_rawptr) return BXE_NOWDAT
 #define BXW_GETV(S) sthg * bxw_rawptr =      m_node->wdat_raw(); if (!bxw_rawptr) return log("BUG: %s: no wdat", (S))
 #define BXW_GETP(P) sthg * bxw_rawptr = (P)->m_node->wdat_raw(); if (!bxw_rawptr) return BXE_NOWDAT
@@ -25,6 +27,7 @@ class BoxGen {
 		virtual int cmd(CmdBuf* cbf) { return BXE_NOCMD; }
 		virtual int gui_cmd(CmdBuf* cbf) { return BXE_NOGCMD; }
 		virtual int v_get_ionm(char *to, int io, int j) { return 0; }
+		virtual const char * v_rgb() { return m_node->own_rgb(); }
 		virtual int cond_del() { return 0; }
 		virtual int save2(SvArg * sv) { return 1; } // nonemp:save2(0)==BXE_NOARG
 		virtual void spec_debug();
@@ -38,6 +41,7 @@ class BoxGen {
 		virtual int start_job_3(JobQ::ent_t * ent, char * arg) { return JQE_UNDEF; }
 		virtual int mini(char * to) { memcpy(to, "B!U!G!a:zz%z%%", 14); return 14; }
 		virtual int df_ui_ix() const { return 0; }
+		virtual int ifflg() const { return 0; }
 		virtual int mxc_notify(int ky, int f) { return log("BUG: mxc_notify undefined"), BXE_WTF; }
 
 		inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_node->id(); }

@@ -141,7 +141,7 @@ typedef struct _ob_box {
 
 static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, mcfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel,
-		     tkcf_skel;
+		     itb_skel, tkcf_skel;
 static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, tkcf_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel, dakcf_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
@@ -162,6 +162,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'g', 0         , graph_skel, NULL },
 	{'P', 0         , pz_skel, NULL },
 	{'c', TWF_YSIZE , calc_skel, NULL },
+	{'i', 0         , itb_skel, NULL },
 	{'t', 0         , ttrk_skel, ttrk_cmd },
 	{'C', 0         , gconf_skel, gconf_cmd },
 	{'D', 0         , doc_skel, doc_cmd },
@@ -819,6 +820,7 @@ GtkWidget * parse_w(topwin * tw, const char **s) {
 }
 
 GtkWidget * parse_w_s(topwin * tw, const char *s) { return parse_w(tw, &s); if (*s) LOG("WARN: parse_w_s: extra chars"); }
+#define TW_TOPH "(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
 
 ///////////////// simple widgets /////////////////////////////////////////////
 
@@ -2214,7 +2216,7 @@ static void wrap_cmd (struct _topwin * tw, char * arg) {
 
 static void wrap_skel (struct _topwin * tw, char * arg) {
 	const char * str = 
-	"[(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
+	"[" TW_TOPH
 	"([{Mm$Xm|#1}{B_stp$X.1}{B_kill$X.2}]{1w}"
 	"3[3{+#XG.}0{__}]0"
 	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{B_plot(t)$XPT})"
@@ -3261,7 +3263,7 @@ done:	tsr_op(wt, TSR_END, 0);
 }
 
 static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str = 
-	"[(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
+	"[" TW_TOPH
 	  "({B<`<$Xs<}{MS*QWEQWE$Xc|T0}{B>`>$Xs>}{YAali$$>GA}"
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
 	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW})3{tt}]";
@@ -3840,7 +3842,7 @@ static void dagraph_skel(struct _ww_t * ww, const char **pp) {
 
 static void graph_skel (struct _topwin * tw, char * arg) {
 	const char *s = arg, *str = 
-	"[(3{C_300$1$eeeeee333333...}0{M_#$|+1}{M_+$|+0})"
+	"[" TW_TOPH
 	"({8i#in$2X<}{8o#out$2X>}{8f#fb$2X@}"
 	"{Maadd...$Xiz$|_0}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
 	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Bsshuffle$Xs})"
@@ -4079,8 +4081,16 @@ GtkWidget * calc_vbl (struct _ww_t * ww, int ix) {
 }
 
 static void calc_skel (struct _topwin * tw, char * arg) {
-	const char * str = "[(3{C_300$1$eeeeee333333...}0{M_#$|+1}{M_+$|+0})"
+	const char * str = "[" TW_TOPH
 		"({8x#in$2XX}{8z#tmp$2XZ}{8y#out$2XY}){:ZcN30}{:YcN31}]";
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
+}
+
+///////////////// iter. box //////////////////////////////////////////////////
+
+static void itb_skel (struct _topwin * tw, char * arg) {
+	const char * str = "[" TW_TOPH
+		"({M0[$Xb|_03}{M1B$Xb|_013}{M2]$Xb|_023}3{C3280$1$eeeeee333333(...bx1...)})]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 }
 
