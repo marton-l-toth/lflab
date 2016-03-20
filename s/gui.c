@@ -34,7 +34,7 @@
 #define WF_BIGDA2 16
 #define WF_BIGDA3 24 
 #define WF_FULLSURF 32
-#define WF_RAWCLK 64
+//#define WF_RAWCLK 64
 #define WF_CLIPL8R 128
 #define WF_DTOR 256
 #define WF_KEYEV 512
@@ -181,8 +181,8 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{':', vbox_skel, NULL, vbox_cmd, NULL, 0 },
 	{'K', daclip_skel, NULL, daclip_cmd, daclip_clk, WF_BIGDA3 | WF_KEYEV | WF_RESIZE },
 	{'M', dalbl_skel, NULL, dalbl_cmd, dlmenu_clk, WF_RESIZE },
-	{'8', dacnt_skel, NULL, dacnt_cmd, dacnt_clk, WF_RESIZE | WF_RAWCLK },
-	{'!', dacntvs_skel, NULL, dacnt_cmd, dacntvs_clk, WF_RESIZE | WF_CONT | WF_RAWCLK },
+	{'8', dacnt_skel, NULL, dacnt_cmd, dacnt_clk, WF_RESIZE },
+	{'!', dacntvs_skel, NULL, dacnt_cmd, dacntvs_clk, WF_RESIZE | WF_CONT },
 	{'Y', dalbl_skel, NULL, dalbl_cmd, dlyn_clk, WF_RESIZE },
 	{'L', dalbl_skel, NULL, dalbl_cmd, debug_clk, WF_RESIZE },
 	{'E', dalbl_skel, NULL, dalbl_cmd, debug_clk, WF_RESIZE },
@@ -1216,7 +1216,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
 	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0;
-	int i, f, n = cmenu_mt->ni, btn = ev->button;
+	int i, n = cmenu_mt->ni, btn = ev->button;
 	const char * lbl = cmenu_mt->lbl;
 	if (*lbl=='[' && btn==1) return (void) widg_defcmd(ww, cmenu_mt->cmd);
 	cmenu_gw = gtk_menu_new(); gtk_widget_set_name(cmenu_gw, "lflabPU");
@@ -1407,12 +1407,35 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
+static int ww_rev_lu(char * to, ww_t * ww) {
+	topwin * tw = ww->top;
+	const char * q = tw->sub_ch.tab;
+	int i, ix = ww->ix;
+	for (i=0; i<96; i++) {
+		int j = q[i];
+		if (j==ix) return *to=i+32, 1;
+		if (j>99) continue;
+		ww_t * w2 = widg_p(tw, j); if (w2->cl->ch != ':') continue;
+		int ns = VB_WPL(w2) * VB_LMAX(w2), k = ix - VB_WBASE(w2);
+		if (k>=0 && k<ns) return *to=i+32, to[1]=hexc1(k>>4), to[2]=hexc1(k&15), 3;
+	}
+	return ((ix = 1023-ix) < 256) ? (*to='_', to[1]=hexc1(ix>>4), to[2]=hexc1(ix&15), 3) : 0;
+}
+
+static gboolean ww_debug(ww_t * ww, int btn) {
+	topwin * tw = ww->top;
+	char buf[1024]; buf[ww_rev_lu(buf, ww)] = 0;
+	LOG("ww_debug: twid=0x%x, wwix=0x%x, rlu=\"%s\"", tw->id, ww->ix, buf);
+	return TRUE;
+}
+
 static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	if (ev->type != GDK_BUTTON_PRESS) return TRUE;
 	ww_t * ww = (ww_t*)p;
-	if (ww->cl->flg & WF_RAWCLK) (ww->cl->clk) (ww, 0, 0, 0, ev);
-	else (ww->cl->clk) (ww, ev->button + ((ev->state&GDK_CONTROL_MASK)?6:3*!!(ev->state&GDK_SHIFT_MASK)),
-				(int)lround(ev->x), (int)lround(ev->y), ev);
+	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK);
+	if (btn>9) return ww_debug(ww, btn);
+	// TODO: rec
+	(ww->cl->clk) (ww, btn, (int)lround(ev->x), (int)lround(ev->y), ev);
 	return TRUE;
 }
 
@@ -1566,7 +1589,6 @@ static void write_tlog() {
 
 static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
 	static int maxv = 0, cnt = 0, unexp = 0;
-	static char buf[1024];
 	if (cond!=G_IO_IN) return LOG("ioc=%d", cond), FALSE;
 	int r = read( g_io_channel_unix_get_fd  (src), (char*)tlog_dat + tlog_ix_c, 4096);
 	if (r<1) return LOG("tpipe errno: r=%d, %d/%s", r, errno, strerror(errno)), TRUE;
@@ -2520,7 +2542,7 @@ static void dakcf_draw(ww_t * ww, cairo_t * cr2) {
         short * a4 = ww->arg[4].s;
         int x0 = a4[0], x1 = a4[2],
             y0 = a4[1], y1 = a4[3];
-	int i, j, x, y, ix = KCF_IX(ww), wid = KCF_X(ww), heig = KCF_Y(ww);
+	int i, x, y, ix = KCF_IX(ww), wid = KCF_X(ww), heig = KCF_Y(ww);
 	int h1 = conf_lbh, w1 = (5*h1+2)>>2, wtot = wid*w1, htot = heig*h1;
 	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE); cairo_set_line_width(cr2, 2.0);
 	cairo_set_source_rgb(cr2, .05*(ix&4), .1*(ix&2), .2*(ix&1)); cairo_paint(cr2);
@@ -2986,7 +3008,7 @@ static void trkclk_w(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 	if (cx<20) return LOG("trkclk_w: nothing happens");
         tc_t * tc = (tc_t*) ww->etc;   tsc_y = cy/48+tc->y0; tsc_ww = ww;
 	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lookup_ps(ww->top,"d"))&~1u, ev);
-	else tsc_md=2, popup2(ww, tsc_mi+2, 0x7ffffff ^ tdiv_sdbv[tdiv_idsf[tc_effdiv(tc,tsc_y)].i], ev);
+	else tsc_md=2, popup2(ww, tsc_mi+2, 0x7ffffff ^ tdiv_sdbv[(int)tdiv_idsf[tc_effdiv(tc,tsc_y)].i], ev);
 }
 
 static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) { 
@@ -3016,7 +3038,7 @@ static gboolean trk_drag(GtkWidget *w, GdkEventMotion * ev, gpointer p) {
 	    cy = ivlim((int)lround(ev->y)-20, 		  0, DA_H(tsc_ww)-41), ty = cy/48+tc->y0;
 	if (tc->gwfr[2]&1) k = TC_PPB(tc)/tdiv_idsf[tc_effdiv(tc,ty)].d, cx = k*((2*cx/k+1)/2);
 	int tx = 40320*tc->x0+TC_UPP(tc)*cx;
-	if (!((tx-tsc_drag_x)|(ty-tsc_drag_y))) return; else tsc_drag_x = tx, tsc_drag_y = ty;
+	if (!((tx-tsc_drag_x)|(ty-tsc_drag_y))) return TRUE; else tsc_drag_x = tx, tsc_drag_y = ty;
 	if (dflg&DF_TRK) LOG("drag (%d,%d) --> (%x:%x) (x0=%d, y0=%d, upp=%d)", 
 			            cx,cy,      ty,tx, tc->x0, tc->y0,TC_UPP(tc));
 	CMD("X#%x$CM%x$%x0$%x", tsc_ww->top->id>>4, tsc_drag_id, ty, tx);
@@ -3154,7 +3176,7 @@ static void trk_upd_wgd(ww_t * ww, int flg) { // 1:div 2:gd 4:wid
 	if (flg&2) trk_upd_gds(tw, 0, TC_GD(tc)->v, 255 ^ TC_GD(tc)->m),
 		 DLM_MSK(widg_lookup_ps(tw, "d")) = (2 * ~TC_GD(tc)->d) + 1;
 	if (flg&1) q = tdiv_idsf+tc->div[0], trk_upd_gds(tw, 1, q->d, ~(2*TC_GD(tc)->d)),
-					     trk_upd_gds(tw, 2, q->s, ~tdiv_sdbv[q->i]);
+					     trk_upd_gds(tw, 2, q->s, ~tdiv_sdbv[(int)q->i]);
 }
 
 static void tc_set_d1(tc_t * tc, int i, int d) {
@@ -3382,7 +3404,7 @@ static void gconf_skel (struct _topwin * tw, char * arg) { const char * str =
 }
 
 static void gconf_cmd (struct _topwin * tw, char * s) {
-	int i,j,k,i0=0; ww_t *w, *w2; char *p; while (*s) { switch (*s) {
+	int i,i0=0; ww_t *w, *w2; char *p; while (*s) { switch (*s) {
 		case 'R': for (++s, i=0; i<6; i++) dacnt_set_x(widg_lookup_ps(tw,"rgbRGB"+i), s[i]-37,  0x355);
 			  for (i=0; i<3; i++) memcpy(p=(w2=widg_lookup_ps(tw, "wny"+i))->arg[4].c, s, 6),
 				  	      p[6] = i, da_fullre(w2);
@@ -3957,7 +3979,7 @@ static void err_upd_nl(struct _topwin * tw) {
 
 static void err_cmd (struct _topwin * tw, char * arg) {
 	ww_t *p, *ww = widg_lookup_pci(tw, 'E', -1);
-	int i, k, n, ix = 0, af = 0, wi = VB_WBASE(ww), nl = err_nl, red = err_red, t = time(NULL);
+	int i, k, n, af = 0, wi = VB_WBASE(ww), nl = err_nl, red = err_red, t = time(NULL);
 	switch(*arg) {
 		case 0: return;
 		case 'N': if (arg[1]=='+') nl += (4*arg[2] - 191);
@@ -4033,7 +4055,7 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 	if (tw->state) return LOG("BUG: create called again for input win 0x%x", tw->id);
 	int i, l = arg ? strlen(arg-1) : 0, n = arg ? ivlim(*arg-48, 1, 16) : 1;
 	sprintf(tw->cmdpref, "%04x", (tw->id>>4)&65535); tw->cmdp_len = 4;
-	char ws[256], *num, *p = arg + 1, *q = ws+1;
+	char ws[256], *p = arg + 1, *q = ws+1;
 	memcpy(tw->title,"input box", 12);
 	ws[0] = '('; 
 	if (l>15) hxdoub_str(tw->title, p, 15), p+=16, l-=16;
@@ -4057,7 +4079,6 @@ static void a20_skel (struct _topwin * tw, char * arg) {
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws); 
 	else   gtk_window_present(GTK_WINDOW(tw->w)); 
 	int l=0; if (arg && (l=strlen(arg)) == 8) {
-		char *cto = tw->cmdpref;
 		memcpy(tw->cmdpref, arg, 8); tw->cmdpref[8] = '$'; tw->cmdp_len = 9;
 		int i; for (i=0; i<8; i++) tw->title[i] = arg[i]|32; tw->title[8] = 0;
 	} else { LOG("auconv BUG: l=%d", l); }
@@ -4114,7 +4135,7 @@ static void daclip_lb32(cairo_t * cr2, int i) {
 	cairo_set_source_rgb(cr2, .0, .0, .0); tx_box(cr2, x0, y0, 12, 16, conf_lbfs, (const char*)&ch); }
 
 static cairo_surface_t * daclip_lzs(ww_t * ww) {
-	LAZYSURF_HEAD(225, 225); int i, j;
+	LAZYSURF_HEAD(225, 225); int i;
 	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE);
 	cairo_set_source_rgb(cr2, .2, .2, .2); cairo_paint(cr2);
 	cairo_set_line_width (cr2, 1.0); cairo_set_source_rgb(cr2, .8, .8, .8);
@@ -4127,7 +4148,7 @@ static cairo_surface_t * daclip_lzs(ww_t * ww) {
 
 static void daclip_draw (ww_t * ww, cairo_t * cr2) {
 	DA_XY01; cairo_set_line_width (cr2, 1.0);
-	int i,j,f,sel=DACLIP_SEL(ww); for (i=0; i<32; i++) {
+	int i,f,sel=DACLIP_SEL(ww); for (i=0; i<32; i++) {
 		char * s = ((char*)ww->etc) + 14*i;
 		if (!(f = (s[2]!=48) + 2*(i==sel))) continue;
 		int wx0 = 28*(i&7)+10; if (wx0>x1 || wx0<x0-19) continue;
@@ -4140,7 +4161,7 @@ static void daclip_draw (ww_t * ww, cairo_t * cr2) {
 
 static void daclip_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return daclip_draw(ww, (cairo_t*)ww->arg[0].p);
-	int k, dflg = !!DA_SURF(ww); unsigned int re = 0;
+	int k; unsigned int re = 0;
 	while (*arg) {
 		if ((k=b32_to_i(*arg))>=0) {
 			if (arg[3]=='0') arg += 4, ((char*)ww->etc)[14*k+2] = '0'; 
