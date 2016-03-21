@@ -4,11 +4,14 @@ vX.YY
 Copyright (C) Marton Laszlo Toth, 2014-2016.
 This is free software (GNU General Public License version 2),
 with ABSOLUTELY NO WARRANTY.
-----
+---
+You can find the source code at:
+https://github.com/marton-l-toth/lflab
+---
 The text of the license should be opened in a separate window.
 In case it isn't see COPYING in the install directory or at
 http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-----
+---
 Thanks to all g++,gdb,gtk,graphviz,gnuplot... developers, and
 Steven W. Smith for his free DSP book (dspguide.com) 
 ==> getting started
@@ -36,7 +39,7 @@ The examples in "!e" are read-only but you can make copies
 or create new objects. (Sounds/instruments can be quickly
 copied with a middle-click (e.g. on the play grid), other
 objects can only be created in the tree view window.
------
+---
 If you make new instruments/tracks/components, save them with
 the "save" button. (or if you exit you can "autosave")
 THERE IS NO UNDO, SAVE OFTEN!!!
@@ -69,7 +72,7 @@ numbers per second. From simple builtin boxes you can build
 more complicated ones, and ultimately wrap them in an
 instrument configuration to be able to conveniently select
 their inputs and hear their outputs.
------
+---
 Most non-filter boxes can accept constant or variable input on
 all input ports (except "phs" for waves "~xyz"), and most 
 filters "=xyz" can take variable input only on the first input
@@ -80,7 +83,7 @@ in an explicit "error", only most of the input is ignored
 in each time-slice). On inputs labeled as "[xy]", lists are
 ==> etc.[lists]
 expected, these are constant inputs unless noted otherwise.
------
+---
 Editable boxes can be graphs, calculators or tracks.
 ==> win.graph-box
 ==> win.calc-box
@@ -528,7 +531,7 @@ inputs, 0..30 temporary variables and 1...30 outputs.
 Temporary variables can be calculated using the inputs and
 previous temporary variables. Output values can be calculated 
 using inputs, temporaries and previous outputs.
------
+---
 In the top line you can set the number of inputs/tmps/outputs.
 There is a line for each temporary/output: as you edit the
 expression, the status (right) follows; a white-on-green "+"
@@ -539,7 +542,7 @@ means OK, while white-on-red means error:
 "f" - non-existing function
 "<" - too few arguments to function
 ">" - too many arguments to function
-----
+---
 Currently only operators +,-,*,/,^(power) and the conditional
 if<(a,b,c,d) (if a<b then c else d) are supported.
 {{{?._wtk}}}
@@ -752,10 +755,10 @@ Please send the following:
 if it looks like a file name pattern you can easily find the
 core file, if not then you have some automatic core-file
 collecting system, see its documentation to find the core)
-----
+---
 If the program seems to be stuck in an infinite loop (CPU meter
 not moving, but CPU is used), try SIGABRT to produce a core.
-----
+---
 Not all of the above are absolutely necessary (and of course
 not always applicable, e.g. when you found a typo in a help
 text, no core or log files are needed), but the more you send,
