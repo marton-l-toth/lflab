@@ -822,6 +822,14 @@ GtkWidget * parse_w(topwin * tw, const char **s) {
 GtkWidget * parse_w_s(topwin * tw, const char *s) { return parse_w(tw, &s); if (*s) LOG("WARN: parse_w_s: extra chars"); }
 #define TW_TOPH "(3{C_300$1$eeeeee333333...}0{__}{M_+$|+0})"
 
+static int ww_rev_lu(char * to, ww_t * ww);
+static gboolean ww_debug(ww_t * ww, int btn) {
+	topwin * tw = ww->top;
+	char buf[1024]; buf[ww_rev_lu(buf, ww)] = 0;
+	LOG("ww_debug: twid=0x%x, wwix=0x%x, rlu=\"%s\"", tw->id, ww->ix, buf);
+	return TRUE;
+}
+
 ///////////////// simple widgets /////////////////////////////////////////////
 
 #define ENT_SL(x) ((x)->arg[1].i[0])
@@ -1216,7 +1224,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
 	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0;
-	int i, n = cmenu_mt->ni, btn = ev->button;
+	int i, n = cmenu_mt->ni, btn = ev ? ev->button : 1;
 	const char * lbl = cmenu_mt->lbl;
 	if (*lbl=='[' && btn==1) return (void) widg_defcmd(ww, cmenu_mt->cmd);
 	cmenu_gw = gtk_menu_new(); gtk_widget_set_name(cmenu_gw, "lflabPU");
@@ -1232,7 +1240,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 		case 3: lsr_popup((int)(msk>>4u)); break;
 		default: LOG("undef _menu %d", (int)(msk&15)); break;
 	}}
-	gtk_menu_popup(GTK_MENU(cmenu_gw), NULL, NULL, NULL, NULL, btn, ev->time);
+	gtk_menu_popup(GTK_MENU(cmenu_gw), NULL, NULL, NULL, NULL, btn, ev ? ev->time : 0);
 	gtk_widget_show(cmenu_gw);
 }
 
@@ -1258,6 +1266,21 @@ static ww_t * wlu_any_pp(topwin * tw, const char ** pp) {
 }
 
 static ww_t * wlu_any_s(topwin * tw, const char * p) { return wlu_any_pp(tw, &p); }
+
+static int ww_rev_lu(char * to, ww_t * ww) {
+	topwin * tw = ww->top;
+	const char * q = tw->sub_ch.tab;
+	int i, ix = ww->ix;
+	for (i=0; i<96; i++) {
+		int j = q[i];
+		if (j==ix) return *to=i+32, 1;
+		if (j>99) continue;
+		ww_t * w2 = widg_p(tw, j); if (w2->cl->ch != ':') continue;
+		int ns = VB_WPL(w2) * VB_LMAX(w2), k = ix - VB_WBASE(w2);
+		if (k>=0 && k<ns) return *to=i+32, to[1]=hexc1(k>>4), to[2]=hexc1(k&15), 3;
+	}
+	return ((ix = 1023-ix) < 256) ? (*to='_', to[1]=hexc1(ix>>4), to[2]=hexc1(ix&15), 3) : 0;
+}
 
 static GtkWidget* vbox_mkline(struct _ww_t * ww, int ix) {
 	topwin * tw = ww->top;
@@ -1406,28 +1429,6 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
-
-static int ww_rev_lu(char * to, ww_t * ww) {
-	topwin * tw = ww->top;
-	const char * q = tw->sub_ch.tab;
-	int i, ix = ww->ix;
-	for (i=0; i<96; i++) {
-		int j = q[i];
-		if (j==ix) return *to=i+32, 1;
-		if (j>99) continue;
-		ww_t * w2 = widg_p(tw, j); if (w2->cl->ch != ':') continue;
-		int ns = VB_WPL(w2) * VB_LMAX(w2), k = ix - VB_WBASE(w2);
-		if (k>=0 && k<ns) return *to=i+32, to[1]=hexc1(k>>4), to[2]=hexc1(k&15), 3;
-	}
-	return ((ix = 1023-ix) < 256) ? (*to='_', to[1]=hexc1(ix>>4), to[2]=hexc1(ix&15), 3) : 0;
-}
-
-static gboolean ww_debug(ww_t * ww, int btn) {
-	topwin * tw = ww->top;
-	char buf[1024]; buf[ww_rev_lu(buf, ww)] = 0;
-	LOG("ww_debug: twid=0x%x, wwix=0x%x, rlu=\"%s\"", tw->id, ww->ix, buf);
-	return TRUE;
-}
 
 static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	if (ev->type != GDK_BUTTON_PRESS) return TRUE;
@@ -4519,8 +4520,14 @@ static void dirtab_debug() {
 
 ///////////////// command ////////////////////////////////////////////////////
 
-static void cmd_tree(int id, char * s)
-{
+static void ww_gencmd(ww_t * ww, const char *arg) { switch(*arg) {
+	case '?': return (void) ww_debug(ww, 1);
+	case 'c': { ww_clk_fun cf = ww->cl->clk; return cf ? (*cf)(ww, arg[1]-48, 0, 0, NULL) 
+							   : LOG("ww_gencmd/c/'%c': no clkfun", ww->cl->ch); }
+	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, ww->cl->ch);
+}}
+
+static void cmd_tree(int id, char * s) {
 	GtkTreeIter * it = tree_lookup_it(id, 0);
 	if (!it) { LOG("T: lookup(0x%x) failed", id); return; }
 	int lr = (id & 1) ^ 1, id2 = 0;
@@ -4599,15 +4606,13 @@ static void cmd_ob(int c0, int id, char * arg) {
 		LOG("%c: exp:%c got:%c", c0, *arg, tw->cl->ch); return; }
 	const char * s = arg + 1;
 	switch(c0) {
-		case 'W':
-			if (!(ww = wlu_any_pp(tw, &s))) LOG("W: widget not found \"%s\"", arg);
-			else if (!ww->cl) LOG("W: widget: zero class \"%s\"", arg);
-			else (*ww->cl->cmd)(ww, s);
+		case 'W': case 'V':
+			if (!(ww = wlu_any_pp(tw, &s))) LOG("%c: widget not found \"%s\"", c0, arg);
+			else if (!ww->cl) LOG("%c: widget: zero class \"%s\"", c0, arg);
+			else (*((c0&1)?ww->cl->cmd:&ww_gencmd)) (ww, s);
 			return;
-		case 'U':
-			(*tw->cl->cmd)(tw, arg+1); return;
-		case 'P':
-			gtk_window_present(GTK_WINDOW(tw->w)); return;
+		case 'U': return (*tw->cl->cmd)(tw, arg+1);
+		case 'P': gtk_window_present(GTK_WINDOW(tw->w)); return;
 		case 'Z':
 			if (id<32) LOG("cowardly refusing to destroy window 0x%x", id);
 			else gtk_widget_destroy(tw->w); return;
