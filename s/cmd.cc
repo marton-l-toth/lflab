@@ -348,13 +348,13 @@ int CmdTab::c_misc(CmdBuf * p) {
 int CmdTab::c_closewin(CmdBuf * p) {
 	char * s = p->m_c_a0;
 	if (!(*s & 80)) return GCE_WRONGWT;
-	int ty = hxd2i(*(s++)), msk = ~(1<<ty);
+	int ty = hxd2i(*(s++));
 	while (ty!=7) {
 		if (*s==36) ++s;
 		if (!*s) return 0;
 		int id = 0; while (*s & 80) id = 16*id + hxd2i(*(s++));
 		ANode * nd = Node::lookup_n(id);
-		if (nd) nd -> close_window(ty); //winflg_and(msk);
+		if (nd) nd -> close_window(ty);
 	}
 	return 0; // TODO (?)
 }
