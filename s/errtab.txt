@@ -154,6 +154,7 @@ GCE_NOCONT   '<' without continued command
 GCE_EXWR     commands expects wrapbox
 GCE_JRUN     job already running
 GCE_ROUTE    a right command at the wrong place (BUG)
+GCE_RPCONV   conversion error in cmd rec/playback
 GCE_PARSE    command parse error
 S3__________ __________________________________________________________(BUG)__
 BXE_WTF      you just have found a bug (box)

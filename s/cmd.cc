@@ -60,7 +60,7 @@ class CmdTab {
 		static int c_iofw(CmdBuf * p) { if (*p->m_c_a0=='f') fflush(stderr); return pt_iocmd(p->m_c_a0); }
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0-48; return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
 		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav, c_report,
-			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin;
+			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin, c_rpl;
 };
 
 char * CmdTok::t(char *s) {
@@ -180,6 +180,23 @@ void CmdBuf::show_error(int ec) {
 	// TODO: NOF_FGUI, NDE_CONFIRM
 	char * s0 = untok(); if (!s0) s0 = m_c_a0 - 1;
 	log("%d: \"%s\": %s (%d)", m_lineno, s0, err_str(ec), ec);
+}
+
+int CmdBuf::cf_p2i(CmdBuf *p, char *q, int l) {
+	q[l-1] = 0; ANode * nd = p->lookup(q+1); if (!nd) return GCE_RPCONV;
+	return hx5(q, nd->id()); }
+
+int CmdBuf::cf_i2p(CmdBuf *p, char *q, int l) {
+	q[l-1] = 0; log("cf_i2p:\"%s\"", q); ANode * nd = Node::lookup_n(atoi_h(q+1)); if (!nd) return GCE_RPCONV;
+	return l = nd->get_path(q+1,999), q[l+1] = '`', l+2; }
+
+int CmdBuf::rpl_cp(char *to, const char *s, CmdBuf::conv_fun f) {
+	char *q0 = 0, *q = to;   int k, r;
+	while(*s) { if ((*(q++) = *(s++)) != '`') continue;
+		    if (!q0) q0 = q-1;
+		    else if ((r = (*f)(this, q0, k=q-q0)) < 0) return r;
+		    else q += r-k, q0 = 0; }
+	return *q = 0, q - to;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -395,11 +412,25 @@ int CmdTab::c_live(CmdBuf *p) {
 	return 0;
 }
 
+int CmdTab::c_rpl(CmdBuf *p) {
+	static long long rec_ts = 0ll;
+	const char * s = p->m_c_a0;
+	if ((*s|2) != 'R') return GCE_PARSE;
+	int l, rf = *s & 2;
+	char buf[1024];
+	if(rf){ if ((l=p->rpl_cp(buf, s+1, CmdBuf::cf_i2p)) < 0) return l;
+		long long ttp = snd0.total_played();
+		int dif = rec_ts ? (int)(ttp - rec_ts) : 0;  rec_ts = ttp;
+		dif = (dif<2888999) ? ((dif*743)>>15) : 65535;
+		log("cmd_rec:%04x %s", dif, buf); return 0;
+	}else { if ((l=p->rpl_cp(buf+1, s+1, CmdBuf::cf_p2i)) < 0) return l; else buf[0] = 9;
+		gui2.sn(buf, l+1); return 0; }}
+
 char CmdTab::m0_chtab[128];
 CmdTab::ent_t CmdTab::m0_tab[] = {
 {'?',c_invalid}, {'#',c_nop}, {'q',c_bye}, {'r',c_stfu}, {'v',c_vol}, {'^',c_gui2}, {'c', c_cfg}, {'l',c_lib},
 {'/',c_stat}, {'C'|CF_NODE1,c_cre}, {'N'|CF_NODE1,c_nadm}, {'I'|CF_NODE,c_info}, {'S'|CF_NODE1,c_sv2},
-{'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx},
+{'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx}, {'Q',c_rpl},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
 {'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {'R', c_report},
 {'w'|CF_TOK1,c_wav}, {0,0} };

@@ -16,6 +16,7 @@ class CmdBuf : public AOBuf {
 		friend class CmdTab;
 		static void st_init();
 		static int read_batch(const char * name, int nof);
+		typedef int (*conv_fun) (CmdBuf*, char*, int);
 
 		CmdBuf() : m_iname(0), m_try(0), m_fd(-1), m_nof0(0), m_sv_M(v_major), m_sv_m(v_minor),
 			   m_errcnt(0), m_cont(0), m_buf(0) {}
@@ -47,6 +48,9 @@ class CmdBuf : public AOBuf {
 		int curnode_ccmd() { ANode * p = curnode(); return p ? p->ccmd(this) : GCE_WTF; }
 		bool before(int i, int j) const { return m_sv_M<i || (m_sv_M==i && m_sv_m<j); }
 	protected:
+		static int cf_i2p(CmdBuf *p, char *s, int l),
+			   cf_p2i(CmdBuf *p, char *s, int l);
+		int rpl_cp(char *to, const char *s, conv_fun f);
 		char * untok() { return m_c_tok.un(); }
 		int chunk(int len);
 		int bprep(int siz);

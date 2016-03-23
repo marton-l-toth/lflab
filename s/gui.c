@@ -55,6 +55,7 @@
 #define DF_GRAPH 256
 #define DF_WIDG 512
 #define DF_MENU 1024
+#define DF_REC  2048
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]));
@@ -216,7 +217,7 @@ static int conf_portwid;
 static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
-			     "40:track 80:lookuperr-0x[56]7 100:graph 200:widg 400:menu";
+			     "40:track 80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -1430,12 +1431,21 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
+static void rec_click(ww_t * ww, int btn) {
+	char buf[1024], *q = buf+4; memcpy(buf, "~QRV", 4);
+	int tid = ww->top->id, id4 = tid&15;
+	q += (id4==7) ? sprintf(q, "%06x", tid) : sprintf(q, "`%05x`%x", tid>>4, id4);
+	*q = 36; q[1] = ww->top->cl->ch; q += 2+ww_rev_lu(q+2, ww);
+	*q = 'c'; q[1] = 48 + btn; q[2] = 10;
+	write(1, buf, q+3-buf);
+}
+
 static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	if (ev->type != GDK_BUTTON_PRESS) return TRUE;
 	ww_t * ww = (ww_t*)p;
 	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK);
+	if ((dflg&DF_REC) && !(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_click(ww, btn);
 	if (btn>9) return ww_debug(ww, btn);
-	// TODO: rec
 	(ww->cl->clk) (ww, btn, (int)lround(ev->x), (int)lround(ev->y), ev);
 	return TRUE;
 }
