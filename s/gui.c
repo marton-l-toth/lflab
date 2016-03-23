@@ -4634,7 +4634,7 @@ static void debug_wid(int fs) {
 static void cmd1(char * str) {
 	int i, t, k = *str;
 	char * s = str + 1;
-	if ((k&96) == 64) {
+	if ((unsigned int)(k-65) < 26u) {
 		int id = 0; while (*s & 80) id<<=4, id += hxd2i(*s), s++;
 		if (*s==36) ++s;
 		if (id) cmd_ob(k, last_obid = id, s);
@@ -4646,6 +4646,7 @@ static void cmd1(char * str) {
 		case 0: return;
 		case 'q': bye(*s);
 		case '#': return;
+		case '^': return CMD("%s", s);
 		case '+': 
 			  i = *(s++) - 48; t = *(s++);
 			  for (k=0; *s&80; s++) k=16*k + hxd2i(*s);
