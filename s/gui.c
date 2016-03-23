@@ -4322,9 +4322,10 @@ static void node_collapse(GtkTreeView *tw, GtkTreeIter *it, GtkTreePath *path, g
 static void node_sel(GtkTreeView *tw, gpointer user_data)  {
 	TVIEW_IX(i, node_sel);
 	GtkTreePath * path; gtk_tree_view_get_cursor(tw, &path, NULL);
-	if (gtk_tree_model_get_iter(FORD(i), tsel+i, path)) 
-		CMD("N#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), "LR"[i]);
-	else    LOG("node_sel: lookup failed"); 
+	if (!gtk_tree_model_get_iter(FORD(i), tsel+i, path)) return LOG("node_sel: lookup failed");
+	int id = 0xfffff&tree_nd_id(i, tsel+i);
+	if (dflg&DF_REC) CMD("QRN`^%05x`%c$*`%05x`", id, 49+i, id);
+	CMD("N#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), "LR"[i]);
 }
 
 static void node_act(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn * col, gpointer _) {

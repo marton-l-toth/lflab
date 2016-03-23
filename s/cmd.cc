@@ -187,7 +187,9 @@ int CmdBuf::cf_p2i(CmdBuf *p, char *q, int l) {
 	return hx5(q, nd->id()); }
 
 int CmdBuf::cf_i2p(CmdBuf *p, char *q, int l) {
-	q[l-1] = 0; log("cf_i2p:\"%s\"", q); ANode * nd = Node::lookup_n(atoi_h(q+1)); if (!nd) return GCE_RPCONV;
+	q[l-1] = 0; int upf = q[1]=='^';
+	ANode *nd2, *nd = Node::lookup_n(atoi_h(q+1+upf)); if (!nd) return GCE_RPCONV;
+	if (upf && (nd2=nd->up())) nd = nd2;
 	return l = nd->get_path(q+1,999), q[l+1] = '`', l+2; }
 
 int CmdBuf::rpl_cp(char *to, const char *s, CmdBuf::conv_fun f) {
