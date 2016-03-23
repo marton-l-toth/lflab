@@ -2093,19 +2093,19 @@ static void dacnt_cmd(struct _ww_t * ww, const char * arg) {
 	dacnt_set_x(ww, x, 768+k);
 }
 
+#define	CNT_CLK int sh = 3*b9, btn = (03213213210>>sh)&7, mod = (02221110000>>sh)&7
 static void dacnt_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	char buf[4]; buf[0] = 42+ev->button; buf[2] = 0;
-	buf[1] = 48 + !!(ev->state&GDK_SHIFT_MASK) + 2*!!(ev->state&GDK_CONTROL_MASK);
+	CNT_CLK; char buf[4]; buf[0] = 42+btn; buf[1] = 48+mod; buf[2] = 0;
 	widg_defcmd(ww, buf);
 	return;
 }
 
 static void dacntvs_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	int sg = 2 - ev->button; if (!sg) return;
+	CNT_CLK, sg = 2 - btn; if (!sg) return;
 	int x0 = DACNT_X(ww), x = x0, k = DACNT_LIM(ww);
-	if (ev->state&GDK_CONTROL_MASK) x = sg<0 ? 0 : k;
-	else if (ev->state&GDK_SHIFT_MASK) x += 8 * sg;
-	else x += sg;
+	switch(mod) { case 0 : x +=   sg; break;
+		      case 1 : x += 8*sg; break;
+		      default: x = sg<0 ? 0 : k; break; }
 	if (x<0) x = 0; else if (x>k) x = k;
 	if (x==x0) return;
 	dacnt_set_x(ww, x, 0x700);
