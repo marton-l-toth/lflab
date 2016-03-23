@@ -555,6 +555,8 @@ class Node {
 		static int chkwin(int oid);
 		static bool being_crawled() { return !!ANode::m0_sv.rn; }
 		static void trk_chk_ord(ANode *tn, ANode *p, ANode *q, const char * msg);
+		static ANode *trk_ij(ABoxNode * tn0, int i, int j);
+		static ANode *trk_fwf(ANode *q), *trk_fwb(ANode *q);
 
 		static int obj_help(int cl);
 		static void lib_start(), lib_end();

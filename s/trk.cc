@@ -286,22 +286,28 @@ int TrackGen::w_sel(sthg * bxw_rawptr) {
 }
 
 int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y) {
-	ANode * nd; if (!id || (nd = ANode::lookup_n_q(id))->cl_id()!='w') id = 0, nd = 0;
+	ANode *nd, *q; if (!id || (nd = ANode::lookup_n_q(id))->cl_id()!='w') id = 0, nd = 0;
 	int ec; switch(c) {
 		case '1': return (TR_SEL_ID=id) ? sel0w(bxw_rawptr, nd->cth()->i, nd->cth()->j)
 			  			: sel0w(bxw_rawptr,y, x),  w_sel(bxw_rawptr);
 		case '4': return nd ? wrap_nd_2mx(static_cast<ABoxNode*>(nd),0,.1*(double)m_bp10m,0):EEE_NOEFF;
 		case '6': return nd ? nd->draw_window(0x1b) : BXE_NOARG;
 		case '9': return nd ? nd->draw_window(0x19) : BXE_NOARG;
-		case 'C': return TR_SEL_ID ? Node::copy(ANode::lookup_n_q(TR_SEL_ID), m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;
-		case 'M': ec = (id=TR_SEL_ID) ? Node::move(ANode::lookup_n_q(TR_SEL_ID), m_node, 0, y|(cb->cnof()&~NOF_FGUI), x) : EEE_NOEFF;
-			  if (ec>=0) sel0w(bxw_rawptr, y, x), TR_SEL_ID=id, w_sel(bxw_rawptr);    return ec;
+		case 'C': if (!TR_SEL_ID || (q=ANode::lookup_n_q(TR_SEL_ID))->cl_id()!='w') return EEE_NOEFF;
+			  return Node::copy(q, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x);
+		case 'M': if (!(id=TR_SEL_ID) || (q=ANode::lookup_n_q(id))->cl_id()!='w') return EEE_NOEFF;
+			  return ((ec = Node::move(q, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) ? ec :
+			   (sel0w(bxw_rawptr, q->cth()->i, q->cth()->j), TR_SEL_ID=id, w_sel(bxw_rawptr), ec);
 		case 'N': return Node::mk(0, m_node, 0, 'w', y|cb->cnof(), x);
 		case 'v': if (!(nd = ClipNode::kcp(2)->ent_sel())) return EEE_NOEFF;
 			  if ((id = Node::copy(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) return id;
 			  return TR_SEL_ID=id, sel0w(bxw_rawptr, y, x), w_sel(bxw_rawptr), 0;
 		case 'c': return nd ? Node::copy(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
 		case 'x': return nd ? Node::move(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
+		case 't': if (TR_SEL_ID) return TR_SEL_ID=0, TR_SEL_XY[1]&=~15, w_sel(bxw_rawptr), 0;
+			  q = Node::trk_ij(m_node, TR_SEL_XY[1]&~15, TR_SEL_XY[0]);
+			  return (q->cth()->j==TR_SEL_XY[0] && !((TR_SEL_XY[1]^q->cth()->i)&~15)) ?
+				  (sel0wn(bxw_rawptr, q), w_sel(bxw_rawptr), 0) : EEE_NOEFF;
 		default: return BXE_CENUM;
 }}
 
@@ -362,19 +368,14 @@ CH(rq){	if (s[1]==',') return p->draw_bx_1();
 	int ec = p->draw_bx_ini(atoi_h(s+1), atoi_h(s2)); return (ec<0) ? ec : p->draw_bx_1();
 }
 
-CH(stp){BXW_GETP(p); if (!TR_SEL_ID) return BXE_NOARG;
-	ANode * nd = ANode::lookup_n_q(TR_SEL_ID);
+CH(stp){BXW_GETP(p); int i = TR_SEL_XY[1], j = TR_SEL_XY[0], k = TR_SEL_ID; 
+	ANode *nd, *cur = k ? ANode::lookup_n_q(k) : 0;
 	switch(s[1]) {
-		case '>':
-			for (nd=nd->next(); nd->cth()->j<0x7fffffff && nd->cl_id()!='w'; nd=nd->next());
-			break;
-		case '<':
-			for (nd=nd->cth()->pv; nd->cth()->j>=0 && nd->cl_id()!='w'; nd=nd->cth()->pv);
-			break;
+		case '>': nd = Node::trk_fwf(cur ? cur->next() : Node::trk_ij(p->m_node, i, j)); break;
+		case '<': nd = Node::trk_fwb((cur ? cur : Node::trk_ij(p->m_node, i, j))->cth()->pv); break;
 		default: return BXE_CENUM;
 	}
-	if (nd->cl_id()=='w') p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr);
-	return 0;
+	return (nd && nd->cl_id()=='w') ? (p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr), 0) : EEE_NOEFF;
 }
 
 CH(mv){	if (!s[1] || !s[2]) return BXE_NOARG;

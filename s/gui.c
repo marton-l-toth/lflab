@@ -2634,9 +2634,12 @@ static void tc_vw_cmd(tc_t * tc) { CMD("X#%x$V%c%c$%x$%x",
 		tc->nid, tc->y0a+48, tc->y1a+48, tc->x0a, tc->x1a); }
 
 static void tc_clear(tc_t * tc, int re) {
-        int i; if (re) for (i=0; i<tc->b3k_n; i++) free3k(tc->b3k[i]);
+	trk_24 sv, *q;
+	if (re) { memcpy(&sv, tc_p24(tc, 1), sizeof(trk_24));
+		  int i; for (i=0; i<tc->b3k_n; i++) free3k(tc->b3k[i]); }
         tc->b3k_n = tc->t24_f = tc->flg = 0; tc->x1r = tc->x1a = -1;
-	unsigned short qw=0; tc_a24(tc, &qw)->b.id=0; if (qw!=1) LOG("BUG: tc_clear: %d!=1", qw);
+	unsigned short qw=0; q = tc_a24(tc, &qw); if (qw!=1) LOG("BUG: tc_clear: %d!=1", qw);
+	if (re) memcpy(q, &sv, sizeof(trk_24)); else q->b.id = -1; 
 }
 
 #define TC_BLK(P,X,Y) ((P)->blk[((X)&15)+16*((Y)&7)])
@@ -2645,7 +2648,6 @@ static void tc_clear(tc_t * tc, int re) {
 static tc_t* tc_mk(ww_t*ww) {
 	tc_t*r=(tc_t*)alloc3k(); tc_clear(r,0); r->nid=(r->ww=ww)->top->id>>4; 
 	r->x0a = 0; r->x1a = -1; r->selx = 0; r->sely = 1; 
-	unsigned short qw=0; tc_a24(r, &qw)->b.id=0; if (qw!=1) LOG("BUG: tc_mk: %d!=1", qw);
 	return r;
 }
 

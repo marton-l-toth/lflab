@@ -1228,6 +1228,14 @@ ANode* tgn_new (ANode *tn, int i, int j, ANode *nx) {
 void Node::trk_chk_ord(ANode *tn, ANode *p, ANode *q, const char * msg) {
 	static_cast<TBoxNode*>(tn)->chk_ord(p,q,msg); }
 
+ANode * Node::trk_ij(ABoxNode * tn0, int i, int j) { 
+	return static_cast<TBoxNode*>(tn0) -> find_ijf(i,j,1); }
+
+ANode * Node::trk_fwf(ANode *q) { while (q->cth()->i<15) q = q->next();
+				  return q->cth()->i>15 ? q : 0; }
+ANode * Node::trk_fwb(ANode *q) { while ((unsigned int)(q->cth()->i-1) < 15u) q = q->cth()->pv;
+				  return q->cth()->i>15 ? q : 0; }
+
 ///////// static /////////////////////////////////////////////////////////////
 
 unsigned int Node::m0_visitor = 0;
