@@ -1121,8 +1121,9 @@ static chtab menu_ctab;
 static ww_t * cmenu_w = NULL;
 static menu_t * cmenu_mt = NULL;
 static GtkWidget * cmenu_gw = NULL;
-static char cmenu_dcmd[1024];
+static char cmenu_dcmd[1024], cmenu_dlbl[1024];
 static int cmenu_dic;
+static unsigned int cmenu_msk;
 
 void lsr_upd(int k, const char * s) {
 	noderef_t * np = lsr_nodes + 32 * k;
@@ -1138,8 +1139,7 @@ void lsr_upd(int k, const char * s) {
 }
 
 void lsr_debug() {
-	int i, j, n;
-	for (i=0; i<3; i++) {
+	int i, j, n; for (i=0; i<3; i++) {
 		LOG("lsr_debug: n(%c) = %d", "LSR"[i], (n = n_lsr[i]));
 		for (j=0; j<n; j++) {
 			noderef_t * p = lsr_nodes + 32*i + j;
@@ -1192,9 +1192,24 @@ static void menutab_init() {
 	tsc_mi = menutab_lu('T', 0);
 }
 
+static int menu_findlbl(const char *s) {
+	int i, n = cmenu_mt->ni;
+	for (i=0; i<n; i++) {
+		if (strcmp(s, cmenu_mt->lbl + i*cmenu_mt->lbll)) continue;
+		if (!((1u<<i)&cmenu_msk)) return i; 
+		LOG("menu_findlbl(%s) : skipping %d (hidden)", s, i); }
+	for (i=0; i<cmenu_dic; i++) if (!strcmp(s, cmenu_dlbl+32*i)) return i;
+	return -1;
+}
+
+static const char * menu_lbl(int ix) {
+	if (ix < cmenu_mt->ni) return cmenu_mt->lbl + ix*cmenu_mt->lbll;
+	return ((ix-=cmenu_mt->ni) < cmenu_dic) ? cmenu_dlbl + 32*ix : "???"; }
+
 static void menu_act(GtkMenuItem *it, gpointer p) {
-	size_t ix = (char*)p - (char*)cmenu_w;
-	if (ix<0 || ix>31) LOG("menu_act: ptr:%p cmenu_w:%p diff:%p", (char*)p, cmenu_w, (void*)ix);
+	size_t ix = (char*)p - cmenu_dcmd;
+	if (it && (dflg & DF_REC)) CMD("QRm%s", menu_lbl(ix));
+	if (ix<0 || ix>31) LOG("menu_act: ptr:%p dcmd:%p diff:%d", (char*)p, cmenu_dcmd, ix);
 	else if (cmenu_w->cl->ch=='t') tsc_act(cmenu_w, ix);
 	else if (ix < cmenu_mt->ni) widg_defcmd(cmenu_w, cmenu_mt->cmd + ix*cmenu_mt->cmdl);
 	else if ((ix-=cmenu_mt->ni) < cmenu_dic) widg_defcmd(cmenu_w, cmenu_dcmd + 32*ix);
@@ -1203,12 +1218,19 @@ static void menu_act(GtkMenuItem *it, gpointer p) {
 
 static void menu_del() { if (cmenu_gw) gtk_widget_destroy(cmenu_gw); cmenu_gw = NULL; }
 
+static void menu_act_s(const char *s) {
+	if (!cmenu_w) return LOG("menu_act_s: no active popup menu");
+	int j = menu_findlbl(s); if (j<0) return LOG("menu_act_s: \"%s\" not found", s);
+	LOG("menu_act_s: found: %d", j); menu_act(NULL, cmenu_dcmd + j); menu_del();
+}
+
 static int add_dyn(const char * nm, const char * cmd, int x) {
 	int i = cmenu_dic; if (i==32) return -1; else cmenu_dic++;
 	GtkWidget * it2 = gtk_menu_item_new_with_label(nm);
+	strncpy(cmenu_dlbl + 32*i, nm, 32);
 	gtk_menu_shell_append(GTK_MENU_SHELL(cmenu_gw), it2);
 	gtk_widget_show(it2);
-	g_signal_connect(it2, "activate", G_CALLBACK(menu_act), (char*)cmenu_w + i);
+	g_signal_connect(it2, "activate", G_CALLBACK(menu_act), cmenu_dcmd + i);
 	char *q0 = cmenu_dcmd + 32*i, *q = q0, *qlim = q0 + 31;
 	while (*cmd && q<qlim) *(q++) = *(cmd++);
 	if (x>=0 && q+5<qlim) q += hx5(q, x);
@@ -1241,7 +1263,7 @@ static void pcm_popup() {
 static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
-	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0;
+	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0; cmenu_msk = msk;
 	int i, n = cmenu_mt->ni, btn = ev ? ev->button : 1;
 	const char * lbl = cmenu_mt->lbl;
 	if (*lbl=='[' && btn==1) return (void) widg_defcmd(ww, cmenu_mt->cmd);
@@ -1252,7 +1274,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
 							 : gtk_separator_menu_item_new();
 		gtk_menu_shell_append(GTK_MENU_SHELL(cmenu_gw), it2);
 		gtk_widget_show(it2);
-		g_signal_connect(it2, "activate", G_CALLBACK(menu_act), (char*)ww + i);
+		g_signal_connect(it2, "activate", G_CALLBACK(menu_act), cmenu_dcmd + i);
 	}} else { switch(msk&15) {
 		case 1: pcm_popup(); break;
 		case 3: lsr_popup((int)(msk>>4u)); break;
@@ -4714,6 +4736,7 @@ static void cmd1(char * str) {
 					  return;
 				default: LOG("unknown debug-cmd 0x%x(%c)",*s, *s); return;
 			}
+		case 'm': return menu_act_s(s);
 		default:LOG("unknown cmd 0x%x",*str); return;
 	}
 }
