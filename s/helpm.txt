@@ -84,8 +84,9 @@ in each time-slice). On inputs labeled as "[xy]", lists are
 ==> etc.[lists]
 expected, these are constant inputs unless noted otherwise.
 ---
-Editable boxes can be graphs, calculators or tracks.
+Editable boxes can be of the following types:
 ==> win.graph-box
+==> win.iterated filter
 ==> win.calc-box
 ==> win.track
 Browse "!b" and "!e" for primitive boxes and examples of

@@ -1071,7 +1071,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
 		"_F  A0W cW  _c-1_E  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
-{'/',6, 0, 7,1, "folder clipbrdinstr. graph  calc   track  ","DCwgct"},
+{'/',7, 0, 7,1, "folder clipbrdinstr. graph  iter.f.calc   track  ","DCwgict"},
 {0,  9, 0,8,5,"load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
 {'#',5, 0, 8, 3, "[focus] config  help    redraw  wav/flac", "$>*W$ N??M9 XAW"},
