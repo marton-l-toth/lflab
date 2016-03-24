@@ -2452,8 +2452,13 @@ static void dagrid_cmd(struct _ww_t * ww, const char * s) {
 #define GR_MKXY int x=(cx-GRID_X0(ww)-1)/GRID_SX(ww); if(x<0)x=0; else if(x>=GRID_X(ww)) x=GRID_X(ww)-1;\
 		int y=(cy-GRID_Y0(ww)-1)/GRID_SY(ww); if(y<0)y=0; else if(y>=GRID_Y(ww)) y=GRID_Y(ww)-1
 
+static void dagrid_kc_rec(ww_t * ww, int byx) {
+	char buf[2048], *q = buf + rec_qrv(buf, ww); 
+	q += sprintf(q, "k%05x\n", byx); write(1, buf, q-buf); }
+
 static void dagrid_kcmd(ww_t * ww, int b9, int x, int y) {
-	char buf[12], *q = ww->top->arg[9].c; buf[0] = 48+b9; buf[1] = 48+x; buf[2] = 48+y;
+	if ((dflg & DF_REC) && !(b9&32)) dagrid_kc_rec(ww, (b9<<16)|(y<<8)|x);
+	char buf[12], *q = ww->top->arg[9].c; buf[0] = 48|b9; buf[1] = 48+x; buf[2] = 48+y;
 	int i; for (i=0; i<6; i++) buf[3+i] = q[i]+48; buf[9] = 0;
 	widg_defcmd(ww, buf);
 }
@@ -4571,13 +4576,15 @@ static void dirtab_debug() {
 
 ///////////////// command ////////////////////////////////////////////////////
 
-static void ww_gencmd(ww_t * ww, const char *arg) { int cl=ww->cl->ch; switch(*arg) {
+static void ww_gencmd(ww_t * ww, const char *arg) { int k, cl=ww->cl->ch; switch(*arg) {
 	case '?': return (void) ww_debug(ww, 1);
 	case 'c': { ww_clk_fun cf = ww->cl->clk; int xy = (arg[1] && arg[2]==',') ? atoi_h(arg+3) : 0;
 		    return cf ? (*cf)(ww, arg[1]-48, xy&4095, xy>>12, NULL) 
 			      : LOG("ww_gencmd/c/'%c': no clkfun", cl); }
-	case 'e': return (cl != 'e') ? LOG("ww_gencmd/e/'%c': entry exp.", ww->cl->ch)
-		  	             : (void) gtk_entry_set_text(GTK_ENTRY(ww->w), arg+1); 
+	case 'e': return (cl=='e') ? (void) gtk_entry_set_text(GTK_ENTRY(ww->w), arg+1)
+		  	           : LOG("ww_gencmd/e/'%c': entry exp.", cl);
+	case 'k': return ((cl|8)==43) ? (k=atoi_h(arg+1), dagrid_kcmd(ww, (k>>16)|32, k&255, (k>>8)&255))
+		  	              : LOG("ww_gencmd/k/'%c': grid exp.", cl);
 	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, cl);
 }}
 
