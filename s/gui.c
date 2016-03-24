@@ -4293,8 +4293,9 @@ static int tree_recdel(int lr, ob_dir *p, GtkTreeIter * it, int flg, char ** pp)
 	}
 }
 
+#define NDC_REC(S) if (dflg&DF_REC) CMD("QRN`^%05x`%c$" S "`%05x`", id, 49+lr, id);
 static void node_expand(GtkTreeView *tw, GtkTreeIter *it, GtkTreePath *path, gpointer _) {
-	TVIEW_IX(lr, node_expand); int id = tree_nd_id(lr, it);
+	TVIEW_IX(lr, node_expand); int id = tree_nd_id(lr, it); NDC_REC("<");
 	if (dflg & DF_NEXP) LOG("expand: %c %x, %c", "LR"[lr], id, 48+expand_cmd_flg);
 	if (expand_cmd_flg) CMD("D#%x$%c", id, 32*lr+'E');
 }
@@ -4314,25 +4315,23 @@ static void node_coll2(int lr, ob_dir * p, GtkTreeIter * it, int keepflg) {
 
 static void node_collapse(GtkTreeView *tw, GtkTreeIter *it, GtkTreePath *path, gpointer _) {
 	TVIEW_IX(lr, node_collapse);
-	int id = tree_nd_id(lr, it);
+	int id = tree_nd_id(lr, it); NDC_REC(">");
 	ob_dir * p = tree_lookup(16*id+lr+1, 0);
 	if (p) node_coll2(lr, p, it, 1);
 }
 
 static void node_sel(GtkTreeView *tw, gpointer user_data)  {
-	TVIEW_IX(i, node_sel);
+	TVIEW_IX(lr, node_sel);
 	GtkTreePath * path; gtk_tree_view_get_cursor(tw, &path, NULL);
-	if (!gtk_tree_model_get_iter(FORD(i), tsel+i, path)) return LOG("node_sel: lookup failed");
-	int id = 0xfffff&tree_nd_id(i, tsel+i);
-	if (dflg&DF_REC) CMD("QRN`^%05x`%c$*`%05x`", id, 49+i, id);
-	CMD("N#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), "LR"[i]);
+	if (!gtk_tree_model_get_iter(FORD(lr), tsel+lr, path)) return LOG("node_sel: lookup failed");
+	int id = 0xfffff&tree_nd_id(lr, tsel+lr);  NDC_REC("*");
+	CMD("N#%x$%c", 0xfffff&tree_nd_id(lr, tsel+lr), "LR"[lr]);
 }
 
 static void node_act(GtkTreeView *tw, GtkTreePath *path, GtkTreeViewColumn * col, gpointer _) {
-	TVIEW_IX(i, node_act);
-	if (gtk_tree_model_get_iter(FORD(i), tsel+i, path)) 
-		CMD("D#%x$%c", 0xfffff&tree_nd_id(i, tsel+i), 32*i+'W');
-	else    LOG("node_act: lookup failed"); 
+	TVIEW_IX(lr, node_act); int id = 0xfffff&tree_nd_id(lr, tsel+lr); 
+	if (!gtk_tree_model_get_iter(FORD(lr), tsel+lr, path)) return LOG("node_act: lookup failed");
+	NDC_REC("W"); CMD("D#%x$%c", id, 32*lr+'W');
 }
 
 static void mk_subnd(GtkTreeIter *to, int lr, GtkTreeIter *nd, int ix, int id, const char * nm) {
@@ -4562,6 +4561,20 @@ static void emp2nd(int lr, GtkTreeIter * it, const char * nm, int id, int dflg) 
 	if (dflg) mk_subnd(NULL, lr, it, 0, id|1048576, "...");
 }
 
+typedef void (*path_fun) (GtkTreeView *v, GtkTreePath *p);
+void cmd_pf_sel(GtkTreeView *v, GtkTreePath *p) { gtk_tree_view_set_cursor  (v, p, NULL, 0); }
+void cmd_pf_exp(GtkTreeView *v, GtkTreePath *p) { gtk_tree_view_expand_row  (v, p, FALSE);   }
+void cmd_pf_cls(GtkTreeView *v, GtkTreePath *p) { gtk_tree_view_collapse_row(v, p);          }
+void cmd_pf_act(GtkTreeView *v, GtkTreePath *p) { gtk_tree_view_row_activated(v, p, 
+							  gtk_tree_view_get_column(v, 0));   }
+
+static void cmd_path(int lr, int id, int snid, GtkTreeIter * it, path_fun f) {
+	if (!( (id>>4)|snid )) it = troot + lr; 
+	else if (!it) return LOG("N*: %x.%x not found", id, snid);
+	GtkTreePath * path = gtk_tree_model_get_path(FORD(lr), it);
+	(*f)(tview[lr], path); gtk_tree_path_free(path); 
+}
+
 static void cmd_node(int id, char * s) {
 	int k = obidtab_lookup(&oi_dir, id, 0);
 	if (k<0) { LOG("N: node %x not found", id); return; }
@@ -4575,16 +4588,10 @@ static void cmd_node(int id, char * s) {
 	int found = snid ? tree_find_child(it, lr, oe->nd+lr, 16*snid+1+lr) : -1, itflg = (found>=0);
 	// LOG("cmd_node: itflg:%c s:\"%s\"", "ny"[itflg], s);
 	switch(c0) {
-		case '*': 
-		 	if (!( (id>>4)|snid )) {
-				it = troot + lr;
-			} else if (!itflg) {
-				LOG("N*: node %x.%x not found", id, snid); return; 
-			}
-			GtkTreePath * path; path = gtk_tree_model_get_path(FORD(lr), it);
-			gtk_tree_view_set_cursor(tview[lr], path, NULL, 0);
-			gtk_tree_path_free(path);
-			return;
+		case '*': return cmd_path(lr, id, snid, itflg?it:0, cmd_pf_sel);
+		case '<': return cmd_path(lr, id, snid, itflg?it:0, cmd_pf_exp);
+		case '>': return cmd_path(lr, id, snid, itflg?it:0, cmd_pf_cls);
+		case 'W': return cmd_path(lr, id, snid, itflg?it:0, cmd_pf_act);
 		case '+':
 		case ',':
 			if (!snid) LOG("N%c: cannot rename root node", c0);
