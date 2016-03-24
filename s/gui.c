@@ -831,6 +831,14 @@ static gboolean ww_debug(ww_t * ww, int btn) {
 	return TRUE;
 }
 
+static int rec_qrv(char *to, ww_t * ww) {
+	int tid = ww->top->id, id4 = tid&15;
+	char * q = to+4; memcpy(to, "~QRV", 4);
+	q += (id4==7) ? sprintf(q, "%06x", tid) : sprintf(q, "`%05x`%x", tid>>4, id4);
+	*q = 36; q[1] = ww->top->cl->ch; q += 2+ww_rev_lu(q+2, ww);
+	return q - to;
+}
+
 ///////////////// simple widgets /////////////////////////////////////////////
 
 #define ENT_SL(x) ((x)->arg[1].i[0])
@@ -845,10 +853,18 @@ static void button_skel(struct _ww_t * ww, const char **pp) {
 	g_signal_connect (ww->w, "clicked", G_CALLBACK (button_click), (gpointer)ww);
 }
 
+static void entry_rec(ww_t * ww, const char * s) {
+	char buf[2048], *q = buf + rec_qrv(buf, ww);
+	int l = strlen(s); q[0] = 'e'; memcpy(q+1, s, l); q[l+1] = 10;
+	write(1, buf, q+l+2-buf);
+}
+
 static void entry_chg(GtkEditable * ed, gpointer p) {
-	char * s = gtk_editable_get_chars(ed, 0, -1);
 	ww_t * ww = (ww_t*)p;
-	if (!ENT_SL(ww) || memcmp(ww->etc, s, ENT_SL(ww))) widg_defcmd(ww, s), ENT_SL(ww) = 0;
+	int k, flg = !!(*ww->cmd) + 2*!!(dflg & DF_REC);  if (!flg) return;
+	char * s = gtk_editable_get_chars(ed, 0, -1);
+	if (!ENT_SL(ww) || memcmp(ww->etc, s, ENT_SL(ww))) {
+		if (flg&2) entry_rec(ww, s); if (flg&1) widg_defcmd(ww, s); ENT_SL(ww) = 0; }
 	free(s);
 }
 
@@ -885,6 +901,7 @@ static int entry_get (void * to, struct _ww_t * ww, int ty) {
 	return l;
 }
 
+static void entry_act(GtkEntry *entry, gpointer p) { ww_debug((ww_t*)p, 1); }
 static void entry_skel(struct _ww_t * ww, const char **pp) {
 	int x,w=0; while (x=**pp-'0',0<=x&&x<=9) w=10*w+x, ++*pp;
 	GtkEntryBuffer * eb = gtk_entry_buffer_new("",0);
@@ -893,8 +910,8 @@ static void entry_skel(struct _ww_t * ww, const char **pp) {
 	gtk_entry_set_width_chars(GTK_ENTRY(ww->w), w?w:10);
 	gtk_entry_set_has_frame(GTK_ENTRY(ww->w), 0);
 	ENT_SL(ww) = ENT_SA(ww) = 0;
-	if (!*ww->cmd) return;
-	g_signal_connect (ww->w, "changed", G_CALLBACK (entry_chg), (gpointer)ww);
+	g_signal_connect (ww->w, "changed",  G_CALLBACK (entry_chg), (gpointer)ww);
+	g_signal_connect (ww->w, "activate", G_CALLBACK (entry_act), (gpointer)ww);
 }
 
 ///////////////// file/dir chooser dialog ////////////////////////////////////
@@ -1432,10 +1449,7 @@ static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton 
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
 static void rec_click(ww_t * ww, int btn) {
-	char buf[1024], *q = buf+4; memcpy(buf, "~QRV", 4);
-	int tid = ww->top->id, id4 = tid&15;
-	q += (id4==7) ? sprintf(q, "%06x", tid) : sprintf(q, "`%05x`%x", tid>>4, id4);
-	*q = 36; q[1] = ww->top->cl->ch; q += 2+ww_rev_lu(q+2, ww);
+	char buf[1024], *q = buf+rec_qrv(buf, ww); 
 	*q = 'c'; q[1] = 48 + btn; q[2] = 10;
 	write(1, buf, q+3-buf);
 }
@@ -4532,11 +4546,13 @@ static void dirtab_debug() {
 
 ///////////////// command ////////////////////////////////////////////////////
 
-static void ww_gencmd(ww_t * ww, const char *arg) { switch(*arg) {
+static void ww_gencmd(ww_t * ww, const char *arg) { int cl=ww->cl->ch; switch(*arg) {
 	case '?': return (void) ww_debug(ww, 1);
 	case 'c': { ww_clk_fun cf = ww->cl->clk; return cf ? (*cf)(ww, arg[1]-48, 0, 0, NULL) 
-							   : LOG("ww_gencmd/c/'%c': no clkfun", ww->cl->ch); }
-	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, ww->cl->ch);
+							   : LOG("ww_gencmd/c/'%c': no clkfun", cl); }
+	case 'e': return (cl != 'e') ? LOG("ww_gencmd/e/'%c': entry exp.", ww->cl->ch)
+		  	             : (void) gtk_entry_set_text(GTK_ENTRY(ww->w), arg+1); 
+	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, cl);
 }}
 
 static void cmd_tree(int id, char * s) {
