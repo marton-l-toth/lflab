@@ -1470,17 +1470,20 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
-static void rec_click(ww_t * ww, int btn) {
+static void rec_click(ww_t * ww, int btn, int xy) {
 	char buf[1024], *q = buf+rec_qrv(buf, ww); 
-	*q = 'c'; q[1] = 48 + btn; q[2] = 10;
-	write(1, buf, q+3-buf);
+	*q = 'c'; q[1] = 48 + btn; q += 2;
+	q += xy ? sprintf(q, ",%x\n", xy) : (*q=10, 1);
+	write(1, buf, q - buf);
 }
 
 static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	if (ev->type != GDK_BUTTON_PRESS) return TRUE;
 	ww_t * ww = (ww_t*)p;
-	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK);
-	if ((dflg&DF_REC) && !(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_click(ww, btn);
+	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK),
+	    x = (int)lround(ev->x), y = (int)lround(ev->y);
+	if (dflg&DF_REC) { if (!(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_click(ww, btn, 0);
+			   else if (ww->cl->ch=='K') rec_click(ww, btn, (y<<12)|x);       }
 	if (btn>9) return ww_debug(ww, btn);
 	(ww->cl->clk) (ww, btn, (int)lround(ev->x), (int)lround(ev->y), ev);
 	return TRUE;
@@ -4570,8 +4573,9 @@ static void dirtab_debug() {
 
 static void ww_gencmd(ww_t * ww, const char *arg) { int cl=ww->cl->ch; switch(*arg) {
 	case '?': return (void) ww_debug(ww, 1);
-	case 'c': { ww_clk_fun cf = ww->cl->clk; return cf ? (*cf)(ww, arg[1]-48, 0, 0, NULL) 
-							   : LOG("ww_gencmd/c/'%c': no clkfun", cl); }
+	case 'c': { ww_clk_fun cf = ww->cl->clk; int xy = (arg[1] && arg[2]==',') ? atoi_h(arg+3) : 0;
+		    return cf ? (*cf)(ww, arg[1]-48, xy&4095, xy>>12, NULL) 
+			      : LOG("ww_gencmd/c/'%c': no clkfun", cl); }
 	case 'e': return (cl != 'e') ? LOG("ww_gencmd/e/'%c': entry exp.", ww->cl->ch)
 		  	             : (void) gtk_entry_set_text(GTK_ENTRY(ww->w), arg+1); 
 	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, cl);
