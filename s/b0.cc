@@ -6,7 +6,7 @@
 #define IMPBOX(NM,NA,NT) class NM : public BoxInst { \
 	public: NM() : m_t(0) {} \
 		virtual int calc(int inflg, double ** inb, double ** outb, int n); \
-	        double m_t, m_arg[NA], m_tx[NT]; }; \
+	        double m_t, m_arg[NA]; int m_tx[NT]; }; \
 int NM::calc(int inflg, double ** inb, double ** outb, int n)
 
 #define WVBOX(NM) class NM : public BoxInst { \
@@ -121,14 +121,27 @@ IMPBOX(TriangImp, 3, 2) {
 }
 
 //? {{{!._gsI}}}
-//? Gaussian impulse (hwid: half-width in seconds)
-IMPBOX(GaussImp, 1, 1) {
-	double x,d,*q=*outb;   int t = m_t;
-	if (!t) m_tx[0] = 8*sec2samp(**inb), x = 3.330218444630791/(double)m_tx[0], m_arg[0] = x*x;
-	if (t>=2*m_tx[0]) return *q = 0.0, 0;
-	x = m_arg[0] * (t-m_tx[0]); d = m_arg[0];
-	for (int i=0; i<n; i++) x+=d, q[i] = exp(-x*x);
-	m_t += n; return 1;
+//? Gaussian impulse
+//? wid - total width, out@(t=wid/2) = 1.0
+//? bits - precision, out@(t=0) = out@(t=wid) = 2^(-bits-1)
+IMPBOX(GaussImp, 3, 1) {
+	double y,d,dd,*q=*outb;   int t = m_t; m_t += n;
+	if(!t){ if (!n) return 0;
+		int hw = sec2samp(.5 * **inb);
+		if (hw<1) return m_tx[0]=0, *q=1.0, memset(q+1,0,8*n-8), m_t = 1;
+		double a = (double)hw, c1 = -M_LN2*inb[1][0], c = c1/(a*a);
+		y  = m_arg[0] = exp(c1);
+		d  = m_arg[1] = exp(c*(1.0-a-a));
+		dd = m_arg[2] = exp(c+c);
+		m_tx[0] = 2*hw+1;
+	} else {
+		int n2 = m_tx[0] - t;
+		if (n2<1) return *q=0.0, 0;
+		if (n2<n) memset(q+n2, 0, 8*(n-n2)), n = n2;
+		y = m_arg[0]; d = m_arg[1]; dd = m_arg[2];
+	}
+	for (int i=0; i<n; i++) q[i] = y, y *= d, d *= dd;
+	m_arg[0] = y; m_arg[1] = d; return 1;
 }
 
 //? {{{!._w}}}
@@ -394,7 +407,7 @@ void b_b0_init(ANode * rn) {
 	qmk_box(wv, "~gpt",  QMB_ARG0(GPlsTrain), 0, 3, 33, "w1", "2+", "z%z");
 	qmk_box(im, "^1", QMB_ARG0(Impulse1), 0, 0, 33, "_1", "*", "z%%O%%"); 
 	qmk_box(im, "^triang", QMB_ARG0(TriangImp), 0, 2, 33, "_trI", "*i*", "zz%O%%", "up$dn");
-	qmk_box(im, "^gauss", QMB_ARG0(GaussImp), 0, 1, 33, "_gsI", "*i*", "%zzO%%", "hwid");
+	qmk_box(im, "^gauss", QMB_ARG0(GaussImp), 0, 2, 33, "_gsI", "*i*", "%zzO%%", "wid$bits");
 	char nm[16]; memcpy(nm, "debug01", 8); qmb_arg_t qa = QMB_ARG1(DebugBox);
 	qmk_box(db, nm, qa, 1, 1, 33, "dbg", "R*1", "zz%z%%");
 	for (int i=2; i<31; i++) nm[5] = 48+i/10, nm[6] = 48+i%10, qmk_box(db,nm,qa,i,i,i,"dbg","1");
