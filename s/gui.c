@@ -839,6 +839,13 @@ static int rec_qrv(char *to, ww_t * ww) {
 	return q - to;
 }
 
+static void rec_vpf(ww_t * ww, const char * fmt, ...) {
+	char buf[2048], *q = buf + rec_qrv(buf, ww);
+	va_list ap; va_start(ap, fmt);
+	q += vsnprintf(q, 999, fmt, ap);
+	va_end(ap); *(q++) = 10; write(1, buf, q-buf);
+}
+
 ///////////////// simple widgets /////////////////////////////////////////////
 
 #define ENT_SL(x) ((x)->arg[1].i[0])
@@ -853,18 +860,12 @@ static void button_skel(struct _ww_t * ww, const char **pp) {
 	g_signal_connect (ww->w, "clicked", G_CALLBACK (button_click), (gpointer)ww);
 }
 
-static void entry_rec(ww_t * ww, const char * s) {
-	char buf[2048], *q = buf + rec_qrv(buf, ww);
-	int l = strlen(s); q[0] = 'e'; memcpy(q+1, s, l); q[l+1] = 10;
-	write(1, buf, q+l+2-buf);
-}
-
 static void entry_chg(GtkEditable * ed, gpointer p) {
 	ww_t * ww = (ww_t*)p;
 	int k, flg = !!(*ww->cmd) + 2*!!(dflg & DF_REC);  if (!flg) return;
 	char * s = gtk_editable_get_chars(ed, 0, -1);
 	if (!ENT_SL(ww) || memcmp(ww->etc, s, ENT_SL(ww))) {
-		if (flg&2) entry_rec(ww, s); if (flg&1) widg_defcmd(ww, s); ENT_SL(ww) = 0; }
+		if (flg&2) rec_vpf(ww, "e%s", s); if (flg&1) widg_defcmd(ww, s); ENT_SL(ww) = 0; }
 	free(s);
 }
 
@@ -1208,7 +1209,7 @@ static const char * menu_lbl(int ix) {
 
 static void menu_act(GtkMenuItem *it, gpointer p) {
 	size_t ix = (char*)p - cmenu_dcmd;
-	if (it && (dflg & DF_REC)) CMD("QRm%s", menu_lbl(ix));
+	if (it && (dflg & DF_REC)) CMD("QRm:%s", menu_lbl(ix));
 	if (ix<0 || ix>31) LOG("menu_act: ptr:%p dcmd:%p diff:%d", (char*)p, cmenu_dcmd, ix);
 	else if (cmenu_w->cl->ch=='t') tsc_act(cmenu_w, ix);
 	else if (ix < cmenu_mt->ni) widg_defcmd(cmenu_w, cmenu_mt->cmd + ix*cmenu_mt->cmdl);
@@ -1470,20 +1471,13 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
-static void rec_click(ww_t * ww, int btn, int xy) {
-	char buf[1024], *q = buf+rec_qrv(buf, ww); 
-	*q = 'c'; q[1] = 48 + btn; q += 2;
-	q += xy ? sprintf(q, ",%x\n", xy) : (*q=10, 1);
-	write(1, buf, q - buf);
-}
-
 static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	if (ev->type != GDK_BUTTON_PRESS) return TRUE;
 	ww_t * ww = (ww_t*)p;
 	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK),
 	    x = (int)lround(ev->x), y = (int)lround(ev->y);
-	if (dflg&DF_REC) { if (!(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_click(ww, btn, 0);
-			   else if (ww->cl->ch=='K') rec_click(ww, btn, (y<<12)|x);       }
+	if (dflg&DF_REC) { if (!(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_vpf(ww, "c%c", 48+btn);
+			   else if (ww->cl->ch=='K') rec_vpf(ww, "c%c,%x", 48+btn, (y<<12)|x); }
 	if (btn>9) return ww_debug(ww, btn);
 	(ww->cl->clk) (ww, btn, (int)lround(ev->x), (int)lround(ev->y), ev);
 	return TRUE;
@@ -2452,12 +2446,8 @@ static void dagrid_cmd(struct _ww_t * ww, const char * s) {
 #define GR_MKXY int x=(cx-GRID_X0(ww)-1)/GRID_SX(ww); if(x<0)x=0; else if(x>=GRID_X(ww)) x=GRID_X(ww)-1;\
 		int y=(cy-GRID_Y0(ww)-1)/GRID_SY(ww); if(y<0)y=0; else if(y>=GRID_Y(ww)) y=GRID_Y(ww)-1
 
-static void dagrid_kc_rec(ww_t * ww, int byx) {
-	char buf[2048], *q = buf + rec_qrv(buf, ww); 
-	q += sprintf(q, "k%05x\n", byx); write(1, buf, q-buf); }
-
 static void dagrid_kcmd(ww_t * ww, int b9, int x, int y) {
-	if ((dflg & DF_REC) && !(b9&32)) dagrid_kc_rec(ww, (b9<<16)|(y<<8)|x);
+	if ((dflg & DF_REC) && !(b9&32)) rec_vpf(ww, "k%05x", (b9<<16)|(y<<8)|x);
 	char buf[12], *q = ww->top->arg[9].c; buf[0] = 48|b9; buf[1] = 48+x; buf[2] = 48+y;
 	int i; for (i=0; i<6; i++) buf[3+i] = q[i]+48; buf[9] = 0;
 	widg_defcmd(ww, buf);
@@ -3827,6 +3817,14 @@ static void dagraph_d_edge(ww_t * ww, char * s0) {
 tok:    LOG("dagraph_d_edge: expected: <from> <to> <n>");
 }
 
+static void graph_sendcmd(ww_t * ww, int b9, int i, int sn) {
+	if ((dflg & DF_REC) && !(b9&32)) rec_vpf(ww, "g%c%x", 48|b9, 256*i+sn);
+	char buf[8]; buf[0] = b9|48; dagraph_get(buf+1, ww, 's');  --i;
+	buf[3] = i_to_b32((i>>5)&31); buf[4] = i_to_b32(i&31); buf[5] = sn; buf[6] = 0;
+	if (dflg&DF_GRAPH) LOG("graph_sendcmd: \"%s\"", buf);
+	widg_defcmd(ww, buf);
+}
+
 static void dagraph_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	gr_dat * dat = DAGRAPH_DAT(ww);
 	if (!dat) { LOG("dagraph_click: no graph"); return; }
@@ -3834,22 +3832,14 @@ static void dagraph_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButto
 	int y = cy - ((DA_H(ww)-(dat->byp))>>1);
 	if (x<0 || y<0 || x>dat->bxp || y>dat->byp) {
 		LOG("dagraph_click: click outside graph"); return; }
-	char buf[8];
 	if (dflg&DF_GRAPH) LOG("dagraph_click: b%d %d,%d", b9, x, y);
 	int i; gr_node * nd;
 	for (i = 0, nd = dat->node; i<dat->nn; i++,nd++) 
 		if (nd->x0<x && x<nd->x1 && nd->y0<y && y<nd->y1) goto found;
-	LOG("dagraph_click: no box at %d,%d", x, y); return;
-found:
-	buf[0] = b9 + 48; dagraph_get(buf+1, ww, 's');
-	--i; buf[3] = i_to_b32((i>>5)&31); buf[4] = i_to_b32(i&31);
-	x -= nd->x0;
-	if (y < nd->y01) buf[5] = 48 + (256*x)/nd->iw8;
-	else if (y < nd->y02) buf[5] = 42;
-	else buf[5] = 80 + (256*x)/nd->ow8;
-	buf[6] = 0;
-	if (dflg&DF_GRAPH) LOG("dagraph_click: \"%s\"", buf); 
-	widg_defcmd(ww, buf);
+	return LOG("dagraph_click: no box at %d,%d", x, y);
+found:; int xr = x-nd->x0, sn = (y<nd->y01) ?      48 + (256*xr)/nd->iw8 
+		             : ((y<nd->y02) ? 42 : 80 + (256*xr)/nd->ow8);
+	graph_sendcmd(ww, b9, i, sn);
 	return;
 }
 
@@ -4576,7 +4566,7 @@ static void dirtab_debug() {
 
 ///////////////// command ////////////////////////////////////////////////////
 
-static void ww_gencmd(ww_t * ww, const char *arg) { int k, cl=ww->cl->ch; switch(*arg) {
+static void ww_gencmd(ww_t * ww, const char *arg) { int c,k, cl=ww->cl->ch; switch(*arg) {
 	case '?': return (void) ww_debug(ww, 1);
 	case 'c': { ww_clk_fun cf = ww->cl->clk; int xy = (arg[1] && arg[2]==',') ? atoi_h(arg+3) : 0;
 		    return cf ? (*cf)(ww, arg[1]-48, xy&4095, xy>>12, NULL) 
@@ -4585,6 +4575,8 @@ static void ww_gencmd(ww_t * ww, const char *arg) { int k, cl=ww->cl->ch; switch
 		  	           : LOG("ww_gencmd/e/'%c': entry exp.", cl);
 	case 'k': return ((cl|8)==43) ? (k=atoi_h(arg+1), dagrid_kcmd(ww, (k>>16)|32, k&255, (k>>8)&255))
 		  	              : LOG("ww_gencmd/k/'%c': grid exp.", cl);
+	case 'g': return (cl=='g') ? (c=arg[1], k=c?atoi_h(arg+2):0, graph_sendcmd(ww, c, k>>8, k&255))
+		  	           : LOG("ww_gencmd/e/'%c': entry exp.", cl);
 	default:  LOG("ww_gencmd: invalid arg \"%s\" for '%c'", arg, cl);
 }}
 
@@ -4729,8 +4721,7 @@ static void cmd1(char * str) {
 				       case 'c': tlog_c_onq = (s[1]>63), tlog_c_bk = s[1]&15; return;
 				       default: LOG("t: invalid subcmd"); return; }
 		case 'f': choo_cmd(choo_tab+chtab_get(&choo_ch, *s), s+1); return; 
-		case 'd':
-			switch(*s) {
+		case 'd': switch(*s) {
 				case 'S': sleep(1); return;
 				case 'B': obidtab_debug(&oi_box); return;
 				case 'D': dirtab_debug(); return;
@@ -4747,7 +4738,10 @@ static void cmd1(char * str) {
 					  return;
 				default: LOG("unknown debug-cmd 0x%x(%c)",*s, *s); return;
 			}
-		case 'm': return menu_act_s(s);
+		case 'm': switch(*s) {
+				  case ':': return menu_act_s(s+1);
+				  default:  return LOG("unknown menu-cmd 0x%x(%c)",*s,*s);
+			  }
 		default:LOG("unknown cmd 0x%x",*str); return;
 	}
 }
