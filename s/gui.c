@@ -862,7 +862,7 @@ static void button_skel(struct _ww_t * ww, const char **pp) {
 
 static void entry_chg(GtkEditable * ed, gpointer p) {
 	ww_t * ww = (ww_t*)p;
-	int k, flg = !!(*ww->cmd) + 2*!!(dflg & DF_REC);  if (!flg) return;
+	int flg = !!(*ww->cmd) + 2*!!(dflg & DF_REC);  if (!flg) return;
 	char * s = gtk_editable_get_chars(ed, 0, -1);
 	if (!ENT_SL(ww) || memcmp(ww->etc, s, ENT_SL(ww))) {
 		if (flg&2) rec_vpf(ww, "e%s", s); if (flg&1) widg_defcmd(ww, s); ENT_SL(ww) = 0; }
@@ -1069,7 +1069,7 @@ noderef_t lsr_nodes[96];
 int n_lsr[3];
 
 typedef struct _menu_t {
-	int ty, ni, wid;
+	int ty, ni, widf;
 	int lbll, cmdl;
 	const char *lbl, *cmd;
 } menu_t;
@@ -1081,10 +1081,11 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  5, 1,1,1,".=*/A",".=*/A"},
 {0,  9, 1,2,1, "/-/L/Q/e/g/s/E/G/S", "-LQegsEGS"},
 {0,  9, 1,2,1, "\\A\\L\\Q\\e\\g\\s\\E\\G\\S", "ALQegsEGS"},
-{0,  32,1,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
+{0,  32,5,3,1, "2:22:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "0182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
-{0,  32,1,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  2:77:23:55:32:84:48:22:93:66:39:24:55:4"
-	       "3:77:33:84:66:48:35:5", "pqrstuvwxyz{5X;I6B`7<QhCJ=Y>DRaK" /*"}"*/ },
+{0,  32,5,3,1, "C  2:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
+	       "3:77:33:84:66:48:35:5", "p182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
+{0,  13,7,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  3:4", "pqrstuvwxyz{:" /*"}"*/ },
 {'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
@@ -1175,7 +1176,7 @@ static ww_t * tsc_ww;
 static void tsc_act(ww_t * ww, int ix);
 
 static void menutab_init() {
-	int i, j, w, k = 0, n = 0;
+	int i, j, w, w2, k = 0, n = 0;
 	chtab_ini(&menu_ctab, 0);
 	menu_t * p = menutab; 
 	while (p->ty>=0) k += p->ni * (p->lbll+2+p->cmdl), p++, n++;
@@ -1186,9 +1187,9 @@ static void menutab_init() {
 		if (p->ty) j=chtab_force(&menu_ctab, k=p->ty), menutab[j].ty += 65536*i; 
 		else p->ty = (k += 256);
 		j = str_unpack(q, p->lbl, p->ni, p->lbll); p->lbl = q; q += j; ++p->lbll;
-		j = str_unpack(q, p->cmd, p->ni, p->cmdl); p->cmd = q; q += j; ++p->cmdl;
-		if (p->wid) for (j=0; j<p->ni; j++) 
-			if ((w=tx_len(conf_lbfs, p->lbl+j*p->lbll)) > p->wid) p->wid = w;
+		j = str_unpack(q, p->cmd, p->ni, p->cmdl); p->cmd = q; q += j; ++p->cmdl;  w2 = 0;
+		if (p->widf&1) for (j=0; j<p->ni; j++) if ((w=tx_len(conf_lbfs,p->lbl+j*p->lbll)) > w2) w2=w;
+		p->widf <<= 10; p->widf |= w2;
 	}
 	tsc_mi = menutab_lu('T', 0);
 }
@@ -1805,24 +1806,28 @@ static void daclb_draw(ww_t * ww, cairo_t * cr2) {
 #define DLM_MT(x)  ((x)->arg[3].i[0])
 #define DLM_MSK(x) (*(unsigned int *)&((x)->arg[3].i[1]))
 
+static void dlmenu_ilb(ww_t * ww, int j) {
+	int k, i = DLM_MT(ww), f = menutab[i].widf;
+	char * s = DALBL_TXT(ww);
+	if (f&4096) { if (j<64) { if (f&2048) --i, --DLM_MT(ww);
+				  s[0]=50+(j>>3), s[1]=':', s[2]=50+(j&7), s[3]=0; 
+				  return da_fullre(ww); }
+		      else      { if (!(f&2048)) ++i, ++DLM_MT(ww); }}
+	k = menutab[i].lbll, memcpy(s, menutab[i].lbl+(j&31)*k, k);
+	return da_fullre(ww);
+}
+
 static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return dalbl_draw(ww, (cairo_t*)ww->arg[0].p);
 	int k, ch = ww->cl->ch; char *s = DALBL_TXT(ww);
 	switch(arg[0]) {
-		case 'c': if (ch!='M') goto err;
-			  if (arg[1]<'p') { k = arg[1] - 48; s[0] = ((k>>3)&7) + 50; s[1] = ':';
-			  		    s[2] = (k&7) + 50; s[3] = 0; goto draw; }
-		case '+': if (ch!='M') goto err;
-			  k = menutab[ch = DLM_MT(ww)].lbll;
-			  memcpy(s, menutab[ch].lbl+((arg[1]-48)&31)*k, k);
-			  goto draw;
+		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
+		case '+': case 'c': if (ch!='M') goto err; else return dlmenu_ilb(ww, arg[1]-48);
 		case 'C': s = ww->arg[4].c; s[6] = 1; ++arg;
 			  for (k=0; arg[k] && k<6; k++) s[k] = arg[k];
 			  if (k<6 || *(arg+=k)!=':') goto draw;
-		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
 		case 'x':
-		case 's':
-			  if (ch!='Y') goto err;
+		case 's': if (ch!='Y') goto err;
 			  k = arg[1]-'0';
 			  if (k&~1) { LOG("dalbl: Y/s: invalid value 0x%x", arg[1]); return; }
 			  if (DABOOL(ww) != k) DABOOL(ww) = k; else return;
@@ -1882,8 +1887,7 @@ static void dalbl_skel(struct _ww_t * ww, const char **pp) {
 			mm = 16*mm + hxd2i(**pp);
 		DLM_MT(ww) = mt; DLM_MSK(ww) = mm; ww->arg[4].c[6] = 0;
 	}
-        int wid = 6 + ((menutab[mt].wid) ? menutab[mt].wid 
-						: tx_len(conf_lbfs, ww->arg[2].c));
+        int w = menutab[mt].widf & 1023, wid = 6 + (w ? w : tx_len(conf_lbfs, ww->arg[2].c));
         if (ch!='L' && 4*wid < wmul*conf_lbh) wid = (wmul*conf_lbh)>>2;
         else if (wid==6) wid = 2;
         da_skel(ww, wid, conf_lbh + h2);
