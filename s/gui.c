@@ -1107,11 +1107,12 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 8, 0, 5, 6, "help info del/s-----cleardel  -----WAV/s", "N?    I3    Kd    ##    KZ    Nd    ######$.X*$AW"},
-{'k', 4, 1, 4, 1, "ask keepwav flac", "0123"},
-{'S', 1,0, 1,1, "??", "##" },
-{0, 3, 1, 5, 1, "availdelayretBS", "012"},
-{0, 7, 0, 4, 4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
+{'K', 8, 0,5,6, "help info del/s-----cleardel  -----WAV/s", "N?    I3    Kd    ##    KZ    Nd    ######$.X*$AW"},
+{'k', 4, 1,4,1, "ask keepwav flac", "0123"},
+{'S', 1, 0,1,1, "??", "##" },
+{0,   3, 1,5,1, "availdelayretBS", "012"},
+{0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
+{'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu", "012345678"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -4162,7 +4163,8 @@ static void calc_skel (struct _topwin * tw, char * arg) {
 
 static void itb_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[" TW_TOPH
-		"({M0[$Xb|_03}{M1B$Xb|_013}{M2]$Xb|_023}3{C3280$1$eeeeee333333(...bx1...)})]";
+		"({M0[$Xb|_03}{M1B$Xb|_013}{M2]$Xb|_023}3{C3280$1$eeeeee333333(...bx1...)})"
+		"({L_scale:}{Ms$Xs|i0}{Yrz1=z0zr$Xr})]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 }
 
