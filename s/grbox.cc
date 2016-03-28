@@ -74,7 +74,7 @@ class GraphBoxGen : public BoxGen {
                 void to_dot(int seq, int ne);
         protected:
                 BXCMD_DECL(GraphBoxGen) c_ni, c_no, c_nfb, c_conn, c_ibx, c_dbx, c_shfl, c_dbg,
-                                        c_gnd, c_g2, c_ck;
+                                        c_gnd, c_g2, c_ck, c_uic;
                 typedef void (*rcf_t)(int*,int,int);
                 static void rcf_ins(int *p, int pos, int ix);
                 static void rcf_cut(int *p, int pos, int ix);
@@ -94,6 +94,8 @@ class GraphBoxGen : public BoxGen {
                 int sel_ix(int t) { return t=m_sel[t]>>5, t>1021?-1:t; }
                 int gui2_cmd(const char * s);
                 int gnd_cmd(ANode * nd);
+		void uinm1(int j);
+		int uicfg(int ch);
                 void upd_con(int i, int j);
                 int inm_2(char*q,int i){ int k=i-n_in(); return k<0 ? get_ionm(q,0,i) : lb3(q,2,k); }
                 int onm_2(char*q,int i){ int k=i-n_out();return k<0 ? get_ionm(q,1,i) : lb3(q,k&1,k>>1); }
@@ -434,8 +436,7 @@ int GraphBoxGen::set_n_out(int n) {
 	return 3;
 }
 
-void GraphBoxGen::reorder(int * ix)  // int[n_box()+1] 
-{
+void GraphBoxGen::reorder(int * ix) { // int[n_box()+1]  
 	int nb = n_box();
 	int ix_1[nb+1];
 	for (int i=0; i<=nb; i++) ix_1[ix[i]] = i;
@@ -452,15 +453,11 @@ void GraphBoxGen::reorder(int * ix)  // int[n_box()+1]
 	delete[] (gnp);
 }
 
-void GraphBoxGen::shuffle()
-{
-	int nb = n_box();
-	int ix[nb+1];
-
+void GraphBoxGen::shuffle() {
+	int nb = n_box(), ix[nb+1];
 	for (int i=0; i<=nb; i++) ix[i] = i;
-	::shuffle(ix, nb);
-	reorder(ix);
-	if (!top_ord(true)) log("gr/shuffle: top_ord() failed");
+	::shuffle(ix, nb); reorder(ix);
+	if (!top_ord(true)) log("BUG: gr/shuffle: top_ord() failed");
 }
 
 bool GraphBoxGen::top_ord(bool rnd) {
@@ -508,10 +505,27 @@ void GraphBoxGen::upd_con(int i, int j) {
 	gui2.b32n(i+1, 2); gui2.c1(i_to_b32(j)); gui2.hdbl(v);
 }
 
+void GraphBoxGen::uinm1(int j) {
+	BoxGen * bx = m_nodes[j]->box;  if (!bx) return;
+	int ni = m_nodes[j]->ni, *p = m_nodes[j]->iarg;
+	char buf[8];
+	for (int k,i=0; i<ni; i++) if (((k=p[i])&0xffff)==0xfffe)
+		k>>=16, buf[bx->get_ionm(buf, 0, i)]=0, m_node->set_ui_lbl(0, k, buf);
+}
+
+int GraphBoxGen::uicfg(int ch) {
+	int j; switch(ch) {
+		case 'r': return (j=m_sel[1])>=0 ? (m_node->set_ui_rgb(m_nodes[j]->box->v_rgb()),1):BXE_GBXSEL;
+		case 'i': return (j=m_sel[1])>=0 ? (uinm1(j), 1) : BXE_GBXSEL;
+		case 'I': if (!(j=n_box())) return EEE_NOEFF; for (; j>=0; j--) uinm1(j);  return 1;
+		default: return BXE_CENUM;
+	}}
+
 BXCMD_DEF(GraphBoxGen) { {8192+'\\',0}, {'<',c_ni}, {'>',c_no}, {'@',c_nfb}, {'+',c_conn},
 	{'i',c_ibx}, {'d',c_dbx}, {'s',c_shfl}, {'d'|256,c_dbg}, {'B'|256,c_gnd}, {'G',c_g2},
-	{'1'|256,c_ck}, {'3'|256,c_ck}, {0,0} };
+	{'1'|256,c_ck}, {'3'|256,c_ck}, {'U',c_uic}, {0,0} };
 
+int GraphBoxGen::c_uic(GraphBoxGen *p, const char * s, CmdBuf * cb) { return p->uicfg(s[1]); }
 int GraphBoxGen::c_dbx(GraphBoxGen *p, const char * s, CmdBuf * cb) { return p->del_box(atoi(s+1)); }
 int GraphBoxGen::c_shfl(GraphBoxGen *p, const char * s, CmdBuf * cb) { return p->shuffle(), 1; }
 int GraphBoxGen::c_dbg (GraphBoxGen *p, const char * s, CmdBuf * cb) { return p->debug(), 0; }
@@ -560,7 +574,7 @@ int GraphBoxGen::c_g2(GraphBoxGen *p, const char * s, CmdBuf * cb) {
 	short * sel = p->m_sel;
 	int i, j, ec;
 	switch (*(s+=3)) {
-		case 'X': return (sel[1]<0) ? BXE_GIOSEL : p->del_box(p->sel_ix(1));
+		case 'X': return (sel[1]<0) ? BXE_GBXSEL : p->del_box(p->sel_ix(1));
 		case '+': return ((sel[0]|sel[2])<0) ? BXE_GIOSEL :
 			         p->conn(p->sel_ix(0), sel[0]&31, p->sel_ix(2), sel[2]&31);
 		case '=': 

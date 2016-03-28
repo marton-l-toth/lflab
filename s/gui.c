@@ -1113,6 +1113,7 @@ TDIV_MENU_LN
 {0,   3, 1,5,1, "availdelayretBS", "012"},
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu", "012345678"},
+{'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -3918,8 +3919,8 @@ static void graph_skel (struct _topwin * tw, char * arg) {
 	const char *s = arg, *str = 
 	"[" TW_TOPH
 	"({8i#in$2X<}{8o#out$2X>}{8f#fb$2X@}"
-	"{Maadd...$Xiz$|_0}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
-	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Bsshuffle$Xs})"
+	"{Maadd...$Xiz$|_?0}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
+	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Ms++$X|g0})"
 	"3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 	if (s && *s) daclb_set(widg_lookup_ps(tw, "."), &s, 1);

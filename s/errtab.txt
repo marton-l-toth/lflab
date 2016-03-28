@@ -176,6 +176,7 @@ BXE_UCLICK   undefined click value
 BXE_GFULL    graph is full
 BXE_GSEQ     graph: graph seq# mismatch
 BXE_GIOSEL   graph: no input/output selected
+BXE_GBXSEL   graph: no box selected
 BXE_ACYC     graph: no circle allowed (use feedback)
 BXE_NOAWIN   this box has no auxiliary window
 BXE_NOEWIN   this box has no extra window

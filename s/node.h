@@ -444,6 +444,8 @@ class ABoxNode : public ANode {
 		sthg * wdat_raw() { int i = (m_winflg>>16)&255; return i ? m0_wi_b + 4*i : 0; }
 		void set_ui_d(int k) { m_ui.set(BoxUI_default(k)); }
 		void set_ui_f(ABoxNode * nd) { m_ui.from(nd->m_ui); }
+		void set_ui_rgb(const char * rgb);
+		void set_ui_lbl(int t, int i, const char * lbl);
 		const char * own_rgb() { return m_ui.ro()->m_rgb; }
 		int get_ionm(char *to, int io, int j);
 		int dsc(char * to);

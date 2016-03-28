@@ -254,6 +254,10 @@ void BoxUI::debug2() {
 	m_nm[0].debug(); m_nm[1].debug(); m_dv.debug();
 }
 
+void ABoxNode::set_ui_rgb(const char * rgb) { memcpy(SOB_RW(ui)->m_rgb, rgb, 6); }
+void ABoxNode::set_ui_lbl(int t, int i, const char * lbl) {
+	SOB_RWP(SOB_RW(ui), nm[t])->set_nm_1(i, lbl, strlen(lbl)); }
+
 SOB_INIFUN(BoxUI, 5)
 
 ///////// abs. node //////////////////////////////////////////////////////////
