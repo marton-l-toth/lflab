@@ -178,11 +178,11 @@ void QuickStat::store(const double * p, int n) {
 int QuickStat::chk(const char * s) {
 	int i=0,j,k; double v;
 	while (*s) {
-		while (*s==20) ++s;
+		while (*s==32) ++s;
 		j=0; while ((unsigned int)(k=*s-48)<=9u) j = 10*j+k, ++s;
 		if (j!=m_pos[i]) return log("qstat/chk: pos[%d]: %d (exp. %d)", i, j, m_pos[i]), BXE_QSTATDIF;
 		if (*s==':') ++s; else return log("qstat/chk: %d: ':' exp., got 0x%x", i, *s), BXE_QSTATDIF;
-		s += parse_num(&v, s); if (approx_cmp(v, m_pos[i]))
+		s += parse_num(&v, s); if (approx_cmp(v, m_val[i]))
 			return log("qstat/chk: val[%d] is %.15g, exp. %.15g", v, m_val[i]), BXE_QSTATDIF;
 		++i;
 	}
