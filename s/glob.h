@@ -5,6 +5,7 @@
 #define GLF_EMPTY     0x200000
 #define GLF_RECOVER   0x400000
 #define GLF_FSTATE    (GLF_EMPTY|GLF_RECOVER)
+#define GLF_RECORD    0x1000000
 #define GLF_FINAL_ASV 0x2000000
 #define GLF_SILENCE   0x4000000
 #define GLF_INI0      0x8000000
@@ -35,6 +36,7 @@ extern int debug_flags;
 extern int sample_rate;
 extern double sample_length, natural_bpm, natural_bpm_r;
 extern int killer_fd;
+extern int qstat_size;
 
 extern char mostly_zero[0x8080];
 extern double junkbuf[4096];

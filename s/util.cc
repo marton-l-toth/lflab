@@ -168,6 +168,33 @@ void log_sortedblk(short *p, int n, bool absf, const char * pref) {
 	log("");
 }
 
+void QuickStat::store(const double * p, int n) {
+	int m = m_siz, stp = 256*(n-1) / (m-1);
+	for (int k, j=0, i=0; i<m; i++, j+=stp) m_pos[i] = k = (j>>8), m_val[i] = p[k];
+	if (!(glob_flg&GLF_RECORD)) return;
+	log_n("cmd_rec:0000 ^_Sc"); for (int i=0; i<m; i++) log_n(" %d:%.15g", m_pos[i], m_val[i]); log("");
+}
+
+int QuickStat::chk(const char * s) {
+	int i=0,j,k; double v;
+	while (*s) {
+		while (*s==20) ++s;
+		j=0; while ((unsigned int)(k=*s-48)<=9u) j = 10*j+k, ++s;
+		if (j!=m_pos[i]) return log("qstat/chk: pos[%d]: %d (exp. %d)", i, j, m_pos[i]), BXE_QSTATDIF;
+		if (*s==':') ++s; else return log("qstat/chk: %d: ':' exp., got 0x%x", i, *s), BXE_QSTATDIF;
+		s += parse_num(&v, s); if (approx_cmp(v, m_pos[i]))
+			return log("qstat/chk: val[%d] is %.15g, exp. %.15g", v, m_val[i]), BXE_QSTATDIF;
+		++i;
+	}
+	return (i==m_siz) ? 0 : (log("qstat/chk: %d values, exp. %d", i, m_siz), BXE_QSTATDIF);
+}
+
+int QuickStat::cmd(const char * s) { int k; switch(*s) {
+	case 'n': return (k=atoi(s+1), k<2||k>64) ? EEE_RANGE : (m_siz=k, 0);
+	case 'c': return chk(s+1);
+	default:  return GCE_PARSE;
+}}
+
 ///////// sorting ASCII strings /////////////////////////////////////////////
 
 typedef void (*ssort_t) (char**, char**, int);

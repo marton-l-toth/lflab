@@ -31,6 +31,7 @@ EEE_LONGSTR  string too long
 EEE_NONAME   no name for save
 EEE_ASVFAIL  autosave failed
 EEE_FDNOSEL  file dialog: nothing selected
+EEE_RANGE    value out of range
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
@@ -190,6 +191,7 @@ BXE_FILTNIO  invalid number of inputs/outputs for filter
 BXE_FILTRM   filter removed due to invalid input/output count
 BXE_NOOUT    this object cannot be used as a box
 BXE_WLGDONE  wrap linegrp done (BUG)
+BXE_QSTATDIF plot quick stat mismatch (TEST CASE FAIL)
 BXE_SORRY    sorry not yet implemented (box)
 S4__________ __________________________________________________________(BUG)__
 MDE_SEVEN    got MIDI data byte where cmd expected

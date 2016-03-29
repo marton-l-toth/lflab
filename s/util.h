@@ -91,6 +91,20 @@ void samp_stat(const double *p, int n, int k, bool dB, double dBy, double *pmin,
 int is_asv_name(const char *s);  // /.../__asv.lf /.../__asv--x.lf
 int coward(const char * fn);
 
+class QuickStat {
+	public:
+		QuickStat() : m_siz(10) {}
+		int size() const { return m_siz; }
+		void store(const double * p, int n);
+		int cmd(const char *s);
+	protected:
+		int chk(const char *s);
+		int m_siz;
+		int m_pos[64];
+		double m_val[64];
+};
+extern QuickStat qstat;
+
 class Scale01 {
 	public:
 		static double f0(double v0, double v1, int ty, double x);

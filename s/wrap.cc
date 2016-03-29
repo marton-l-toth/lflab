@@ -1031,6 +1031,7 @@ int AWrapGen::plot_t(double t0, double t1, int n) {
 	double * res = new double[len];
 	int r = batch_mono(res, i0, len); if (r<0) return r;
         if (len <= n) {
+		qstat.store(res, len);
                 PlotPar_arr par(res, len, t0, t1);
                 Gnuplot::sg()->setfun1(0, arrfun1, &par);
                 Gnuplot::sg()->plot1(1, t0, t1, len);
@@ -1038,6 +1039,7 @@ int AWrapGen::plot_t(double t0, double t1, int n) {
                 double * stat = new double [ 3 * n ];
                 samp_stat(res, len, n, false, 0.0,
                                 stat, stat + n, stat + 2 * n);
+		qstat.store(stat, n);
                 PlotPar_arr p_min(stat, n, t0, t1);
                 PlotPar_arr p_max(stat+n, n, t0, t1);
                 PlotPar_arr p_avg(stat+2*n, n, t0, t1);
@@ -1082,6 +1084,7 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpa
         bool statflg = (n < n0);
         double * stat = new double [ (statflg ? 3 : 2) * n ];
         samp_stat(res+ix0, n0, n, false, 0.0, 0, 0, stat);
+	qstat.store(stat, n);
         samp_stat(res+ix0, n0, n, true, 55.0, 0,
                         statflg ? stat+2*n : 0, stat+n);
         PlotPar_arr p_avg(stat, n, f0, f1);

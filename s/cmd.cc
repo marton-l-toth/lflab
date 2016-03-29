@@ -361,6 +361,12 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'G': return log("glob_flg = 0x%x", glob_flg), 0;
 		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
 		case 'W': return ANode::wi_debug(), 0;
+		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = p->m_c_a0[1]&1) ) return EEE_NOEFF;
+		          glob_flg ^= GLF_RECORD; gui2.pf("\tdf%x", j<<11);
+			  log("cmd/event recording st%sed", "opp\0art"+4*j);
+			  if (j) log("cmd_rec:0000 ^_Sn%d", qstat.size());
+			  else   fflush(stderr), i='f', pt_iocmd((char*)&i);    return 0;
+		case 'S': return qstat.cmd(p->m_c_a0+1);
 		default: return GCE_UMISC;
 	}}
 

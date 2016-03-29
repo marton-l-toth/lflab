@@ -13,20 +13,16 @@
 #include "midi.h"
 #include "pt.h"
 
-int glob_flg = GLF_EMPTY | GLF_INI0;
-int debug_flags = 0;
-int sample_rate = 44100;
-int killer_fd = -1;
-double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625;
-char mostly_zero[0x8080];
-double junkbuf[4096];
-char save_file_name[1024];
+int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
+double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625, junkbuf[4096];
+char mostly_zero[0x8080], save_file_name[1024];
 const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 GuiStub gui2;
 JobQ jobq;
 ASnd snd0;
+QuickStat qstat;
 
 #define N_SLCMD 4
 static CmdBuf sl_cmd[N_SLCMD];
