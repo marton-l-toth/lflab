@@ -20,11 +20,11 @@ int u_sleep(int x) {
 #define qh4rs(P) qh4r(*(const int*)(P))
 
 void qwe(FILE *f) {
-	char buf[1024];
-	while (fgets(buf, 1023, stdin)) {
-		int k = qh4rs(buf), l = strlen(buf+5); if (k) u_sleep(1000*k);
-		buf[3] = 'Q'; buf[4] = 'P'; if (buf[l+4]!=10) buf[++l+4] = 10;
-		write(1, buf+3, l+2);
+	char buf[1024], *s;
+	while (fgets(s=buf+2, 1020, stdin)) {
+		if (*s>47 && *s!='^') { int k = qh4rs(s); s += 5; if (k) u_sleep(1000*k); }
+		int l = strlen(s); s[-2] = 'Q'; s[-1] = 'P'; if (s[l-1]!=10) s[l++] = 10;
+		write(1, s-2, l+2);
 	}}
 
 int main(int ac, char** av) {

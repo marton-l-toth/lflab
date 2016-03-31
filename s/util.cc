@@ -131,6 +131,36 @@ double ipow(double x, int k) {
 
 ///////// debug tools ///////////////////////////////////////////////////////
 
+static void enc11(char* to, double x) {
+        int i,j; unsigned int qw[2]; memcpy(qw, &x, 8);
+        to[0] = 42 + (qw[0]>>30) + ((qw[1]>>28)&12);
+        for (i=0;i<2;i++) for (j=0; j<5; j++) to[5*i+j+1] = 59 + ((qw[i]>>(6*j))&63);
+}
+
+static int dcd11(double *to, const char * s) {
+        unsigned int qw[2], k = s[0] - 42u; if (k>15u) return 0;
+        qw[0] = (k&3u)<<30; qw[1] = (k&12u)<<28;
+        int i,j; for (i=0;i<2;i++) { for (j=0; j<5; j++) {
+                if ((k=s[5*i+j+1]-59) > 63u) return 0; else qw[i] |= k << (6*j); }}
+        return memcpy(to, qw, 8), 1;
+}
+
+class QSCReader : public AReader {
+	public:
+		QSCReader(QuickStat * qs) : m_qs(qs), m_siz(qs->size()), m_n(0), m_p((double*)malloc(8*m_siz)) {}
+		virtual ~QSCReader() { free(m_p); }
+		virtual int line(char * s) { while(1) { switch(*s) {
+			case 0  : return 1;
+			case '!': return (m_n==m_siz) ? m_qs->chk1(m_p) : BXE_QSTATCNT;
+			default : if (m_n>=m_siz) return BXE_QSTATCNT;
+				  if (dcd11(m_p+m_n, s)) m_n++, s+=11; else return BXE_PARSE;
+		}}}
+	protected:
+		QuickStat * m_qs;
+		int m_siz, m_n;
+		double * m_p;
+};
+
 void log_sn(const char * pref, const char * str, int len) {
 	if (pref) fprintf(stderr, "%s", pref), fflush(stderr); 
 	write(2, str, len); if (pref) putc(10, stderr);
@@ -171,27 +201,20 @@ void log_sortedblk(short *p, int n, bool absf, const char * pref) {
 void QuickStat::store(const double * p, int n) {
 	int m = m_siz, stp = 256*(n-1) / (m-1);
 	for (int k, j=0, i=0; i<m; i++, j+=stp) m_pos[i] = k = (j>>8), m_val[i] = p[k];
-	if (!(glob_flg&GLF_RECORD)) return;
-	log_n("cmd_rec:0000 ^_Sc"); for (int i=0; i<m; i++) log_n(" %d:%.15g", m_pos[i], m_val[i]); log("");
+	if (!(glob_flg&GLF_RECORD) || !m) return;
+	char buf[12]; log_n("cmd_rec:^_Sc%d", m);
+	for (int i=0; i<m; i++) enc11(buf, m_val[i]), log_n("\ncmd_rec:^<%.11s"+11*!!(i%7), buf); log("!");
 }
 
-int QuickStat::chk(const char * s) {
-	int i=0,j,k; double v;
-	while (*s) {
-		while (*s==32) ++s;
-		j=0; while ((unsigned int)(k=*s-48)<=9u) j = 10*j+k, ++s;
-		if (j!=m_pos[i]) return log("qstat/chk: pos[%d]: %d (exp. %d)", i, j, m_pos[i]), BXE_QSTATDIF;
-		if (*s==':') ++s; else return log("qstat/chk: %d: ':' exp., got 0x%x", i, *s), BXE_QSTATDIF;
-		s += parse_num(&v, s); if (approx_cmp(v, m_val[i]))
-			return log("qstat/chk: val[%d] is %.15g, exp. %.15g", v, m_val[i]), BXE_QSTATDIF;
-		++i;
-	}
-	return (i==m_siz) ? 0 : (log("qstat/chk: %d values, exp. %d", i, m_siz), BXE_QSTATDIF);
-}
+AReader * QuickStat::chk0(const char *s) { return atoi(s)==m_siz ? new QSCReader(this) : 0; }
+
+int QuickStat::chk1(const double * q) {
+	for (int n=m_siz, i=0; i<n; i++) if (approx_cmp(m_val[i], q[i]))
+		return log("qstat/chk: val[%d] is %.15g, exp. %.15g", i, m_val[i], q[i]), BXE_QSTATDIF;
+	return 0; }
 
 int QuickStat::cmd(const char * s) { int k; switch(*s) {
 	case 'n': return (k=atoi(s+1), k<2||k>64) ? EEE_RANGE : (m_siz=k, 0);
-	case 'c': return chk(s+1);
 	default:  return GCE_PARSE;
 }}
 

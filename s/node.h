@@ -287,8 +287,6 @@ template <class T> class SOB_p {
                 T * m_p;
 };
 
-class AReader { public: virtual int line(char * s) = 0; virtual ~AReader() {} }; // ret: 0:done <0:err
-
 char * bigblk(int n);
 char * alloc_32k();
 

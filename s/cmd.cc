@@ -193,7 +193,8 @@ int CmdBuf::cf_i2p(CmdBuf *p, char *q, int l) {
 	return l = nd->get_path(q+1,999), q[l+1] = '`', l+2; }
 
 int CmdBuf::rpl_cp(char *to, const char *s, CmdBuf::conv_fun f) {
-	char *q0 = 0, *q = to;   int k, r;
+	int k, r; if (!memcmp(s,"^<",2)) return r = strlen(s), memcpy(to, s, r), r;
+	char *q0 = 0, *q = to;
 	while(*s) { if ((*(q++) = *(s++)) != '`') continue;
 		    if (!q0) q0 = q-1;
 		    else if ((r = (*f)(this, q0, k=q-q0)) < 0) return r;
@@ -366,7 +367,8 @@ int CmdTab::c_misc(CmdBuf * p) {
 			  log("cmd/event recording st%sed", "opp\0art"+4*j);
 			  if (j) log("cmd_rec:0000 ^_Sn%d", qstat.size());
 			  else   fflush(stderr), i='f', pt_iocmd((char*)&i);    return 0;
-		case 'S': return qstat.cmd(p->m_c_a0+1);
+		case 'S': return p->m_c_a0[1]=='c' ? ((p->m_cont = qstat.chk0(p->m_c_a0+2)) ? 0 : BXE_QSTATDIF)
+						   : qstat.cmd(p->m_c_a0+1);
 		default: return GCE_UMISC;
 	}}
 
