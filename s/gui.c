@@ -101,7 +101,7 @@ typedef struct _obidtab {
 
 typedef struct _topwin {
 	int id;
-	int state; // 0:none 1:skel 2+:extra 
+	int state; // 0:none 1:skel 2:closecmd
 	char cmdpref[20]; int cmdp_len;
 	char title[64];
 	tw_cl * cl;
@@ -543,8 +543,11 @@ static void cltab_init() {
 static void tw_bye(GtkWidget *w, gpointer p) {
 	topwin * tw = (topwin*)p;
 	if (dflg & DF_WCLOSE) LOG("tw_bye: 0x%x, cl=0x%x '%c'", tw->id, tw->cl->ch, tw->cl->ch);
-	if (tw->cl->ch=='J') CMD("L%04xFF01", (tw->id>>4)&65535);
-	else CMD("x%c%x", hexc1(tw->id&15), tw->id>>4);
+	if (tw->state!=2) {
+		int j = tw->id, j4 = j&15, j20 = j>>4, cl = tw->cl->ch;
+		if (dflg&DF_REC) CMD("QRZ`%x`%c$%c", j20, hexc1(j4), cl);
+		if (cl=='J') CMD("L%04xFF01", j20&65535); else CMD("x%c%x", hexc1(j4), j20);
+	}
 	tw_remove(tw); tw_free(tw);
 }
 
@@ -705,6 +708,7 @@ static ww_t * widg_new(topwin * tw, const char ** pp) {
 	return p;
 }
 
+static void tw_close(topwin * tw) { if(tw->state)tw->state=2; gtk_widget_destroy(tw->w); }
 static inline int tw_defcmd(topwin * tw, char* to) {
 	int l = tw->cmdp_len; memcpy(to, tw->cmdpref, l); return l; }
 
@@ -4443,8 +4447,7 @@ static void t2sel_upd(int lr, int nid, int ty, const char * rgb, const char * s)
 	da_fullre(ww);
 	const char *s1 = lastname(s, l-1), *s2 = s1;
 	char *q = lr_dirname + 24*lr;
-	ww = widg_lookup_ps(ot_etc+1, "E\0e\0"+2*lr);
-	gtk_entry_set_text(GTK_ENTRY(ww->w), s1);
+	entry_set(widg_lookup_ps(ot_etc+1, "E\0e"+2*lr), s1);
 	if (ty!='d'&&ty!='k') s2 = lastname(s, s2-s-1);	
 	while(*s2&&(*s2-'.')) *(q++) = *(s2++);   *q = 0;
 	return;
@@ -4681,9 +4684,7 @@ static void cmd_ob(int c0, int id, char * arg) {
 			return;
 		case 'U': return (*tw->cl->cmd)(tw, arg+1);
 		case 'P': gtk_window_present(GTK_WINDOW(tw->w)); return;
-		case 'Z':
-			if (id<32) LOG("cowardly refusing to destroy window 0x%x", id);
-			else gtk_widget_destroy(tw->w); return;
+		case 'Z': return (id<32) ? LOG("cowardly refusing to destroy window 0x%x",id) : tw_close(tw);
 		default: LOG("unknown cmd 0x%x \"%s\"", c0); return;
 	}
 }
