@@ -1346,7 +1346,7 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 	if ((ec=up->add(nd, name, i, j)) < 0) return ANode::fN(nd), ec;
 	if (sbf) bnd->m_ui.set(BoxUI_default((*sbf)(bnd, from)));
 	m0_slr_flg |= up->winflg(WF_2SEL);
-	(i&NOF_FGUI) && (shl_add(nd), up->cl_id()!='C') && nd->draw_window(16);
+	(i&NOF_FGUI) && (shl_add(nd), ty!='W') && nd->draw_window(16);
 	if (rr) *rr = nd; return 0;  // TODO: cons_err (qcp->trk)
 }
 

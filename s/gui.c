@@ -149,7 +149,7 @@ static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, 
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
 static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_cmd, dacnt_cmd, dasep_cmd,
                     daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd, dakcf_cmd;
-static ww_get_fun_t pv_get, entry_get, dagraph_get;
+static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
 static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
@@ -180,7 +180,7 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'e', entry_skel, entry_get, entry_cmd, NULL, 0 },
 	{'s', scale_skel, NULL, NULL, NULL, 0 },
 	{':', vbox_skel, NULL, vbox_cmd, NULL, 0 },
-	{'K', daclip_skel, NULL, daclip_cmd, daclip_clk, WF_BIGDA3 | WF_KEYEV | WF_RESIZE },
+	{'K', daclip_skel, daclip_get, daclip_cmd, daclip_clk, WF_BIGDA3 | WF_KEYEV | WF_RESIZE },
 	{'M', dalbl_skel, NULL, dalbl_cmd, dlmenu_clk, WF_RESIZE },
 	{'8', dacnt_skel, NULL, dacnt_cmd, dacnt_clk, WF_RESIZE },
 	{'!', dacntvs_skel, NULL, dacnt_cmd, dacntvs_clk, WF_RESIZE | WF_CONT },
@@ -1111,7 +1111,7 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 8, 0,5,6, "help info del/s-----cleardel  -----WAV/s", "N?    I3    Kd    ##    KZ    Nd    ######$.X*$AW"},
+{'K', 8, 0,5,6, "help info del/snew  -----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  ##    KZ    Nd    ######$.X*$AW"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
 {'S', 1, 0,1,1, "??", "##" },
 {0,   3, 1,5,1, "availdelayretBS", "012"},
@@ -4216,6 +4216,9 @@ static void daclip_draw (ww_t * ww, cairo_t * cr2) {
 			 daclip_lb32(cr2, i);
 		if (f&1) da_wr18(cr2, wx0, wy0, s, 18);
 	}}
+
+static int daclip_get(void * to, struct _ww_t * ww, int ty) {
+	return *(char*)to = i_to_b32(DACLIP_SEL(ww)), 1; }
 
 static void daclip_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return daclip_draw(ww, (cairo_t*)ww->arg[0].p);
