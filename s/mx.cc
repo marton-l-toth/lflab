@@ -451,8 +451,8 @@ int MxItem::c_stop_j(int j, int f) {
 		bn = mx_ptr(i);
 		if (!bn->u.b.dn || !bn->u.b.t2) { if (f) goto kill; else goto keep; }
 		if ((td = bn->u.b.t - bn->u.b.t2)<0) {
-			if (bn->u.b.t2==bn->u.b.t3) goto kill;
 			if ((jj=bn->u.b.trec)) trec_fin_t(bn, jj, bn->u.b.t);
+			if (bn->u.b.t2==bn->u.b.t3) goto kill;
 			bn->u.b.t2+=td, bn->u.b.t3+=td; }
 keep:		if (!keepf) keepf = 1, bn->u.b.ctp = lastid, *pl=i;
 		lastid = i; pl = &bn->u.b.ctn; if ((i = *pl)) continue; else return *pl = 0;
