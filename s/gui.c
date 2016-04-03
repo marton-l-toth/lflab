@@ -545,7 +545,7 @@ static void tw_bye(GtkWidget *w, gpointer p) {
 	if (dflg & DF_WCLOSE) LOG("tw_bye: 0x%x, cl=0x%x '%c'", tw->id, tw->cl->ch, tw->cl->ch);
 	if (tw->state!=2) {
 		int j = tw->id, j4 = j&15, j20 = j>>4, cl = tw->cl->ch;
-		if (dflg&DF_REC) CMD("QRZ`%x`%c$%c", j20, hexc1(j4), cl);
+		if (dflg&DF_REC) (j4==7) ? CMD("QRZ%x7$%c", j20, cl) : CMD("QRZ`%x`%c$%c", j20, hexc1(j4), cl);
 		if (cl=='J') CMD("L%04xFF01", j20&65535); else CMD("x%c%x", hexc1(j4), j20);
 	}
 	tw_remove(tw); tw_free(tw);
