@@ -99,9 +99,9 @@ else
 fi
 	
 if [[ -n "$dbg" ]]; then
-	gdb --args "$LF_BIN" $*
+	gdb --args "$LF_BIN" "$LF_DEFLIB" $*
 elif [[ -n "$trc" ]]; then
-	strace "-o$LF_USERDIR/lf.trc" "$LF_BIN" $* 
+	strace "-o$LF_USERDIR/lf.trc" "$LF_BIN" "$LF_DEFLIB" $* 
 else
 	if [[ -z "$*" ]]; then
 		exec "$LF_BIN" "$LF_DEFLIB" /
