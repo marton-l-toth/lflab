@@ -429,11 +429,10 @@ there is much more detailed then in the "Errors" window.
 {{{?._plan}}}
 Planned features (please don't take these as promises :) )
 - import of external audio
-- improved track editor usability (drag & drop?)
+- improved track editor usability (block edit?)
 - default values for boxes
 - description for non-builtin boxes
 - plot/save/record to backgr. job (like autovol calc.)
-- RPM package
 - more builtin boxes and example editable boxes
 - support of various MIDI HW
 ==> etc.midi.new devices
@@ -508,22 +507,29 @@ graph box window may cause an audio buffer underrun.
 ==> win.tree
 {{{?._wit}}}
 An iterated filter is a filter chain consisting of multiple
-instances of the same "simple" filter.
-In the current version, all instances of the filter have the
-same parameters. The first input (in) is the input of the
-first filter, #b is the number of filter boxes, all the other
-inputs are "inherited" from the simple filter.
-#b is expected to be constant, it is rounded and limited to
-the interval [0...1024].
-If #b rounds to zero or the simple filter is undefined, the
-result is an empty filter which copies its input (in) to the 
-output unchanged. CPU cost is only a little more than #b times
-the cost of the simple filter.
+instances of the same "simple" filter (*) (which can be set 
+from the L/R sel.folder or shortlist). When scale is "con",
+all filters have the same parameters; you can also have the
+last parameter (**) vary along a specified scale.
 ---
-Currently the only modifiable parameter is the simple filter.
-This box has no configurable GUI -- the colors and the in/out
-labels (except for "in" and "#b") are inherited from the simple
-filter.
+The iterated filter inherits all inputs from the simple filter
+(except the last one, when a scale is specified). Extra inputs:
+(#b): number of instances. (rounded, const expected) (*)
+(z0): last input value for first instance (const exp.)
+(z1): last input value for last instance (const exp.)
+(z*): last input multiplier: (z1) = (z0)*(z*) (const exp.)
+(z%): scale as in map01, -3...3 (const exp., when scale="ask")
+==> .!b.map.map01
+(#b) is always present, (z0) when scale is not "con", "z1=z0zr"
+switches between (z1) and (z*)
+---
+(*) if (#b) is zero or "simple filter" is undefined, the iter.
+filter simply copies the (first) input to the output.
+(**) if you want an other parameter (or multiple ones) to be
+varied, wrap the filter in a simple graph box.
+---
+CPU cost is only a little more than (#b) times the cost of the
+simple filter. (#b) is limited to 1024.
 {{{?._wcc}}}
 Calculator boxes are stateless boxes (each set of outputs only
 depends on the current set of inputs, not previous ones),
