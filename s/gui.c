@@ -1111,7 +1111,7 @@ TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
 "loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 8, 0,5,6, "help info del/snew  -----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  ##    KZ    Nd    ######$.X*$AW"},
+{'K', 9, 0,5,6, "help info del/snew  -----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  ##    KZ    Nd    ######$.X*$AW"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
 {'S', 1, 0,1,1, "??", "##" },
 {0,   3, 1,5,1, "availdelayretBS", "012"},
