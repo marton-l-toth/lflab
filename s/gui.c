@@ -1268,11 +1268,11 @@ static void pcm_popup() {
 	for (i=0; i<n; i++) buf[7] = 48+(ls[i]>>4), buf[9] = 48+(ls[i]&15), add_dyn(buf  , buf  , -1);
 }
 
-static void popup2(ww_t * ww, int tid, unsigned int msk, GdkEventButton * ev) {
+static void popup2(ww_t * ww, int tid, unsigned int msk, int btn, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
 	cmenu_w = ww; cmenu_mt = menutab + tid; cmenu_dic = 0; cmenu_msk = msk;
-	int i, n = cmenu_mt->ni, btn = ev ? ev->button : 1;
+	int i, n = cmenu_mt->ni;
 	const char * lbl = cmenu_mt->lbl;
 	if (*lbl=='[' && btn==1) return (void) widg_defcmd(ww, cmenu_mt->cmd);
 	cmenu_gw = gtk_menu_new(); gtk_widget_set_name(cmenu_gw, "lflabPU");
@@ -1875,7 +1875,7 @@ static void dlyn_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton *
 	if (b9==1) widg_defcmd(ww, "1\0""0"+2*ww->arg[3].c[0]); }
 
 static void dlmenu_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-        if ((b9|2)==3) popup2(ww, DLM_MT(ww), DLM_MSK(ww), ev); }
+        if ((b9|2)==3) popup2(ww, DLM_MT(ww), DLM_MSK(ww), b9, ev); }
 
 static void dalbl_skel(struct _ww_t * ww, const char **pp) {
         int ch = ww->cl->ch, h2 = 0, wmul = 5, mt = 0, mm = 0;
@@ -3025,7 +3025,7 @@ static void trk_mv(ww_t * ww, int dx, int dy) {
 
 static void trk_ns_playm(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
 	tc_t * tc = (tc_t*) ww->etc; tsc_x = tc->x0 + (cx - 60) / TC_PPB(tc); 
-	tsc_ww = ww; tsc_md = 3; popup2(ww, tsc_mi+4, 0, ev); }
+	tsc_ww = ww; tsc_md = 3; popup2(ww, tsc_mi+4, 0, b9, ev); }
 
 static void trkclk_n(ww_t * ww, int b9, int cx, GdkEventButton * ev) {
 	tc_t * tc;
@@ -3064,8 +3064,8 @@ static void trkclk_w(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 	if (dflg&DF_TRK) LOG("trkclk_w: b%c x:%d y:%d", 48+b9, cx, cy);
 	if (cx<20) return LOG("trkclk_w: nothing happens");
         tc_t * tc = (tc_t*) ww->etc;   tsc_y = cy/48+tc->y0; tsc_ww = ww;
-	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lookup_ps(ww->top,"d"))&~1u, ev);
-	else tsc_md=2, popup2(ww, tsc_mi+2, 0x7ffffff ^ tdiv_sdbv[(int)tdiv_idsf[tc_effdiv(tc,tsc_y)].i], ev);
+	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lookup_ps(ww->top,"d"))&~1u, b9, ev);
+	else tsc_md=2, popup2(ww, tsc_mi+2, 0x7ffffff^tdiv_sdbv[(int)tdiv_idsf[tc_effdiv(tc,tsc_y)].i], b9,ev);
 }
 
 static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) { 
@@ -3080,7 +3080,7 @@ static void trkclk_c(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 			           cx = k*((2*cx/k+1)/2), t1 = tz+upp*cx;
 	tsc_md = 0; tsc_x = t1; tsc_y = y; tsc_id = r; tsc_ww = ww;
 	if (dflg&DF_TRK) LOG("trkclk_c: b%c x:%d(%d) y:%d(%d) --> 0x%x", 48+b9, cx, t1, cy, y, r);
-	if (b9==3) return popup2(ww, tsc_mi, r ? 1 : 0x37, ev);
+	if (b9==3) return popup2(ww, tsc_mi, r ? 1 : 0x37, b9, ev);
 	tsc_cc(48+b9); 
 	if (r && b9==1) tsc_drag_id = tsc_drag_x = tsc_drag_y = -1, tsc_drag_xd = cx;
 }
