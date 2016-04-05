@@ -49,6 +49,7 @@ void qwe(FILE *f) {
 			case 'V': for (q=s+1; *q && *q!=36; q++); if (!*q) goto wtf; else q+=3;
 				  switch(*(q+=2*(IFHX(q[0], 65) && IFHX(q[1], 65)))) {
 					  case'c':case'e':case'k':case'g': l=*q;goto lim; default: goto wtf; }
+			case 10:  continue;
 			default:  goto wtf;
 		}
 lim:		l = LIM(l); if (k>l) k = l; goto sl;

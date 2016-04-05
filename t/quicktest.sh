@@ -30,12 +30,17 @@ he "write wav(2,2) and flac(all)"
 ls -ltr "$HOME" | tail -3
 echo '^V57$F_01c1' >> $LF_TMPROOT/lf.*/A
 he "change aodir"
-AODIR="$(grep LF_WAV_DIR $HOME/.lflab/lf.ini | cut '-d"' -f2)"
+echo '^V57$F>c1' >> $LF_TMPROOT/lf.*/A
+sleep 0.5; AODIR="$(grep LF_WAV_DIR $HOME/.lflab/lf.ini | cut '-d"' -f2)"
 [[ -z "$AODIR" ]] && oops "LF_WAV_DIR undefined/empty, did you set it?"
 run1 t_rec
 sleep .5
 echo "found AODIR: \"$AODIR\""; ls -l "$AODIR"
 he "check wav/flac files"
-echo '^V7$.sc1' >> $LF_TMPROOT/lf.*/A
-he "save file"
-
+echo '^V$.mc1' >> $LF_TMPROOT/lf.*/A
+sleep .3; echo '^m:exit(autosv)' >> $LF_TMPROOT/lf.*/A
+he "check autosaves & log"
+$LAUNCH &
+sleep .5; run1 t_start
+he "recover autosave"
+run1 t_trkdep0
