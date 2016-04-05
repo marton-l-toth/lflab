@@ -1827,11 +1827,11 @@ static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return dalbl_draw(ww, (cairo_t*)ww->arg[0].p);
 	int k, ch = ww->cl->ch; char *s = DALBL_TXT(ww);
 	switch(arg[0]) {
-		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
 		case '+': case 'c': if (ch!='M') goto err; else return dlmenu_ilb(ww, arg[1]-48);
 		case 'C': s = ww->arg[4].c; s[6] = 1; ++arg;
 			  for (k=0; arg[k] && k<6; k++) s[k] = arg[k];
 			  if (k<6 || *(arg+=k)!=':') goto draw;
+		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
 		case 'x':
 		case 's': if (ch!='Y') goto err;
 			  k = arg[1]-'0';
@@ -1844,6 +1844,8 @@ static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 		case 'M':
 			  if (ch!='M') goto err;
 			  DLM_MSK(ww) = atoi_h(arg+1); return;
+		case ':': s[1]=0; memcpy(ww->arg[4].c, (s[0]=arg[1])=='+' ? "zzz%z%\001":"zz%z%%\01", 8);
+			  goto draw;
 		default:
 			  LOG("dalbl: invalid cmd 0x%x",arg[0]); return;
 	}
