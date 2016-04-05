@@ -1,5 +1,4 @@
-# recording to WAV/flac/track
-# expected result: windows closed, t_rec(k(0,1,b),trk(7+9)), ls -l:
+# expected result: windows closed (ex. maincfg) , t_rec(k(0,1,b),trk(7+9)), ls:
 # -rw------- 1 tml tml 3710492 Apr  3 12:28 5700f039.wav
 # -rw------- 1 tml tml 1685124 Apr  3 12:28 5700f03a.wav
 # -rw------- 1 tml tml 3368568 Apr  3 12:28 5700f03b.wav
@@ -79,22 +78,22 @@
 0f32 m:wav
 302c V`.t_rec.trk`b$tRc1
 0468 V000007$.Wc1
-08d0 V`.t_rec.k.0`9$##k10302
-03fd V`.t_rec.k.0`9$##k00302
-0278 V`.t_rec.k.0`9$##k10515
-0321 V`.t_rec.k.0`9$##k00515
+03d0 V`.t_rec.k.0`9$##k10302
+02fd V`.t_rec.k.0`9$##k00302
+0178 V`.t_rec.k.0`9$##k10515
+0221 V`.t_rec.k.0`9$##k00515
 01da V`.t_rec.k.0`9$##k10524
 0273 V`.t_rec.k.0`9$##k00524
 0298 V`.t_rec.k.0`9$##k1052d
 0301 V`.t_rec.k.0`9$##k0052d
-03bf V`.t_rec.k.0`9$##k10b1a
-0375 V`.t_rec.k.0`9$##k00b1a
+01bf V`.t_rec.k.0`9$##k10b1a
+0275 V`.t_rec.k.0`9$##k00b1a
 0100 V`.t_rec.k.0`9$#cc4
 00b0 V`.t_rec.k.0`9$##k10b02
-0530 V`.t_rec.k.0`9$##k00b02
+0330 V`.t_rec.k.0`9$##k00b02
 0278 V`.t_rec.k.0`9$##k10b2e
-04f1 V`.t_rec.k.0`9$##k00b2e
-0367 V`.t_rec.k.1`9$##k10702
+03f1 V`.t_rec.k.0`9$##k00b2e
+0167 V`.t_rec.k.1`9$##k10702
 007e V`.t_rec.k.1`9$##k00702
 0106 V`.t_rec.k.1`9$##k1060d
 0074 V`.t_rec.k.1`9$##k0060d
@@ -108,9 +107,9 @@
 0089 V`.t_rec.k.1`9$##k00a08
 0190 V`.t_rec.k.1`9$##k10a00
 00bd V`.t_rec.k.1`9$##k00a00
-03aa V`.t_rec.k.1`9$##k10a1d
+01aa V`.t_rec.k.1`9$##k10a1d
 007e V`.t_rec.k.1`9$##k00a1d
-0283 V`.t_rec.k.1`9$##k10b03
+0183 V`.t_rec.k.1`9$##k10b03
 00a6 V`.t_rec.k.1`9$##k00b03
 14ec V`.t_rec.trk`b$tRc1
 0800 #
@@ -153,11 +152,16 @@
 0687 V`.t_rec.k.b`b$wY0Cc1
 0c6e Z`.t_rec.k.1`9$#
 08fa Z`.t_rec.k.0`9$#
-0ee5 Z`.!b.?.win`7$E
-0452 Z`.!b.?.etc`7$F
+0452 Z47$F
 0542 Z`.t_rec.trk`B$t
 2663 Z`.t_rec.k`3$K
 090f Z`.t_rec.k.0`B$w
 05d8 Z`.t_rec.k.b`B$w
 1868 Z`.t_rec.k.1`B$w
+0ad3 V000057$FKc1
+055a m:ask
 0200 V000007$.2c9
+0200 V000057$F>c1
+0f8c V000007$.mc1
+0a7b m:console
+
