@@ -177,8 +177,7 @@ int CalcBoxGen::cmd(CmdBuf* cb) {
 		case 'z':
 			unset_model();
 			k = atoi(c0+1);
-			c1 = cb->tok(); if (!c1) return BXE_NOARG;
-			set_exp(*c0, k, c1 ? c1 : "");
+			set_exp(*c0, k, (c1=cb->tok()) ? c1 : "");
 			if (wnfl()) upd_line(*c0, k, 0);
 			return 0;
 		default:
