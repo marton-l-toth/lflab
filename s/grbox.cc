@@ -515,8 +515,8 @@ void GraphBoxGen::uinm1(int j) {
 
 int GraphBoxGen::uicfg(int ch) {
 	int j; switch(ch) {
-		case 'r': return (j=m_sel[1])>=0 ? (m_node->set_ui_rgb(m_nodes[j]->box->v_rgb()),1):BXE_GBXSEL;
-		case 'i': return (j=m_sel[1])>=0 ? (uinm1(j), 1) : BXE_GBXSEL;
+		case 'r': return (j=sel_ix(1))>=0 ? (m_node->set_ui_rgb(m_nodes[j]->box->v_rgb()),1):BXE_GBXSEL;
+		case 'i': return (j=sel_ix(1))>=0 ? (uinm1(j), 1) : BXE_GBXSEL;
 		case 'I': if (!(j=n_box())) return EEE_NOEFF; for (; j>=0; j--) uinm1(j);  return 1;
 		default: return BXE_CENUM;
 	}}
