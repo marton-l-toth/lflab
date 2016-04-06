@@ -1,0 +1,7 @@
+#!/bin/bash
+asv=$HOME/.lflab/__asv.lf
+cp $HOME/g/lflab/t/qtst-asv$1.lf $asv
+$HOME/lf-prod/s/lf $asv & 
+/bin/sleep .5
+find /run/shm -name A
+$HOME/lf.cmd.playback >>/run/shm/lf.*/A <$HOME/g/lflab/t/tc/t_$2
