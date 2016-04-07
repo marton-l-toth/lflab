@@ -1229,7 +1229,7 @@ static void menu_del() { if (cmenu_gw) gtk_widget_destroy(cmenu_gw); cmenu_gw = 
 static void menu_act_s(const char *s) {
 	if (!cmenu_w) return LOG("menu_act_s: no active popup menu");
 	int j = menu_findlbl(s); if (j<0) return LOG("menu_act_s: \"%s\" not found", s);
-	LOG("menu_act_s: found: %d", j); menu_act(NULL, cmenu_dcmd + j); menu_del();
+	if (dflg & DF_MENU) LOG("menu_act_s: found: %d", j); menu_act(NULL, cmenu_dcmd + j); menu_del();
 }
 
 static int add_dyn(const char * nm, const char * cmd, int x) {
