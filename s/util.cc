@@ -385,9 +385,8 @@ int parse_num(void * to, const char * s) {
                           buf[i] = 0; *(double*)to = atof(buf);
                           return s - s0 + i;
                 case '#':
-                          for (xl=0, i=1; i<17; i++)
-                                  if (!(s[i]&80)) break; else xl<<=4, xl += hxd2i(s[i]);
-                          memcpy(to, &xl, 8); return i;
+                          for (xl=0, i=1; i<17; i++) if (!(s[i]&80)) return *(double*)to=1.2345, i;
+			  *(double*)to = hx2doub(s+1); return 17;
                 case '"':
                           for (i=1; i<7; i++) if (s[i]<32 || s[i]==34 || s[i]>126) break;
                           wrnan_lbl(to, s+1, i-1); return i + (s[i]==34);

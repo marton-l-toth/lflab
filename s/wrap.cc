@@ -118,6 +118,7 @@ class WrapCore : public SOB {
 			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); } 
                 int save2(SvArg * p);
 		void debug2() { log("WrapCore: sorry"); } // TODO
+		int sv_tf01(char * to);
 		void grcmd(const char * i8) { gui2.c4('#', 'g', grdim[0]+48, grdim[1]+48);
 			gui2.c4(grdim[8]+48, grdim[9]+48, i8[0]+48, i8[1]+48); }
 		void upd_grid(const char * i8, int gui9) {
@@ -353,12 +354,21 @@ void WrapCore::set_key_nz(int i, int v) {
 	ktab->bv[ih] |= (1u << il);  ktab->pk[ih][il] = v;
 }
 
+int WrapCore::sv_tf01(char * to) {
+	float *q = tf01, *q0 = WrapCore_default(0)->tf01;
+	int r = 0, flg = 0; 
+	for (int i=0; i<4; i++) if (fabs(q[i]-q0[i])>1e-5) flg |= (1<<i);
+	if (!flg) return 0; else memcpy(to, "X$t0", 4), to[3]+=flg, r = 4;
+	for (int i=0; i<4; i++) if (flg & (1<<i)) to[r] = '#', doub2hx(to+r+1, q[i]), r+=17;
+	return to[r]=10, r+1;
+}
+
 int WrapCore::save2(SvArg * sv) {
 	char buf[600]; memcpy(buf, "X$#*", 4);
 	for (int i=0; i<10; i++) buf[i+4] = grdim[i]+48;   buf[14] = 10;
 	int l = (xfd == 63) ? 15 : 15+sprintf(buf+15,"X$i%02xX\n", wr_ixtr_r(xfd));
 	if (ktab) memcpy(buf+l, "X$k", 3), l += 4+wrap_dump_keytab(buf+l+3, ktab->bv, ktab->pk), buf[l-1] = 10;
-	return sv->st2=-1, sv->out->sn(buf, l);
+	return sv->st2=-1, l+=sv_tf01(buf+l), sv->out->sn(buf, l);
 }
 
 /////// scale ///////////////////////////////////////////////////////////////
