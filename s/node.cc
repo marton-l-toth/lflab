@@ -1352,7 +1352,9 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 
 int Node::move(ANode * p, ANode * to, const char * name, int i, int j) {
 	ANode * up = p->up(); if (!up) return NDE_NOROOT; if (!to) to = up;
-	if (!(i&NOF_FORCE) && !(up->perm_ed() && to->perm_ed())) return NDE_PERM;
+	if (!(i&NOF_FORCE)) { if (!up->perm_ed() || (up!=to && !to->perm_ed())) return NDE_PERM;
+			      if (p->is_dir()) { ADirNode * q = static_cast<ADirNode*>(p);
+				      		 if (q->m_pm_msk & ~q->m_pm_val & DF_EDDIR) return NDE_PERM; }}
 	int ec = to->add(p, name, i, j); if (ec<0) return ec;
 	int flg = (p->m_winflg|up->m_winflg|to->m_winflg) & WF_XSEL; if (!flg) return ec;
 	m0_slr_flg |= flg; if (!(p->winflg(WF_2SEL))) return ec;
