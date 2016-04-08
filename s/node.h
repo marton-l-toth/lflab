@@ -570,6 +570,7 @@ class Node {
 		static int conn2(ABoxNode * fr, ABoxNode * to);
 		static int disconn2(ABoxNode * fr, ABoxNode * to, BoxEdge * p);
 		static void contrib_init(ANode * r);
+		static int hier(ANode * up, ANode *dn);
 
 		static unsigned int m0_visitor;
 		static int m0_slr_flg;

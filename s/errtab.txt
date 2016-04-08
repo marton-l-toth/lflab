@@ -90,6 +90,8 @@ NDE_TRGLU    target lookup failed
 NDE_BOXCRE   create box failed
 NDE_LOOPB1   refused to self-reference box
 NDE_LOOPBX   refused to create box reference loop
+NDE_HIERMV   refused to move object under itself in obj.tree
+NDE_HIERCP   refused to copy object under itself in obj.tree
 NDE_TSNF     error in track subnode format
 NDE_USBT     unknown subbox type
 NDE_BIDX     wrong subbox index

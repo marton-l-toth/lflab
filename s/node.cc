@@ -1247,6 +1247,8 @@ int Node::m0_slr_flg;
 int Node::m0_shl_n = 0, Node::m0_shl[32];
 ADirNode * Node::m0_clibroot = 0;
 
+int Node::hier(ANode * up, ANode *dn) { while(1) { if (!dn) return 0; if (dn==up) return 1; dn=dn->m_up; }}
+
 ANode * Node::lookup_cb(CmdBuf * cb, const char * s) {
 	ANode * r; int i, j, c = *(s++);
 	if (c&1) {
@@ -1355,6 +1357,7 @@ int Node::move(ANode * p, ANode * to, const char * name, int i, int j) {
 	if (!(i&NOF_FORCE)) { if (!up->perm_ed() || (up!=to && !to->perm_ed())) return NDE_PERM;
 			      if (p->is_dir()) { ADirNode * q = static_cast<ADirNode*>(p);
 				      		 if (q->m_pm_msk & ~q->m_pm_val & DF_EDDIR) return NDE_PERM; }}
+	if (hier(p, to)) return NDE_HIERMV;
 	int ec = to->add(p, name, i, j); if (ec<0) return ec;
 	int flg = (p->m_winflg|up->m_winflg|to->m_winflg) & WF_XSEL; if (!flg) return ec;
 	m0_slr_flg |= flg; if (!(p->winflg(WF_2SEL))) return ec;
@@ -1367,6 +1370,7 @@ int Node::copy(ANode * p, ANode * to, const char * name, int i, int j) {
 	ANode *up = p->up(), *to2 = to ? to : up; 
 	if (!up) return NDE_NOROOT;
 	if (!(i&NOF_FORCE) && !(to2->perm_ed())) return NDE_PERM;
+	if (hier(p, to)) return NDE_HIERCP;
 	ANode * trg = 0; int tid, ec;
 	switch(p->cl_id()) {
 		case '_': return NDE_BTCOPY;
