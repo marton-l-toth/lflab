@@ -771,6 +771,13 @@ void NDirNode::debug(int flg) {
 
 ClipNode * ClipNode::m0_kcp[3];
 
+void ClipNode::del2() { 
+	ClipNode **qq = m0_kcp, *dc = qq[0]; 
+	int dci = dc->winflg(8) ? dc->id() : 0;
+	for (int i=1; i<3; i++) if (qq[i]==this && (qq[i]=dc, dci)) gui2.clip_flg(dci,54+13*i,1);
+	f64((char*)m_eh);
+}
+
 ANode * ClipNode::sn_list(ANode ** pwl) {
 	if (!pwl) return 0;
 	ANode *q, *wl = *pwl;

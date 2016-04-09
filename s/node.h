@@ -512,7 +512,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		static const char * wbname(BoxGen * wb, int ix); // p2static
                 ClipNode() : m_map(0), m_sel(0), m_flg(3) {
 			m_eh = (short*)a64(); m_u24.s[0] = 'C'; }
-		virtual void del2() { f64((char*)m_eh); }
+		virtual void del2();
 		virtual int add(ANode * that, const char * nm, int i = NOF_PARSE, int j = -1);
 		virtual int rm(ANode * that);
 		virtual int draw_window_2(int x) { return (x&&(x-3)) ? NDE_IW4 : (draw(), 16*'K'+3); }
