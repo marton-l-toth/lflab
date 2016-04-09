@@ -1,0 +1,233 @@
+?L N250 m200 e100 c250 Z250 g250 k250
+0000 ^_Sn63
+0000 N`.`1$*`.`
+007d N`.`1$*`.`
+0000 N`.`1$W`.`
+28d1 V000017$/Ee
+0000 V000017$/Eet
+0271 V000017$/EetD
+0894 V000017$/Tc1
+0499 m:folder
+0733 N`.`1$*`.tD`
+0097 N`.`1$*`.tD`
+0000 N`.`1$W`.tD`
+0000 N`.`1$<`.tD`
+116e V000017$/Ee
+0000 V000017$/Eek
+02d9 V000017$/Tc1
+03cd m:clipbrd
+0fb8 V`.tD.k`3$Kac1
+09ef m:new
+0777 N`.!b`2$*`.!b.imp`
+0952 V`.tD.k.0`b$wS02c1
+03af m:_> ^1
+137d N`.!b`2$*`.!b.filt`
+0779 V`.tD.k.0`b$wZ02c1
+538f m:_> =acc
+1e66 V`.tD.k.0`b$wZ04c1
+18f9 V`.tD.k.0`b$wZ09e
+0009 V`.tD.k.0`b$wZ09e5
+40ef V`.tD.k`3$KCc1
+0000 V`.tD.k`3$KCc3
+0507 V`.tD.k`3$KKc2,25011
+34f0 V`.tD.k`3$KKc9,2802d
+0717 V`.tD.k.1`b$wZ02c1
+0684 m:_> =accN
+0b67 V`.tD.k.1`b$wZ04c1
+0dd7 V`.tD.k.1`b$wZ09e
+0000 V`.tD.k.1`b$wZ09e0
+0c8b V`.tD.k.1`b$wZ11e
+0000 V`.tD.k.1`b$wZ11e2
+00b4 V`.tD.k.1`b$wZ11e22
+1370 V`.tD.k.1`b$wZ19e
+0000 V`.tD.k.1`b$wZ19e1
+0bba V`.tD.k`3$KKc2,2902c
+06c6 V`.tD.k`3$KKc9,22050
+0b21 V`.tD.k.2`b$wZ04c1
+2c20 V`.tD.k.2`b$wZ19e
+0000 V`.tD.k.2`b$wZ19e3
+809f V`.tD.k`3$KKc1,51031
+057b V`.tD.k`3$KKc2,2602f
+0668 V`.tD.k`3$KKc1,2004e
+0606 V`.tD.k`3$KKc1,5e045
+03a3 V`.tD.k`3$KKc2,21048
+0bac V`.tD.k`3$KKc9,5a02c
+034f V`.tD.k`3$KKc9,5c04a
+05dd Z`.tD.k.1`B$w
+0411 Z`.tD.k.2`B$w
+04fc Z`.tD.k.0`B$w
+0f24 V`.tD.k.9`b$wZ04c1
+048f V`.tD.k.a`b$wZ04c1
+0ff6 V`.tD.k.a`b$wZ09e
+000d V`.tD.k.a`b$wZ09e3
+08f5 V`.tD.k.9`b$wZ09e
+0000 V`.tD.k.9`b$wZ09e3
+0200 V`.tD.k.9`b$wTe
+0009 V`.tD.k.9`b$wTe.
+0029 V`.tD.k.9`b$wTe.0
+00a5 V`.tD.k.9`b$wTe.01
+12ec V`.tD.k.a`b$wTe
+0000 V`.tD.k.a`b$wTe.
+0037 V`.tD.k.a`b$wTe.0
+00c1 V`.tD.k.a`b$wTe.01
+11b3 V`.tD.k.9`b$wZ11e
+0007 V`.tD.k.9`b$wZ11e5
+00a6 V`.tD.k.9`b$wZ11e55
+00b4 V`.tD.k.9`b$wZ11e555
+0741 V`.tD.k.a`b$wZ11e
+000d V`.tD.k.a`b$wZ11e5
+00c2 V`.tD.k.a`b$wZ11e55
+00b4 V`.tD.k.a`b$wZ11e555
+35db Z`.tD.k.a`B$w
+0e7f Z`.tD.k.9`B$w
+7be7 V`.tD.k`3$KKc1,230d9
+09c5 V`.tD.k`3$Kac1
+08ee m:new
+1840 N`.!b`2$<`.!b.filt`
+bb76 N`.!b.filt`2$*`.!b.filt.echo`
+0e3a V`.tD.k.7`b$wZ02c1
+064c m:_> =echo03
+0c1b N`.!b`2$*`.!b.imp`
+0b52 V`.tD.k.7`b$wS02c1
+08e7 m:_> ^triang
+083e V`.tD.k.7`b$wS04c1
+0f79 V`.tD.k.7`b$wS09e
+0000 V`.tD.k.7`b$wS09e.
+004c V`.tD.k.7`b$wS09e.0
+012e V`.tD.k.7`b$wS09e.01
+799e V`.tD.k.7`b$wS09e.0
+008a V`.tD.k.7`b$wS09e.02
+0033 V`.tD.k.7`b$wS09e.025
+0744 V`.tD.k.7`b$wS11e
+0000 V`.tD.k.7`b$wS11e.
+006f V`.tD.k.7`b$wS11e.0
+0210 V`.tD.k.7`b$wS11e.02
+005c V`.tD.k.7`b$wS11e.025
+16ad V`.tD.k.7`b$wZ04c1
+2f21 V`.tD.k.7`b$wZ09e
+000c V`.tD.k.7`b$wZ09e1
+0045 V`.tD.k.7`b$wZ09e10
+065a V`.tD.k.7`b$wZ11e
+0000 V`.tD.k.7`b$wZ11e[
+044a V`.tD.k.7`b$wZ11e[3
+006f V`.tD.k.7`b$wZ11e[3 
+01c4 V`.tD.k.7`b$wZ11e[3 3
+0112 V`.tD.k.7`b$wZ11e[3 3]
+0f79 V`.tD.k.7`b$wZ21e
+000d V`.tD.k.7`b$wZ21e1
+07fb V`.tD.k.7`b$wZ29e
+000a V`.tD.k.7`b$wZ29e-
+0177 V`.tD.k.7`b$wZ29e-1
+14fc V`.tD.k.7`b$wZ31e
+000b V`.tD.k.7`b$wZ31e-
+007d V`.tD.k.7`b$wZ31e-1
+07ed V`.tD.k.7`b$wZ39e
+0000 V`.tD.k.7`b$wZ39e-
+005a V`.tD.k.7`b$wZ39e-1
+0053 V`.tD.k.7`b$wZ39e-1.
+018f V`.tD.k.7`b$wZ39e-1.5
+0578 V`.tD.k.7`b$wZ41e
+000b V`.tD.k.7`b$wZ41e.
+0045 V`.tD.k.7`b$wZ41e.5
+18bd V`.tD.k.7`b$wZ31e-
+0381 V`.tD.k.7`b$wZ31e-.
+0061 V`.tD.k.7`b$wZ31e-.7
+0670 V`.tD.k.7`b$wZ41e.
+0084 V`.tD.k.7`b$wZ41e.3
+1a2b V`.tD.k.7`b$wZ49e
+0000 V`.tD.k.7`b$wZ49e1
+69b6 Z`.tD.k.7`B$w
+0200 V`.tD.k`3$KKc1,840d5
+04b6 V`.tD.k`3$KKc2,1b014
+068e V`.tD.k`3$KKc9,8d0d7
+252f N`.!b.filt`2$<`.!b.filt.eql`
+1301 N`.!b.filt`2$*`.!b.filt.eql`
+0fa0 V`.tD.k.n`b$wZ04c1
+0439 V`.tD.k.n`b$wZ02c1
+14d3 m:_> =eql3
+1e30 V`.tD.k.n`b$wFe2205
+0c89 V`.tD.k.n`b$wZ11e
+0009 V`.tD.k.n`b$wZ11e3
+0037 V`.tD.k.n`b$wZ11e30
+0097 V`.tD.k.n`b$wZ11e300
+05bd V`.tD.k.n`b$wZ19e
+0000 V`.tD.k.n`b$wZ19e.
+0029 V`.tD.k.n`b$wZ19e.1
+123b V`.tD.k.n`b$wZ21e
+0007 V`.tD.k.n`b$wZ21e4
+0903 V`.tD.k.n`b$wZ29e
+0000 V`.tD.k.n`b$wZ29e8
+003f V`.tD.k.n`b$wZ29e80
+0095 V`.tD.k.n`b$wZ29e800
+0462 V`.tD.k.n`b$wZ31e
+000a V`.tD.k.n`b$wZ31e.
+0045 V`.tD.k.n`b$wZ31e.2
+1829 V`.tD.k.n`b$wZ39e
+000b V`.tD.k.n`b$wZ39e.
+0045 V`.tD.k.n`b$wZ39e.2
+0f3e V`.tD.k.n`b$wZ41e
+000c V`.tD.k.n`b$wZ41e1
+006f V`.tD.k.n`b$wZ41e13
+0087 V`.tD.k.n`b$wZ41e130
+007d V`.tD.k.n`b$wZ41e1300
+0a77 V`.tD.k.n`b$wZ49e
+0000 V`.tD.k.n`b$wZ49e.
+0053 V`.tD.k.n`b$wZ49e.3
+2786 V`.tD.k.n`b$wZ51e
+0000 V`.tD.k.n`b$wZ51e3
+117b V`.tD.k.n`b$wZ09e
+0000 V`.tD.k.n`b$wZ09e1
+e541 V`.tD.k`3$KKc1,be0d1
+0359 V`.tD.k`3$KKc2,8a0db
+04e2 V`.tD.k`3$KKc9,c50d9
+093a Z`.tD.k.n`B$w
+0ec1 V`.tD.k.v`b$wZ02c1
+0412 m:_> =eql-ls
+0579 V`.tD.k.v`b$wZ04c1
+0395 V`.tD.k.v`b$wZ03c1
+0096 V`.tD.k.v`b$wZ03c1
+092d V`.tD.k.v`b$wZ09e
+000a V`.tD.k.v`b$wZ09e3
+0037 V`.tD.k.v`b$wZ09e30
+0098 V`.tD.k.v`b$wZ09e300
+0882 Z`.!b.filt.eql.=eql-ls`B$D
+1257 V`.tD.k.v`b$wZ11e
+0000 V`.tD.k.v`b$wZ11e1
+18d0 V`.tD.k.v`b$wZ19e0.
+0000 V`.tD.k.v`b$wZ19e0.2
+1a8c V`.tD.k.v`b$wZ29e
+0000 V`.tD.k.v`b$wZ29e[
+34c5 V`.tD.k.v`b$wZ29e[-
+01ef V`.tD.k.v`b$wZ29e[-8
+006d V`.tD.k.v`b$wZ29e[-84
+006a V`.tD.k.v`b$wZ29e[-84 
+0182 V`.tD.k.v`b$wZ29e[-84
+00a6 V`.tD.k.v`b$wZ29e[-8
+0045 V`.tD.k.v`b$wZ29e[-8 
+00dc V`.tD.k.v`b$wZ29e[-8 -
+0069 V`.tD.k.v`b$wZ29e[-8 -4
+004f V`.tD.k.v`b$wZ29e[-8 -4 
+069b V`.tD.k.v`b$wZ29e[-8 -4
+00da V`.tD.k.v`b$wZ29e[-8 -
+008a V`.tD.k.v`b$wZ29e[-8 -2
+005a V`.tD.k.v`b$wZ29e[-8 -2 
+011e V`.tD.k.v`b$wZ29e[-8 -2 2
+0029 V`.tD.k.v`b$wZ29e[-8 -2 2 
+0e7d V`.tD.k.v`b$wZ29e[-8 -2 2 8
+0045 V`.tD.k.v`b$wZ29e[-8 -2 2 8 
+0457 V`.tD.k.v`b$wZ29e[-8 -2 2 8 4
+098e V`.tD.k.v`b$wZ29e[-8 -2 2 8 4]
+bbfc V`.tD.k`3$KKc1,c90ae
+0622 V`.tD.k`3$KKc2,c50d2
+37e8 V`.tD.k`3$KKc9,cf0b3
+06e4 V`.tD.k.u`b$wZ04c1
+2153 V`.tD.k.u`b$wZ19e0.
+0037 V`.tD.k.u`b$wZ19e0.5
+e9b9 V`.tD.k.u`b$wZ19e
+025e V`.tD.k.u`b$wZ19e1
+1c7e Z`.tD.k.u`B$w
+05c0 Z`.tD.k.v`B$w
+1782 V`.tD.k`3$KCc1
+1967 Z`.!b.[]`3$K
+347d Z`.tD.k`3$K
+05c1 N`.`1$>`.tD`
