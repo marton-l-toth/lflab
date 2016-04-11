@@ -1385,13 +1385,14 @@ int Node::copy(ANode * p, ANode * to, const char * name, int i, int j) {
 		default: break;
 	}
 	SvArg * sv = &ANode::m0_sv; if (sv->rn) return NDE_LOCK;
-	if ((ec = Node::mk(&trg, to2, name, p->cl_id(), i, j, 0))<0) return ec; else tid = trg->id();
+	if ((ec = Node::mk(&trg, to2, name, p->cl_id(), i&~NOF_FGUI, j, 0))<0) return ec; else tid = trg->id();
 	CmdBuf * cb = new CmdBuf(); 
 	cb->init(-1, NOF_FORCE|NOF_STRICT);
 	cb->setvar(0, tid); cb->setvar(1, tid); 
 	ANode::sv_start(cb, p, SVF_COPY);
-	ec = ANode::sv_write(-1); ANode::sv_end();
-	return ec<0 ? ec : tid;
+	ec = ANode::sv_write(-1); ANode::sv_end(); if (ec<0) return ec;
+	if (i&NOF_FGUI) trg->draw_window(16);
+	return tid;
 }
 
 int Node::del(ANode * p, int flg) {
