@@ -545,7 +545,7 @@ static void tw_bye(GtkWidget *w, gpointer p) {
 	if (dflg & DF_WCLOSE) LOG("tw_bye: 0x%x, cl=0x%x '%c'", tw->id, tw->cl->ch, tw->cl->ch);
 	if (tw->state!=2) {
 		int j = tw->id, j4 = j&15, j20 = j>>4, cl = tw->cl->ch;
-		if (dflg&DF_REC) (j4==7) ? CMD("QRZ%x7$%c", j20, cl) : CMD("QRZ`%x`%c$%c", j20, hexc1(j4), cl);
+		if (dflg&DF_REC) (j4==7) ? CMD("QRY%x7$%c", j20, cl) : CMD("QRY`%x`%c$%c", j20, hexc1(j4), cl);
 		if (cl=='J') CMD("L%04xFF01", j20&65535); else CMD("x%c%x", hexc1(j4), j20);
 	}
 	tw_remove(tw); tw_free(tw);
@@ -708,7 +708,7 @@ static ww_t * widg_new(topwin * tw, const char ** pp) {
 	return p;
 }
 
-static void tw_close(topwin * tw) { if(tw->state)tw->state=2; gtk_widget_destroy(tw->w); }
+static void tw_close(topwin * tw, int f) { if(f&&tw->state)tw->state=2; gtk_widget_destroy(tw->w); }
 static inline int tw_defcmd(topwin * tw, char* to) {
 	int l = tw->cmdp_len; memcpy(to, tw->cmdpref, l); return l; }
 
@@ -1228,6 +1228,7 @@ static void menu_del() { if (cmenu_gw) gtk_widget_destroy(cmenu_gw); cmenu_gw = 
 
 static void menu_act_s(const char *s) {
 	if (!cmenu_w) return LOG("menu_act_s: no active popup menu");
+	if (!cmenu_w->cl) return LOG("menu_act_s: BUG: cmenu_w zero class");
 	int j = menu_findlbl(s); if (j<0) return LOG("menu_act_s: \"%s\" not found", s);
 	if (dflg & DF_MENU) LOG("menu_act_s: found: %d", j); menu_act(NULL, cmenu_dcmd + j); menu_del();
 }
@@ -4689,7 +4690,8 @@ static void cmd_ob(int c0, int id, char * arg) {
 			return;
 		case 'U': return (*tw->cl->cmd)(tw, arg+1);
 		case 'P': gtk_window_present(GTK_WINDOW(tw->w)); return;
-		case 'Z': return (id<32) ? LOG("cowardly refusing to destroy window 0x%x",id) : tw_close(tw);
+		case 'Y': case 'Z':  return (id<32) ? LOG("cowardly refusing to destroy window 0x%x",id) 
+				     	            : tw_close(tw,c0-'Y');
 		default: LOG("unknown cmd 0x%x \"%s\"", c0); return;
 	}
 }
