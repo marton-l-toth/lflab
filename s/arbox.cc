@@ -156,6 +156,7 @@ class CalcBoxInst : public BoxInst {
 };
 
 int CalcBoxGen::cmd(CmdBuf* cb) {
+	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
 	char * c0 = cb->a1(), *c1;
 	int k, v, v0, cx;
 	switch (*c0) {
