@@ -15,6 +15,9 @@ void CL :: NM##_init() { \
 char CL :: m0_##NM##_ctab[128]; \
 CL :: NM##_ent_t CL :: m0_##NM##_tab[] =
 
+#define BCR_NIO 0x40000000
+#define BCR_WIN 0x20000000
+
 #define BXCMD_DECL(CL) \
         typedef int (*cmd_t) (CL *, const char *, CmdBuf *); \
         typedef int (dcmd_t) (CL *, const char *, CmdBuf *); \
@@ -28,8 +31,8 @@ CL :: NM##_ent_t CL :: m0_##NM##_tab[] =
 	int ec, x = ep->x; if (x&8192) return BXE_UCMD; \
 	if (!(x&256) && !cb->cperm(DF_EDBOX)) return NDE_PERM; \
 	if ((ec = (*ep->f)(this, s, cb))>0) { \
-		if ((ec&1) && m_node->winflg(2048)) box_window(); \
-		if (ec&2) m_node->nio_change(); \
+		if ((ec&BCR_WIN) && m_node->winflg(2048)) box_window(); \
+		if ( ec&BCR_NIO) m_node->nio_change(); \
 	} return ec; } \
 	TAB7_DEF(CL, cmd)
 

@@ -114,7 +114,7 @@ int ItBoxGen::save2(SvArg * sv) {
 int ItBoxGen::set_bx1_2(BoxGen * bx, int ni) { 
 	int f = 6, r = set_boxp(&m_bx1,bx); if (r<0) return r;
 	if (ni<2 && m_scl) m_scl = 0, f += 8; 
-	return unset_model(), m_ni=ni, m_node->nio_change(), upd_window(f), 0;
+	return m_ni=ni, upd2(f), 0;
 }
 
 int ItBoxGen::set_bx1(BoxGen * bx) {
