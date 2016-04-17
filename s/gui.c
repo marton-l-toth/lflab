@@ -3350,7 +3350,9 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
 	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW})3{tt}]";
 	if (!tsc_mi) tsc_mi = menutab_lu('T', 0);
-	if (tw->state) { if (arg) ttrk_cmd(tw, arg); return; }
+	if (tw->state) { ww_t *wt = widg_lookup_ps(tw, "t");
+			 if (wt && wt->etc) tc_clear((tc_t*)(wt->etc), 1), da_fullre(wt);
+			 if (arg) ttrk_cmd(tw, arg); return; }
 	tw->arg[0].p = parse_w(tw, &str);
 	if (arg) ttrk_cmd(tw, arg); 
 	trk_upd_wgd(widg_lookup_ps(tw, "t"),  7);
