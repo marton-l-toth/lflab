@@ -1249,7 +1249,7 @@ int DWrapGen::set_sf_2(int ff, BoxGen * bx) {
 
 int DWrapGen::set_sf(int ff, BoxGen * bx) {
 	BoxGen ** ppbx = m_sfbx + (ff&=1);
-	if (bx==this || bx==*ppbx) return 0;
+	if (bx==this || bx==*ppbx) return EEE_NOEFF;
 	int ec, wf = wnfl(2048);
 	if (bx && bx->node()->cl_id()=='w') {
 		DWrapGen * that = dynamic_cast<DWrapGen*> (bx); if (!that) return BXE_SORRY;
