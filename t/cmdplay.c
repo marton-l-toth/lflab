@@ -43,7 +43,7 @@ void qwe(FILE *f) {
 	while (fgets(s=buf+2, 999, f)) {
 		int l = 0, k = IFHX(*s, 97) ? qh4rs((s+=5)-5) : 0;
 		switch(*s) {
-			case '#': m_sleep(k); continue;
+			case '#': m_sleep(k); if (s[1]&&s[1]!=10) fprintf(stderr,"%s",s); continue;
 			case '?': cmd(s+1); continue;
 			case '^': goto sl;
 			case 'm': case 'N': case 'Z': l = *s; goto lim;
@@ -68,7 +68,8 @@ static FILE * at_f_ij(int i, int j) {
 	return at_fxy[0] = 65 + i, at_fxy[1] = j<0 ? 'z' : 48+j, fopen(at_fnm, "r"); }
 
 static void qwe_tij(int t, int i, int j) {
-	FILE * f = at_f_ij(i,j);
+	FILE * f = at_f_ij(i,j); 
+	printf("_>========== %s - %s =========\n", at_fnm, f ? "ok" : strerror(errno)); fflush(stdout);
 	f ? (m_sleep(t), qwe(f), fclose(f)) : perror(at_fnm);
 }
 
@@ -91,8 +92,8 @@ static void at_random() {
 	while(1) {
 		i = random() % at_n;
 		if (!st[i]) qwe_tij(200, i, 0), st[i] = 1;
-		else if (st[i]<=at_k[i]) qwe_tij(200, i, st[i]), st[i]++;
-		else if ((k=random()%st[i])<at_k[i]) qwe_tij(200, i, k), st[i]++;
+		else if (st[i]<at_k[i]) qwe_tij(200, i, st[i]), st[i]++;
+		else if ((k=random()%st[i])<at_k[i]-1) qwe_tij(200, i, k+1), st[i]++;
 		else qwe_tij(200, i, -1), st[i] = 0;
 	}}
 
