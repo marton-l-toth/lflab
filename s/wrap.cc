@@ -1031,11 +1031,11 @@ int AWrapGen::batch_mono(double * to, int skip, int n) {
 	if (skip) mx_calc(mxid, junkbuf, 0, skip, 1);
 	while (n>=1024) mx_calc(mxid, to, 0, 1024, 1), n -= 1024, to += 1024;
 	if (n) mx_calc(mxid, to, 0, n, 1);
-	mx_del(mxid); return log("batch_mono: %d", clk.get()), 0;
+	mx_del(mxid); if (DBGC) log("batch_mono: %d", clk.get()); return 0;
 }
 
 int AWrapGen::plot_t(double t0, double t1, int n) {
-	log("plot_t: %.15g %.15g %d", t0, t1, n);
+	if (DBGC) log("plot_t: %.15g %.15g %d", t0, t1, n);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0;
         if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
 	double * res = new double[len];
@@ -1063,7 +1063,7 @@ int AWrapGen::plot_t(double t0, double t1, int n) {
 }
 
 int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, bool zpad) {
-	log("plot_f: %.15g %.15g %.15g %.15g %d %c", t0, t1, f0, f1, n, "ny"[zpad]);
+	if (DBGC) log("plot_f: %.15g %.15g %.15g %.15g %d %c", t0, t1, f0, f1, n, "ny"[zpad]);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0;
         if (len<1) return log("plot_f: length = %d samples, sorry.", len), BXE_RANGE;
         int siz = 64, bits = 6; 

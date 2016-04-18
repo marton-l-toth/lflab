@@ -369,6 +369,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 			  else   fflush(stderr), i='f', pt_iocmd((char*)&i);    return 0;
 		case 'S': return p->m_c_a0[1]=='c' ? ((p->m_cont = qstat.chk0(p->m_c_a0+2)) ? 0 : BXE_QSTATDIF)
 						   : qstat.cmd(p->m_c_a0+1);
+		case '>': return log("_> %s", p->m_c_a0+1), 0;
 		default: return GCE_UMISC;
 	}}
 
