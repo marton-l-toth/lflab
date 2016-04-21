@@ -9,7 +9,6 @@ function oops() {
 }
 
 function run1() {
-	grep "^#" $TCDIR/$1
 	"$TOOL" >>$LF_TMPROOT/lf.*/A <$TCDIR/$1
 }
 
@@ -37,10 +36,27 @@ run1 t_rec
 sleep .5
 echo "found AODIR: \"$AODIR\""; ls -l "$AODIR"
 he "check wav/flac files"
-echo '^V$.mc1' >> $LF_TMPROOT/lf.*/A
+run1 t_ro
+he "check results"
+run1 t_err
+he "check results"
+echo '^V7$.mc1' >> $LF_TMPROOT/lf.*/A
 sleep .3; echo '^m:exit(autosv)' >> $LF_TMPROOT/lf.*/A
 he "check autosaves & log"
 $LAUNCH &
 sleep .5; run1 t_start
 he "recover autosave"
 run1 t_trkdep0
+he "test trk editor (drag while playing)"
+run1 t_common
+$TOOL -a-1$TCDIR >> $LF_TMPROOT/lf.*/A
+echo '^V7$.sc1' >> $LF_TMPROOT/lf.*/A
+he "save"
+echo '^V7$.mc1' >> $LF_TMPROOT/lf.*/A
+sleep .3; echo '^m:exit(autosv)' >> $LF_TMPROOT/lf.*/A
+sleep .5; $LAUNCH &
+sleep 1; run1 t_start
+he "load saved file"
+echo '^V7$.2c9' >> $LF_TMPROOT/lf.*/A
+$TOOL -a-a$TCDIR >> $LF_TMPROOT/lf.*/A
+he "check (no err, t[A-Z] removed) -- done!"

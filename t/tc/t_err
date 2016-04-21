@@ -1,0 +1,177 @@
+# exp.res: 2*g/circ selfref 3*used refloop 2*filtrm invfilt
+#          2*refloop 2*(cp mv) nonemp/t 2*used ro 
+#          used 2*nonemp/d  (23 total)
+?L N250 m200 e100 c250 Z250 g250 k250
+0000 ^_Sn63
+0000 V000007$.mc1
+0892 m:error list
+05cf V000047$ENc4
+013f V000047$ENc4
+0123 V000047$ENc4
+0123 V000047$E_00c1
+1911 N`.`1$*`.`
+0de6 N`.`2$*`.`
+007d N`.`2$*`.`
+0000 N`.`2$W`.`
+0816 V000017$/Ee
+0007 V000017$/Eet
+015b V000017$/Eet_
+00f3 V000017$/Eet_e
+0052 V000017$/Eet_er
+00b0 V000017$/Eet_err
+0516 V000017$/Tc1
+0552 m:folder
+0d14 N`.`1$<`.t_err`
+0381 N`.`1$*`.t_err`
+321d V000017$/Ee
+0009 V000017$/Eeg
+0037 V000017$/Eeg1
+0b8d V000017$/Tc1
+078c m:graph
+0817 V000017$/Eeg
+0045 V000017$/Eeg2
+0728 V000017$/Tc1
+0582 m:graph
+1564 V000017$/Eeg
+0077 V000017$/Eeg3
+06b5 V000017$/Tc1
+06ef m:graph
+2d2c V`.t_err.g3`b$g1c1
+0799 m:g= g1
+034f V`.t_err.g3`b$g1c1
+04d3 m:g= g2
+0ef9 V`.t_err.g1`b$gic1
+063b V`.t_err.g2`b$gic1
+06d7 V`.t_err.g3`b$ggg1250
+0262 V`.t_err.g3`b$ggg1230
+03ff V`.t_err.g3`b$g_03c1
+096e V`.t_err.g3`b$ggg1150
+13de V`.t_err.g3`b$g_03c1
+069e V`.t_err.g3`b$ggg1250
+034f V`.t_err.g3`b$ggg1130
+03cc V`.t_err.g3`b$g_03c1
+148f V`.t_err.g3`b$g1c1
+03a0 m:g= g3
+2f81 V`.t_err.g1`b$g_02c1
+06f3 m:delete
+0939 V`.t_err.g2`b$g_02c1
+062e m:delete
+3747 N`.t_err`1$*`.t_err.g2`
+0da0 N`.t_err`1$*`.t_err.g3`
+05da V000017$/Eeg3w
+099c V000017$/Tc1
+0d59 m:instr.
+0ae9 V`.t_err.g3w`b$wS01c1
+0ae4 m:g= g3
+1571 V000017$/Dc1
+1bbc V`.t_err.g1`b$g1c1
+0473 m:g= g3
+3750 V`.t_err.g3w`b$wZ01c1
+0544 m:g= g1
+20ca V`.t_err.g1`b$gic1
+14d9 V`.t_err.g1`b$goc1
+1edf V`.t_err.g1`b$goc3
+07a4 V`.t_err.g3w`b$wZ01c1
+0cd0 m:g= g1
+0550 V`.t_err.g1`b$gic3
+0323 V`.t_err.g1`b$gic3
+491d V000017$/Ee
+0007 V000017$/Eeg
+0053 V000017$/Eeg2
+1422 V000017$/Eeg
+0053 V000017$/Eeg3
+0387 V000017$/Eeg3i
+0037 V000017$/Eeg3it
+0b80 V000017$/Tc1
+085c m:iter.f.
+1618 V`.t_err.g3it`b$i1c1
+04a9 m:g= g1
+0fbf V`.t_err.g1`b$gic1
+12c9 V`.t_err.g3it`b$i1c1
+0334 m:g= g1
+09aa V`.t_err.g1`b$goc1
+097e V`.t_err.g1`b$goc3
+0420 V`.t_err.g3it`b$i1c1
+02fc m:g= g1
+03f0 V`.t_err.g1`b$gic3
+05ac V`.t_err.g1`b$gic1
+0aea V`.t_err.g3`b$gic1
+2b45 V`.t_err.g1`b$g1c1
+0878 m:i= g3it
+559e V`.t_err.g3it`b$i1c1
+0738 m:g= g3
+16ff V`.t_err.g1`b$ggg112a
+0577 V`.t_err.g1`b$gXc1
+0544 V`.t_err.g3it`b$i1c1
+044a m:g= g3
+0d69 V`.t_err.g1`b$g1c1
+0597 m:i= g3it
+eab5 N`.`2$*`.t_err`
+13c3 N`.`1$*`.t_err`
+117b V000017$/Cc1
+06d7 V000017$/Mc1
+1c47 N`.`2$<`.t_err`
+0f06 V000017$/ee
+0000 V000017$/eed
+0061 V000017$/eed1
+0368 V000017$/tc1
+07cc m:folder
+0701 N`.t_err`2$*`.t_err.d1`
+008a N`.t_err`2$*`.t_err.d1`
+0000 N`.t_err`2$W`.t_err.d1`
+0000 N`.t_err`2$<`.t_err.d1`
+0a35 V000017$/eed12
+08a1 V000017$/tc1
+0457 m:folder
+0630 N`.t_err.d1`2$*`.t_err.d1.d12`
+0597 V000017$/eed123
+04a4 V000017$/tc1
+0326 m:folder
+04c7 N`.t_err.d1`2$<`.t_err.d1.d12`
+0622 N`.t_err.d1.d12`2$*`.t_err.d1.d12.d123`
+150e V000017$/Cc1
+0af7 V000017$/Mc1
+78ea V000017$/Ee
+0000 V000017$/Eet
+0053 V000017$/Eetr
+0061 V000017$/Eetrk
+0675 V000017$/Tc1
+0700 m:track
+0100 V`.t_err.trk`b$tBc1
+0f4c V`.t_err.g3w`b$wwc5
+0d5a V`.t_err.trk`b$t_02c1
+06ad m:delete
+110b V`.t_err.g3w`b$w_02c1
+0dbc m:delete
+3b49 V`.t_err.g3`b$g_02c1
+04c7 m:delete
+1562 V`.t_err.trk`b$tSc1
+097c V`.t_err.trk`b$tSc3
+0ab2 m:cut
+0738 V`.t_err.g3`b$g_02c1
+0593 m:delete
+0ec3 V`.!b.[]`3$Kac1
+070f m:clear
+0e6d V`.!b.[]`3$Kac1
+0456 m:del
+1b34 V`.t_err.trk`b$t_02c1
+06f3 m:delete
+0754 V`.t_err.g3`b$g_02c1
+0d58 m:delete
+164c V`.t_err.g3it`b$i_02c1
+051a m:delete
+06aa V`.t_err.g3`b$g_02c1
+0662 m:delete
+050c N`.t_err`1$*`.t_err.g2`
+042e V000017$/Dc1
+03f6 N`.t_err`1$*`.t_err.g1`
+048d V000017$/Dc1
+1057 N`.t_err`1$*`.t_err.d1`
+07c3 V000017$/Dc1
+0ab2 N`.t_err.d1`2$*`.t_err.d1.d12`
+05dd V000017$/dc1
+0473 N`.t_err.d1.d12`2$*`.t_err.d1.d12.d123`
+048c V000017$/dc1
+04df V000017$/dc1
+1755 V000017$/dc1
+0761 V000017$/dc1
