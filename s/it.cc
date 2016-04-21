@@ -37,7 +37,6 @@ class ItBoxGen : public BoxGen {
         public: 
                 friend void itb_init();
                 ItBoxGen(ABoxNode * nd) : BoxGen(nd), m_bx1(0), m_ni(1), m_scl(0), m_flg(0) {}
-                virtual ~ItBoxGen() { set_boxp(&m_bx1, 0); }
                 virtual void set_model() { m_model = m_bx1 ? new ItBoxModel(m_bx1->model(), mflg()) 
 							   : new ItBoxModel(0, 0); }
                 virtual int n_in() const { return m_ni + (m_scl ? 2+(m_scl==1) : 1); }
