@@ -1,0 +1,25 @@
+lflab v0.6
+
+quicktest.sh was run in the following environments:
+lflab-0.6-0-amd64.deb: Debian 7 on Dell I17R, ALC283(builtin), MAYA44USB
+lflab-0.6-0-i386.deb: Debian 8 on VirtualBox, ALSA SW mixer
+lflab-0.6-0.i686.rpm: Fedora 23 on VirtualBox, PulseAudio
+lflab-0.6-0.x86_64.rpm: Fedora 23 on VirtualBox, PulseAudio
+
+Features:
+- iterated filter (with some examples in !e.4)
+- small GUI additions (clipb./new, graph/quick guicfg.)
+- instrument cfg: switch piano shading on/off
+
+Fixes:
+- record to track (hold-to-play sounds)
+- Gaussian impulse 
+- track ed. selection fix
+- object tree: permission/sanity checks added
+
+Errors found:
+- repeated automatic test shows memory leak
+- GDK error msg when clipboard opened with 1 or 2 sounds
+- wrong color displayed for iter.f. within graph
+- strange timing behaviour with PulseAudio
+- small (harmless?) difference in plot values (32 vs 64-bit)

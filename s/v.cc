@@ -1,1 +1,1 @@
-int v_major=0,v_minor=5;
+int v_major=0,v_minor=6;
