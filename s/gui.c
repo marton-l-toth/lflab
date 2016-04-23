@@ -4183,7 +4183,8 @@ static void itb_skel (struct _topwin * tw, char * arg) {
 #define DACLIP_SEL(x) ((x)->arg[2].c[0])
 
 static void daclip_inv(ww_t * ww, unsigned int bv) {
-	if (!bv || !ww->w) return; if (bitcnt(bv)>2) return da_fullre(ww);
+	if (!bv || !ww->w || DA_H(ww)<=0 || DA_W(ww)<=0) return; 
+	if (bitcnt(bv)>2) return da_fullre(ww);
 	GdkWindow * w = gtk_widget_get_window(ww->w);
 	struct _GdkRectangle rct; rct.width = 29; rct.height = 57;
 	BVFOR_JMC(bv) rct.x = 28*(j&7), rct.y = 7*(j&24), gdk_window_invalidate_rect(w, &rct, 0);
