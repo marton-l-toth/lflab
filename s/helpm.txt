@@ -61,9 +61,11 @@ fb : simple examples for feedback
 fe : string/membrane wrappers for the finite-elem builtin "=fe"
 filt : some simple compound filters
 hpar : combination (almost iteration) of parallel p/z filters
+iter : iterated filters
 nz : noise-based boxes
 osc : simple applications of non-linear (rev.quad.) oscillator
 sel : some filter config using selector boxes
+trk : tracks
 wave : waves modulated by other waves
 {{{?._boxg}}}
 A box is a little machine with 0...30 input ports and 1...30
@@ -352,13 +354,13 @@ There is only one config file, so "save" is the same as in:
 {{{?._wcf}}}
 This help text describes the main config window (available from
 the "++" menu in the main window). For a list of command line
-options, start the program with "lflab -l".
+options, start the program with "lflab -h".
 sv.exec - save files with exec right (line 1: #!/usr/bin/lflab)
 min/asv - autosave every x minutes (*) (0: off)
 au.tlog - automatically write timing log on GUI exit (max. 4MB)
 {sv|as|tl}.bkup - max # of backup copies for save, a.sv. & tlog
 dev - features under development (at your own risk :))
-{wav-|atmp}dir - set WAV/FLAC or audio tmpfile. directory (**)
+{wav-|atmp}dir - set WAV/FLAC or audio tmp.file directory (**)
 ==> win.auconv -- details for writing to WAV/FLAC
 ask/keep/wav/flac - default action when audio tmp file is ready
 (the auconv window will appear only when set to "ask")
@@ -367,9 +369,10 @@ lim - max time (sec.) for automatic "write to WAV" commands
 (*) to avoid unpleasant buffer underruns, autosave happens only
 when no sound is being played, or in mute mode
 (**) it is recommended to make a directory under you home dir.
-for the WAV/FLAC files. Unless you are very short on RAM, you
-should leave atmpdir on ramdisk (run/shm) -- on a real disk
-(even SSD) it can cause performance problems/buffer underruns.
+for the WAV/FLAC files. Unless you are very short on RAM,
+atmpdir should be on a ramdisk: on a real disk (even SSD) it
+can cause performance problems/buffer underruns. (default is
+/run/shm if it exists, otherwise /tmp)
 ---
 Directories shown for information: homedir is the default WAV/
 FLAC target, logs and autosaves go to userdir, instdir is where
