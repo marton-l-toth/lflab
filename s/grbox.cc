@@ -385,8 +385,8 @@ void GraphBoxGen::draw_node(int i) {
 	gui2.c2(i_to_b32((i+1)>>5), i_to_b32((i+1)&31));
 	gui2.c2(i_to_b32(ni), i_to_b32(no));
 	if (nd && nd->box) {
-		gui2.sn((bnd = nd->box->node())->own_rgb(), 6);
-		gui2.nname(bnd); gui2.c1(36);
+		gui2.sn(nd->box->v_rgb(), 6);
+		gui2.nname(bnd = nd->box->node()); gui2.c1(36);
 	} else {
 		gui2.sn("zz%z%%!BUG!$", 12);
 	}
