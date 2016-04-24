@@ -95,16 +95,18 @@ class AReader { public: virtual int line(char * s) = 0; virtual ~AReader() {} };
 
 class QuickStat {
 	public:
-		QuickStat() : m_siz(63) {}
+		QuickStat() : m_siz(63), m_flg(0) {}
 		int size() const { return m_siz; }
 		void store(const double * p, int n);
 		int cmd(const char *s);
 		AReader * chk0(const char *s);
 		int chk1(const double *p);
 	protected:
-		int m_siz;
+		void cfg();
+		int qcmp(double x, double y);
+		int m_siz, m_flg;
 		int m_pos[64];
-		double m_val[64];
+		double m_val[64], m_dlim, m_rlim;
 };
 extern QuickStat qstat;
 

@@ -208,8 +208,23 @@ void QuickStat::store(const double * p, int n) {
 
 AReader * QuickStat::chk0(const char *s) { return atoi(s)==m_siz ? new QSCReader(this) : 0; }
 
+void QuickStat::cfg() { m_dlim = exp(-M_LN2 * (double)CFG_QTST_ADIF.i);
+			m_rlim = exp( M_LN2 * (double)CFG_QTST_RDIF.i); m_flg |= 1; }
+
+int QuickStat::qcmp(double x, double y) {
+	if (x!=x) return (y==y) ? 1 : memcmp(&x,&y,8);
+	if (y!=y) return -1;
+	if (x==y) return 0;
+	double d = x - y;
+	int r = (d<0.0) ? (d=-d, -1) : 1;
+	if (d<m_dlim) return 0;
+	if (d*m_rlim < fabs(x)) return 0;
+	return r;
+}
+
 int QuickStat::chk1(const double * q) {
-	for (int n=m_siz, i=0; i<n; i++) if (approx_cmp(m_val[i], q[i]))
+	if (!(m_flg&1)) cfg();
+	for (int n=m_siz, i=0; i<n; i++) if (qcmp(m_val[i], q[i]))
 		return log("qstat/chk: val[%d] is %.15g, exp. %.15g", i, m_val[i], q[i]), BXE_QSTATDIF;
 	return 0; }
 
@@ -360,7 +375,6 @@ int parse_num(void * to, const char * s) {
         char buf[24];
 	const char *s0 = s;
         int dat[16], c, emd = 0, dfl = 0;
-        long long xl;
         while (*s==' ') ++s;
         if (*s==':') for (++s; *s==' '; s++);
         switch(*s) {
@@ -385,7 +399,7 @@ int parse_num(void * to, const char * s) {
                           buf[i] = 0; *(double*)to = atof(buf);
                           return s - s0 + i;
                 case '#':
-                          for (xl=0, i=1; i<17; i++) if (!(s[i]&80)) return *(double*)to=1.2345, i;
+                          for (i=1; i<17; i++) if (!(s[i]&80)) return *(double*)to=1.2345, i;
 			  *(double*)to = hx2doub(s+1); return 17;
                 case '"':
                           for (i=1; i<7; i++) if (s[i]<32 || s[i]==34 || s[i]>126) break;
