@@ -17,6 +17,8 @@
 #define WRF_PASS   0x40000000 // bx 
 #define WRF_W_CH2  0x20000000 // bx
 #define WRF_W_PLOT 0x10000000 // bx
+#define WRF_SHADOW 0x08000000 // bx
+#define WRF_CLID(X) ('w' - (((X)>>25)&4))
 #define WRF_S_NI   0x0000007c // bx
 #define WRF_S_NO   0x00000f80 // bx
 #define WRF_F_NI   0x0001f000 // bx

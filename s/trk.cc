@@ -213,7 +213,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 		vti += k; vtf -= natural_bpm * (double)k;
 		for (; vti>nextvt; nd=nd->next(), nextvt=nd->cth()->j) {
 			int ci = nd->cth()->i; if (ci>15) {
-				if (nd->cl_id()!='w') return unexp_node(nd);
+				if (!nd->is_wrap()) return unexp_node(nd);
 				wrap_nd_2mx(static_cast<ABoxNode*>(nd), m_mxid, *bpm, i);
 				if (DBGC) log("trk2mx: %d", m_mxid);   continue; }
 			if (ci==15) return (void) (m_md = 3);
@@ -281,21 +281,21 @@ int TrackGen::w_sel(sthg * bxw_rawptr) {
 	*(int*)(s+ 4) = qh4(16*sxy[1]+(nid>>16));  *(int*)(s+ 8) = qh4(nid   &65535);
 	*(int*)(s+12) = qh4(sxy[0]>>16);           *(int*)(s+16) = qh4(sxy[0]&65535);
 	gui2.setwin(w_oid(), 't'); gui2.t_sn(s+3, 17); if (!nid) return 0;
-	ANode * nd = ANode::lookup_n_q(nid); if (nd->cl_id()!='w') return BXE_WTF;
+	ANode * nd = ANode::lookup_n_q(nid); if (!nd->is_wrap()) return BXE_WTF;
 	gui2.bxmini(nd->box0()); return 0;
 }
 
 int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y) {
-	ANode *nd, *q; if (!id || (nd = ANode::lookup_n_q(id))->cl_id()!='w') id = 0, nd = 0;
+	ANode *nd, *q; if (!id || !(nd = ANode::lookup_n_q(id))->is_wrap()) id = 0, nd = 0;
 	int ec; switch(c) {
 		case '1': return (TR_SEL_ID=id) ? sel0w(bxw_rawptr, nd->cth()->i, nd->cth()->j)
 			  			: sel0w(bxw_rawptr,y, x),  w_sel(bxw_rawptr);
 		case '4': return nd ? wrap_nd_2mx(static_cast<ABoxNode*>(nd),0,.1*(double)m_bp10m,0):EEE_NOEFF;
 		case '6': return nd ? nd->draw_window(0x1b) : BXE_NOARG;
 		case '9': return nd ? nd->draw_window(0x19) : BXE_NOARG;
-		case 'C': if (!TR_SEL_ID || (q=ANode::lookup_n_q(TR_SEL_ID))->cl_id()!='w') return EEE_NOEFF;
+		case 'C': if (!TR_SEL_ID || !(q=ANode::lookup_n_q(TR_SEL_ID))->is_wrap()) return EEE_NOEFF;
 			  return Node::copy(q, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x);
-		case 'M': if (!(id=TR_SEL_ID) || (q=ANode::lookup_n_q(id))->cl_id()!='w') return EEE_NOEFF;
+		case 'M': if (!(id=TR_SEL_ID) || !(q=ANode::lookup_n_q(id))->is_wrap()) return EEE_NOEFF;
 			  return ((ec = Node::move(q, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) ? ec :
 			   (sel0w(bxw_rawptr, q->cth()->i, q->cth()->j), TR_SEL_ID=id, w_sel(bxw_rawptr), ec);
 		case 'N': return Node::mk(0, m_node, 0, 'w', y|cb->cnof(), x);
@@ -315,9 +315,9 @@ int TrackGen::del_n_sel(int d, int nof) {
 	BXW_GET; if (!TR_SEL_ID) return EEE_NOEFF;
 	ANode *nd0 = ANode::lookup_n_q(TR_SEL_ID), *nd = d ? nd0->cth()->pv : nd0->next();
 	int ec = Node::move(nd0, ClipNode::kcp(1), 0, NOF_NOIDX|nof); if (ec<0) return ec;
-	if (d) while (nd && nd->cl_id()!='w') nd=nd->cth()->pv;
-	else   while (nd->cl_id()!='w' && nd->cth()->j<0x7fffffff) nd=nd->next();
-	if (nd && nd->cl_id()=='w') TR_SEL_ID=nd->id(), sel0wn(bxw_rawptr, nd), w_sel(bxw_rawptr);
+	if (d) while (nd && !nd->is_wrap()) nd=nd->cth()->pv;
+	else   while (!nd->is_wrap() && nd->cth()->j<0x7fffffff) nd=nd->next();
+	if (nd && nd->is_wrap()) TR_SEL_ID=nd->id(), sel0wn(bxw_rawptr, nd), w_sel(bxw_rawptr);
 	return ec;
 }
 
@@ -375,7 +375,7 @@ CH(stp){BXW_GETP(p); int i = TR_SEL_XY[1], j = TR_SEL_XY[0], k = TR_SEL_ID;
 		case '<': nd = Node::trk_fwb((cur ? cur : Node::trk_ij(p->m_node, i, j))->cth()->pv); break;
 		default: return BXE_CENUM;
 	}
-	return (nd && nd->cl_id()=='w') ? (p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr), 0) : EEE_NOEFF;
+	return (nd && nd->is_wrap()) ? (p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr), 0) : EEE_NOEFF;
 }
 
 CH(mv){	if (!s[1] || !s[2]) return BXE_NOARG;
@@ -438,7 +438,7 @@ int TrackGen::draw_bx_1() {
 	while (1) {
 		if (!q) goto done;
 		if (q->cth()->j < m_drq_x) goto done;
-		if (q->cl_id()!='w') { ++k; q = q->cth()->pv; continue; }
+		if (!q->is_wrap()) { ++k; q = q->cth()->pv; continue; }
 		if (k>10000) goto cont;
 		w1b_pm(q,'+'); k += 32; q = q->cth()->pv;
 	}
@@ -457,10 +457,10 @@ ANode * TrackGen::bkm_find(int j) {
 }
 
 void TrackGen::bkm_add(ANode * nd) {  const trk_24 * p = nd->cth();  int j = p->j;
-	if (p->ty=='w' && ((p->pv->cth()->j ^ j) & 0xfffff000)) m_m.bkm.set(j>>12, nd->id()); }
+	if ((p->ty|4)=='w' && ((p->pv->cth()->j ^ j) & 0xfffff000)) m_m.bkm.set(j>>12, nd->id()); }
 
 void TrackGen::bkm_rm(ANode * nd) {   const trk_24 * p = nd->cth();  int j = p->j;
-	if (p->ty=='w' && ((p->pv->cth()->j ^ j) & 0xfffff000)) m_m.bkm.set(j>>12,
+	if ((p->ty|4)=='w' && ((p->pv->cth()->j ^ j) & 0xfffff000)) m_m.bkm.set(j>>12,
 			((j^(nd=nd->next())->cth()->j)&0xfffff000) ? 0 : nd->id());  }
 
 int TrackGen::save2(SvArg * sv) {

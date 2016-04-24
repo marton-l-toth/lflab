@@ -558,7 +558,7 @@ int ADirNode::wdat_free() {
 
 ///////// dir ////////////////////////////////////////////////////////////////
 
-#define ADDL(J) (q = lookup_n_q(J), q->cl_id()=='w' ? (q->m_next=wl, wl=q) : (q->m_next=r, r=q))
+#define ADDL(J) (q = lookup_n_q(J), q->is_wrap() ? (q->m_next=wl, wl=q) : (q->m_next=r, r=q))
 ANode * NDirNode::sn_list(ANode ** pwl) {
 	int n = m_siz; if (!n) return 0;
 	unsigned int * pe = m_e[0];
@@ -812,7 +812,7 @@ int ClipNode::add(ANode * that, const char * nm, int i, int j) {
 			       : ((i&NOF_NOIDX) ? m_sel : i&31);
 	if (that->m_up==this) return xchg(that->m_u24.c.i, ix);
 	unsigned int m1 = 1u << ix;
-	if (that->m_u24.c.ty != 'w') return NDE_EXPWRAP;
+	if (!that->is_wrap()) return NDE_EXPWRAP;
 	if (m_map & m1) {
 		if (!~m_map) return NDE_FULL;
 		if (i&NOF_STRICT) return NDE_NDUP;
@@ -845,12 +845,12 @@ int ClipNode::rm(ANode * that) {
 
 int ClipNode::gui_list(char * to, int flg) {
 	if (!m_map) return 0;
-	char * p = to;
+	char * p = (flg&1) ? to : (*to='x', to+1);
 	for (unsigned int j,m = m_map; j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j)) {
-		if (p==to) { *(p++) = 'x'-2*(flg&1); }
-		else { *(p++) = 36; if (flg&1) *(p++) = 'w'; }
-		p += hx5(p, 256*m_eh[j] + m_el[j]); *(p++) = 36;
-		*(p++) = i_to_b32((int)j);
+		int k = 256*m_eh[j] + m_el[j];
+		if (p>to+1) *(p++) = 36;
+		if (flg&1) *(p++) = max_i(32, lookup_n_q(k)->cl_id());
+		p += hx5(p, k); *(p++) = 36; *(p++) = i_to_b32((int)j);
 	}
 	return p - to;
 }
@@ -961,7 +961,7 @@ const char * ABoxNode::rgb() { return m_box ? m_box->v_rgb() : "zz%z%%"; }
 
 void ABoxNode::del2() { 
 	BoxEdge * p; while ((p = m_ef0)) Node::disconn(this, p->to);
-	if (m_u24.s[0]=='w') f64(m_box); else delete(m_box); }
+	if (is_wrap()) f64(m_box); else delete(m_box); }
 
 int ABoxNode::save1() {
 	SvArg * p = &m0_sv;
@@ -1166,7 +1166,7 @@ void TBoxNode::do_cut(ANode * q) {
 
 int TBoxNode::rm(ANode * that) {
 	if (that->m_up != this) return NDE_RMWHAT;
-	if (that->cl_id()!='w') return log("BUG: trk/rm: %s 0x%x/0x%x", that->cl_id()==33?"guard":"unexp",
+	if (!that->is_wrap()) return log("BUG: trk/rm: %s 0x%x/0x%x", that->cl_id()==33?"guard":"unexp",
 			that->id(), that->cl_id()), NDE_WTF;
 	if (m_winflg & 2048) trk_cond_pm(m_box, that, '-');
 	do_cut(that); trk_bkm_rm(m_box, that);
@@ -1174,7 +1174,7 @@ int TBoxNode::rm(ANode * that) {
 }
 
 int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
-	int ty = that->m_u24.c.ty; if (ty!='w') return NDE_EXPWRAP;
+	int ty = that->m_u24.c.ty; if ((ty|4)!='w') return NDE_EXPWRAP;
 	int k, ec, sf = !!(i&NOF_STRICT), wf = m_winflg & 2048;
 	if (!(i&NOF_PARSE)) i&=NOF_IDX; else if ((ec = trkn_parse(&i, &j, &nm)) < 0) return ec;
 	if ((unsigned int)(i-16)>4079u) return TKE_RANGEI;
@@ -1307,12 +1307,12 @@ int Node::obj_help(int cl) {
 	log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
-		case 'w': s = "instrument(cfg)"; break;
+		case 'w': case 's': s = "instrument(cfg)"; break;
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
 		case 'i': s = "iterated filter"; break;
-		case 'w'+256: s = "instrument(play)"; break;
+		case 'w'+256: case 's'+256: s = "instrument(play)"; break;
 		case '_': return EEE_NOEFF;
 		default: return NDE_WTF;
 	}

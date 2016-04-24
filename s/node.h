@@ -173,6 +173,7 @@ class ANode {
                 ANode* next() const { return m_next; }
                 bool is_dir() const { return (m_u24.u[0] & 120)== 64; }
                 bool is_box() const { return (m_u24.u[0] > 94); }
+                bool is_wrap() const { return ( (m_u24.u[0]|4) == 'w' ); }
                 int winflg(int m = -1) const { return m_winflg & m; }
                 int gui9() const { return 16*m_id + ((m_winflg>>11)&1) + ((m_winflg>>6)&8); }
                 void winflg_or(int x) { m_winflg |= x; }
