@@ -230,6 +230,19 @@ class WrapSOB : public SOB {
 		SOB_p<WrapScVec> m_scl[2];
 };
 
+class SWrapSOB : public SOB {
+	public:
+		SOBDEF_64(SWrapSOB);
+		SWrapSOB(int uarg) : SOB(uarg) {}
+		SWrapSOB(const SWrapSOB * that, int uarg);
+		void ini_default(int k);
+                int save2(SvArg * p) { return p->st2=-1, 1; }
+                void debug2();
+		SOB_RW_F0(core, WrapCore) 
+
+		SOB_p<WrapCore> m_core;
+};
+
 class AWrapGen : public BoxGen {
 	public:
 		friend void wrap_set_trec(BoxGen * bx, int v);
@@ -844,7 +857,23 @@ void WrapSOB::ini_default(int k) {
 	m_core.set(WrapCore_default(k));
 	for (int i=0; i<2; i++) m_con[i].set(DblVec_default(i+1)),
 			        m_scl[i].set(WrapScVec_default(i)); }
-SOB_INIFUN(WrapSOB, 1)
+
+SWrapSOB::SWrapSOB(const SWrapSOB * that, int uarg) : SOB(uarg) {
+	if (DBGC) log("s/wrsob copy: %p -> %p", that, this);
+	m_core.from(that->m_core); m_u8_refcnt |= (that->m_u8_refcnt&0x7f000000);
+}
+
+void SWrapSOB::debug2() {
+	log("SWrapSOB: flg:0x%x core", m_u8_refcnt>>24);
+	m_core.debug(); 
+}	
+
+void SWrapSOB::ini_default(int k) {
+	m_core.set(WrapCore_default(k));
+}
+
+SOB_INIFUN( WrapSOB, 1)
+SOB_INIFUN(SWrapSOB, 1)
 
 /////// box (abs) ////////////////////////////////////////////////////////////
 

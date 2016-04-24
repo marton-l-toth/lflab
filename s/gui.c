@@ -2293,21 +2293,28 @@ static void wrap_cmd (struct _topwin * tw, char * arg) {
 		entry_set(widg_p(tw,wi+((0x541>>(4*i))&7)), hxdoub_str(NULL, s, 15)), s += 16;
 }
 
-static void wrap_skel (struct _topwin * tw, char * arg) {
-	const char * str = 
-	"[" TW_TOPH
+static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	"([{Mm$Xm|#1}{B_stp$X.1}{B_kill$X.2}]{1w}"
 	"3[3{+#XG.}0{__}]0"
 	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{B_plot(t)$XPT})"
 	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{B_plot(F)$XPF})])"
-	        "(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:tlim$XWt2}{YAa.v$XWt3})])"
-		"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}"
-		"]";
-	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
-	const char *s = arg;
-	if (*s) daclb_set(widg_lookup_ps(tw, "."), &s, 1);
+		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:tlim$XWt2}%s)])" "%s]";
+
+static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", ""};
+static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}", "{L_later}"};
+
+static const char * wrap_tws(int flg) {
+	static char tws_d[sizeof(wrap_tw_fmt)+64],
+		    tws_s[sizeof(wrap_tw_fmt)+64];
+	char * s = (flg&=1) ? tws_s : tws_d;  
+	if (!*s) sprintf(s, wrap_tw_fmt, wrap_tw_a0[flg], wrap_tw_a1[flg]);
+	return s;
+}
+
+static void wrap_skel (struct _topwin * tw, char * arg) {
 	if (tw->state) return;
-	if (tw->id & 1) tw->ix4 = 101, WRAP_TABIX(tw) = 0;
+	tw->arg[0].p = parse_w_s(tw, wrap_tws(arg && *arg=='s'));
+	tw->ix4 = 101, WRAP_TABIX(tw) = 0;
 }
 
 ///////////////// wrap/grid //////////////////////////////////////////////////
