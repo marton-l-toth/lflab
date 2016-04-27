@@ -88,7 +88,7 @@ int pt_iocmd(char *s) {
 	int r, l = strlen(s), c = s[l]; s[l] = 10;
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
-int pt_con_op(int x) { switch(x) {
+int pt_con_op(int x) { if (debug_flags&DFLG_PT) log("pt_con_op(%d)", x); switch(x) {
 	case -2: x = pt_constat; pt_constat = 0;
 		 if (x!=-4) return (x>0||x==-2) ? 0 : EEE_STATE;
 	case -1: if (!pt_constat) return pt_constat = -1, pt_iocmd_sn("c\n", 2);
