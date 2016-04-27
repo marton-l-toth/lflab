@@ -193,6 +193,7 @@ static void ts_9(char *to) {
 
 static int con_stat = 0, cxt_pid = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0;
+static const char * xterm_name;
 
 /*** shutdown --- shutdn_flg: 1-ppid 2-cmdin 4-.log 8-ulog */
 
@@ -330,8 +331,8 @@ done:	signal(SIGCHLD, io_chld);
 static int start_con() {
 	static const char * sh = 0;
 	return -(cxt_pid || (!sh && !(sh = getenv("LF_CON"))) ||
-		 (cxt_pid = launch("xterm", "!)x1", "-sb", "-e", sh, (char*)0))<0 ||
-		 (msg_fd = open(tpipe_name('m'), O_WRONLY|O_APPEND))<0); }
+		 (cxt_pid = launch(xterm_name, "!)x1", "-e", sh, (char*)0))<0 ||
+		 (msg_fd = open(tpipe_name('m'), O_RDWR|O_APPEND))<0); }
 
 static void kill_con() { con_stat = 0; if (cxt_pid)  kill(cxt_pid, 9); }
 
@@ -393,6 +394,7 @@ int i_main(int ac, char ** av) {
 	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN);
 	signal(SIGCHLD, io_chld);
 	hello();
+	if (!(xterm_name = getenv("LF_XTERM"))) xterm_name = "xterm";
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
 	killer_fd = (ac<3||*av[2]<48) ? 0 : qh4r(*(int*)av[2]);
 	der_alte = ac<4 ? getppid() : qh4r(*(int*)av[3]);

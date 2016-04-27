@@ -90,7 +90,18 @@ fi
  [[ -n "$LF_LOGPEND" ]] && echo "$LF_LOGPEND"
  mkdir -p "$LF_TMPDIR" 
  echo hahahaha > "$LF_KILLER"
- if [[ ! -f "$LF_INIFILE" ]]; then echo "copying ini file..."; cp "$LF_PKGINI" "$LF_INIFILE"; fi) 2>&1 | tee "$LF_LOG"
+ if [[ ! -f "$LF_INIFILE" ]]; then echo "copying ini file..."; cp "$LF_PKGINI" "$LF_INIFILE"; fi)  2>&1 | tee "$LF_LOG"
+if ! grep -q ^LF_XTERM "$LF_INIFILE"; then
+	if [[ -z "$LF_XTERM" ]]; then
+		LF_XTERM="(no terminal found)";
+		for term in x-terminal-emulator xterm rxvt gnome-terminal konsole lxterminal terminator; do
+			if [[ -x $(which $term) ]]; then LF_XTERM=$term; break; fi;
+		done
+		echo "$LF_XTERM"
+	fi
+	echo "terminal: $LF_XTERM" | tee -a "$LF_LOG"
+	echo "LF_XTERM=\"$LF_XTERM\"" >> "$LF_INIFILE"
+fi
 
 if [[ -z "$LF_GUI_CFG" ]]; then
 	export LF_GTKRC="$LF_DIR/lf.gtk.rc.def"

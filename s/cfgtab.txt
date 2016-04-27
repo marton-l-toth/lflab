@@ -19,6 +19,7 @@ AO_TLIM     |i|60         |15  |900  |aolim |time limit for (auto mode) audio wr
 AO_DIR      |s|           |0   |255  |aodir |directory for tmp. audio output (default /run/shm or /tmp)
 WAV_DIR     |s|           |0   |255  |wvdir |directory for WAV / FLAC output (default is home dir.)
 TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
+XTERM       |s|xterm      |1   |255  |xterm |terminal emulator (used for console & license display)
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
 QTST_ADIF   |i|800        |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 
 QTST_RDIF   |i|45         |10  |52   |qtsta |quicktest/samp: -log2 of max rel diff 
