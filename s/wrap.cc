@@ -162,9 +162,10 @@ class WrapAutoVol : public SOB {
                 int vol_ix(int i, int j, int k, int l) { return l + m_xy12rt[3] * (k + m_xy12rt[2] * (j + m_xy12rt[1]*i)); }
                 double vol_i(int i, int j, int k, int l) { return (double)m_dat[vol_ix(i,j,k,l)] / 46.0; }
                 short * dat() { return m_dat; }
-                int fill_data(char * s, int ver); // version: 0 1 2
-                int pred(int i, int j, int k, int l);
+                int fill_data(char * s, int ver, int cflg); // version: 0 1 2
                 int pred2(int i, int j, int k, int l);
+                int pred2o(int i, int j, int k, int l);
+                int pred2t(int i, int j, int k, int l);
 		unsigned char * xy12rt() { return m_xy12rt; }
 		int parse_dim(const char * s);
 		void set_c8(unsigned char * _) {}
@@ -175,16 +176,18 @@ class WrapAutoVol : public SOB {
                 static const int eol = -1234567890;
 
                 short * m_dat;
+		int m_hood[16];
                 unsigned char m_xy12rt[8];
 };
 
 class WrapAVReader : public AReader {
 	public:
-		WrapAVReader(WrapAutoVol * av) : m_av(av) {}
+		WrapAVReader(WrapAutoVol * av, int cflg) : m_av(av), m_cflg(cflg) {}
 		virtual int line(char * s);
 	protected:
                 LWArr<char> m_dat_str;
 		WrapAutoVol * m_av;
+		int m_cflg;
 };
 
 class WrapAVJob : public Job {
@@ -326,7 +329,7 @@ class DWrapGen : public AWrapGen {
 		int avj_state() { return jobq.jst(m_node, 1); }
 		int qdiff(DWrapGen * that); 
 		int sob_from(int ix, BoxGen * bx0, int bxf);
-		AReader * avreader() { return new WrapAVReader(SOB_RW(sob)->avol_rw()); }
+		AReader * avreader(int cflg) { return new WrapAVReader(SOB_RW(sob)->avol_rw(), cflg); }
         protected:
 		virtual WrapCore * core_ro() { return m_sob.ro()->m_core.ro(); } 
 		virtual WrapCore * core_rw() { return SOB_RW(sob)->core_rw(); }
@@ -595,36 +598,57 @@ int WrapAutoVol::parse_dim(const char * s) {
 	t[5] = atoi(s+6); return upd_xy12rt(t);
 }
 
-int WrapAutoVol::fill_data(char *s, int ver) {
+#define AVLOOP4(F) for (int i=0; i<nx; i++) { for (int j=0; j<ny; j++) {     \
+		       for (int k=0; k<n1; k++) { for (int l=0; l<n2; l++) {  \
+			   if (vol_ix(i,j,k,l)!=cnt) return VTE_IXDIFF;        \
+			   m_dat[cnt++] = F (i,j,k,l) + tr.get_short_k(ver); }}}}
+
+int WrapAutoVol::fill_data(char *s, int ver, int cflg) {
         B91Reader tr; tr.init(s);
-        int cnt = 0;
-        int nx=m_xy12rt[0], ny=m_xy12rt[1], n1=m_xy12rt[2], n2=m_xy12rt[3];
-        for (int i=0; i<nx; i++) {
-                for (int j=0; j<ny; j++) {
-                        for (int k=0; k<n1; k++) {
-                                for (int l=0; l<n2; l++) {
-                                        if (vol_ix(i,j,k,l)!=cnt) return VTE_IXDIFF;
-                                        int pre = pred2(i,j,k,l);
-                                        m_dat[cnt++] = pre + tr.get_short_k(ver);
-                                }}}}
-        return 0;
+        int cnt=0, nx=m_xy12rt[0], ny=m_xy12rt[1], n1=m_xy12rt[2], n2=m_xy12rt[3];
+	if (debug_flags & DFLG_VOLTAB) log("fill_data: compat flg = %d", cflg);
+	if (cflg) { AVLOOP4(pred2o); }
+	else 	  { AVLOOP4(pred2);  } 
+	return 0;
 }
 
-int WrapAutoVol::pred(int i, int j, int k, int l) {
-        if      (l) return m_dat[vol_ix(i,j,k,l-1)];
-        else if (k) return m_dat[vol_ix(i,j,k-1,l)];
-        else if (j) return m_dat[vol_ix(i,j-1,k,l)];
-        else if (i) return m_dat[vol_ix(i-1,j,k,l)];
-        else return 0;
-}
+#define PREDN(X,Y) m_dat[ix+m_hood[4*X+Y]]
 
+#define PRED1(I) return PREDN(I,I)
+#define PRED2(I,J) return PREDN(I,I) + PREDN(J,J) - PREDN(I,J) 
+#define PRED3(I,J,K) return ((2*(PREDN(I,I)+PREDN(J,J)+PREDN(K,K))  \
+			       -(PREDN(I,J)+PREDN(I,K)+PREDN(J,K)))*5461+8192) >> 14
+		  
 int WrapAutoVol::pred2(int i, int j, int k, int l) {
+	int ix = vol_ix(i,j,k,l), flg = !!i+2*!!j+4*!!k+8*!!l;
+	switch(flg) {
+		case  0: return 0;
+		case  1: PRED1(0);
+		case  2: PRED1(1);
+		case  4: PRED1(2);
+		case  8: PRED1(3);
+		case  3: PRED2(0,1);
+		case  5: PRED2(0,2);
+		case  9: PRED2(0,3);
+		case  6: PRED2(1,2);
+		case 10: PRED2(1,3);
+		case 12: PRED2(2,3);
+		case  7: PRED3(0,1,2);
+		case 11: PRED3(0,1,3);
+		case 13: PRED3(0,2,3);
+		case 14: PRED3(1,2,3);
+		case 15: return ((PREDN(0,0)+PREDN(1,1)+PREDN(2,2)+PREDN(3,3)+1) -
+		    ((4096+5461*(PREDN(0,1)+PREDN(0,2)+PREDN(0,3)+PREDN(1,2)+PREDN(1,3)+PREDN(2,3)))>>14)) >>1;
+		default: return bug("pred2b"), 0;
+	}}
+
+int WrapAutoVol::pred2o(int i, int j, int k, int l) {
         if (!(i|j|k|l)) return 0;
         int ix=vol_ix(i,j,k,l), ixn=0, ixd[4];
-        if (i) ixd[ixn++] = vol_ix(1,0,0,0);
-        if (j) ixd[ixn++] = vol_ix(0,1,0,0);
-        if (k) ixd[ixn++] = vol_ix(0,0,1,0);
-        if (l) ixd[ixn++] = vol_ix(0,0,0,1);
+        if (i) ixd[ixn++] = -m_hood[0];
+        if (j) ixd[ixn++] = -m_hood[5];
+        if (k) ixd[ixn++] = -m_hood[10];
+        if (l) ixd[ixn++] = -m_hood[15];
         if (ixn==1) return m_dat[ix - ixd[0]];
         int prlg_sum = 0, prlg_cnt = ixn * (ixn-1) / 2;
         for (int i=0; i<ixn; i++) 
@@ -633,6 +657,14 @@ int WrapAutoVol::pred2(int i, int j, int k, int l) {
         return (prlg_sum + (prlg_cnt/2)) / prlg_cnt;
 }
  
+int WrapAutoVol::pred2t(int i, int j, int k, int l) {
+	static int mdif = 0, c0=0, cm=0, cp=0;
+	int x = pred2o(i,j,k,l), y= pred2(i,j,k,l), d = x-y; 
+	if (!d) c0++; else if (d<0) cm++; else cp++;
+	if (d) d=abs(d), log("pred2(%d,%d,%d,%d): %d != %d (max:%d, <:%d =:%d >:%d)", i,j,k,l, x,y, d>mdif ? (mdif=d):mdif, cm, c0, cp);
+	return x;
+}
+
 int WrapAutoVol::save2(SvArg * p) {
 	Clock clk; int c1,c2,c3,c4; clk.reset();
 	AOBuf * f = p->out;
@@ -651,10 +683,9 @@ int WrapAutoVol::save2(SvArg * p) {
                                 }}}}
 	c1 = clk.reset();
         if (debug_flags & DFLG_VOLTAB) log_sortedblk(difftab, total, 1, "difftab2:");
-        int cost[3]; for (int i=0; i<3; i++) {
-                cost[i] = 0;
-                for (int j=0; j<total; j++) cost[i] += b91_cost(i,difftab[j]);
-        }
+        int cost[3];    cost[0] = b91_cost0(difftab, total);
+			cost[1] = b91_cost1(difftab, total);	
+			cost[2] = b91_cost2(difftab, total);	
 	c2 = clk.reset();
         int ty = cost[1]<cost[2] ? cost[1]<cost[0] : 2*(cost[2]<cost[0]);
         if (debug_flags & DFLG_VOLTAB) log("voltab_cost(%d): %d %d %d --> %d", p->cn->id(), cost[0], cost[1], cost[2], ty);
@@ -686,6 +717,8 @@ int WrapAutoVol::upd_xy12rt(const unsigned char * p) {
 	m_xy12rt[5] = p[5];
         delete[](m_dat); m_dat = new short[k];
         for (int i=0; i<k; i++) m_dat[i] = -30000;
+	m_hood[15] = -1; for (int i=3; i>0; i--) m_hood[5*i-5] = m_hood[5*i]*m_xy12rt[i];
+	for (int i=0;i<4;i++) for (int j=0;j<i;j++) m_hood[4*i+j] = m_hood[4*j+i] = m_hood[5*i]+m_hood[5*j];
 	return 0;
 }
 
@@ -764,7 +797,7 @@ int WrapAVReader::line(char *s) {
 	int k = 0; if (s[l-1]<36) k=1, --l;
 	int n0 = m_dat_str.n();
 	if (l) m_dat_str.resize(n0+l), memcpy(m_dat_str.p(n0), s, l);
-	return k ? m_av->fill_data(m_dat_str.p(), s[l]-33) : 1;
+	return k ? m_av->fill_data(m_dat_str.p(), s[l]-33, m_cflg) : 1;
 }
 
 /////// main shared obj /////////////////////////////////////////////////////
@@ -1500,7 +1533,7 @@ int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {
 		if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm); }
 	if (DBGC) log("nd2mx: tf=%d", tf); return  WARG -> add2mx_txdlv(trg, 0, dly, tf, 0); }
 int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
-AReader * wrap_avreader(BoxGen * bx) { return WARGD -> avreader(); } // TODO: typechk(?)
+AReader * wrap_avreader(BoxGen * bx, int cflg) { return WARGD -> avreader(cflg); } 
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 	int v, n = 0; for (int i=0; i<4; i++) BVFOR_JM(bv[i])
 		to[n] = hexc1(2*i+(j>>4)), to[n+1] = hexc1(j&15), v = pk[i][j],

@@ -22,7 +22,7 @@ class Clock {
 // sh1: 00 01sx 10sxxx 110sx6 111sx15
 // sh2: 00 01sxx 10sxxxxx 110sx9 111sx15
 
-int b91_cost(int c, int k);
+int b91_cost0(const short *q, int n), b91_cost1(const short *q, int n), b91_cost2(const short *q, int n);
 
 class B91Reader {
         public: 

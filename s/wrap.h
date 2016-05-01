@@ -11,6 +11,6 @@ int wrap_qdiff(BoxGen * b1, BoxGen * b2);
 int wrap_dump_keycfg(char * to, unsigned int * bv, short ** pk);
 int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof);
 void wrap_set_trec(BoxGen * bx, int j);
-AReader * wrap_avreader(BoxGen * bx);
+AReader * wrap_avreader(BoxGen * bx, int cflg);
 
 #endif // __qwe_wrap_h__

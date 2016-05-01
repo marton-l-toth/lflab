@@ -66,8 +66,29 @@ static int costtab1[] = { 0,2,  2,4,  10,6,  74,10,  33333, 19 };
 static int costtab2[] = { 0,2,  4,5,  36,8,  548,13, 33333, 19 };
 static int * costtab_123[3] = { costtab0, costtab1, costtab2 };
 
-int b91_cost(int c, int k) { if ((k=abs(k)) > 32768) return -1;
-        for (int *p = costtab_123[c]; 1; p+=2) if (k<=*p) return p[1]; }
+int b91_cost0(const short * q, int n) {
+	int k, v = 0;
+	for (int i=0; i<n; i++) k =  abs(q[i]),
+				v += (k<=2) ? (k?4:1) 
+			   	            : ((k<=22) ? (k<=6?6:9) : (k<=86?12:21));
+	return v;
+}
+
+int b91_cost1(const short * q, int n) {
+	int k, v = 0;
+	for (int i=0; i<n; i++) k =  abs(q[i]),
+				v += (k<=2) ? (k?4:2) 
+			   	            : ((k<=10) ? 6 : (k<=74?10:19));
+	return v;
+}
+	
+int b91_cost2(const short * q, int n) {
+	int k, v = 0;
+	for (int i=0; i<n; i++) k =  abs(q[i]),
+				v += (k<=4) ? (k?5:2) 
+			   	            : ((k<=36) ? 8 : (k<=548?13:19));
+	return v;
+}
 
 int B91Reader::get_bit() {
         if (!bits) {

@@ -249,7 +249,8 @@ int CmdTab::c_nadm(CmdBuf * p) {
 		case 'l': gui2.tree_sel(0, nd); return 0;
 		case 'r': gui2.tree_sel(1, nd); return 0;
 		case '+': return *p->m_nd_var = nd->id();
-		case 'V': return nd->cl_id()=='w' ? (p->m_cont = wrap_avreader(nd->box0()), 0) : GCE_EXWR;
+		case 'V': return nd->cl_id()=='w' ? (p->m_cont = wrap_avreader(nd->box0(), p->before(0,7)), 0) 
+			  		          : GCE_EXWR;
 		case 'W': return nd->draw_window(16);
 		case '=': if (!(ec = arg[1] & 7)) return EEE_NOEFF;
 			  return p->m_nd_var[ec] = nd->id(); 
