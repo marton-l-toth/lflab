@@ -19,9 +19,10 @@ void pt_wait();
 void pt_chld_act();
 int pt_iocmd_sn(const char *s, int n);
 int pt_iocmd(char *s);
-int pt_con_op(int x); // -1: start >0: pid
+int pt_con_op(const char * arg); // -1:start -2:stop -3:restart -4:killed /:prclink
 int pt_acv_op(int id, int op, const char *a1, const char *a2);
 int pt_kill_pa(int flg);
 int pt_show_lic();
+void pt_con_fd_ptr(int * pfd);
 
 #endif // __qwe_pt_h__

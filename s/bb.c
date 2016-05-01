@@ -142,42 +142,14 @@ static int a_main(int ac, char ** av) {
 }
 
 //// console ////////////////////////////////////////////////////////////////
-
-int oops(const char *s) { if (*s==33) fprintf(stderr,"con/fatal: %s\n", s+1); else perror(s); 
-			  sleep(1); return 1; }
-
 int c_main() {
-	const char * tdir = getenv("LF_TMPDIR"); if (!tdir) return oops("!LF_TMPDIR undefined");
-	int i, infd, outfd, l = 0; while (tdir[l]) ++l; 
-	char *p = malloc(l+3); for (i=0; i<l; i++) p[i] = tdir[i]; p[i++] = '/'; p[i+1] = 0;
-	if ((p[i] = 'C', outfd = open(p, O_WRONLY)) < 0 ||
-	    (p[i] = 'm',  infd = open(p, O_RDWR)  ) < 0    ) return oops(p);
-	fd_set rset; struct timeval tv;
-	char buf[4096];
-	int reop_cnt = 0, c0buf[3];
-	c0buf[0] = 0x635f0000; c0buf[1] = qh4(getpid()); c0buf[2] = 10; write(outfd, (char*)c0buf + 2, 7);
-	while(1) {
-		FD_ZERO(&rset); FD_SET(0, &rset); FD_SET(infd, &rset);
-		tv.tv_sec=1; tv.tv_usec = 0;
-		int r2, r = select(infd+1, &rset, 0, 0, &tv);
-		if (r<0) return oops("select");
-		if (!r) { if (reop_cnt) --reop_cnt; continue; }
-		if (FD_ISSET(0, &rset)) {
-			r = read(0, buf, 4096);
-			if (r<=0) return oops(r?"stdin":"!EOF");
-			if ((r2=write(outfd, buf, r)) !=r ) return oops(r2?"'C'":"!con: cmd write failed");
-		}
-		if (FD_ISSET(infd, &rset)) {
-			if ((r = read(infd, buf, 4096)) > 0) { write(1, buf, r); continue; }
-			if (++reop_cnt>5 || (close(infd), r=infd=open(p, O_RDWR))<0)
-				return oops(r?p:"!reopen failed 5x");
-			fprintf(stderr,"reopened %dx\n", reop_cnt);
-		}
-	}}
+	const char * cnm = tpipe_name('C');
+	FILE * f = fopen(cnm, "a"); if (!f) return perror(cnm), sleep(3), 1;
+	fprintf(f, "_c/proc/%d/fd/1\n", getpid()); fclose(f); while(1) sleep(60);  }
 
 /**************** log i/o ****************************************************/
 
-static void LOG(const char * fmt, ...), kill_con(), bye(int kf);
+static void LOG(const char * fmt, ...), bye(int kf);
 
 static void ts_9(char *to) {
         static time_t sec = 0; static char sbuf[8] = {48,48,48,48,48,46,0,0};
@@ -191,7 +163,7 @@ static void ts_9(char *to) {
 	memcpy(to, sbuf, 6); d999(to+6, tv.tv_usec/1000);
 }
 
-static int con_stat = 0, cxt_pid = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
+static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0;
 static const char * xterm_name;
 
@@ -232,11 +204,12 @@ static void search_and_destroy(int kfd) {
                     (buf2[ec]=0, memcmp(buf2, kf, kfl)) ) continue;
                 memcpy(buf+6+i, "/exe", 5); ec = readlink(buf,buf2,1023);
                 exe = (ec<0) ? "(readlink(exe) failed)" : (buf2[ec]=0, buf2);
+		if (!memcmp(exe, "/usr/bin/gnome-terminal", 24)) { ec = '='; goto msg; }
                 switch(kill(pid, 9)) {  case 0:     ec = '+'; break;
                                         case ESRCH: ec = '-'; break;
                                         case EPERM: ec = '!'; break;
                                         default:    ec = '?'; break; }
-                LOG("kill %5s %c %s", s, ec, exe);
+msg:		LOG("kill %5s %c %s", s, ec, exe);
         }
         closedir(dir);
 }
@@ -259,6 +232,8 @@ static void close_all() {
 static char logbuf[16384];
 static int log_ix = 0, log_ox = 0, log_flg = 0;
 
+static void con_end() { if (con_stat) kill(con_stat,9),con_stat=0; if (msg_fd>=0) close(msg_fd),msg_fd=-1; }
+
 static void log_sn(const char *s, int n, int conpfx) {
 	int r = 0, ix0 = log_ix, n0 = n;
 	if (n<1) { switch(n) {
@@ -279,7 +254,7 @@ static void log_sn(const char *s, int n, int conpfx) {
 	if (msg_fd<0 || !con_stat || (n = n0 + conpfx)<1) return; else ix0 = log_ix - n;
 	if (ix0<0 && (r=write(msg_fd, logbuf+(ix0&16383), -ix0), n+=ix0, ix0=0, r<1)) goto err;
 	if ((r=write(msg_fd, logbuf+ix0, n))>0) return;
-err:	kill_con(); return LOG("[console write err: %s]\n", r==-1 ? strerror(errno) : "zero ret"), log_sn(0, -1, 0);
+err:	return s = (r==-1) ? strerror(errno) : "zero ret", con_end(), LOG("[console write err: %s]", s);
 lerr:   if (!con_stat) return;
 	char errbuf[256]; n = snprintf(errbuf, 255, "log file write error: %d(%s)\n",
 			r ? errno : 0, r ? strerror(errno) : "zero ret.");
@@ -307,9 +282,8 @@ static void LOG(const char * fmt, ...) {
 }
 
 static void bye(int kf) {
-	if (!kf) kill_con(), exit(1);
-	con_stat = 0; 
-	search_and_destroy(killer_fd); del_workdir();
+	if (!kf) exit(1);
+	con_end(); search_and_destroy(killer_fd); del_workdir();
 	if (!rs_ts || time(NULL)>rs_ts+5) LOG("bye"), log_sn(0,-1,0), exit(0);
 	const char *es, *fn = getenv("LF_SCRIPT"); 
 	if (!fn) LOG("restart failed (missing env)"), log_sn(0,-1,0), exit(1);
@@ -322,23 +296,22 @@ static void bye(int kf) {
 
 /*** cmd **********************/
 
-static void io_chld(int _) {
-	int st, pid = waitpid(-1, &st, WNOHANG); if (pid<=0 || pid!=cxt_pid) goto done;
-	msg_fd = -1; con_stat = cxt_pid = 0; write(1, "_c-2\n", 5);
-done:	signal(SIGCHLD, io_chld);
-}
-
 static int start_con() {
 	static const char * sh = 0;
-	return -(cxt_pid || (!sh && !(sh = getenv("LF_CON"))) ||
-		 (cxt_pid = launch(xterm_name, "!)x1", "-e", sh, (char*)0))<0 ||
-		 (msg_fd = open(tpipe_name('m'), O_RDWR|O_APPEND))<0); }
+	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xterm_name, "!)x1", "-e", sh, (char*)0)<0); }
 
-static void kill_con() { con_stat = 0; if (cxt_pid)  kill(cxt_pid, 9); }
+static void con_started(char *s, int n) {
+	if (memcmp(s, "_c/proc/", 8)) return LOG("_: invalid path\"%s\"", s);
+	int pid = atoi(s+8); if (pid<1 || pid>65535) return LOG("/: invalid pid %d", pid);
+	if (pid==con_stat) return LOG("/: already started, pid %d", pid); else con_end();
+	if ((msg_fd = open(s+2, O_WRONLY|O_APPEND|O_NOCTTY))<0) return LOG("\"%s\": %s",s+2,strerror(errno));
+	con_stat = pid; log_sn(0, -2, 0); --s[n-1]; s[n]=10; write(1, s, n+1);
+}
 
 static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
-	case 'c': if (start_con()<0) LOG("start_con failed");    return;
-	case 'C': return con_stat = 1, log_sn(0, -2, 0);
+	case 'c': if (start_con()<0) LOG("start_con failed"); return;
+	case '_': return con_started(s, n);
+	case 'Z': return con_end();
 	case 'f': return log_sn(0, -1, 0);
 	case 'r': return (void) (rs_ts = time(NULL));
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
@@ -348,10 +321,11 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 typedef void (*lfun)(char *, int, int);
 typedef struct { int fd, siz, cont, arg; lfun lf; char * p; } ibuf;
 
-#define N_IBUF 8
+#define N_IBUF 9
 char bigbuf[0x8000];
-static ibuf ib[8] = {{ 0, 4096, 0, 0,   &cmd_l, bigbuf},
-		     {-1, 4096, 0, '.', &log_l, bigbuf+0x1000},
+static ibuf ib[9] = {{ 0, 3072, 0, 0,   &cmd_l, bigbuf},
+		     {-1, 4096, 0, '.', &log_l, bigbuf+0x0c00},
+		     {-1, 1024, 0, 'C', &cmd_l, bigbuf+0x1c00},
 		     {-1, 4096, 0, 'p', &log_l, bigbuf+0x2000},
 		     {-1, 4096, 0, 't', &log_l, bigbuf+0x3000},
 		     {-1, 4096, 0, 'u', &log_l, bigbuf+0x4000},
@@ -392,7 +366,6 @@ static void hello() {
 #define FOR_IB for(i=0; i<N_IBUF; i++) if ((k=ib[i].fd)>=0)
 int i_main(int ac, char ** av) {
 	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN);
-	signal(SIGCHLD, io_chld);
 	hello();
 	if (!(xterm_name = getenv("LF_XTERM"))) xterm_name = "xterm";
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
@@ -405,8 +378,9 @@ int i_main(int ac, char ** av) {
 		int maxfd = 0;
 		FOR_IB { FD_SET(k, &rset); if (k>maxfd) maxfd = k; }
 		tv.tv_sec=0; tv.tv_usec = selwt;
-		int r = select(maxfd+1, &rset, 0, 0, &tv);
+		int x, r = select(maxfd+1, &rset, 0, 0, &tv);
 		if (r<0) { LOG("select(): %s", strerror(errno)); r = 0; }
+		waitpid(-1, &x, WNOHANG);
 		shutdn(0);
 		if(!r){ if ((errtemp -= 20)<0) errtemp = 0;  continue; }
 		if ((errtemp -= r)<0) errtemp = 0;

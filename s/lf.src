@@ -94,7 +94,7 @@ fi
 if ! grep -q ^LF_XTERM "$LF_INIFILE"; then
 	if [[ -z "$LF_XTERM" ]]; then
 		LF_XTERM="(no terminal found)";
-		for term in x-terminal-emulator xterm rxvt gnome-terminal konsole lxterminal terminator; do
+		for term in x-terminal-emulator xterm gnome-terminal konsole lxterminal terminator rxvt; do
 			if [[ -x $(which $term) ]]; then LF_XTERM=$term; break; fi;
 		done
 		echo "$LF_XTERM"

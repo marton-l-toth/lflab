@@ -54,13 +54,13 @@ static void ini1() {
 	if (!CFG_INI_ORDER.i) gui2.start();
 	sl_cmd[0].init(pt_cp_i2m, NOF_ERRMSG);
 	sl_cmd[1].init(gui2.outpipe(), NOF_GUI, 126);
-	sl_cmd[2].init(-'C', NOF_ERRMSG);
+	sl_cmd[2].init(0, NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
 	gui2.root_expand(); gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(1)));
 	                    gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(2)));
 	log("### tlp=%d i2m=%d, gcp=%d", gui2.tpipe(), pt_cp_i2m, gui2.outpipe());
 	if (getenv("LF_HITHERE")) snd0.w(-1);
-	if (CFG_DEVEL.i) pt_con_op(-1);
+	if (CFG_DEVEL.i) pt_con_op("-1");
 	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
 	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1;
 }

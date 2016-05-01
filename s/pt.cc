@@ -15,10 +15,10 @@ int pt_cp_i2m = -1;
 
 typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
 
-static int pt_cp_m2i = -1, pt_constat = 0;
+static int pt_cp_m2i = -1, pt_constat = 0, pt_nullfd = -1;
 static volatile pt_tab_t pt_tab[PT_COUNT];
 static const char * pt_logf_name;
-static int pt_acv_cur = 0, pt_acv_cw = 0;
+static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0;
 
 static void log_pidstat(const char *s, int pid, int stat) {
         if (WIFEXITED(stat)) log("%s %d exited (%d)", s, pid, WEXITSTATUS(stat));
@@ -78,26 +78,41 @@ static int acv_dead(int pid, int stat, int td) {
 	if (e) gui_errq_add(e); if (c && pt_acv_cw) gui_closewin(ACV_WIN(pt_acv_cur)); return 0;
 }
 
+static int con_started(const char *s) {
+	if (memcmp(s, "/proc/", 6) || (unsigned int)(s[6]-49)>8u) return GCE_PARSE;
+	int fd, pid = atoi(s+6); if (pid&-65536) return GCE_PARSE;
+	if ((fd=open(s,O_RDONLY|O_NOCTTY))<0 || dup2(fd,0)<0) return pt_constat = 0, EEE_ERRNO;
+	close(fd); pt_constat = pid; *pt_con_pfd = 0; return 0;
+}
+
 //////// export ////////////////////////////////////////////
 
-int pt_iocmd_sn(const char *s, int n) {
-	int r = write(pt_cp_m2i, s, n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
+void pt_con_fd_ptr(int *p) { pt_con_pfd = p; }
+int pt_iocmd_sn(const char *s, int n) { int r = write(pt_cp_m2i,s,n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
 
 int pt_iocmd(char *s) {
 	if ((pt_chld_flg & (1<<PT_IOP))) return EEE_NOPRC;
 	int r, l = strlen(s), c = s[l]; s[l] = 10;
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
-int pt_con_op(int x) { if (debug_flags&DFLG_PT) log("pt_con_op(%d)", x); switch(x) {
-	case -2: x = pt_constat; pt_constat = 0;
-		 if (x!=-4) return (x>0||x==-2) ? 0 : EEE_STATE;
-	case -1: if (!pt_constat) return pt_constat = -1, pt_iocmd_sn("c\n", 2);
-		 else return pt_constat > 0 ? (kill(pt_constat, 9), pt_constat = -4, 0) : EEE_STATE;
-	case -3: if (pt_constat>0) return kill(pt_constat, 9), pt_constat = -2, 0;
-		 return pt_constat ? EEE_STATE : EEE_NOEFF;
-	default: if (x<=0) return EEE_STATE;
-		 return pt_constat = x, pt_iocmd_sn("C\n", 2);
-}}
+int pt_con_op(const char *s) { 
+	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", s);
+	if (*s!='-') return con_started(s);
+	int k, l;
+	switch(s[1]) {
+		case '1': if (pt_constat) { if (pt_constat>0) { k = -3; goto kill; }
+				  	    gui_errq_add(EEE_STATE, "con/-1"); }
+			  return pt_constat = -1, pt_iocmd_sn("c\n", 2);
+		case '2': case '3': if (pt_constat<1) return EEE_STATE; k = 48 - *s; goto kill;
+		case '4': if (pt_constat>0) kill(pt_constat, 9), k = pt_constat = 0;
+			  else if ((k=-pt_constat-2)&~1) return EEE_STATE;
+			  else pt_constat = -k;
+			  if (dup2(pt_nullfd, 0)<0) gui_errq_add(EEE_ERRNO, "con/-4");
+			  return *pt_con_pfd = -1, pt_iocmd_sn("Z\nc\n", 2+2*k);
+		default:  return EEE_RANGE;
+	}
+kill:	return kill(pt_constat, 9)<0 ? EEE_ERRNO : (pt_constat = k, 0);
+}
 
 void pt_reg(int ix, int pid, pt_wfun fun) {
 	if ((unsigned int)ix >= (unsigned int)PT_COUNT) return log("BUG: pt_reg: ix=%d", ix);
@@ -149,7 +164,8 @@ void pt_init() {
         pt_dlog("...\n");
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
         const char * kfn = getenv("LF_KILLER"); if (!kfn) log("no killer file");
-	int fd; close(0); if ((fd=open("/dev/null", O_RDONLY))>0) log("hmmm..."), dup2(fd, 0), close(fd);
+	if ((pt_nullfd = open("/dev/null", O_RDONLY)) < 0 ||
+	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("nullfd"), exit(1);
 	if (kfn && (killer_fd = open(kfn, O_RDONLY))<0) log("\"%s\": %s", kfn, strerror(errno));
 	if ((wrk_dir=getenv("LF_TMPDIR")))  wrk_dir_len=strlen(wrk_dir); else wrk_dir="/tmp", wrk_dir_len=4;
 	if ((tmp_dir=getenv("LF_TMPROOT"))) tmp_dir_len=strlen(tmp_dir); else tmp_dir="/tmp", tmp_dir_len=4;

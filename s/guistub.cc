@@ -79,7 +79,7 @@ int GuiStub::flush() {
 	clear();
 	if (l) {
 		log("ERROR: GUI does not seem to work, type 's<filename>' to save, 'q' to quit (with autosave)");
-		pt_con_op(-1); return -1;
+		pt_con_op("-1"); return -1;
 	} 
 	return 1;
 }

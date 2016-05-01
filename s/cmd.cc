@@ -82,7 +82,8 @@ char * CmdTok::un() {
 void CmdBuf::st_init() { CmdTab::init(); }
 
 void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
-	m_fd = fd>-32 ? fd : open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
+	if (!fd) m_fd = -1, pt_con_fd_ptr(&m_fd);
+	else m_fd = fd>-32 ? fd : open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
 	m_nof0 = nof; m_prefix = px; m_rsiz = rs; m_buf = (char*)malloc(m_bsiz = bs); 
 	m_lineno = m_rpos = m_cpos = m_try = 0;
 	memset(m_nd_var, 0, 8*sizeof(int));
@@ -116,9 +117,11 @@ int CmdBuf::bprep(int siz) {
 int CmdBuf::read_f() {
         int r, len = bprep(m_rsiz);   if (len<1) return GCE_FULLBUF;
         if ((r = read(m_fd, m_buf+m_rpos, len))>0) return (m_try=0, chunk(r));
-	close(m_fd); if (!r && (m_nof0 & NOF_EXPEOF)) return GCE_EOF;
 	log("read_f(): %s: %s (%cx)", m_fd?(m_iname?m_iname:"(unnamed)"):"(stdin)",
-		                                 r ? strerror(errno) : "EOF", ++m_try+48);
+		                      r ? strerror(errno) : "EOF", m_try+49);
+	if (!m_fd) return pt_con_op("-4");
+	close(m_fd); 
+	if (!r && (m_nof0 & NOF_EXPEOF)) return GCE_EOF; else ++m_try;
 	if (!m_iname) return set_fd(&m_fd, open("/dev/null", O_RDWR)), r ? GCE_FREAD : GCE_EOF;
 	if (m_try>5) return m_fd = -1, r ? GCE_FREAD : GCE_EOF;
 	return (m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
@@ -349,7 +352,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
 		case 'w': i = p->m_c_a0[1]&1 ? snd0.hcp_start(20903400) : snd0.hcp_end();
 			  gui2.setwin(7,'.'); gui2.wupd_i1('W',!!snd0.hcp()); return i;
-		case 'c': return pt_con_op(atoi_h(p->m_c_a0+1)); // TODO
+		case 'c': return pt_con_op(p->m_c_a0+1); 
 		case 'L': log_load(atoi(p->m_c_a0+1)); return 0;
 		case 'l': return pt_show_lic();
 		case 'V': if (sscanf(p->m_c_a0+1, "%d.%d", &i, &j)!=2) return GCE_PARSE;
