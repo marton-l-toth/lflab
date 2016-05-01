@@ -28,13 +28,14 @@ class B91Reader {
         public: 
                 void init(char *p) { s=p; bits = 0;}
                 bool eof() { return *s<36 || *s>126; }
-                int get_bit();
+                int get_bit() { if (!bits) get_bit_2();
+				int r = (cur&1); cur>>=1; --bits; return r; }
+		void get_bit_2();
                 int get_bebin(int n);
                 int get_short0();
                 int get_short1();
                 int get_short2();
                 int get_short_k(int k);
-                int get_int6();
         protected:
                 char *s;
                 int bits;
@@ -48,11 +49,7 @@ class B91Writer {
                 void put_bit(int b1, int b2) { put_bit(b1); put_bit(b2); }
                 void put_bit(int b1, int b2, int b3) { put_bit(b1); put_bit(b2); put_bit(b3); }
                 void put_bebin(int x, int n);
-                void put_short1(int x);
-                void put_short0(int x);
-                void put_short2(int x);
-                void put_short_k(int k, int x);
-                void put_int6(int x);
+                void put_short_tpn(int ty, const short *p, int n);
 
                 char * get_str() { flush13(); buf.add(0); return buf.forget(); }
                 int n_bytes() { flush13(); return buf.n(); }

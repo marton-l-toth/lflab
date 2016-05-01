@@ -37,7 +37,8 @@
 #define WRF_V10    512        // v11
 #define WRF_V11A   768        // v11
 #define WRF_GRMODE 3	      // bx
-#define DBGC (debug_flags&DFLG_WRAP)
+#define DBGC  (debug_flags&DFLG_WRAP)
+#define DBGCV (debug_flags&DFLG_VOLTAB)
 
 #define WR_AVCONF ((unsigned char*)(bxw_rawptr[1].c))
 #define WR_TAB   (bxw_rawptr[2].c[6])
@@ -606,7 +607,7 @@ int WrapAutoVol::parse_dim(const char * s) {
 int WrapAutoVol::fill_data(char *s, int ver, int cflg) {
         B91Reader tr; tr.init(s);
         int cnt=0, nx=m_xy12rt[0], ny=m_xy12rt[1], n1=m_xy12rt[2], n2=m_xy12rt[3];
-	if (debug_flags & DFLG_VOLTAB) log("fill_data: compat flg = %d", cflg);
+	if (DBGCV) log("fill_data: compat flg = %d", cflg);
 	if (cflg) { AVLOOP4(pred2o); }
 	else 	  { AVLOOP4(pred2);  } 
 	return 0;
@@ -666,7 +667,7 @@ int WrapAutoVol::pred2t(int i, int j, int k, int l) {
 }
 
 int WrapAutoVol::save2(SvArg * p) {
-	Clock clk; int c1,c2,c3,c4; clk.reset();
+	Clock clk; int c1=0,c2=0,c3=0,c4=0; if (DBGCV) clk.reset();
 	AOBuf * f = p->out;
         int total = 1; for (int i=0; i<4; i++) total *= m_xy12rt[i];
         short difftab[total];
@@ -676,35 +677,35 @@ int WrapAutoVol::save2(SvArg * p) {
                 for (int j=0; j<ny; j++) {
                         for (int k=0; k<n1; k++) {
                                 for (int l=0; l<n2; l++) {
-                                        if (vol_ix(i,j,k,l)!=cnt) bug("voltab/save2: ix4(%d)!=cnt(%d)",vol_ix(i,j,k,l),cnt);
+                                        if (vol_ix(i,j,k,l)!=cnt) bug("voltab/save2: ix4(%d)!=cnt(%d)",
+									     vol_ix(i,j,k,l), cnt);
                                         int pre = pred2(i,j,k,l);
                                         int dif = (m_dat[cnt] - pre);
                                         difftab[cnt++] = dif;
                                 }}}}
-	c1 = clk.reset();
-        if (debug_flags & DFLG_VOLTAB) log_sortedblk(difftab, total, 1, "difftab2:");
+	
+        if (DBGCV) c1 = clk.reset(), log_sortedblk(difftab, total, 1, "difftab2:");
         int cost[3];    cost[0] = b91_cost0(difftab, total);
 			cost[1] = b91_cost1(difftab, total);	
 			cost[2] = b91_cost2(difftab, total);	
-	c2 = clk.reset();
+	if (DBGCV) c2 = clk.reset();
         int ty = cost[1]<cost[2] ? cost[1]<cost[0] : 2*(cost[2]<cost[0]);
         if (debug_flags & DFLG_VOLTAB) log("voltab_cost(%d): %d %d %d --> %d", p->cn->id(), cost[0], cost[1], cost[2], ty);
-        B91Writer wr;
-        for (int i=0; i<total; i++) wr.put_short_k(ty, difftab[i]);
+        B91Writer wr; wr.put_short_tpn(ty, difftab, total);
         int l = wr.n_bytes();
         char * s = wr.get_str();
 	char buf[20]; memcpy(buf, "X$V:", 4);
 	for (int i=0; i<5; i++) buf[4+i] = m_xy12rt[i]+48; buf[9] = ':';
 	sprintf(buf+10, "%03d", m_xy12rt[5]); memcpy(buf+13, "\nN$V", 4);
 	CHKERR(f->sn(buf, 17));
-	c3 = clk.reset();
+	if (DBGCV) c3 = clk.reset();
         while (l) {
 		CHKERR(f->sn("\n<", 2));
                 int k = (l<75) ? l : 75;
 		CHKERR(f->sn(s, k)); s+=k; l-=k;
 	}
 	CHKERR(f->sn("!\n\"\n#\n"+2*ty, 2)); 
-	c4 = clk.reset(); log("avol/save clk: %d %d %d %d", c1, c2, c3, c4);
+	if (DBGCV) c4 = clk.reset(), log("avol/save clk: %d %d %d %d", c1, c2, c3, c4);
 	p->st2 = -1; return r;
 }
 
