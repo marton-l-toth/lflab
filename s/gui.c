@@ -4885,6 +4885,7 @@ static void add_in(int fd, gboolean (*fun)(GIOChannel*,GIOCondition,gpointer), i
 }	
 
 int main(int ac, char **av) {
+	gtk_disable_setlocale();
 	if (getenv("LF_TMPDIR")) write(2, "&CMD1\n", 6), signal(SIGHUP, SIG_IGN), signal(SIGINT, SIG_IGN);
 	else LOG("(gui test mode)");
 	int tpipe_fd = ac<2 ? -1 : qh4r(*(int*)av[1]);
