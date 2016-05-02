@@ -914,6 +914,7 @@ static void entry_skel(struct _ww_t * ww, const char **pp) {
 	ww -> w = gtk_entry_new_with_buffer(eb);
 	gtk_entry_set_width_chars(GTK_ENTRY(ww->w), w?w:10);
 	gtk_entry_set_has_frame(GTK_ENTRY(ww->w), 0);
+	gtk_widget_set_size_request(ww->w, -1, conf_lbh-1);
 	ENT_SL(ww) = ENT_SA(ww) = 0;
 	g_signal_connect (ww->w, "changed",  G_CALLBACK (entry_chg), (gpointer)ww);
 	g_signal_connect (ww->w, "activate", G_CALLBACK (entry_act), (gpointer)ww);
