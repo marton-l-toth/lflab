@@ -5,6 +5,7 @@
 
 static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
+static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
 
 #define qh4rs(P) qh4r(*(const int*)(P))
 

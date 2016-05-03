@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "uc0.h"
 #include "uc1.h"
 #include "glob.h"
 #include "errtab.inc"

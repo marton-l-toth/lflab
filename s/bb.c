@@ -388,10 +388,180 @@ int i_main(int ac, char ** av) {
 	}}
 
 
+/**************** cmd playback (quicktest) *********************************/
+
+static int lim_arr[96];
+#define LIM(X) lim_arr[(int)(X)-32]
+
+static int m_sleep(int x) { if (!x) return 0;
+        struct timespec ts; ts.tv_sec = x/1000; ts.tv_nsec = 1000000*(x%1000); int ec;
+        do ec = nanosleep(&ts, &ts); while (ec==EINTR); return ec; }
+
+#define qh4rs(P) qh4r(*(const int*)(P))
+#define IFHX(X,T) ( (unsigned int)((X)-48)<10u || (unsigned int)((X)-(T))<6u )
+
+static void he(const char *s1, const char *s2) { fprintf(stderr, "%s: \"%s\"\n", s1, s2); }
+
+static void qpcmd(const char *s) { switch(*s) {
+	case 'L': for (++s; *s; ) {
+			  while (*s==32) ++s;  if (*s==10) return;
+			  int v=0, d, k = *s-32; if ((unsigned int)k>95u) return he("invalid ch",s);
+			  if (*s=='*') { ++s; v = INT_MAX; }
+			  else         { for (++s; (unsigned int)(d=*s-48)<10u; s++) v = 10*v + d; }
+			  lim_arr[k] = v; if (!lim_arr[31]) fprintf(stderr, "lim '%c' set to %d\n", k+32, v);
+		  } return;
+	default: return he("unknown cmd", s);
+}}
+
+void qp1(FILE *f) {
+	char buf[1024], *s, *q; buf[1023]=0;
+	while (fgets(s=buf+2, 999, f)) {
+		int l = 0, k = IFHX(*s, 97) ? qh4rs((s+=5)-5) : 0;
+		switch(*s) {
+			case '#': m_sleep(k); if (s[1]&&s[1]!=10) fprintf(stderr,"%s",s); continue;
+			case '?': qpcmd(s+1); continue;
+			case '^': goto sl;
+			case 'm': case 'N': case 'Z': l = *s; goto lim;
+			case 'Y': l = 'Z'; goto lim;
+			case 'V': for (q=s+1; *q && *q!=36; q++); if (!*q) goto wtf; else q+=3;
+				  switch(*(q+=2*(IFHX(q[0], 65) && IFHX(q[1], 65)))) {
+					  case'c':case'e':case'k':case'g': l=*q;goto lim; default: goto wtf; }
+			case 10:  continue;
+			default:  goto wtf;
+		}
+lim:		l = LIM(l); if (k>l) k = l; goto sl;
+wtf: 		fprintf(stderr,"warning: \"%s\": unknown cmd\n", s);
+sl:		m_sleep(k);
+		l = strlen(s); s[-2] = 'Q'; s[-1] = 'P'; if (s[l-1]!=10) s[l++] = 10;
+		write(1, s-2, l+2);
+	}}
+
+static char *at_fnm, *at_fxy;
+static int at_n, at_k[26], at_zf = 0;
+
+static FILE * at_f_ij(int i, int j) {
+	return at_fxy[0] = 65 + i, at_fxy[1] = j<0 ? 'z' : 48+j, fopen(at_fnm, "r"); }
+
+static void qp1_tij(int t, int i, int j) {
+	FILE * f = at_f_ij(i,j); 
+	printf("_>========== %s - %s =========\n", at_fnm, f ? "ok" : strerror(errno)); fflush(stdout);
+	f ? (m_sleep(t), qp1(f), fclose(f)) : perror(at_fnm);
+}
+
+static void at_dir(const char * dir) {
+	int i, j, l = strlen(dir);   FILE *f;
+	memcpy(at_fnm = malloc(l+6), dir, l); memcpy(at_fnm+l, "/t", 2);
+	memcpy(at_fxy = at_fnm+l+2, "xy\0", 4);
+	for (i=0;;i++) {
+		for (j=0; (f=at_f_ij(i,j)) ;j++) fclose(f);
+		if (!j) { at_n = i; break; }
+		at_k[i] = j; if ((f=at_f_ij(i,-1))) fclose(f), at_zf |= 1<<i;
+		fprintf(stderr," [%d: 0..%d]", i, j-1);
+	}
+	fprintf(stderr, " n=%d, zf=0x%x\n", at_n, at_zf);
+}
+
+static void at_random() {
+	srandom(time(NULL));
+	int i,k,st[32]; for (i=0; i<at_n; i++) st[i] = 1;
+	while(1) {
+		i = random() % at_n;
+		if (!st[i]) qp1_tij(200, i, 0), st[i] = 1;
+		else if (st[i]<at_k[i]) qp1_tij(200, i, st[i]), st[i]++;
+		else if ((k=random()%st[i])<at_k[i]-1) qp1_tij(200, i, k+1), st[i]++;
+		else qp1_tij(200, i, -1), st[i] = 0;
+	}}
+
+static void at_main(const char * opt) {
+	int i,j,k, flg = (*opt=='-') ? (opt+=2, hxd2i(opt[-1])) : 0;
+	at_dir(opt);
+	if (flg&1) for (i=0; i<at_n; i++) qp1_tij(200, i, 0);
+	if (flg&2) for (i=0; i<at_n; i++) for (j=1,k=at_k[i]; j<k; j++) qp1_tij(200, i, j);
+	if (flg&4) for (i=0; i<at_n; i++) at_random();
+	if (flg&8) for (i=0; i<at_n; i++) qp1_tij(200, i, -1);
+}
+
+static int q_main(int ac, char** av) {
+	int i; for (i=0; i<96; i++) lim_arr[i] = INT_MAX;
+	if (ac<2) qp1(stdin);
+	FILE * f;
+	for (i=1; i<ac; i++) {
+		if (*av[i] == '-') { switch(av[i][1]) {
+			case 'a': at_main(av[i]+2); continue;
+			default: fprintf(stderr, "unknown option \"%s\"\n", av[i]); 
+		}}
+		if ((f=fopen(av[i],"r"))) qp1(f), fclose(f); else return perror(av[i]), 1;
+	}
+	return 0;
+}
+
+/* lf.tlogdump (debug tool for lflab)
+   dumps tlog in a more-or-less human-readable format (time:event pairs)
+   time: duration (time until next event) in microseconds unless "m" says millisec.
+   event: (s) - select (with wait)         +-  - clock adjust
+   	  (S) - select (without wait)      j88 - job slice (j1: longest)
+   	  888 - calculate main mixer       (J) - no time for job exec    
+          (p) - play (send to audio dev)
+   every 4th cycle the data is send to GUI process (for CPU meter display)
+   (this has no separate event, you can see that every 4th "clock adjust" takes a little longer)
+*/
+
+static void dur4(char * to, int t) {
+	if (t<=9999) return (void)sprintf(to, "%4d", t);
+	if (t>262141) return (void)memcpy(to, "FRVR-WTF"+4*(t&1), 4);
+	if (t>99999) return (void)sprintf(to, "%dm", t/1000);
+	t/=100; sprintf(to, "%dm%c", t/10, 48+(t%10));
+}
+
+static int ev4(char *to, int k) {
+	if (k<128) to[0]=40, to[2]=41, to[3]=32, to[1] = k?k:63;
+	else if (k<2048) return sprintf(to, "%+d", k-1090), k-1090;
+	else if (k<4096) (k&=2047)<1000 ? sprintf(to, "j%d", k) 
+				        : (k/=100, sprintf(to, "j%ck%c",48+k/10,48+k%10));
+	else k&=4095, sprintf(to, "%d"+(k>999), k);
+	return 0;
+}
+
+#define MEGA 1000000
+
+static int  ent10(char *q, unsigned int x) { return dur4(q,x&262143), q[4]=q[9]=58, ev4(q+5, x>>18); }
+static void top10(char *q, long long t) { sprintf(q, "%02d.%06d", (int)((t/MEGA)%60), (int)(t%MEGA)); }
+
+static int t_main(int ac, char ** av) {
+	long long t0 = 0LL, t1 = 0LL;
+	int nrow = 30, ncol = 10, nblk = 0, atot2 = 0;
+	if (ac==4) nrow=atoi(av[1]), ncol = atoi(av[2]), av += 2;
+	else if (ac!=2) return fprintf(stderr,"usage: %s [nrow ncol] <binfile>\n", *av), 1;
+	int fd = open(av[1], O_RDONLY); if (fd<0) return  perror(av[1]), 1;
+	int blks = nrow * ncol, ibuf[blks], wid = 10*ncol, osiz0 = (nrow+1)*wid;
+	char obuf[osiz0 + 80]; memset(obuf, 32, osiz0);
+	while(1) {
+		int i,j,k,nr = read(fd, ibuf, 4*blks), eof = 4*blks - nr;
+		t1 = t0;
+		if (nr<=0) return nr ? (perror("read"),1) : 0;
+		if (nr&3) fprintf(stderr, "ignoring %c extra bytes\n", nr&3);
+		int nrow2 = ((nr>>=2) + ncol - 1) / ncol, osiz2 = (nrow2+1)*wid;
+		int adjm = 0, adjM = 0, adjtot = 0;
+		for (i=0,j=0,k=0; k<nr; k++, i += (++j>=nrow2 && !(j=0))) {
+			if (!j) { top10(obuf+10*i, t0); obuf[10*i+9] = (i==ncol-1)?10:'|'; }
+			int a = ent10(obuf + 10*i + wid*(j+1), ibuf[k]); t0 += ibuf[k]&262143;
+			if (a) { adjtot+=a; if (a<adjm) adjm=a; else if (a>adjM) adjM=a; }
+		}
+		for (i=0; i<osiz2; i++) if (!obuf[i]) obuf[i] = 32;
+		for (i=9; i<osiz2; i+=10) obuf[i] = 32; 
+		for (i=wid-1; i<osiz2; i+=wid) obuf[i] = 10;
+		int sec = t0/MEGA, nx;
+		nx=sprintf(obuf+osiz2, "blk%04d t%02d:%02d.%06d len:%d.%06d +-min,max,tot,atot: %d,%d,%d,%d\n",
+		    	nblk++, sec/60, sec%60, (int)(t0%MEGA), (int)((t0-t1)/MEGA), (int)((t0-t1)%MEGA),
+			adjm, adjM, adjtot, atot2+=adjtot);
+		write(1, obuf, osiz2+nx);
+		if (eof) return 0;
+	}}
+
 /*******************************/
 
 int usage(const char *s) { return fprintf(stderr, "lf.bb: name \"%s\"%s", s,
-		" unknown, valid names are lf.acv, lf.io, lf.lic and lf.con\n"), 1; }
+		" unknown, valid names are lf.acv, lf.io, lf.lic, lf.con, lf.tld, lf.qplay\n"), 1; }
 
 int main(int ac, char ** av) {
 	const char *q, *s = *av;
@@ -401,6 +571,8 @@ int main(int ac, char ** av) {
 		case 'c': return c_main();
 		case 'a': return a_main(ac, av);
 		case 'i': return i_main(ac, av);
+		case 'q': return q_main(ac, av);
+		case 't': return t_main(ac, av);
 		case 'l': return execlp("less", "less", getenv("LF_LIC"), NULL);
 		default: return usage(q); }}
 
