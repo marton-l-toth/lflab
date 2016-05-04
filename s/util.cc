@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <cstdarg>
 #include <errno.h>
+#include <xmmintrin.h>
 
 #define QWE_UTILC_DEF
 #define QWE_DEFINE_CFGTAB
@@ -62,7 +63,9 @@ void cfg_init() {
                 if (p->i_m==0x7fffffff) {
 			p->s = (char*)malloc((p->i_M&65535)+1);
 			if (!s || !cfg_setstr(p, s)) { for (s = p->s_vd; *s; s++); cfg_setstr(p, s+1); }
-		} else if (s) { cfg_setint(p, atoi(s)); }}}
+		} else if (s) { cfg_setint(p, atoi(s)); }}
+	if (CFG_HW_DENORM.i) _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
+}
 
 int cfg_write() {
 	const char * fn = getenv("LF_INIFILE"); if (!fn) return EEE_ENVUNDEF;

@@ -20,6 +20,7 @@ AO_DIR      |s|           |0   |255  |aodir |directory for tmp. audio output (de
 WAV_DIR     |s|           |0   |255  |wvdir |directory for WAV / FLAC output (default is home dir.)
 TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
 XTERM       |s|xterm      |1   |255  |xterm |terminal emulator (used for console & license display)
+HW_DENORM   |i|1          |0   |1    |hwden |eliminate denormal numbers with CPU flag setting
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
 QTST_ADIF   |i|800        |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 
 QTST_RDIF   |i|45         |10  |52   |qtstr |quicktest/samp: -log2 of max rel diff 
