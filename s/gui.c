@@ -2000,7 +2000,7 @@ static void daprg_draw(ww_t * ww, cairo_t * cr2) {
 	}
 	for (i=0; i<2; i++) {
 		int d = (diag>>(3*i)) & 7; if (!d) continue;
-		LOG("diag %d %d", diag, i);
+		if (dflg&DF_WIDG) LOG("diag %d %d", diag, i);
 		cairo_set_source_rgb(cr2, .2+.1*(double)(d&4), .2+.2*(double)(d&2), .2+.4*(double)(d&1));
 		cairo_set_line_width(cr2, 3.0);
 		cairo_move_to(cr2, (double) (DA_W(ww) & (i-1)), 1.0);
