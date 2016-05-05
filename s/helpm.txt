@@ -402,7 +402,6 @@ folders (see below), intruments, boxes and clipboards.
 ==> etc.box (general)
 A folder can contain up to 32 named objects (of any type).
 Name: up to 20 ASCII characters except dot(.) and dollar sign.
-(up to 20 ASCII characters except dot(.) and dollar sign)
 Folders can be opened by double-clicking on the name or
 clicking on the little +/arrow. (clipboards can also be opened
 as folders (+/>) but in most cases it is more convenient to

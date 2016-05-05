@@ -316,7 +316,7 @@ void b_filt_echo_init(ANode * rn) {
 	char nm[8]; memcpy(nm, "=echo01", 8); 
 	qmb_arg_t qa = CFG_HW_DENORM.i ? QMB_ARG1(SparseRF_H) : QMB_ARG1(SparseRF_S);
 	qmk_box(rn, nm, qa, 1, 6, 1, "spF", "i-i:o*R*1i-", 3, "in$fq1$[fi]", 
-			2, 1, "c$t", "out", "uuu3%F", 0x501, "dmp");
+			2, 1, "c$t", "out", "uuK3%F", 0x501, "dmp");
 	for (int i=2; i<14; i++) i==10 ? (nm[5]=49, nm[6]=48) : ++nm[6],
 		qmk_box(rn, nm, qa, i, 2*i+4, 1, "spF", "r1i-", 512*i+769, "dmp");
 }

@@ -79,12 +79,12 @@ NDE_LNAME    max box/dir name length is 20
 NDE_XNAME    box/dir name can have ASCII chars ' '...'~' except '.' and '$'
 NDE_NDUP     duplicate box/dir name
 NDE_BDUP     duplicate component/anonwrap index
-NDE_WDUP     duplicate wrapbox in clipboard
-NDE_TDUP     duplicate wrapbox in track
+NDE_WDUP     duplicate sound in clipboard
+NDE_TDUP     duplicate sound in track
 NDE_RMWHAT   attempted remove from wrong container (BUG)
 NDE_EXPBOX   box expected (no dir/clip allowed)
 NDE_EXPNULL  new object expected (BUG)
-NDE_EXPWRAP  wrapbox expected
+NDE_EXPWRAP  instrument/sound expected (no box)
 NDE_NOTLIM   time limit can only be set in trk/clip
 NDE_TRGLU    target lookup failed
 NDE_BOXCRE   create box failed
@@ -154,7 +154,7 @@ GCE_WRONGWT  wrong window type
 GCE_UPREFIX  undefined prefix
 GCE_NOPFX    prefix character expected
 GCE_NOCONT   '<' without continued command
-GCE_EXWR     commands expects wrapbox
+GCE_EXWR     commands expects instrument/sound (no box)
 GCE_JRUN     job already running
 GCE_ROUTE    a right command at the wrong place (BUG)
 GCE_RPCONV   conversion error in cmd rec/playback
