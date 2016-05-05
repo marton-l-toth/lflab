@@ -216,8 +216,9 @@ int CmdTab::c_cont(CmdBuf * p) {
 
 int CmdTab::c_cre(CmdBuf * p) { 
 	ANode * nd; const char * s;
-	int ty = *p->m_c_a1; 
-	if (ty==63) ty = ((s=p->tok())) ? *s : 0; 
+	int ty = *p->m_c_a1;
+	if (ty==63) { if (!(s=p->tok())) return GCE_PARSE; else ty = *s; }
+	if (!p->m_c_a1[1]) return NDE_ZNAME;
 	int ec = Node::mk(&nd, p->m_c_node, p->m_c_a1+1, ty, p->m_c_nof|NOF_PARSE);
 	if (ec>=0) p->set_curnode(nd);
 	else if (ec!=NDE_NDUP || (ty|32)!='d') return p->set_curnode(0), ec;

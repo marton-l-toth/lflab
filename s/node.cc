@@ -1297,7 +1297,7 @@ int Node::parse_target(CmdBuf * cb, char ** ppname, ANode** ppto) {
 	for (;*s;s++) if (*s=='.') pd = s;
 	if (!pd) return *ppto = 0, NDirNode::hash(*ppname);
 	*pd = 0; *ppto = (pd>*ppname) ? lookup_cb(cb, *ppname) : ANode::root(); *pd = '.';
-	return *ppto ? ( pd[1] ? NDirNode::hash(*ppname=pd+1) : (*ppname=0, 1) ) 
+	return *ppto ? ( pd[1] ? NDirNode::hash(*ppname=pd+1) : NDE_ZNAME ) 
 		     : NDE_TRGLU;
 }
 

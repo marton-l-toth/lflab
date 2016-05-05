@@ -864,10 +864,13 @@ static void button_skel(struct _ww_t * ww, const char **pp) {
 	g_signal_connect (ww->w, "clicked", G_CALLBACK (button_click), (gpointer)ww);
 }
 
+static int str_filter(char *s) { 
+	int i,c; for (i=0;(c=s[i]);i++) if ((unsigned int)(c-32)>94u||c==36) s[i]='?'; return i; }
+
 static void entry_chg(GtkEditable * ed, gpointer p) {
 	ww_t * ww = (ww_t*)p;
 	int flg = !!(*ww->cmd) + 2*!!(dflg & DF_REC);  if (!flg) return;
-	char * s = gtk_editable_get_chars(ed, 0, -1);
+	char * s = gtk_editable_get_chars(ed, 0, -1); str_filter(s);
 	if (!ENT_SL(ww) || memcmp(ww->etc, s, ENT_SL(ww))) {
 		if (flg&2) rec_vpf(ww, "e%s", s); if (flg&1) widg_defcmd(ww, s); ENT_SL(ww) = 0; }
 	free(s);
@@ -902,7 +905,7 @@ static int entry_get (void * to, struct _ww_t * ww, int ty) {
 		case 'S': if ((l=strlen(s)) > 1023) l = 1023; break;
 		default: return 0xfffff;
 	}
-	memcpy(to, s, l);
+	memcpy(to, s, l); str_filter(to);
 	return l;
 }
 
