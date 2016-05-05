@@ -980,14 +980,15 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 	static const unsigned int optr[4] = { 0xc65a32bf, 0xc65a32b9, 0xc65b32af, 0xb65a32cf };
 	if (op<8) { if (op<0) return BXE_CENUM; else op = (optr[m_bflg&3]>>(4*op)) & 15; }
 	if (op==15) return 0;
-	char buf[8], xysav[8]; int ec, nb, bfsav = m_bflg;
+	char buf[8], xysav[8]; int ec, nb, bfsav = m_bflg, tlim = INT_MAX;
 	if (k<0) { 
 		nb = 2+6*(k&1); for (int j,i=0;i<nb;i++) if ((j=xys[i]-48)<0) return BXE_PARSE; else buf[i]=j;
 		k = 64*buf[1]+buf[0]+64;
 	} else {
 		if (k&65536) { WrapCore *cr = core_ro(); k &= 65535;
 			       if (!cr->has_key(k)) return BXE_UNDEFKEY; else k = cr->get_key(k); }
-		if (k<64) nb = 0; else nb = 2, buf[0] = k&63, buf[1] = (k>>6)-1;
+		if (k<64) { nb = 0; if ((m_bflg&3)==1) tlim = min_i(2*sample_rate, m_node->etc()->i[0]); }
+		else { nb = 2, buf[0] = k&63, buf[1] = (k>>6)-1; }
 	}
 	if ((unsigned int)(op-8)<3u){ if (m_mxctl && (ec=mx_c_stop(m_mxctl,k,1+(op==8)))!=MXE_CTLU) return ec;
 				      if (op==10) ++op; else return EEE_NOEFF; }
@@ -1002,8 +1003,8 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 			 if (wnfl()) w_col0(pflg());
 			 return 1;
 		case  5: ec = qcopy(1, nof & ~NOF_FGUI); break;
-		case 11: ec = add2mx_txdlv(0,0,0,INT_MAX,0); if (ec>=0) ec = add2ctl(ec, k);       break;
-		case 12: ec = add2mx_txdlv(0,0,0,INT_MAX,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
+		case 11: ec = add2mx_txdlv(0,0,0,tlim,0); if (ec>=0) ec = add2ctl(ec, k);       break;
+		case 12: ec = add2mx_txdlv(0,0,0,tlim,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
 		default: ec = BXE_CENUM; break;
 	}
 	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
