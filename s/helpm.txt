@@ -359,13 +359,13 @@ sv.exec - save files with exec right (line 1: #!/usr/bin/lflab)
 min/asv - autosave every x minutes (*) (0: off)
 au.tlog - automatically write timing log on GUI exit (max. 4MB)
 {sv|as|tl}.bkup - max # of backup copies for save, a.sv. & tlog
+xterm - terminal emulator (for console & GPL text)
+autocon - automatically open console when debug info is written
+cpu/den - HW denormal num. handling (doesn't work on old CPUs)
 dev - features under development (at your own risk :))
 {wav-|atmp}dir - set WAV/FLAC or audio tmp.file directory (**)
-==> win.auconv -- details for writing to WAV/FLAC
 ask/keep/wav/flac - default action when audio tmp file is ready
-(the auconv window will appear only when set to "ask")
-lim - max time (sec.) for automatic "write to WAV" commands
----
+==> win.auconv -- details for writing to WAV/FLAC
 (*) to avoid unpleasant buffer underruns, autosave happens only
 when no sound is being played, or in mute mode
 (**) it is recommended to make a directory under you home dir.

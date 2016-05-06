@@ -186,19 +186,22 @@ void GuiStub::mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef) {
 	if (pc->i) sn("%%%ttt", 6), sn(pc->s, pc->i); else sn("ppp666(", 7), sn(sdef, ldef), c1(')'); }
 
 void GuiStub::mcfg_win(int flg) {
-	if (flg&   1) cre(0x57, 'F'); else setwin(0x57, 'F');
-	if (flg&   2) wupd_s('7', ","), sz(*save_file_name?save_file_name:"(no name)");
-	if (flg&   4) wupd_i1('s', CFG_SV_EXEC.i);
-	if (flg&   8) wupd_i2('a', CFG_ASV_MIN.i);
-	if (flg&  16) wupd_i1('t', CFG_TLOG_AUTO.i);
-	if (flg&  32) wupd_i2('S', CFG_SV_BACKUP.i);
-	if (flg&  64) wupd_i2('A', CFG_ASV_BACKUP.i);
-	if (flg& 128) wupd_i2('T', CFG_TLOG_BACKUP.i);
-	if (flg& 256) mcfg_ud('k', &CFG_AO_DIR,  tmp_dir, tmp_dir_len);
-	if (flg& 512) mcfg_ud('w', &CFG_WAV_DIR, hsh_dir, hsh_dir_len);
-	if (flg&1024) wupd_ls('K', CFG_AO_ACTION.i);
-	if (flg&2048) wupd_i ('L', CFG_AO_TLIM.i);
-	if (flg&8192) wupd_i1('d', CFG_DEVEL.i);
+	if (flg&     1) cre(0x57, 'F'); else setwin(0x57, 'F');
+	if (flg&     2) wupd_s('7', ","), sz(*save_file_name?save_file_name:"(no name)");
+	if (flg&     4) wupd_i1('s', CFG_SV_EXEC.i);
+	if (flg&     8) wupd_i2('a', CFG_ASV_MIN.i);
+	if (flg&    16) wupd_i1('t', CFG_TLOG_AUTO.i);
+	if (flg&    32) wupd_i2('S', CFG_SV_BACKUP.i);
+	if (flg&    64) wupd_i2('A', CFG_ASV_BACKUP.i);
+	if (flg&   128) wupd_i2('T', CFG_TLOG_BACKUP.i);
+	if (flg&   256) mcfg_ud('k', &CFG_AO_DIR,  tmp_dir, tmp_dir_len);
+	if (flg&   512) mcfg_ud('w', &CFG_WAV_DIR, hsh_dir, hsh_dir_len);
+	if (flg&  1024) wupd_ls('K', CFG_AO_ACTION.i);
+	if (flg&  2048) wupd_i ('L', CFG_AO_TLIM.i);
+	if (flg&  8192) wupd_i1('d', CFG_DEVEL.i);
+	if (flg& 16384) wupd_s ('x', CFG_XTERM.s);
+	if (flg& 32768) wupd_i1('C', CFG_AUTOCON.i);
+	if (flg& 65536) wupd_i1('D', CFG_HW_DENORM.i);
 }
 
 void GuiStub::savename() { 

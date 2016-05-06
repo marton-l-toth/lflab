@@ -50,15 +50,17 @@ class CmdTab {
 			else debug_flags = atoi_h(p->m_c_a0); return 0; }
                 static int c_gui2(CmdBuf * p) { gui2.brk(); gui2.pf("%s\n", p->m_c_a0); return 0; }
 		static int c_kfw(CmdBuf * p) { CMD_NODE(Clip); return nd->cmd(p); }
-		static int c_info(CmdBuf * p) { char*s = p->tok(); p->m_c_node->debug(s ? *s&7 : 7); return 0;}
+		static int c_info(CmdBuf * p) { char*s = p->tok(); pt_con_op(0);
+						p->m_c_node->debug(s ? *s&7 : 7); return 0;}
 		static int c_source(CmdBuf * p) { return p->fdok(CmdBuf::read_batch(p->m_c_a0,
 								  p->m_c_nof|NOF_BATCHF), '<'); }
                 static int c_save(CmdBuf * p) { return p->fdok(Node::save_batch(Node::root(), p->m_c_a0,
 						          p->m_c_nof&NOF_FORCE),'>'&-(p->m_c_a0&&*p->m_c_a0));}
                 static int c_sv2(CmdBuf * p) { CMD_NODE(ADir); return (!nd->id()) ? NDE_SLROOT :
 			p->fdok(Node::save_batch(nd,p->m_c_a1, p->m_c_nof&NOF_FORCE), 'L'); }
-		static int c_iofw(CmdBuf * p) { if (*p->m_c_a0=='f') fflush(stderr); return pt_iocmd(p->m_c_a0); }
-		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0-48; return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
+		static int c_iofw(CmdBuf * p) { if(*p->m_c_a0=='f')fflush(stderr); return pt_iocmd(p->m_c_a0);}
+		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0 - 48;
+					       return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
 		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav, c_report,
 			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin, c_rpl;
 };
@@ -312,10 +314,14 @@ int CmdTab::c_stat(CmdBuf * p) {
 static void log_load(int n) { for (int i=0; i<n; i++) log("log load test ------------------------- #%d", i); }
 
 int CmdTab::c_cfg(CmdBuf * p) {
-	const char *s = p->m_c_a0; int fd = 0, f = 0; switch(*(s++)) {
+	char *s = p->m_c_a0; int fd = 0, f = 0; switch(*(s++)) {
 		case '>': return cfg_write();
-		case 's': CFG_SV_EXEC.i = *s&1; f = 4; break;
-		case 't': CFG_TLOG_AUTO.i = *s&1; f = 16; gui2.set_tlog(); break;
+		case 's': CFG_SV_EXEC.i   = *s&1; f =     4; break;
+		case 't': CFG_TLOG_AUTO.i = *s&1; f =    16; gui2.set_tlog(); break;
+		case 'K': CFG_AO_ACTION.i = *s&3; f =  1024; break;
+		case 'd': CFG_DEVEL.i     = *s&1; f =  8192; break;
+		case 'C': CFG_AUTOCON.i   = *s&1; f = 32768; break;
+		case 'D': CFG_HW_DENORM.i = *s&1; f = 65536; break;
 		case 'a': intv_cmd_cfg(&CFG_ASV_MIN,     s, -4); f =   8; break;
 		case 'S': intv_cmd_cfg(&CFG_SV_BACKUP,   s, -4); f =  32; break;
 		case 'A': intv_cmd_cfg(&CFG_ASV_BACKUP,  s, -4); f =  64; break;
@@ -323,9 +329,9 @@ int CmdTab::c_cfg(CmdBuf * p) {
 		case 'L': intv_cmd_cfg(&CFG_AO_TLIM,     s, -1); f =2048; break;
 		case 'k': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_AO_DIR,  s);fd=1; break;
 		case 'w': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_WAV_DIR, s);fd=2; break;
-		case 'K': CFG_AO_ACTION.i = *s & 3; f = 1024; break;
-		case 'd': CFG_DEVEL.i = *s&1; f = 8192; break;
 		case 'W': f = -1; break;
+		case 'x': if ((f=strlen(s))>254) return EEE_LONGSTR;
+			  cfg_setstr(&CFG_XTERM, s); s[f] = 10; pt_iocmd_sn(s-1, f+2); return s[f] = 0;
 		default:  return GCE_UCFG;
 	}
 	if (fd) f |= fd<<8, gui2.c4(9, 'f', s[-1], 'Z');

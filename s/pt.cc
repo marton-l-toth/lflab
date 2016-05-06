@@ -96,7 +96,8 @@ int pt_iocmd(char *s) {
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
 int pt_con_op(const char *s) { 
-	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", s);
+	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", s?s:"(null)");
+	if (!s) return (pt_constat || !CFG_AUTOCON.i) ? 0 : (pt_constat = -1, pt_iocmd_sn("c\n", 2));
 	if (*s!='-') return con_started(s);
 	int k, l;
 	switch(s[1]) {
