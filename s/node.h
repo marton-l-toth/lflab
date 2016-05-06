@@ -181,6 +181,7 @@ class ANode {
                 int get_path(char* to, int max);
                 int sv_path(int cz = -1);
                 int get_path_uf(char* to, int max);
+		const char * path255();
                 int draw_window(int x);
                 void close_window(int x);
                 int title_arg(char * to, int wid = 512); // (id)rgbRGBpath

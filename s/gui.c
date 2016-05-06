@@ -1104,7 +1104,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {'#',5, 0, 8, 3, "[focus] config  help    redraw  wav/flac", "$>*W$ N??M9 XAW"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
-{'+',6, 0, 7,2, "help   info1  info2  info*  GUI cfgdelete ", "N?I1I2I3EWNd"},
+{'+',7, 0, 7,2, "help   info1  info2  info4  info*  GUI cfgdelete ", "N?I1I2I4I7EWNd"},
 {0, 24, 0, 8,13, ">@L/src >@R/src >clip/s.+anon/s.>@L/filt>@R/filt>clip/f.+anon/f.anon#00 anon#01 anon#02 "
 "anon#03 anon#04 anon#05 anon#06 anon#07 anon#08 anon#09 anon#10 anon#11 anon#12 anon#13 anon#14 anon#15 ",
 "$~C@L.wr$wb%@$~C@R.wr$wb%@$~C@C._$wb%@ Cw_$wb%@     "

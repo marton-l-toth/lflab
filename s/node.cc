@@ -369,6 +369,8 @@ int ANode::get_path_uf(char * to, int max) {
         return max;
 }
 
+const char * ANode::path255() { static char s[256]; s[get_path_uf(s,255)] = 0; return s; }
+
 int ANode::get_path_2(char* to, int max) {
         if (!m_up) return 0;
         int r = m_up->get_path_2(to, max);
@@ -1017,6 +1019,7 @@ void ABoxNode::nio_change() {
 int ABoxNode::ui_cmd(CmdBuf * cb) {
 	char * s = cb->a1();
 	if (*s == 'W') return draw_window(0x1c);
+	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
 	if (*s != 'O') {
 		int ec = SOB_RW(ui)->cmd(s); if (ec<0) return ec;
 		if ((ec&1) && winflg(4096)) m_ui.ro()->w_rgb(16*m_id+12);
@@ -1113,16 +1116,16 @@ void ABoxNode::ab_debug(int flg) {
 	log_n(" ("); m_box->model0()->debug0(); log_n(")"); if (!flg) return; 
 	a_debug(); if (!(flg&1)) goto d2;
 	log("box=%p, box_cl=\"%s\"", m_box, m_box->cl_name()); 
-	m_ui.debug(); 
 	// TODO: minidir
 	log_n("uses: ");
 	for (BoxEdge * p = m_ef0; p; p=p->fr_n)
-		if (p->fr != this) log_n(" (bug)"); else log_n(" 0x%x", p->to->id());
+		if (p->fr != this) log_n(" (bug)"); else log_n(" %s", p->to->path255());
 	log(""); log_n("used by:");
 	for (BoxEdge * p = m_et0; p; p=p->to_n)
-		if (p->to != this) log_n(" (bug)"); else log_n(" 0x%x", p->fr->id());
+		if (p->to != this) log_n(" (bug)"); else log_n(" %s", p->fr->path255());
 	log(""); 
-d2:	if (m_box && (flg&2)) m_box -> spec_debug();
+d2: 	if (flg&4) m_ui.debug(); 
+	if (m_box && (flg&2)) m_box -> spec_debug();
 }
 
 ///////// trk ////////////////////////////////////////////////////////////////
@@ -1537,8 +1540,7 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	if (backup(fn, n_bk)<0) gui2.errq_add(EEE_ERRNO), gui2.errq_add(EEE_BACKUP),
 			        log("WARNING: backup failed: %s", strerror(errno));
 	Clock clk; clk.reset();
-	char pbuf[256]; pbuf[dir->get_path_uf(pbuf, 255)] = 0;
-	log("saving \"%s\" to \"%s\"...", pbuf, fn);
+	log("saving \"%s\" to \"%s\"...", dir->path255(), fn);
 	if (ANode::m0_lock) { if (flg&NOF_FORCE) ANode::sv_end(); else return NDE_LOCK; }
 	int exef = !!CFG_SV_EXEC.i, fd = creat(fn, 0644+(0111&-exef)); if (fd<0) return EEE_ERRNO;
 	FILE * f = fdopen(fd, "w"); if (!f) return EEE_ERRNO;
