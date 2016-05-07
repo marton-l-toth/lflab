@@ -201,7 +201,6 @@ void GuiStub::mcfg_win(int flg) {
 	if (flg&  8192) wupd_i1('d', CFG_DEVEL.i);
 	if (flg& 16384) wupd_s ('x', CFG_XTERM.s);
 	if (flg& 32768) wupd_i1('C', CFG_AUTOCON.i);
-	if (flg& 65536) wupd_i1('D', CFG_HW_DENORM.i);
 }
 
 void GuiStub::savename() { 

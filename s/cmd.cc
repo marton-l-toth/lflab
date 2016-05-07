@@ -321,7 +321,6 @@ int CmdTab::c_cfg(CmdBuf * p) {
 		case 'K': CFG_AO_ACTION.i = *s&3; f =  1024; break;
 		case 'd': CFG_DEVEL.i     = *s&1; f =  8192; break;
 		case 'C': CFG_AUTOCON.i   = *s&1; f = 32768; break;
-		case 'D': CFG_HW_DENORM.i = *s&1; f = 65536; break;
 		case 'a': intv_cmd_cfg(&CFG_ASV_MIN,     s, -4); f =   8; break;
 		case 'S': intv_cmd_cfg(&CFG_SV_BACKUP,   s, -4); f =  32; break;
 		case 'A': intv_cmd_cfg(&CFG_ASV_BACKUP,  s, -4); f =  64; break;

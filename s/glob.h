@@ -39,7 +39,8 @@ extern double sample_length, natural_bpm, natural_bpm_r;
 extern int killer_fd;
 extern int qstat_size;
 
-extern char mostly_zero[0x8080];
+#define zeroblkD ((double*)(zeroblkC))
+extern char zeroblkC[32768];
 extern double junkbuf[4096];
 extern char save_file_name[1024];
 
@@ -47,10 +48,6 @@ extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_nam
 extern int 	   tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 extern int v_major, v_minor;
-
-#define zeroblkC (mostly_zero+128)
-#define zeroblkD ((double*)(mostly_zero+128))
-#define imp4097  ((double*)(mostly_zero+120))
 
 void ini_err(int ec);
 void log(const char * fmt, ...);

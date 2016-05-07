@@ -1,5 +1,4 @@
 CC=g++
-CFLAGS ?= -O2 -fpredictive-commoning -fgcse-after-reload
 
 SRC1 = main.cc node.cc util.cc cmd.cc box.cc util2.cc asnd.cc job.cc mx.cc pt.cc midi.cc
 INC1 = glob.h  node.h  util.h  cmd.h  box.h  util2.h  asnd.h  job.h  mx.h  pt.h  midi.h

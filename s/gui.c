@@ -4101,7 +4101,7 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 	}
 	const char *ws="[(3[{C7,?}{C6,?}{C5,?}({L_term:}3{ex20$cx})]"
 			 "0[{Yssv.exec$cs}{8amin/asv$2ca}{Ytau.tlog$ct}{YCautocon$cC}]"
-	"[{8Ssv.bkup$2cS}{8Aas.bkup$2cA}{8Ttl.bkup$2cT}{YDcpu/den$cD}][3{B_?$$?}0{Yddev$cd}])"
+	"[{8Ssv.bkup$2cS}{8Aas.bkup$2cA}{8Ttl.bkup$2cT}][3{B_?$$?}0{Yddev$cd}])"
 	"([{B_wav-dir$$!fwW}{B_atmpdir$$!fkW}{L_homedir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]"
 	"3[(3[{Cw,/1234/6789/1234/6789/1234/6789/1234/6789/1234/6789}{Ck,?}]0[{MK$cK|k0}{8Llim$3cL}])"
 	"{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}]){B>saveCfg$c>}]";

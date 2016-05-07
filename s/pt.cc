@@ -10,15 +10,26 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 
+#ifdef __SSE2__
+#include <xmmintrin.h>
+#define FPU_INI _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON); pt_hello="sse2:Y"
+#else
+#define FPU_INI pt_hello="sse2:n"
+#endif
+
 volatile int pt_chld_flg = 0;
 int pt_cp_i2m = -1;
+const char * pt_hello;
 
 typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
 
 static int pt_cp_m2i = -1, pt_constat = 0, pt_nullfd = -1;
 static volatile pt_tab_t pt_tab[PT_COUNT];
-static const char * pt_logf_name;
 static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0;
+static const char *qenv_v[26], *qenv_i[] = {
+	"lLF_LOG","/tmp/lflab.noenv.log", "bLF_BB",0, "dLF_DEBUGFLG","0", "gLF_LICB",0, "hHOME","/tmp",
+	"iLF_IO",0, "kLF_KILLER",0, "tLF_TMPROOT",0,  "uLF_USERDIR",0, "wLF_TMPDIR",0, 0,0 };
+#define QENV(c) qenv_v[(int)c-97]
 
 static void log_pidstat(const char *s, int pid, int stat) {
         if (WIFEXITED(stat)) log("%s %d exited (%d)", s, pid, WEXITSTATUS(stat));
@@ -26,8 +37,7 @@ static void log_pidstat(const char *s, int pid, int stat) {
         else log("something happened to %s %d (0x%x)", s, pid, stat); }
 
 static void pt_dlog(const char * s) {
-        const char * nm = pt_logf_name;
-        int fd = open(nm, O_WRONLY|O_APPEND);
+        int fd = open(QENV('l'), O_WRONLY|O_APPEND);
 	switch(fd) {
 		case 1:  dup2(1, 2); break;
 		case 2:  dup2(2, 1); break;
@@ -59,10 +69,9 @@ static int iop_dead(int pid, int stat, int td) {
 }
 
 static int io_start(int re) {
-	static const char * exe = 0; if (!exe && !(exe=getenv("LF_IO"))) exe = "./lf.io";
 	char a2[16], *aa = a2; *(int*)aa = killer_fd>0 ? qh4(killer_fd) : 33; a2[4] = 0;
 	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;
-	int pf1, pf2, pf3, pid = launch(exe, "!><+>", &pf1, &pf2, pt_logf_name, &pf3, a2, a2+8, (char*)0);
+	int pf1, pf2, pf3, pid = launch(QENV('i'), "!><+>", &pf1, &pf2, QENV('l'), &pf3, a2, a2+8, (char*)0);
 	if ((pid|pf1|pf2|pf3)<0) return -1;
 	if (!re) pt_reg(PT_IOP, pid, &iop_dead);
 	fflush(stdout); fflush(stderr);
@@ -96,11 +105,10 @@ int pt_iocmd(char *s) {
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
 int pt_con_op(const char *s) { 
-	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", s?s:"(null)");
+	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", str0(s));
 	if (!s) return (pt_constat || !CFG_AUTOCON.i) ? 0 : (pt_constat = -1, pt_iocmd_sn("c\n", 2));
 	if (*s!='-') return con_started(s);
-	int k, l;
-	switch(s[1]) {
+	int k; switch(s[1]) {
 		case '1': if (pt_constat) { if (pt_constat>0) { k = -3; goto kill; }
 				  	    gui_errq_add(EEE_STATE, "con/-1"); }
 			  return pt_constat = -1, pt_iocmd_sn("c\n", 2);
@@ -130,7 +138,6 @@ void pt_chld_act() {
 	pt_chld_flg = 0; }
 
 int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
-	static const char * acv_bin = 0; if (!acv_bin && !(acv_bin=getenv("LF_BB"))) acv_bin="lf.bb";
 	int sdl, tdl, pid, op = opw & 255, nwf = opw & 256;
 	const char *sdir, *tdir, *src, *trg;
 	if ((sdl = CFG_AO_DIR.i )) sdir = CFG_AO_DIR.s;  else sdl = tmp_dir_len, sdir = tmp_dir;
@@ -146,32 +153,30 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 	trg = au_file_name(tdir, tdl, id, a1, a2, "wav\0flac" + (op&4));
 	pt_acv_cw = !nwf && !(~op&3);
 	switch (op&3) {
-		case 0: pid = launch(acv_bin, "(kk", "lf.acv",       src, trg,         (char*)0); break;
-		case 1: pid = launch(acv_bin, "(kk", "lf.acv",       src, trg, a1,     (char*)0); break;
-		case 2: pid = launch(acv_bin, "(kk", "lf.acv",       src, trg, a1, a2, (char*)0); break;
-		case 3: pid = launch(acv_bin, "(kk", "lf.acv", "-r", src, trg,         (char*)0); break;
+		case 0: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg,         (char*)0); break;
+		case 1: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg, a1,     (char*)0); break;
+		case 2: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg, a1, a2, (char*)0); break;
+		case 3: pid = launch(QENV('b'), "(kk", "lf.acv", "-r", src, trg,         (char*)0); break;
 	}
 ret:	return (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
 }
 
-int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", getenv("LF_LICB"), (char*)0); }
+int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('g'), (char*)0); }
 
 int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
 					EEE_ERRNO : 0; }
 
 void pt_init() {
-	if (!(pt_logf_name = getenv("LF_LOG"))) pt_logf_name = "/tmp/lf.noenv.log",
-		pt_dlog("no LF_LOG defined, this was a short run...\n"), exit(1);
-        pt_dlog("...\n");
+	FPU_INI; vstring_set(v_major, v_minor);
+	for (const char **q2, **q = qenv_i; *q; q+=2) 
+		if (q2=&QENV(**q), !(*q2=getenv(*q+1)) && !(*q2=q[1])) pt_dlog(q[0]+1), exit(1);
+	debug_flags = atoi_h(QENV('d')); pt_dlog("...\n");
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
-        const char * kfn = getenv("LF_KILLER"); if (!kfn) log("no killer file");
 	if ((pt_nullfd = open("/dev/null", O_RDONLY)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("nullfd"), exit(1);
-	if (kfn && (killer_fd = open(kfn, O_RDONLY))<0) log("\"%s\": %s", kfn, strerror(errno));
-	if ((wrk_dir=getenv("LF_TMPDIR")))  wrk_dir_len=strlen(wrk_dir); else wrk_dir="/tmp", wrk_dir_len=4;
-	if ((tmp_dir=getenv("LF_TMPROOT"))) tmp_dir_len=strlen(tmp_dir); else tmp_dir="/tmp", tmp_dir_len=4;
-	if ((usr_dir=getenv("LF_USERDIR"))) usr_dir_len=strlen(usr_dir); else usr_dir="/tmp", usr_dir_len=4;
-	if ((hsh_dir=getenv("HOME")))       hsh_dir_len=strlen(hsh_dir); else hsh_dir="/tmp", hsh_dir_len=4;
+	if ((killer_fd=open(QENV('k'),O_RDONLY))<0) log("\"%s\": %s", QENV('k'), strerror(errno));
+	wrk_dir_len=strlen(wrk_dir=QENV('w')); usr_dir_len=strlen(usr_dir=QENV('u'));
+	tmp_dir_len=strlen(tmp_dir=QENV('t')); hsh_dir_len=strlen(hsh_dir=QENV('h'));
 	char *s1 = (char*)malloc(usr_dir_len+10); memcpy(s1, usr_dir, usr_dir_len);
 	char *s2 = (char*)malloc(usr_dir_len+13); memcpy(s2, usr_dir, usr_dir_len);
 	memcpy(s1+usr_dir_len,  "/__asv.lf",    10); autosave_name   = s1;

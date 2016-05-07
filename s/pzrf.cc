@@ -131,8 +131,8 @@ int PZFInst::ini(double ** inb) {
 	for (int j=0; j<n; j++) {				   \
 		double y = a0*in[j] + a1*x1 + a2*x2 + b1*y1 + b2*y2;\
 		x2 = x1; x1 = in[j]; y2 = y1; y1 = y; (X);	  } \
-	m_bqs[I].x1 = cut300(x1); m_bqs[I].x2 = cut300(x2);	    \
-	m_bqs[I].y1 = cut300(y1); m_bqs[I].y2 = cut300(y2)
+	m_bqs[I].x1 = CUT300(x1); m_bqs[I].x2 = CUT300(x2);	    \
+	m_bqs[I].y1 = CUT300(y1); m_bqs[I].y2 = CUT300(y2)
 
 void PZFInst::rf_debug(int n) {
 	m_t += n;

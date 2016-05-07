@@ -1,6 +1,12 @@
 #ifndef __qwe_uc1_h__
 #define __qwe_uc1_h__
 
+#ifdef __SSE2__
+#define CUT300(X) (X)
+#else
+#define CUT300(X) cut300(X)
+#endif
+
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define TRK_DEF_GWFR ((const unsigned char*)"$%\0")
 
@@ -22,10 +28,8 @@ static inline int    max_i(int    x, int    y) { return x>y ? x : y; }
 static inline double max_d(double x, double y) { return x>y ? x : y; }
 static inline int ivlim(int x, int m, int M) { return x<m ? m : (x>M ? M : x); }
 static inline void clearbuf(double *p, int n) { double *p1=p+n; while(p<p1) *(p++) = 0.0; }
-
 static inline const char * str0(const char *s) { return s?s:"(null)"; }
 static inline double cut300(double x) { return fabs(x)>=1e-300 ? x : 0.0; }
-
 static inline int is_hx(int c) { return (unsigned int)(c-48)<10u || (unsigned int)((c|32)-97)<6u; }
 static inline int hex2(const char*s) { return 16*hxd2i(*s)+hxd2i(s[1]); }
 static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }

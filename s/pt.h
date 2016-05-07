@@ -12,6 +12,7 @@
 typedef int (*pt_wfun)(int,int,int);
 extern volatile int pt_chld_flg;
 extern int pt_cp_i2m;
+extern const char * pt_hello;
 
 #define ACV_WIN(J) (0xf00007 + 16*(J&65535))
 void pt_reg(int ix, int pid, pt_wfun fun);

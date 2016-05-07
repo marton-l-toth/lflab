@@ -292,7 +292,7 @@ int RQOsc::calc(int inflg, double** inb, double** outb, int n) {
 		case 6: RQO2_CL(exp(-sample_length*pel[i])); break;
 		case 7: RQO3_CL(exp(-sample_length*pel[i])); break;
 	}
-	m_y = cut300(y); m_v = cut300(v); return 1; 
+	m_y = CUT300(y); m_v = CUT300(v); return 1; 
 }
 
 inline int ixround(double x, int n) { int r = (int)lround(x);

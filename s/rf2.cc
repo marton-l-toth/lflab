@@ -1,6 +1,5 @@
 #include "util.h"
 #include "box0.h"
-#include "cfgtab.inc"
 
 static const unsigned char minifilt_ix[66] = {
 124,9, 168,9, 116,8, 160,8, 109,7, 153,7, 103,6, 147,6, 98,5, 142,5, 94,4, 138,4, 91,3, 135,3, 89,2, 133,2,
@@ -67,10 +66,11 @@ static const double minifilt9[177] = { 1.0,
 //? 0:none +:low-p -:high-p. even: symmetric odd: assym.
 //? t<i>, c<i>: time, constant
 //? t>=0: input-t, t<0: output-t
-class SparseRF_A : public BoxInst {
+class SparseRF : public BoxInst {
 	public:
-		SparseRF_A(int nxy) : m_nxy(nxy), m_px(0), m_xc(0) {}
-		virtual ~SparseRF_A() { free(m_px); free(m_xc); }
+		SparseRF(int nxy) : m_nxy(nxy), m_px(0), m_xc(0) {}
+		virtual ~SparseRF() { free(m_px); free(m_xc); }
+		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
 		void ini(double ** ap);
 		int m_nxy, m_nx, m_ny, m_siz, m_t, *m_xt, *m_yt;
@@ -78,7 +78,7 @@ class SparseRF_A : public BoxInst {
 };
 
 // in fq1 cfg t1 c1 ... tn cn dmp
-void SparseRF_A::ini(double** p) {
+void SparseRF::ini(double** p) {
 	int dmpf, nxy = m_nxy, n_xy1 = 0, siz;
 	double tmul = (double)sample_rate / p[0][0];
 	NAN_UNPK_8(mf, p[1], 0);
@@ -109,24 +109,20 @@ void SparseRF_A::ini(double** p) {
 	for (int i=siz-tlim; i<siz; i++) m_py[i] = 0.0;
 }
 
-#define SPRF_DC(N,X) class SparseRF_##N : public SparseRF_A { \
-	public: SparseRF_##N (int nxy) : SparseRF_A(nxy) {}   \
-		virtual int calc(int inflg, double** inb, double** outb, int n);};\
-int SparseRF_##N::calc(int inflg, double** inb, double** outb, int n) {		  \
-	if (!m_px) { if (n) ini(inb+1); else return 1; }			  \
-	double x, *in, *out = *outb; int iim;					  \
-	if (inflg&1) in = inb[0], iim = -1; else x = inb[0][0], in = &x, iim = 0; \
-	int m = m_siz-1, t = m_t;						  \
-	for (int k,i=0; i<n; i++, t++) {					  \
-		m_px[k = t&m] = in[i&iim];					  \
-		double v = 0.0;							  \
-		for (int j=0; j<m_nx; j++) v += m_xc[j] * m_px[(t-m_xt[j]) & m];  \
-		for (int j=0; j<m_ny; j++) v += m_yc[j] * m_py[(t-m_yt[j]) & m];  \
-		m_py[k] = out[i] = (X);  }					  \
-	m_t = t & m; return 1; }
-
-SPRF_DC(H,v)
-SPRF_DC(S,cut300(v))
+int SparseRF::calc(int inflg, double** inb, double** outb, int n) {
+	if (!m_px) { if (n) ini(inb+1); else return 1; }
+	double x, *in, *out = *outb; int iim;
+	if (inflg&1) in = inb[0], iim = -1; else x = inb[0][0], in = &x, iim = 0;
+	int m = m_siz-1, t = m_t;
+	for (int k,i=0; i<n; i++, t++) {
+		m_px[k = t&m] = in[i&iim];
+		double v = 0.0;
+		for (int j=0; j<m_nx; j++) v += m_xc[j] * m_px[(t-m_xt[j]) & m];
+		for (int j=0; j<m_ny; j++) v += m_yc[j] * m_py[(t-m_yt[j]) & m];
+		m_py[k] = out[i] = CUT300(v);
+	}
+	m_t = t & m; return 1;
+}
 
 #define ACCLOOP(X) for (int i=0; i<n; i++) (X); break
 #define ACCLOOPZ(X) for (int i=0; i<n; i++) (X), q[i] = z; break;
@@ -249,7 +245,7 @@ static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, 
 		case 2: x=*p; for (int i=0; i<n; i++) v*=d, y+=(v+=e*(  x -y)), q[i] = x-y; break;
 		case 3:       for (int i=0; i<n; i++) v*=d, y+=(v+=e*(p[i]-y)), q[i] = p[i]-y; break;
 	}
-	yv[0] = cut300(y); yv[1] = cut300(v);
+	yv[0] = CUT300(y); yv[1] = CUT300(v);
 }
 
 //? {{{!._qlh}}}
@@ -314,7 +310,7 @@ void b_filt_misc_init(ANode * rn) {
 
 void b_filt_echo_init(ANode * rn) {
 	char nm[8]; memcpy(nm, "=echo01", 8); 
-	qmb_arg_t qa = CFG_HW_DENORM.i ? QMB_ARG1(SparseRF_H) : QMB_ARG1(SparseRF_S);
+	qmb_arg_t qa = QMB_ARG1(SparseRF);
 	qmk_box(rn, nm, qa, 1, 6, 1, "spF", "i-i:o*R*1i-", 3, "in$fq1$[fi]", 
 			2, 1, "c$t", "out", "uuK3%F", 0x501, "dmp");
 	for (int i=2; i<14; i++) i==10 ? (nm[5]=49, nm[6]=48) : ++nm[6],

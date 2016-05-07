@@ -15,7 +15,7 @@
 
 int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
 double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625, junkbuf[4096];
-char mostly_zero[0x8080], save_file_name[1024];
+char zeroblkC[32768], save_file_name[1024];
 const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
@@ -28,15 +28,13 @@ QuickStat qstat;
 static CmdBuf sl_cmd[N_SLCMD];
 static int asv_ts[2];
 
-void hi() { log("lflab: linear filter based audio lab %d.%02d\n%s\n%s\n%s", v_major, v_minor,
+void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s", v_major, v_minor, pt_hello,
 	    "Copyright (C) 2014-2016 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
 	    "see the file \"COPYING\" for details"); }
 
 #define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
 		 mx_init(), wrap_init(), track_init(), itb_init(), midi_init()
 static void ini0() {
-	const char * dfs = getenv("LF_DEBUGFLG"); if (dfs) debug_flags = atoi_h(dfs);
-	imp4097[0] = 1.0; vstring_set(v_major, v_minor);
 	extern void INI_LIST; INI_LIST;
 	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
 	if (CFG_INI_ORDER.i) gui2.start();
