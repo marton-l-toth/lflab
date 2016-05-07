@@ -84,7 +84,7 @@ int ItBoxInst::calc(int inflg, double** inb, double** outb, int n) {
 	int r, flg = m_flg, of = inflg&1, sc = (m_flg>>5)&15, ni = (flg&31) - !!(sc),
 	    xin = sc ? 3+(sc==1) : 1, ifg1 = (inflg>>xin) & ~1, ali = m_flg&IBF_ALI;
 	double *in1[ni+2], **qq = 0;
-	if (ni) memcpy(in1+1, inb+1+xin, 8*ni);
+	if (ni) memcpy(in1+1, inb+1+xin, sizeof(double*)*ni);
 	if (sc) *(qq=in1+ni+1) = m_zvec;
 	if (nr==1) return in1[0]=inb[0], m_ppbx[0] -> calc(ifg1|of, in1, outb, n);
 	if (ali) {
