@@ -165,7 +165,8 @@ static void ts_9(char *to) {
 
 static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0;
-static const char xterm_nbuf[256], *xterm_name;
+static char xterm_nbuf[256];
+static const char *xterm_name;
 
 /*** shutdown --- shutdn_flg: 1-ppid 2-cmdin 4-.log 8-ulog */
 
@@ -314,7 +315,8 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'Z': return con_end();
 	case 'f': return log_sn(0, -1, 0);
 	case 'r': return (void) (rs_ts = time(NULL));
-	case 'x': return (n>255) ? LOG("x: str too long") : (void) memcpy(xterm_name=xterm_nbuf, s+1, n);
+	case 'x': return (n>255) ? LOG("x: str too long") 
+		  	         : (void) (memcpy(xterm_nbuf, s+1, n), xterm_name=xterm_nbuf);
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 
