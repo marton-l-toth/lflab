@@ -1357,7 +1357,7 @@ int DWrapGen::sob_from(int ix, BoxGen * bx0, int bxf) {
 	}}
 
 int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
-	int ec; switch(ent->i3f) {
+	int ec; switch(ent->i4f) {
 		case 1:
 			ent->plttwwii = 0x6b775924;
 			WrapAutoVol * av; av = SOB_RW(sob)->avol_rw();

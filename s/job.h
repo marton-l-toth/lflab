@@ -5,7 +5,7 @@ class Job; class CmdBuf; class ANode;
 
 class JobQ {
         public: 
-		typedef struct { Job * p; int nid; short st, xst, jid, i3f; int plttwwii; } ent_t;
+		typedef struct { Job * p; int nid; short st, xst, jid, i4f; int plttwwii; } ent_t;
 		void init();
 		int nj() const { return m_nj; }
 		Job *  job(ANode * nd, int ix);

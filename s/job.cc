@@ -17,7 +17,7 @@ int JobQ::launch(ANode * nd, int ix, char * arg) {
 	ent_t * p = m_ent + i;
 	int ji0 = p->jid, ji = (ji0+32) & 4095;
 	p->p   = 0;  p->nid = nd->id(); p->st = 0; p->xst = 9999;
-	p->jid = ji; p->i3f = ix & 7; p->plttwwii = 0x60000000;
+	p->jid = ji; p->i4f = ix & 15; p->plttwwii = 0x60000000;
 	int ec = nd->start_job_2(p, arg);
 	if (ec<0) return p->jid = ji0, ec;
 	int j    = m_nj++,
@@ -33,7 +33,7 @@ int JobQ::kill5(int j, int ec) {
 	ent_t * p = m_ent + j;
 	if (p->p && (p->st&1023)<1005) p->p->abort(), p->st = ec&1023; 
 	if (p->p) delete(p->p), p->p = 0;
-	if (p->nid>=0) ANode::lookup_n_q(p->nid)->set_job_result(p->i3f&3, p->st),
+	if (p->nid>=0) ANode::lookup_n_q(p->nid)->set_job_result(p->i4f, p->st),
 		       jobq.upd_gui_1p(m_ent), p->nid = -1;
 	p->jid |= 4096;
 	return 1;
@@ -43,7 +43,7 @@ int JobQ::lu(ANode * nd, int ix) {
 	int j, k;
 	if (!nd) return j = ix&31, k = m_ent[j].jid, (ix&4096 ? k<4096 : k==ix) ? j : JQE_LU;
 	if (!nd->winflg(WF_JOBF)) return JQE_LU;
-	return j = nd->winflg(WF_JOB5) >> 24, (ix<0 || (m_ent[j].i3f&7)==ix) ? j : JQE_LU;
+	return j = nd->winflg(WF_JOB5) >> 24, (ix<0 || (m_ent[j].i4f&7)==ix) ? j : JQE_LU;
 }
 
 int JobQ::cmd(ANode * nd, int ix, char * arg) {
