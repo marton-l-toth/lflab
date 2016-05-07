@@ -9,7 +9,7 @@ while [[ -n "$cond" ]]; do
                 "")   cond="" ;;
                 "--") cond=""; shift ;;
                 -j*)  JARG=$1; shift ;;
-                "-S") SSE="";  shift ;;
+                "-S") SSE="-mno-sse2";  shift ;;
                 "-s") SSE="-msse2";  shift ;;
 		"-0") OPTARG="";    shift ;;
 		"-cf")  UCFLG="$2"; shift 2 ;;
