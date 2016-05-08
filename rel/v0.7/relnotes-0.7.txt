@@ -1,0 +1,25 @@
+lflab v0.7
+
+quicktest.sh was run in the following environments:
+(warning, the next 4 lines contain a lot of (registered) trademarks)
+rel/v0.7/lflab-0.7-0-amd64.deb  : Debian 7 on Dell I17R, ALC283, MAYA44USB
+rel/v0.7/lflab-0.7-0-i386.deb   : Linux Mint 17.3 (VirtualBox), PulseAudio
+rel/v0.7/lflab-0.7-0.x86_64.rpm : openSUSE Leap 42.1 (VirtualBox), PulseAudio
+rel/v0.7/lflab-0.7-0.i686.rpm   : Fedora 23 (VirtualBox), PulseAudio
+
+Note: the packages above (also the 32-bit ones) are built using SSE2.
+Thus, it is possible to turn off denormal numbers (saving CPU time).
+For old CPUs without SSE2 you have to compile it yourself, sorry.
+
+Features:
+- small speedup (unless compiled for old CPUs, see note above)
+- configurable terminal (for console)
+- examples (.!e.6 and .!e.1.[34] and new boxes)
+
+Fixes:
+- fixed dependency to libffi (removed, not directly using it...)
+- io process does not stop when terminal unavailable
+- disable locale (decimal commas were breaking graph display)
+- time limit for 'hold' mode sounds on clipboards
+- box/+/info1/used-by made more human-readable
+- small GUI and help text corrections
