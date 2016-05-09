@@ -73,6 +73,7 @@ class TrackGen : public BoxGen {
 		virtual int save2(SvArg * sv);
 		virtual int mxc_notify(int k,int f) { if(f&64) m_mxctl=0; if (wnfl()) w_ply(); return 0; }
 		virtual int cond_del() { return m_m.g0->next() == m_m.g1 ? 0 : TKE_NONEMP; }
+		virtual int ifflg() const { return BIF_GC; }
 		ANode* bkm_find(int j);
 		void   bkm_add(ANode * nd);
 		void   bkm_rm (ANode * nd);
