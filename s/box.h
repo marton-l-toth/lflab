@@ -4,7 +4,8 @@
 #include "node.h"
 #include "box0.h"
 
-#define BIF_GC 1
+#define BIF_GC  1
+#define BIF_QCP 2
 
 #define BXW_GET     sthg * bxw_rawptr =      m_node->wdat_raw(); if (!bxw_rawptr) return BXE_NOWDAT
 #define BXW_GETV(S) sthg * bxw_rawptr =      m_node->wdat_raw(); if (!bxw_rawptr) return log("BUG: %s: no wdat", (S))
@@ -43,6 +44,7 @@ class BoxGen {
 		virtual int df_ui_ix() const { return 0; }
 		virtual int ifflg() const { return 0; }
 		virtual int mxc_notify(int ky, int f) { return log("BUG: mxc_notify undefined"), BXE_WTF; }
+		virtual BoxGen * qcp3(ABoxNode * nd) { return 0; }
 
 		inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_node->id(); }
 		inline ABoxNode* node() const { return m_node; }

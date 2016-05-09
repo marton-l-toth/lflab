@@ -265,6 +265,7 @@ class AWrapGen : public BoxGen {
 		virtual void set_model() { bug("wr: set_model() called"); }
 		virtual int mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0;
 						     return 0; }
+		virtual int ifflg() const { return BIF_QCP; }
 		inline int pflg() { return m_bflg & WRF_PASS; }
 		void delayed_clip_upd();
 		int key_op(int k, int op, const char * xys, int nof);
@@ -322,6 +323,7 @@ class DWrapGen : public AWrapGen {
 		virtual int save2(SvArg * sv); 
 		virtual void spec_debug();
 		virtual void notify_nio(BoxGen * bx);
+		virtual BoxGen * qcp3(ABoxNode * nd) { return new (ANode::a64()) DWrapGen(nd, this); }
 		virtual int save_sob(SvArg *p);
 		virtual void wdat_cons(sthg * p);
 		virtual int start_job_3(JobQ::ent_t * ent, char * arg);
@@ -1525,7 +1527,6 @@ BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB,
 #define WARG  (static_cast<AWrapGen*>(bx))
 #define WARGD (static_cast<DWrapGen*>(bx))
 int setbox_wrap(ABoxNode *nd, BoxGen*_) { return new (ANode::a64()) DWrapGen(nd), nd->etc()->i[0]=INT_MAX, 3; }
-int setbox_wrap_qcp (ABoxNode * nd, BoxGen * bx) { return new (ANode::a64()) DWrapGen(nd, WARGD), 3; }
 int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) { 
 	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {

@@ -119,6 +119,7 @@ NDE_GUARD    invalid usage of guard node
 NDE_NOLIB    a complete save cannot be loaded as library
 NDE_EXPVIRG  loading of libraries only possible in empty state
 NDE_SLROOT   whole object tree (root node) cannot be saved as library
+NDE_NOQCP    quick copy not available for this object (BUG)
 NDE_SORRY    sorry not yet implemented (node)
 S2__________ __________________________________________________________(BUG)__
 GCE_WTF      you just have found a bug (cmd)

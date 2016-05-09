@@ -1323,7 +1323,7 @@ int Node::obj_help(int cl) {
 	return nd->draw_window(16);
 }
 
-sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc, setbox_it;
+sbfun_t setbox_wrap, setbox_graph, setbox_calc, setbox_it;
 
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
@@ -1332,6 +1332,13 @@ int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
 	t24 = &(g1 = new (ANode::aN())TGuardNode(nd,15))->m_u24.t; t24->pv=g0; t24->ct='t'; t24->j=0x7fffffff;
 	g1->m_next=0; g0->m_next=g1;
 	return nd->m_box = trk_mk(nd, g0, g1), 4;
+}
+
+ABoxNode * Node::qcp2(BoxGen *bx) {
+	if (!bx || !(bx->ifflg()&BIF_QCP)) return 0;
+	ABoxNode *ndf = bx->node(), *ndt = new (ANode::aN()) LBoxNode(ndf->cl_id());
+	return bx->qcp3(ndt) ? (memcpy(ndt->etc(),ndf->etc(),8), ndt->set_ui_f(ndf), ndt) 
+			     : (ANode::fN(ndt), (ABoxNode*)0);
 }
 		
 int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, BoxGen* from) {
@@ -1349,8 +1356,8 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'i': nd = bnd = new (ANode::aN()) LBoxNode('i'); sbf = setbox_it; break;
 		case '_': nd = bnd = new (ANode::aN()) LBoxNode('_'); sbf = sb_btin; break;
 		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk; break;
-		case 'W': nd = bnd = new (ANode::aN()) LBoxNode('w');
-			  memcpy(bnd->etc(), from->node()->etc(), 8); sbf = setbox_wrap_qcp; break;
+		case 'W': if (!(nd = bnd = qcp2(from))) return from ? NDE_NOQCP : NDE_WTF;
+			  break;
 		case '!': nd	   = new (ANode::aN()) TGuardNode(); 
 			  log("BUG: Node::mk(tguard)"); gui2.errq_add(NDE_WTF); break;
 		default: return NDE_UTYPE;
@@ -1381,11 +1388,10 @@ int Node::copy(ANode * p, ANode * to, const char * name, int i, int j) {
 	if (!up) return NDE_NOROOT;
 	if (!(i&NOF_FORCE) && !(to2->perm_ed())) return NDE_PERM;
 	if (hier(p, to)) return NDE_HIERCP;
-	ANode * trg = 0; int tid, ec;
-	switch(p->cl_id()) {
-		case '_': return NDE_BTCOPY;
-		case 'w': return (ec=mk(&trg, to2, name, 'W', i, j, p->box0()))<0 ? ec : trg->id();
-		default: break;
+	ANode * trg = 0; int tid, ec, cl = p->cl_id();
+	if (BoxGen * bx = p->box0()) {
+		if (cl=='_') return NDE_BTCOPY;
+		if (bx->ifflg()&BIF_QCP) return (ec=mk(&trg, to2, name, 'W', i, j, bx))<0 ? ec : trg->id();
 	}
 	SvArg * sv = &ANode::m0_sv; if (sv->rn) return NDE_LOCK;
 	if ((ec = Node::mk(&trg, to2, name, p->cl_id(), i&~NOF_FGUI, j, 0))<0) return ec; else tid = trg->id();
