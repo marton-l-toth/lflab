@@ -79,6 +79,7 @@
 #define ND_NAME(s,n) char s[24]; s[n->get_name(s)] = 0
 #define CLIP_DRAW_F(x) if (!((x)->winflg()|WF_CLIP)) (x)->draw(); else
 #define VFUN_I(nm,r) virtual int nm() { return (r); }
+#define STC_BOX(ND,TY) (static_cast<TY##Gen*>(static_cast<ABoxNode*>(ND)->box()))
 
 class ANode; class ADirNode; class NDirNode; class ClipNode; class ABoxNode;
 class BoxEdge; class BoxGen; class CmdBuf;

@@ -485,7 +485,7 @@ int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*
 
 int trk_cut_time(BoxGen *bx, int t) {
 	ABoxNode * p = bx->node();  if (memcmp(p->cth(), "wt", 2)) return TKE_INVCUT;
-	int bp10m = static_cast<TrackGen*>(static_cast<ABoxNode*>(p->up())->box())->m_bp10m;
+	int bp10m = STC_BOX(p->up(), Track) -> m_bp10m;
 	p->etc()->i[0] = (int)lround((double)t * (double)bp10m*.1/natural_bpm);  return 0; }
 		
 int trk_glob_paste(BoxGen *bx, int nof) { return !trgp_node ? EEE_NOEFF : 
