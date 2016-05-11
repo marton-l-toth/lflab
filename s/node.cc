@@ -1331,7 +1331,7 @@ int Node::obj_help(int cl) {
 	return nd->draw_window(16);
 }
 
-sbfun_t setbox_wrap, setbox_shwr, setbox_graph, setbox_calc, setbox_it;
+sbfun_t setbox_wrap, setbox_shwr, setbox_shtg, setbox_graph, setbox_calc, setbox_it;
 
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
@@ -1364,15 +1364,15 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'c': sbf = setbox_calc;  goto lb;
 		case 'i': sbf = setbox_it;    goto lb;
 		case '_': sbf = sb_btin;      goto lb;
-		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk; goto ndok;
-		case 'W': if (!(nd=bnd=qcp2(from))) return from ? NDE_NOQCP:NDE_WTF; else goto ndok;
-		case '!': nd	   = new (ANode::aN()) TGuardNode(); 
-			  log("BUG: Node::mk(tguard)"); gui2.errq_add(NDE_WTF); goto ndok;
+		case 'S': sbf = setbox_shtg; ty='s';  goto lb;
+		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk;  goto ndok;
+		case 'W': if (!(nd=bnd=qcp2(from))) return from ? NDE_NOQCP:NDE_WTF; goto ndok;
+		case '!': return log("BUG: Node::mk(tguard)"), NDE_WTF;
 		default: return NDE_UTYPE;
 	}
 lb:   	nd = bnd = new (ANode::aN()) LBoxNode(ty);
 ndok:	if ((ec=up->add(nd, name, i, j)) < 0) return ANode::fN(nd), ec;
-	if (sbf) bnd->m_ui.set(BoxUI_default((*sbf)(bnd, from)));
+	if (sbf) { if ((ec=(*sbf)(bnd, from))<0) return ec; else bnd->m_ui.set(BoxUI_default(ec)); }
 	m0_slr_flg |= up->winflg(WF_2SEL);
 	(i&NOF_FGUI) && (shl_add(nd), ty!='W') && nd->draw_window(16);
 	if (rr) *rr = nd; return 0;

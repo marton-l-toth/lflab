@@ -232,6 +232,7 @@ class ANode {
 
 class SOB {
         public:
+		static const int sflg = 0; // 1: coll
                 inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + (m_u8_flg4_own&0xfffff); }
                 int is_save_trg(SvArg * sv) {
                         return !(m_u8_flg4_own&SOBF_LIB) && m_visitor!=sv->vis; }
@@ -281,7 +282,7 @@ template <class T> class SOB_p {
                         }
                         if (!(xnd = m_p->owner())) return sv->st2=-1, 1;
                         CHKERR(sobref_h(sv));   CHKERR(xnd->sv_path('\n'));
-                 qdone: sv->st2 = -1; if (!(sv->st&7)) sv->st += 7;
+		 qdone: sv->st2 = -1; if (T::sflg & 1) sv->st |= 7;
                         return r;
                 }
 		void debug() { if (m_p) m_p->debug1(), m_p->debug2(); else log("SOB: NULL"); }
@@ -369,6 +370,7 @@ class NameVec : public SOB {
 class BoxUI : public SOB {
         public:
                 SOBDEF_64(BoxUI);
+		static const int sflg = 1;
                 BoxUI(int uarg) : SOB(uarg) {}
                 BoxUI(const BoxUI * that, int uarg);
 		~BoxUI() {}

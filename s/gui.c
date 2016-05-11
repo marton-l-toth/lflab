@@ -2278,8 +2278,10 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
-"({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
-"({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", "({Y0mute$XT_}{L1t:}3{e28$XTT})",
+"({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}"
+ "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
+"({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
+"({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS)",
 "({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})"};
 return parse_w_s(ww->top, str[ix]); }
 
@@ -2299,7 +2301,7 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	"3[3{+#XG.}0{__}]0"
 	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{B_plot(t)$XPT})"
 	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{B_plot(F)$XPF})])"
-		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:tlim$XWt2}%s)])" "%s]";
+		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", ""};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}", "{L_later}"};
