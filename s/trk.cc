@@ -300,6 +300,7 @@ int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y
 			  return ((ec = Node::move(q, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) ? ec :
 			   (sel0w(bxw_rawptr, q->cth()->i, q->cth()->j), TR_SEL_ID=id, w_sel(bxw_rawptr), ec);
 		case 'N': return Node::mk(0, m_node, 0, 'w', y|cb->cnof(), x);
+		case 'S': return Node::mk(0, m_node, 0, 's', y|cb->cnof(), x);
 		case 'v': if (!(nd = ClipNode::kcp(2)->ent_sel())) return EEE_NOEFF;
 			  if ((id = Node::copy(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) return id;
 			  return TR_SEL_ID=id, sel0w(bxw_rawptr, y, x), w_sel(bxw_rawptr), 0;

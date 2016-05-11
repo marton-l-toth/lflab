@@ -969,14 +969,14 @@ int ABoxNode::save1() {
 	SvArg * p = &m0_sv;
 	if (!p->st && m_visitor==p->vis) return p->cn = (p->st = !m_next) ? m_up : m_next, 1;
 	if (debug_flags & DFLG_SAVE) sv_dump1("box");
-	int ec, r = 1;
+	int ec, r = 1, wf = p->flg & SVF_WRAP;
 	BoxEdge * eg = 0; ANode * snl;
 
 	if (p->st > 7) return save_sob();
 	if ((p->st & 1)) { switch(p->st) { 
 		case 1:goto s1;case 3:goto s3;case 5:goto s5;default:return NDE_WTF; }}
 	m_visitor = p->vis; m_winflg &= 0x1fffffff; m_winflg |= p->st << 29;
-	for (eg = m_ef0; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg;
+	if (!wf) { for (eg = m_ef0; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg; }
 s5:	CHKERR(sv_cre()); m_winflg |= WF_SVNC; if (debug_flags & DFLG_SAVE) log("svnc_flg set1: 0x%x", m_id); 
 	p->st = 8; p->st2 = 0; CHKERR(save_sob()); return r;
 s3:	if ((snl = sn_list(&m0_sv.wl))) log("BUG: unexp. non-wrap subbox 0x%x, skipped", snl->id()); // TODO
@@ -987,7 +987,15 @@ s1:	if ((ec=m_box->save2(&m0_sv)) < 0) return ec; else r += ec;
 	for (eg = m_et0->fr_n; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg;
 	if (debug_flags & DFLG_SAVE) log("bxsv/s1: 0x%x: ret 0x%p", m_id, m_et0->fr);
 	p->cn = m_et0->fr; p->st = 5; return r;
-edg:	Node::eg_splice(eg); p->st = 2; p->cn = eg->to; return r + 5;
+edg:	Node::eg_mv_to0(eg); p->st = 2; p->cn = eg->to; return r + 5;
+}
+
+int ABoxNode::sv_wr_backref() {
+	AOBuf * f = m0_sv.out;
+	int ec, r=1;  ABoxNode * fnd;
+	for (BoxEdge * eg = m_et0; eg && (fnd=eg->fr)->m_visitor==m0_sv.vis; eg = eg->to_n) {
+		CHKERR(f->sn("X$<", 3)); CHKERR(fnd->sv_path(10)); }
+	return r;
 }
 
 int ABoxNode::save_sob() {
@@ -1037,7 +1045,7 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 }
 
 int ABoxNode::draw_window_2(int x) {
-	if (!m_box) return NDE_NULLBOX;
+	if (!m_box) return NDE_NULLBOX; else Node::shl_add(this);
 	switch(x) {
 		case 0: case 0xb: return m_box->box_window(), 16*cl_id() + 0xb;
 		case 0x9: return m_box->aux_window();
@@ -1432,23 +1440,27 @@ int Node::conn(ABoxNode * fr, ABoxNode * to) {
         int ec = to -> find_fw(fr, 0); return (ec<0) ? ec : conn2(fr, to);
 }	
 
+#define E_CFR0 (p0 = p->fr_n = fr->m_ef0, fr->m_ef0 = p, (p0) ? (p0->fr_p = p) : (fr->m_efz = p))
+#define E_CTO0 (p0 = p->to_n = to->m_et0, to->m_et0 = p, (p0) ? (p0->to_p = p) : (to->m_etz = p))
+#define E_DCFR (pp0=(p0=p->fr_p)?&p0->fr_n:&fr->m_ef0, pp1=(p1=p->fr_n)?&p1->fr_p:&fr->m_efz, *pp0=p1, *pp1=p0)
+#define E_DCTO (pp0=(p0=p->to_p)?&p0->to_n:&to->m_et0, pp1=(p1=p->to_n)?&p1->to_p:&to->m_etz, *pp0=p1, *pp1=p0)
+
 int Node::conn2(ABoxNode * fr, ABoxNode * to) {
-        BoxEdge *p0, *p = new (ANode::a64()) BoxEdge(fr, to);
-        p0 = p->fr_n = fr->m_ef0; fr->m_ef0 = p; if (p0) p0->fr_p = p; else fr->m_efz = p;
-        p0 = p->to_n = to->m_et0; to->m_et0 = p; if (p0) p0->to_p = p; else to->m_etz = p;
-        return 1;
-}
+        BoxEdge *p0, *p = new (ANode::a64()) BoxEdge(fr, to); return E_CFR0, E_CTO0, 1; }
 
 int Node::disconn(ABoxNode * fr, ABoxNode * to) {
 	BoxEdge * p = find_edge(fr, to); return p ? (--p->cnt ? p->cnt : disconn2(fr, to, p))
 					          : (log("BUG: node/disconnect failed"), 0); }
 
 int Node::disconn2(ABoxNode * fr, ABoxNode * to, BoxEdge * p) {
-        BoxEdge *p0, *p1, **pp0, **pp1;
-        p0=p->fr_p; p1=p->fr_n; pp0= p0?&p0->fr_n:&fr->m_ef0; pp1= p1?&p1->fr_p:&fr->m_efz; *pp0=p1; *pp1=p0;
-        p0=p->to_p; p1=p->to_n; pp0= p0?&p0->to_n:&to->m_et0; pp1= p1?&p1->to_p:&to->m_etz; *pp0=p1; *pp1=p0;
-        ANode::f64((char*)p); return 0;
-}
+        BoxEdge *p0, *p1, **pp0, **pp1; return E_DCFR, E_DCTO, ANode::f64((char*)p), 0; }
+
+void Node::eg_mv_to0(BoxEdge * p) { if (!(p->to_p)) return;
+	ABoxNode *to = p->to; BoxEdge *p0, *p1, **pp0, **pp1; E_DCTO, E_CTO0; }
+
+void Node::eg_f_mv_to0(ABoxNode * fr, ABoxNode * to) { 
+	BoxEdge * p = find_edge(fr, to); if (!p) return log("BUG: node/eg_f_mv_to0: find failed");
+	BoxEdge *p0, *p1, **pp0, **pp1; E_DCTO, E_CTO0; }
 
 int Node::set_conn_2(ABoxNode * fr, ABoxNode * to1, ABoxNode * to2) {
 	BoxEdge *e1, *e2; 
@@ -1464,18 +1476,6 @@ int Node::set_conn_2(ABoxNode * fr, ABoxNode * to1, ABoxNode * to2) {
 	if (e1->to==to1) to1=to2, to2=0; else if (e1->to==to2) to2=0; else disconn2(fr, e1->to, e1);
 	if (e2->to==to1) to1=to2, to2=0; else if (e2->to==to2) to2=0; else disconn2(fr, e2->to, e2);
 co:     return (to1 && conn(fr, to1)) + (to2 && conn(fr, to2));
-}
-
-// TODO: wraps-last (?)
-// 1 2 3 x -> x 1 2 3
-// 1 2 x 3 4 -> x 3 4 1 2
-
-void Node::eg_splice(BoxEdge * p) {
-	BoxEdge *pp = p->to_p; if (!pp) return;
-	ABoxNode *nd = p->to;
-	BoxEdge *p0 = nd->m_et0, *pz = nd->m_etz;
-	pz->to_n = p0, p0->to_p = pz;
-	nd->m_et0 = p; nd->m_etz = pp; p->to_p = pp->to_n = 0;
 }
 
 void Node::shl_add(ANode * nd) {

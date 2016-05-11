@@ -1098,24 +1098,21 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
 		"_F  A0W cW  _c-1_E  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
-{'/',7, 0, 7,1, "folder clipbrdinstr. graph  iter.f.calc   track  ","DCwgict"},
-{0,  9, 0,8,5,"load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
+{'/',8, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  ","DCwsgict"},
+{0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
 {'#',5, 0, 8, 3, "[focus] config  help    redraw  wav/flac", "$>*W$ N??M9 XAW"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',7, 0, 7,2, "help   info1  info2  info4  info*  GUI cfgdelete ", "N?I1I2I4I7EWNd"},
-{0, 24, 0, 8,13, ">@L/src >@R/src >clip/s.+anon/s.>@L/filt>@R/filt>clip/f.+anon/f.anon#00 anon#01 anon#02 "
-"anon#03 anon#04 anon#05 anon#06 anon#07 anon#08 anon#09 anon#10 anon#11 anon#12 anon#13 anon#14 anon#15 ",
-"$~C@L.wr$wb%@$~C@R.wr$wb%@$~C@C._$wb%@ Cw_$wb%@     "
-"$~C@L.wr$w>%@$~C@R.wr$w>%@$~C@C._$w>%@ Cw_$w>%@     $.Ww0        $.Ww1        $.Ww2        $.Ww3        $.Ww4        $.Ww5        "
-"$.Ww6        $.Ww7        $.Ww8        $.Ww9        $.WwA        $.WwB        $.WwC        $.WwD        $.WwE        $.WwF        "},
-{'T', 9, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew...  ", "txcv96CMN"},
+{'T',10, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)", "txcv96CMNS"},
 TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
-{0, 32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 loop5 loop6 "
-"loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20","103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
-{'K', 9, 0,5,6, "help info del/snew  -----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  ##    KZ    Nd    ######$.X*$AW"},
+{0,32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 "
+	    "loop5 loop6 loop7 loop8 loop9 loop10loop11loop12loop13loop14loop15loop16loop17loop18loop19loop20",
+			"103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
+{'K', 10,0,5,6, "help info del/snew dnew s-----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  Cs%K  ##    "
+								      "KZ    Nd    ######$.X*$A"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
 {'S', 1, 0,1,1, "??", "##" },
 {0,   3, 1,5,1, "availdelayretBS", "012"},

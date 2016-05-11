@@ -452,6 +452,7 @@ class ABoxNode : public ANode {
 		int dsc(char * to);
 		void ab_debug(int flg);
 		sthg * etc() { return &m_etc; }
+		int sv_wr_backref();
 	protected:
 		ABoxNode(int ty) : m_box(0), m_ef0(0), m_efz(0), m_et0(0), m_etz(0) { m_u24.s[0] = ty; }
 		virtual void del2();
@@ -548,7 +549,8 @@ class Node {
 		static int conn(ABoxNode * fr, ABoxNode * to);
 		static int disconn(ABoxNode * fr, ABoxNode * to);
 		static int set_conn_2(ABoxNode * fr, ABoxNode * to1, ABoxNode * to2);
-		static void eg_splice(BoxEdge * p);
+		static void eg_mv_to0(BoxEdge * p);
+		static void eg_f_mv_to0(ABoxNode * fr, ABoxNode * to);
 
 		static void shl_add(ANode * nd);
 		static void shl_rm(ANode * nd);
@@ -572,9 +574,9 @@ class Node {
 		static void ini_echo(ANode * e0);
 		static int conn2(ABoxNode * fr, ABoxNode * to);
 		static int disconn2(ABoxNode * fr, ABoxNode * to, BoxEdge * p);
-		static void contrib_init(ANode * r);
 		static int hier(ANode * up, ANode *dn);
 		static ABoxNode * qcp2(BoxGen *bx);
+		static void contrib_init(ANode * r);
 
 		static unsigned int m0_visitor;
 		static int m0_slr_flg;
