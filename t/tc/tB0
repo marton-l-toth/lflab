@@ -19,7 +19,7 @@
 0000 N`.`2$W`.!b`
 102e N`.!b`2$*`.!b.imp`
 0840 V`.tB.k`3$Kac1
-05b3 m:new
+05b3 m:new d
 2134 V`.tB.k.0`b$wS02c1
 0322 m:_> ^1
 0950 V`.tB.k.0`b$wTe
@@ -32,7 +32,7 @@
 0123 V`.tB.k.0`b$wTe.01
 0fbe Y`.tB.k.0`B$w
 03d7 V`.tB.k`3$Kac1
-04eb m:new
+04eb m:new d
 0ed2 V`.tB.k.1`b$wS02c1
 1df8 m:_> ^gauss
 1264 V`.tB.k.1`b$wS04c1
@@ -86,7 +86,7 @@
 0d92 Y`.tB.k.1`B$w
 127f N`.!b`2$*`.!b.wave`
 2718 V`.tB.k`3$Kac1
-0ab1 m:new
+0ab1 m:new d
 29ce V`.tB.k.3`b$wS02c1
 219c m:_> ~sin
 106d V`.tB.k.3`b$wS04c1

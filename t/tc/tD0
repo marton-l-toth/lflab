@@ -20,7 +20,7 @@
 02d9 V000017$/Tc1
 03cd m:clipbrd
 0fb8 V`.tD.k`3$Kac1
-09ef m:new
+09ef m:new d
 0777 N`.`2$<`.!b`
 0777 N`.!b`2$*`.!b.imp`
 0952 V`.tD.k.0`b$wS02c1
@@ -85,7 +85,7 @@
 0e7f Y`.tD.k.9`B$w
 7be7 V`.tD.k`3$KKc1,230d9
 09c5 V`.tD.k`3$Kac1
-08ee m:new
+08ee m:new d
 1840 N`.!b`2$<`.!b.filt`
 bb76 N`.!b.filt`2$*`.!b.filt.echo`
 0e3a V`.tD.k.7`b$wZ02c1
