@@ -485,7 +485,7 @@ void trk_bkm_rm(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_rm(
 int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*>(abx)->cond_pm(nd, pm); }
 
 int trk_cut_time(BoxGen *bx, int t) {
-	ABoxNode * p = bx->node();  if (memcmp(p->cth(), "wt", 2)) return TKE_INVCUT;
+	ABoxNode *p = bx->node(); if (!p->is_wrap() || p->cth()->ct!='t') return TKE_INVCUT;
 	int bp10m = STC_BOX(p->up(), Track) -> m_bp10m;
 	p->etc()->i[0] = (int)lround((double)t * (double)bp10m*.1/natural_bpm);  return 0; }
 		
@@ -498,7 +498,7 @@ int trk_rec(ANode * nd, int mxbi) {
 			   : (rec_t0 = snd0.total_played(), rec_mode=1, 0),
 	    r = Node::mk(&cpnd, trk_rec_trg->node(), 0,'W', rec_line, rec_x0+t, bx0);
 	if (r<0 || (r = mx_tr_add(mxbi, cpbx=static_cast<ABoxNode*>(cpnd)->box()))<0) return r;
-	wrap_set_trec(cpbx, r); return 0;
+	wrap_set_trec(cpbx, r); return mxbi;
 }
 
 void track_init() { TrackGen::cmd_init(); }

@@ -24,6 +24,7 @@
 #define WRF_S_NO   0x00000f80 // bxD
 #define WRF_F_NI   0x0001f000 // bxD
 #define WRF_F_NO   0x003e0000 // bxD
+#define WRF_VFL    0x0000037c // bxS
 #define WRF_W_ALL  0x30000000
 #define WRF_W_SH   28
 #define WRF_NOREC  0x00000100 // 2m
@@ -38,7 +39,7 @@
 #define WRF_V89    256        // v11
 #define WRF_V10    512        // v11
 #define WRF_V11A   768        // v11
-#define WRF_GRMODE 3	      // bx
+#define WRF_GRMODE 3	      // bx*
 #define DBGC  (debug_flags&DFLG_WRAP)
 #define DBGCV (debug_flags&DFLG_VOLTAB)
 
@@ -398,7 +399,9 @@ class SWrapGen : public AWrapGen {
 		void w_sob(int ix, int sl) { log("shw/w_sob"); }
 		void w_trg2(){ gui2.setwin(w_oid(),'w'); gui2.ref_title('E', BoxGen::node0(m_trg),3,"target");}
 		void w_trg() { gui2.setwin(w_oid(),'w'); gui2.own_title(); w_mini(); w_trg2(); }
-		BXCMD_DECL(SWrapGen) c_trg, c_so;
+		void w_vfl() { BXW_GETV("vfl"); if (WR_WLG&1) gui2.setwin(w_oid(),'w'), gui2.t_sn("!",1),
+							      gui2.hexn(m_bflg>>2,2); }
+		BXCMD_DECL(SWrapGen) c_trg, c_so, c_vfl;
 		SOB_p<WrapCore> m_core;
 		SOB_p<SWrapSOB> m_ssob;
 		AWrapGen * m_trg;
@@ -1336,9 +1339,8 @@ int DWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs)
 	if (v0f) in[0] = in[1] = 1.0;
 	if (flg & WRF_MONO) in[5] = 0.0, in[0] *= M_SQRT2;
 	int ocb = no>1 ? 0x402 : 0x7c01; // TODO
-	int r = mx_add_box(trg, m_sfbx[0]->mk_box(), udio, in, ocb, dly, lim); if (r<0) return r;
-	if (trf) trk_rec(m_node, r);
-	return r;
+	int r = mx_add_box(trg, m_sfbx[0]->mk_box(), udio, in, ocb, dly, lim); 
+	return (r<0 || !trf) ? r : trk_rec(m_node, r);
 }
 
 int DWrapGen::qdiff(DWrapGen * that) {
@@ -1568,14 +1570,14 @@ BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB ,
 
 SWrapGen::SWrapGen(ABoxNode * nd) : AWrapGen(nd) {
 	m_ssob.set(SWrapSOB_default(0)); m_trg = 0; 
-	m_core.set(WrapCore_default(0)); m_bflg |= WRF_SHADOW|3; delayed_clip_upd(); }
+	m_core.set(WrapCore_default(0)); m_bflg |= WRF_SHADOW|12; delayed_clip_upd(); }
 
 SWrapGen::SWrapGen(ABoxNode * nd, const SWrapGen * p) : AWrapGen(nd, p) {
 	m_ssob.from(p->m_ssob); m_core.from(p->m_core); m_trg = p->m_trg; 
 	upd_conn(); delayed_clip_upd(); }
 
 SWrapGen::SWrapGen(ABoxNode * nd, AWrapGen * p, int flg) : AWrapGen(nd) {
-	m_bflg |= WRF_SHADOW|3; m_ssob.set(SWrapSOB_default(0)); m_trg = p; Node::conn(nd, p->node());
+	m_bflg |= WRF_SHADOW|12; m_ssob.set(SWrapSOB_default(0)); m_trg = p; Node::conn(nd, p->node());
 	m_core.set(p->core_ro()); memcpy(m_xys6, p->m_xys6, 8); delayed_clip_upd(); }
 
 int SWrapGen::set_trg(AWrapGen* aw) {
@@ -1601,8 +1603,7 @@ int SWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs)
 	BVFOR_JM(flg&255) v8[j] = vs[nv++];
 	m_core.ro()->i2v(v8, m_xys6, flg);
 	int r = m_trg->add2mx_txdlv(trg, flg|(255|WRF_NOREC), dly, lim, v8);
-	if (r>=0 && !(flg&WRF_NOREC) && !trg && trk_rec_trg) trk_rec(m_node, r);
-	return r;
+	return (r<0 || (flg&WRF_NOREC) || trg || !trk_rec_trg) ? r : trk_rec(m_node, r);
 }
 
 int SWrapGen::save_sob(SvArg *p) { switch(p->st) {
@@ -1631,7 +1632,7 @@ int SWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 	if (of)                      gui2.wupd_0(gc, "S><$XW", 4), gui2.c1(48 + ix);
 	else gui2.wupd_0(gc, ".+1"), gui2.wupd_0(gc, "S<>$XW", 4), gui2.c1(52 + ix);
 	switch (ix) {
-		case 0:  if (of) gui2.wupd_0(gc, ".+"), gui2.c1(58), gui2.t_sn("!",1), gui2.hexn(m_bflg,2);
+		case 0:  if (of) gui2.wupd_0(gc, ".+"), gui2.c1(58), gui2.t_sn("!",1), gui2.hexn(m_bflg>>2,2);
 			 w_trg2(); return 0;
 		default: return BXE_WTF;
 	}}
@@ -1648,8 +1649,14 @@ CH(so){	if (!s[1]||!s[2]) return BXE_NOARG;
 	int i = s[1]&7,  ec = nd ? p->sob_from(i, nd->box0()) : BXE_ARGLU;
 	if (ec>=0) p->w_sob(i, 1), p->w_slbv(2); return ec; }
 
+CH(vfl){if (s[1]==42&&s[2]) { p->m_bflg &= ~255; p->m_bflg |= hex2(s+2); if (p->wnfl()) p->w_vfl(); return 0; }
+	int c, m, j = s[1]-48; if (j&~7) return BXE_PARSE; else m = 4<<j;
+	if ((c=s[2]&1)) p->m_bflg |= m; else p->m_bflg &= ~m;
+	if (p->wnfl()) { BXW_GETP(p); if (WR_WLG&1) gui2.setwin(p->w_oid(),'w'), gui2.wupd_i1('E', c, 8+j); }
+	return 0; }
+
 BXCMD_DEF(SWrapGen) { {8192+'\\', 0}, AW_CTAB, 
-	{'>', c_trg}, {'O', c_so}, {0, 0} };
+	{'>', c_trg}, {'O', c_so}, {'v', c_vfl}, {0, 0} };
 
 ///////////// export /////////////////////////////////////////////////////////////
 
