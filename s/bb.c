@@ -477,11 +477,11 @@ static void at_random() {
 
 static void at_main(const char * opt) {
 	int i,j,k, flg = (*opt=='-') ? (opt+=2, hxd2i(opt[-1])) : 0;
-	at_dir(opt);
-	if (flg&1) for (i=0; i<at_n; i++) qp1_tij(200, i, 0);
-	if (flg&2) for (i=0; i<at_n; i++) for (j=1,k=at_k[i]; j<k; j++) qp1_tij(200, i, j);
-	if (flg&4) for (i=0; i<at_n; i++) at_random();
-	if (flg&8) for (i=0; i<at_n; i++) qp1_tij(200, i, -1);
+	at_dir(opt), write(1, "_m\n", 3);
+	if (flg&1) for (i=0; i<at_n; i++) qp1_tij(200, i, 0), write(1, "_m\n", 3);
+	if (flg&2) for (i=0; i<at_n; i++) for (j=1,k=at_k[i]; j<k; j++) qp1_tij(200, i, j), write(1, "_m\n", 3);
+	if (flg&4) for (i=0; i<at_n; i++) at_random(), write(1, "_m\n", 3);
+	if (flg&8) for (i=0; i<at_n; i++) qp1_tij(200, i, -1), write(1, "_m\n", 3);
 }
 
 static int q_main(int ac, char** av) {
