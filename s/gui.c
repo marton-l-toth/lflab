@@ -56,9 +56,12 @@
 #define DF_WIDG 512
 #define DF_MENU 1024
 #define DF_REC  2048
+#define DF_CHOO 4096
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
-#define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]));
+#define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]))
+#define RGB_D3(C,A) cairo_set_source_rgb(C, (A)[0], (A)[1], (A)[2])
+#define MV_TXT(C,X,Y,S) (cairo_move_to(C,X,Y), cairo_show_text(C,S))
 
 #define EVMASK_DEF (GDK_BUTTON_PRESS_MASK | GDK_EXPOSURE_MASK)
 #define EVMASK_KEY (GDK_KEY_PRESS_MASK|GDK_KEY_RELEASE_MASK)
@@ -152,7 +155,7 @@ static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_c
 static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
-static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
+static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_s, calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
 
 static tw_cl tw_cltab[] = { {'?',0,NULL,NULL}, 
 	{'.', TWF_UNDEAD|TWF_ABOVE, mwin_skel, NULL },
@@ -216,8 +219,8 @@ static int conf_portwid;
 
 static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
-static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf\n"
-			     "40:track 80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec";
+static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf 40:track\n"
+			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -951,11 +954,13 @@ static void choo_ucmd(const char * cmd, char * uri) {
 	write(1, uri+cpos-1, ulen+clen+2); g_free(uri);
 }
 
-static void choo_bye(GtkWidget *w, gpointer p) { ((choo_t*)p)->pg = NULL; LOG("choo_bye: %c", ((choo_t*)p)->ch&127);}
+static void choo_bye(GtkWidget *w, gpointer p) { 
+	((choo_t*)p)->pg = NULL; if (dflg&DF_CHOO)LOG("choo_bye: %c", ((choo_t*)p)->ch&127); }
+
 static void choo_resp(GtkDialog* choo, gint resp, void * p) {
 	GtkFileChooser * fc = GTK_FILE_CHOOSER(choo);
 	choo_t * q = (choo_t *)p;
-	LOG("choo choo resp %d \"%s\"", resp, choo ?  gtk_file_chooser_get_uri(fc) : "BUG"); 
+	if (dflg&DF_CHOO) LOG("choo resp %d \"%s\"", resp, choo ?  gtk_file_chooser_get_uri(fc) : "BUG"); 
 	switch(resp) {
 		case GTK_RESPONSE_HELP:   return CMD("W#2.win.fd.%s",(q->ch&512) ? "set directory" : q->title);
 		case GTK_RESPONSE_ACCEPT: return choo_ucmd(q->c0, gtk_file_chooser_get_uri(fc));
@@ -1373,6 +1378,7 @@ static void vbox_skel(struct _ww_t * ww, const char **pp) {
 	int ty = *((*pp)++); switch(ty) {
 		case 'w': ww->arg[3].p = &wrap_vbl_i; break;
 		case 'W': ww->arg[3].p = &wrap_vbl_t; break;
+		case 'S': ww->arg[3].p = &wrap_vbl_s; break;
 		case 'c': ww->arg[3].p = &calc_vbl; break;
 		case 'g': ww->arg[3].p = &gconf_vbl; break;
 		case 'd': ww->arg[3].p = &doc_vbl; break;
@@ -1671,7 +1677,7 @@ static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
 static void da_wr18(cairo_t * cr2, int xi, int yi, const char * s0, int xclip) {
 	//LOG("da_wr18: x=%d, y=%d, clp=%d", xi, yi, xclip);
 	if (!xclip) return;
-	double x = (double)xi, y = (double)yi, y2, rgb[6];
+	double x = (double)xi, y = (double)yi, y2, fg[6], *bg = fg+3;
 	char txt[9]; const char * s = s0;
 	if (s[2]=='0') {
 		cairo_set_source_rgb (cr2, .2, .2, .2);
@@ -1686,19 +1692,17 @@ static void da_wr18(cairo_t * cr2, int xi, int yi, const char * s0, int xclip) {
 	}
 	if (!*s) goto err;
 	double v = 0.8 * (double)aA2i(*(s++));
-	if ((*s++) != ':') goto err;
+	int shf = *(s++) - ':'; if (shf & ~1) goto err;
 	if (xclip<18) cairo_save(cr2), cairo_rectangle(cr2, x, y, (double)xclip, 44.0), cairo_clip(cr2);
-	for (i=0; i<6; i++) rgb[i] = RGB_C(*(s++));
-	cairo_set_source_rgb (cr2, rgb[3], rgb[4], rgb[5]);
-	cairo_rectangle(cr2, x+1.0, y+1.0, 16.0, 42.0);
-	cairo_fill(cr2);
-	cairo_set_source_rgb (cr2, rgb[0], rgb[1], rgb[2]);
+	for (i=0; i<6; i++) fg[i] = RGB_C(*(s++));
 	cairo_select_font_face (cr2, "monospace", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 	cairo_set_font_size(cr2, 10.0);
-	for (i=0, y2=y; i<3; i++) {
-		cairo_move_to(cr2, x+2.0, y2+12.0); y2 += 13.0;
-		cairo_show_text(cr2, txt+3*i);
-	}
+	if (shf) RGB_D3(cr2,fg), cairo_rectangle(cr2, x+1.0, y+1.0,  16.0, 14.0), cairo_fill(cr2),
+		 RGB_D3(cr2,bg), cairo_rectangle(cr2, x+1.0, y+15.0, 16.0, 28.0), cairo_fill(cr2), 
+		 MV_TXT(cr2,x+2.0,y+12.0,txt), RGB_D3(cr2, fg);
+	else	 RGB_D3(cr2,bg), cairo_rectangle(cr2, x+1.0, y+1.0,  16.0, 42.0), cairo_fill(cr2), 
+		 RGB_D3(cr2,fg), MV_TXT(cr2,x+2.0,y+12.0,txt);
+	MV_TXT(cr2, x+2.0, y+25.0, txt+3), MV_TXT(cr2, x+2.0, y+38.0, txt+6);
 	cairo_set_line_width (cr2, 1.0);
 	cairo_move_to(cr2, x+16.5, y+42.5);
 	cairo_line_to(cr2, x+16.5, y+41.5-v);
@@ -1862,15 +1866,14 @@ static void dalbl_mw18(ww_t * ww, const char * s) {
 	da_fullre(ww); }
 
 static void upd_flgvec(topwin * tw, const char* s, int n, int of, int nf) {
-	int ix = widg_lookup(tw, &s, 0);
-	if (ix<0) { LOG("upd_flgvec: widget not found"); return; }
-	int i, msk=1, sg=1; if (n<0) n = -n, sg = -1;
+	ww_t * ww0 = wlu_any_s(tw, s); if (!ww0) return LOG("upd_flgvec: widget not found");
+	int ix = ww0->ix, x, i, msk=1, sg=1; 
+	if (n<0) n = -n, sg = -1; if (of<0) of = ~nf;
 	for (i=0; i<n; i++, ix+=sg, msk<<=1) {
 		if (!(msk & (of^nf))) continue;
-		ww_t * ww = widg_p(tw, ix);
-		DABOOL(ww) = !!(msk&nf); da_fullre(ww);
-	}
-}
+		ww_t * ww = widg_p(tw, ix); 
+		if ((x=!!(msk&nf)) != DABOOL(ww)) DABOOL(ww) = x, da_fullre(ww);
+	}}
 
 static void dlbtn_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	if (b9==1) widg_defcmd(ww, ""); }
@@ -2258,8 +2261,8 @@ static void dawr1_cmd(struct _ww_t * ww, const char * arg) {
 
 GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 	static const char * head[3] = {
-		"({M0[$Xb|_03}{M1S$Xb|_013}{M2]$Xb|_023}3{C3280$1$eeeeee333333(...src...)}0{B4<>$XW5})",
-		"({M0[$X>|_03}{M1F$X>|_053}{M2]$X>|_023}3{C3280$1$eeeeee333333(...filter...)}0{B4<>$XW6})",
+		"({M0[$Xb|_03}{M1S$Xb|_013}{M2]$Xb|_023}3{C3280$1$kkkAAA(...src...)}0{B4<>$XW5})",
+		"({M0[$X>|_03}{M1F$X>|_053}{M2]$X>|_023}3{C3280$1$kkkAAA(...filter...)}0{B4<>$XW6})",
 		"(3{C1280$1$ttt666vol./envlp./LR}0{M2$XU|W3}{M3$XD|W4}{B4<>$XW4})"};
 	static const char s0[] = "({L0QW00}3{e19$Xi[]=}0"
 	"{M2$Xi[]s|W0}{M3$Xi[]f|W1}3{e49$Xi[]<}0"
@@ -2277,6 +2280,14 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 	return rw;
 }
 
+GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
+	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
+			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
+	topwin * tw = ww->top;
+	if (ix<2) return parse_w_s(tw, h[ix]);
+	return parse_w_s(tw, "(3{L0later..})");
+}
+
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
 "({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}"
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
@@ -2286,6 +2297,10 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] 
 return parse_w_s(ww->top, str[ix]); }
 
 static void wrap_cmd (struct _topwin * tw, char * arg) {
+	if (*arg<48) { switch(*arg) {
+		case '!': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return; 
+		default: return LOG("wrap_cmd: unknown cmd 0x%x/%c", *arg, *arg);
+	}}
 	int i, ix = hex2(arg), flg = hex2(arg+2), sh = (ix>>2)&24, j = (ix+(0x7000101>>sh)) & 31;
 	ww_t *p, *ww = widg_lookup_pci(tw, (0x455a4553 >> sh) & 127, -1);
 	int wi = VB_WBASE(ww) + j * VB_WPL(ww);
@@ -2304,7 +2319,8 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", ""};
-static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}", "{L_later}"};
+static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
+				     "{:YW5:0}{:ES:80}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
@@ -3562,8 +3578,7 @@ static void gr_draw_edge(cairo_t * cr, gr_dat * dat, int i) {
 	double xo = dat->x0, yo = dat->y0, sx = dat->scx, sy = dat->scy;
 	float * p = ed->p; if (!p) { LOG("gr_draw_edge: #%d empty", i); return; }
 	int j, n = ed->len;
-	double rgb[3]; get_rgb8(rgb, 45*i, 1.0);
-	cairo_set_source_rgb(cr, rgb[0], rgb[1], rgb[2]);
+	double rgb[3]; get_rgb8(rgb, 45*i, 1.0); RGB_D3(cr, rgb);
 	cairo_move_to(cr, xo + sx*p[0], yo + sy*p[1]);
 	for (j=1; j<n-2; j+=3) cairo_curve_to(cr, xo+sx*p[2*j  ], yo+sy*p[2*j+1],
 					 	  xo+sx*p[2*j+2], yo+sy*p[2*j+3],
@@ -3616,7 +3631,7 @@ static void gr_draw_node(cairo_t * cr, gr_dat * dat, int i) {
 	if (y01 < y02) {
 		cairo_set_source_rgba (cr, .0, .0, .0, .667);
 		cairo_rectangle(cr, x0, y01, x01-x0, y02-y01); cairo_fill(cr);
-		cairo_set_source_rgb(cr, RGB_C(nd->rgb[3]), RGB_C(nd->rgb[4]), RGB_C(nd->rgb[5]));
+		RGB_C3(cr, nd->rgb+3); 
 		cairo_rectangle(cr, x01+1.0, y01+1.0, x1-x01-2.0, y02-y01-2.0); cairo_fill(cr);
 		char buf[4]; buf[1] = buf[3] = 0;
 		cairo_set_font_size(cr, conf_lbfs_s); cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
@@ -3625,7 +3640,7 @@ static void gr_draw_node(cairo_t * cr, gr_dat * dat, int i) {
 		cairo_show_text(cr, buf);
 		cairo_move_to(cr, x0+3.0, y01 + (double)(23+FONT_OFFS(conf_lbfs_s)));
 		cairo_show_text(cr, buf + 2);
-		cairo_set_source_rgb(cr, RGB_C(nd->rgb[0]), RGB_C(nd->rgb[1]), RGB_C(nd->rgb[2]));
+		RGB_C3(cr, nd->rgb);
 		tx_box_split(cr, x01, y01, x1-x01, y02-y01, 30, nd->nm);
 		cairo_set_source_rgb (cr, .667, .667, .667); cairo_set_line_width(cr, 1.0);
 		cr_line(cr, x01+.5, y01, x01+.5, y02); cairo_stroke(cr);

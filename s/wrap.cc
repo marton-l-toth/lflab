@@ -306,8 +306,7 @@ class AWrapGen : public BoxGen {
 		inline int add2ctl(int mxbi, int mxky) {
 			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
 		int save2_aw(SvArg * sv);
-		void gr_rgbc() { char buf[4]; gui2.c1('M'); get_nm2(buf); gui2.sn(buf, 2); 
-			         gui2.sn(v_rgb(), 6); }
+		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(v_rgb(),6); }
 		int plot_t(double t0, double t1, int n);
 		int plot_f(double t0, double t1, double f0, double f1, int n, bool zpad);
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
@@ -364,7 +363,6 @@ class DWrapGen : public AWrapGen {
 		int set_sf_2(int ff, BoxGen * bx);
 		void upd_updn(int flg);
 		int grid_cmd(const char * s);
-		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(v_rgb(),6); }
 		void w_sob(int ix, int sl);
 		void w_avol(int f, unsigned char * s);
 		int wupd1(int col, int ix1, int ix2 = 333);
@@ -388,16 +386,18 @@ class SWrapGen : public AWrapGen {
 		virtual int add2mx_txdlv(int trg, int xflg, int dly, int lim, const double *vs);
 		virtual WrapCore * core_ro() { return m_core.ro(); } 
 		virtual WrapCore * core_rw() { return SOB_RW(core); }
-		virtual int wlg(sthg * bxw_rawptr, int ix, int flg) { return BXE_WLGDONE; }
+		virtual const char * v_rgb() { return m_trg ? m_trg->v_rgb() : "EEE%%%"; }
 		int sob_from(int ix, BoxGen * bx0);
 		int set_trg(AWrapGen * q);
 	protected:
-		void upd_conn() {Node::set_conn_2(m_node, BoxGen::node0(m_trg), 0); }
-		void w_sob(int ix, int sl) { log("shw/w_sob"); }
-		void w_trg() { log("shw/w_trg"); }
 		virtual int show_tab_2(sthg * bxw_rawptr, int i) { return BXE_CENUM; }
+		virtual int wlg(sthg * bxw_rawptr, int ix, int flg);
 		virtual void w_col0(int flg) {}
 		virtual int sl_bv() { return 63; }
+		void upd_conn() {Node::set_conn_2(m_node, BoxGen::node0(m_trg), 0); }
+		void w_sob(int ix, int sl) { log("shw/w_sob"); }
+		void w_trg2(){ gui2.setwin(w_oid(),'w'); gui2.ref_title('E', BoxGen::node0(m_trg),3,"target");}
+		void w_trg() { gui2.setwin(w_oid(),'w'); gui2.own_title(); w_mini(); w_trg2(); }
 		BXCMD_DECL(SWrapGen) c_trg, c_so;
 		SOB_p<WrapCore> m_core;
 		SOB_p<SWrapSOB> m_ssob;
@@ -1000,7 +1000,8 @@ int AWrapGen::show_tab(int i) {
 	}}
 
 void AWrapGen::box_window() {
-	gui2.cre(w_oid(), 'w'); gui2.own_title(); show_tab(-1); w_mini(); w_gmd();
+	gui2.cre(w_oid(), 'w'); if (m_node->cl_id()=='s') gui2.c1('s');
+	gui2.own_title(); show_tab(-1); w_mini(); w_gmd();
 	WrapCore * cr = core_ro();
 	const float * p = cr->tf01;
 	for (int i=0; i<4; i++) gui2.wupd_d((0x46665474>>(8*i))&127, (double)p[i]);
@@ -1056,7 +1057,7 @@ void AWrapGen::delayed_clip_upd() {
 
 int AWrapGen::mini(char *to) {
 	get_nm2(to); for (int i=0; i<4; i++) to[i+2] = i2aA(m_xys6[i]);
-	to[6] = i2aA(m_xys6[7]); to[7] = ':';
+	to[6] = i2aA(m_xys6[7]); to[7] = ':' + !!(m_bflg&WRF_SHADOW);
 	memcpy(to+8, v_rgb(), 6); return 14;
 }
 
@@ -1567,15 +1568,14 @@ BXCMD_DEF(DWrapGen) {    {8192+'\\', 0}, AW_CTAB ,
 
 SWrapGen::SWrapGen(ABoxNode * nd) : AWrapGen(nd) {
 	m_ssob.set(SWrapSOB_default(0)); m_trg = 0; 
-	m_core.set(WrapCore_default(0));
-	delayed_clip_upd(); }
+	m_core.set(WrapCore_default(0)); m_bflg |= WRF_SHADOW|3; delayed_clip_upd(); }
 
 SWrapGen::SWrapGen(ABoxNode * nd, const SWrapGen * p) : AWrapGen(nd, p) {
 	m_ssob.from(p->m_ssob); m_core.from(p->m_core); m_trg = p->m_trg; 
 	upd_conn(); delayed_clip_upd(); }
 
 SWrapGen::SWrapGen(ABoxNode * nd, AWrapGen * p, int flg) : AWrapGen(nd) {
-	m_ssob.set(SWrapSOB_default(0)); m_trg = p; Node::conn(nd, p->node());
+	m_bflg |= WRF_SHADOW|3; m_ssob.set(SWrapSOB_default(0)); m_trg = p; Node::conn(nd, p->node());
 	m_core.set(p->core_ro()); memcpy(m_xys6, p->m_xys6, 8); delayed_clip_upd(); }
 
 int SWrapGen::set_trg(AWrapGen* aw) {
@@ -1620,6 +1620,21 @@ int SWrapGen::save2(SvArg * sv) {
 	else { CHKERR(f->sn("X$>", 3)); CHKERR(m_trg->node()->sv_path(10)); }
 	return r;
 }
+
+int SWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
+	if (!bxw_rawptr) return NDE_NOWIN; if ((unsigned int)ix > 0u) return ix<0 ? BXE_RANGE : BXE_WLGDONE;
+	int oid = w_oid(), gc = (0x605a5345>>8*ix) & 127, pf = pflg(),
+	    of = (flg & WRF_SETOC) ? ((flg&WRF_OC) ? (WR_WLG|=(1<<ix),1) : (WR_WLG&=~(1<<ix),0))
+		    		   : (WR_WLG >> ix) & 1;
+	// SWrapSOB * ssob = m_ssob.ro();
+	gui2.setwin(oid, 'w'); 
+	if (of)                      gui2.wupd_0(gc, "S><$XW", 4), gui2.c1(48 + ix);
+	else gui2.wupd_0(gc, ".+1"), gui2.wupd_0(gc, "S<>$XW", 4), gui2.c1(52 + ix);
+	switch (ix) {
+		case 0:  if (of) gui2.wupd_0(gc, ".+"), gui2.c1(58), gui2.t_sn("!",1), gui2.hexn(m_bflg,2);
+			 w_trg2(); return 0;
+		default: return BXE_WTF;
+	}}
 
 #undef CH
 #define CH(X) BXCMD_H(SWrapGen, X)
