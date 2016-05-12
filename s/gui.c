@@ -1099,6 +1099,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  32,5,3,1, "C  2:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "p182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
 {0,  13,7,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  3:4", "pqrstuvwxyz{:" /*"}"*/ },
+{'s',10,1,4,1, "+0* +1* +x* +y* +s1*+s2*+s3*+s4*+s5*+s6*", "0123456789"},
 {'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
@@ -2283,9 +2284,10 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
 			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
+	const char ln[]="({L0s5}3{e19$Xj_v}0{86=$:3Xj_c}{M2$Xj_x|s0}3{e38$Xj_a}00{M4$Xj_y|s0}3{e58$Xj_b})";
 	topwin * tw = ww->top;
 	if (ix<2) return parse_w_s(tw, h[ix]);
-	return parse_w_s(tw, "(3{L0later..})");
+	return parse_w_s(tw, ln);
 }
 
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
