@@ -2284,10 +2284,14 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
 			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
-	const char ln[]="({L0s5}3{e19$Xj_v}0{86=$:3Xj_c}{M2$Xj_x|s0}3{e38$Xj_a}00{M4$Xj_y|s0}3{e58$Xj_b})";
+	const char ln[]="({L0s5}3{e19$Xj_v}0{84=$:3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}00{M6$Xj_y|s0}3{e38$Xj_b})";
 	topwin * tw = ww->top;
 	if (ix<2) return parse_w_s(tw, h[ix]);
-	return parse_w_s(tw, ln);
+	GtkWidget * rw = parse_w_s(tw, ln);
+	int i0 = VB_WBASE(ww) + 8*ix;
+	char * q = DALBL_TXT(widg_p(tw, i0)); 
+	if (ix<4) q[0] = 'v'+ix, q[1] = 0; else q[0]='s', q[1]=45+ix, q[2]=0;
+	return rw;
 }
 
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
@@ -2298,11 +2302,26 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] 
 "({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})"};
 return parse_w_s(ww->top, str[ix]); }
 
-static void wrap_cmd (struct _topwin * tw, char * arg) {
-	if (*arg<48) { switch(*arg) {
-		case '!': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return; 
-		default: return LOG("wrap_cmd: unknown cmd 0x%x/%c", *arg, *arg);
+static void swrap_cmd (struct _topwin * tw, char * arg) {
+	ww_t *ww, *vb = widg_lookup_pci(tw, 'E', -1);
+	int i, wi = VB_WBASE(vb);
+	switch(*arg) {
+		case '&': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return;
+		case '!': i = 3; BVFOR_JMC(hex2(arg+1))
+				  entry_set(widg_p(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
+			  return;
+		case '-': wi += 8*(arg[1]&7) + 16; i = qh4rs(arg+2);
+			  dacnt_set_x(widg_p(tw, wi+4), i&127, 256);
+			  dlmenu_ilb (widg_p(tw, wi+5), (i>> 8)&15);
+			  dlmenu_ilb (widg_p(tw, wi+6), (i>>12)&15);
+			  for (i=0; i<3; i++) entry_set(widg_p(tw, wi+1+i), hxdoub_str(NULL, arg+6+16*i, 15));
+			  return;
+		default: return LOG("swrap_cmd: unknown cmd 0x%x/%c", *arg, *arg);
 	}}
+
+
+static void wrap_cmd (struct _topwin * tw, char * arg) {
+	if (*arg<48) return swrap_cmd(tw, arg);
 	int i, ix = hex2(arg), flg = hex2(arg+2), sh = (ix>>2)&24, j = (ix+(0x7000101>>sh)) & 31;
 	ww_t *p, *ww = widg_lookup_pci(tw, (0x455a4553 >> sh) & 127, -1);
 	int wi = VB_WBASE(ww) + j * VB_WPL(ww);
