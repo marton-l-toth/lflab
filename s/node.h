@@ -98,17 +98,32 @@ struct trk_24 { char ty, ct; short i; int j; ANode * pv; int rsrv[2]; };
 struct dir_24 { char ty, ct, n, s[21]; };
 struct clp_24 { char ty, ct, i, rsrv[21]; };
 
+int nd_mem_debug();
+#ifdef LF_C_MEMDEBUG
+extern int nd_count64;
+#define INC_CNT64 ++nd_count64,((void**)p)[2] = 0
+#else
+#define INC_CNT64
+#endif
+
 class ANode {
         public: // static
                 friend class Node; friend class NDirNode; friend class ClipNode;
                 friend class ABoxNode; friend class LBoxNode; friend class TBoxNode;
                 union u24_t { trk_24 t; clp_24 c; dir_24 d; char s[24]; unsigned char u[24]; };
                 static void st_init();
-                static char  * a64() { char *p = m0_f64 ? m0_f64 : blk64();
+                static char  * a64() { char *p = m0_f64 ? m0_f64 : blk64(); INC_CNT64;
                                        m0_f64 = *(char**)p; return p; }
                 static char  * aN () { ANode *p = m0_fN ? m0_fN : blkN();
                                        m0_fN = p->m_next; return (char*)p; }
-                static void f64(void *p) { return;if ((unsigned long)p<1024) bug("f64-wtf??"); *(char**)p = m0_f64; m0_f64 = (char*)p; }
+                static void f64(void *p) {
+#ifdef LF_C_MEMDEBUG
+			if ((unsigned long)p<1024) bug("f64-wtf??"); 
+			int k=0; unsigned int * q = (unsigned int *)p;
+			for (int i=2; i<16; i++) if (q[i]==0xdeadbeef) ++k; else q[i]=0xdeadbeef;
+			if (k==14) bug("double free %p", p); else --nd_count64;
+#endif
+			*(char**)p = m0_f64; m0_f64 = (char*)p; }
                 static void f64c(void *p) { if (p) f64(p); }
                 static void fN (ANode *p) { p->m_u24.d.ty = 0; p->m_next = m0_fN; m0_fN = p; }
                 static char * z64() { return (char*)memset(a64(), 0, 64); }

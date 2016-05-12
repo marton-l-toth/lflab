@@ -12,6 +12,16 @@
 #include "contrib.h"
 #include "cfgtab.inc"
 
+#ifdef LF_C_MEMDEBUG
+int nd_count64;
+int nd_mem_debug() {
+	log("a64 total: %d", nd_count64);
+	return 0;
+}
+#else
+int nd_mem_debug() { log("compiled w/o mem_debug"); return NDE_SORRY; }
+#endif
+
 ///////// decl ///////////////////////////////////////////////////////////////
 
 class NDirNode : public ADirNode {

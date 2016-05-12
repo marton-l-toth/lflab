@@ -367,6 +367,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 			  p->m_sv_M = i; p->m_sv_m = j; return 0;
 		case 'K': return cfg_write();
 		case 'M': return mx_debug(p->m_c_a0+1);
+		case 'm': return nd_mem_debug();
 		case '_': return midi_cmd(p->m_c_a0+1);
 		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
 		case 'G': return log("glob_flg = 0x%x", glob_flg), 0;
