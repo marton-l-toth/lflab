@@ -139,9 +139,13 @@ int BKMK32k::find(int i) {
                 if (i2==3) return 0; else i6 = 0, x = bv[++i2];
         }}
 
-void BKMK32k::del8k(int i2) { BKMK128 ***qqq = p[i2]; for (int i=0; i<8; i++) if (qqq[i]) {
-                for (int j=0; j<8; j++) ANode::f64c(qqq[i][j]); ANode::f64(qqq[i]); }
-                ANode::f64(qqq); bv[i2] = 0; p[i2] = 0; }
+void BKMK32k::del8k(int i2) {
+	BKMK128 ***qqq = p[i2]; if (!qqq) return; 
+	unsigned long long bv1 = bv[i2];
+	for (int i=0; i<8; i++) {
+		if (qqq[i]) { BVFOR_JM((bv1>>8*i)&255) ANode::f64c(qqq[i][j]);   ANode::f64(qqq[i]); }}
+	ANode::f64(qqq); bv[i2] = 0; p[i2] = 0; }
+
 int BKMK32k::set(int i, int v) {
         int i7 = i&127, i6 = (i>>=7)&63, i2 = (i>>6)&3;
         unsigned long long msk = 1ull << i6;
