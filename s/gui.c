@@ -4097,7 +4097,8 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 static void err_skel (struct _topwin * tw, char * arg) {
 	if (!tw->state) {
 		tw->arg[0].p = parse_w_s(tw,
-		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_console$_c-1}{B_?$$?}){:EeN10}]");
+		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_mem$_m}{B_mx$_ML}3()0"
+		"{B_console$_c-1}{B_au.cfg$A0W}{B_?$$?}){:EeN10}]");
 		memcpy(tw->title, "Errors\0", 8); 
 		err_upd_nl(tw); err_upd_flg(tw);
 	} else if (err_annoy) {
