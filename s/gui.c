@@ -945,13 +945,15 @@ static void choo_init() {
 	int i,j; for (i=0; (j=choo_tab[i].ch); i++) 
 		if (chtab_force(&choo_ch,j&127) != i) LOG("choo_init: ixw error"); }
 
-static void choo_ucmd(const char * cmd, char * uri) {
+static void choo_ucmd(const char * cmd, char * uri, int ff) {
 	if (!uri) return local_error(EEE_FDNOSEL), LOG("choo_ucmd: missing uri");
 	if (memcmp(uri, "file://", 7)) return LOG("choo_ucmd: unexp uri \"%s\"", uri);
 	int clen = strlen(cmd), ulen = strlen(uri+7), cpos = 7 - clen;
 	if (cpos<1) return LOG("choo_ucmd: cmd too long/me too lazy");
-	uri[cpos-1] = '~'; memcpy(uri+cpos, cmd, clen); uri[7+ulen] = 10;
-	write(1, uri+cpos-1, ulen+clen+2); g_free(uri);
+	uri[cpos-1] = '~'; memcpy(uri+cpos, cmd, clen); 
+	if (ff) write(1, uri+cpos-1, ulen+clen+1), write(1, ".lf\n", 4);
+	else    uri[7+ulen] = 10, write(1, uri+cpos-1, ulen+clen+2);
+	g_free(uri);
 }
 
 static void choo_bye(GtkWidget *w, gpointer p) { 
@@ -959,17 +961,19 @@ static void choo_bye(GtkWidget *w, gpointer p) {
 
 static void choo_resp(GtkDialog* choo, gint resp, void * p) {
 	GtkFileChooser * fc = GTK_FILE_CHOOSER(choo);
-	choo_t * q = (choo_t *)p;
+	choo_t * q = (choo_t *)p; 
+	int ff = !memcmp(q->b0, "save", 4) &&
+		 !memcmp(gtk_file_filter_get_name(gtk_file_chooser_get_filter(fc)), "lfla", 4);
 	if (dflg&DF_CHOO) LOG("choo resp %d \"%s\"", resp, choo ?  gtk_file_chooser_get_uri(fc) : "BUG"); 
 	switch(resp) {
 		case GTK_RESPONSE_HELP:   return CMD("W#2.win.fd.%s",(q->ch&512) ? "set directory" : q->title);
-		case GTK_RESPONSE_ACCEPT: return choo_ucmd(q->c0, gtk_file_chooser_get_uri(fc));
+		case GTK_RESPONSE_ACCEPT: return choo_ucmd(q->c0, gtk_file_chooser_get_uri(fc), ff);
 		case GTK_RESPONSE_REJECT: case GTK_RESPONSE_OK:
 			switch(*q->c1) {
 				case 0:   return LOG("choo_resp: unexp rej for 0x%x'%c'", q->ch&127,q->ch&127);
 				case '$': if (*q->c1=='$') return choo_cmd(q, q->c1+1);
 				case '#': return CMD("%s\n", q->c1+1);
-				default:  return choo_ucmd(q->c1, gtk_file_chooser_get_uri(fc));     }
+				default:  return choo_ucmd(q->c1, gtk_file_chooser_get_uri(fc), ff); }
 		case GTK_RESPONSE_CANCEL: return gtk_widget_destroy(q->pg); //, (void)(q->pg = 0);
 		default: return LOG("choo_resp: unknown resp %d", resp);
 	}}
