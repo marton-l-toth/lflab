@@ -339,6 +339,8 @@ class DblVec : public SOB {
                 DblVec(const DblVec * that, int arg);
                 ~DblVec() { clear(); }
                 int save2(SvArg * sv);
+                int save_dw(SvArg * sv, int k);
+                int save_sw(SvArg * sv);
                 void ini_default(int k);
                 void clear();
                 double * addp(int i) { int k = i>>3, j = i&7; if (!bv[k]) p[k] = (double*)ANode::z64();

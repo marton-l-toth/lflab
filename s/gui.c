@@ -2284,9 +2284,11 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
 			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
-	const char ln[]="({L0s5}3{e19$Xj_v}0{84=$:3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}00{M6$Xj_y|s0}3{e38$Xj_b})";
+	const char ln0[]="({L0s5}3{e19$Xj_v}0{84=$:3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})";
+	static char ln[80]; if (!*ln) memcpy(ln,ln0,80); 
 	topwin * tw = ww->top;
 	if (ix<2) return parse_w_s(tw, h[ix]);
+	ln[15] = ln[28] = ln[37] = ln[51] = ln[61] = ln[75] = 46 + ix;
 	GtkWidget * rw = parse_w_s(tw, ln);
 	int i0 = VB_WBASE(ww) + 8*ix;
 	char * q = DALBL_TXT(widg_p(tw, i0)); 

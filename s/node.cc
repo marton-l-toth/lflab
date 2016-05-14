@@ -22,6 +22,10 @@ int nd_mem_debug() {
 int nd_mem_debug() { log("compiled w/o mem_debug"); return NDE_SORRY; }
 #endif
 
+SOB_INIFUN(DblVec, 3)
+SOB_INIFUN(NameVec, 6)
+SOB_INIFUN(BoxUI, 5)
+
 ///////// decl ///////////////////////////////////////////////////////////////
 
 class NDirNode : public ADirNode {
@@ -133,16 +137,25 @@ void DblVec::debug2() {
 	log(" ]");
 }
 
-int DblVec::save2(SvArg * sv) {
-        int ec, r = 1, k = sv->st - 8;
-        const char * fmt = (k<8 ? "E$%02xv%s\n" : "X$i%02x=%s\n");
-        for (int k=sv->st-8, i=0; i<5; i++) {
-                int f = bv[i]; if (!f) continue;
+int DblVec::save2(SvArg * sv) { switch(sv->st) {
+	case 19: return save_sw(sv);
+	case 20: return save_dw(sv, 0);
+	case 21: return save_dw(sv, 1);
+	default: return log("BUG: dblvec/sv.st=%d, skipped",sv->st), sv->st2=-1, 1;
+}}
+
+int DblVec::save_dw(SvArg * sv, int k) {
+        int ec, r = 1, i0 = 64*k;
+        for (int i=0; i<5; i++, i0+=8) {
                 double * q = p[i];
-                for (int j=0; j<8; j++) { if (f&(1<<j)) {
-                        int i2 = 8*i+j, i3 = k>7 ? wr_ixtr_r(64*(k&1)+i2) : i2;
-                        CHKERR(sv->out->pf(fmt, i3, dbl2str_s(0,q[j]))); }}}
+		BVFOR_JM(bv[i]) { CHKERR(sv->out->pf("X$i%02x=%s\n", wr_ixtr_r(i0+j), dbl2str_s(0,q[j]))); }}
         return sv->st2=-1, 5*r;
+}
+
+int DblVec::save_sw(SvArg * sv) {
+	int ec, r=1; double * q = p[0];
+	BVFOR_JM(bv[0]) { CHKERR(sv->out->pf("X$j%cv%s\n", 48+j, dbl2str_s(0,q[j]))); }
+	return sv->st2=-1, 5*r;
 }
 
 void DblVec::ini_default(int k) { switch(k) {
@@ -150,8 +163,6 @@ void DblVec::ini_default(int k) { switch(k) {
         case 2: *addp(0) = .5, *addp(1) = 1e-5; return;
         default: return;
 }}
-
-SOB_INIFUN(DblVec, 3)
 
 void NameVec::debug2() {
 	log_n("NameVec p0:%d,\"%3s\" p1:%d,\"%3s\" (", m_patt[0], m_patt+1, m_patt[4], m_patt+5);
@@ -223,8 +234,6 @@ void NameVec::ini_default(int k) { switch (k) {
 	case 5: set_nm(63, "BPM$from$to$rpt#$r.fr$r.to"); return;
 }}
 
-SOB_INIFUN(NameVec, 6)
-
 int BoxDesc::dsc(char * to) {
 	if (!(m_u8_refcnt&(1<<24))) return *to=33, 1+s__cat(to+1,m_u.ky);
 	return s__cat(to, "2dynamic description:$sorry not yet implemented");
@@ -267,8 +276,6 @@ void BoxUI::debug2() {
 void ABoxNode::set_ui_rgb(const char * rgb) { memcpy(SOB_RW(ui)->m_rgb, rgb, 6); }
 void ABoxNode::set_ui_lbl(int t, int i, const char * lbl) {
 	SOB_RWP(SOB_RW(ui), nm[t])->set_nm_1(i, lbl, strlen(lbl)); }
-
-SOB_INIFUN(BoxUI, 5)
 
 ///////// abs. node //////////////////////////////////////////////////////////
 
