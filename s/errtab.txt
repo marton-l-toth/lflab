@@ -35,7 +35,7 @@ EEE_RANGE    value out of range
 EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
-RTE_RANGE    box parameter out of range
+RTE_RANGE    box parameter out of range (runtime)
 RTE_CONFIG   invalid configuration for box
 RTE_IWCLOSE  input window was closed
 RTE_MXLDFAIL cannot delete related mixer live obj (BUG)
