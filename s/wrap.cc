@@ -63,6 +63,7 @@ static const double div1tab[52] = { 0.0, 0.0, 1.0, 0.5, 0.333333333333333, 0.25,
 static const unsigned char i8tab[8] = {2,3,4,5,6,7,8,9};
 static const double d8tab[8] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
 
+static int slbv_2(int r,int y) { return r>>=2, r | (64&(((0x0e13173f>>(4*(bitcnt_8(r)&6)))&63)-y)); }
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk);
 
 // 1:lbl 2:src 4:fun 8:xf  32:c 64:v0 128:v1   256:(xf=='=') 512: slref 1024: unflg
@@ -273,6 +274,7 @@ class SWrapTab : public SOB {
 		void set_ab(int j, int f, double v) { 
 			(ce[f] ? ce[f] : (ce[f] = (double*)(f ? ANode::z64() : ANode::cp64(d8tab))))[j] = v; }
 		int set_all(int j, const char * a0, const char * a1);
+		int ibv(int f8) { int r=0; BVFOR_JM(f8) r |= (1<<(ix[j]&15)) | (1<<(ix[j]>>4)); return r>>2; }
 
 		unsigned char cc[8], ix[8]; 
 		double *ce[2];
@@ -428,7 +430,8 @@ class SWrapGen : public AWrapGen {
 		virtual int show_tab_2(sthg * bxw_rawptr, int i) { return BXE_CENUM; }
 		virtual int wlg(sthg * bxw_rawptr, int ix, int flg);
 		virtual void w_col0(int flg) { w_col0_2(flg, m_bflg&1020); }
-		virtual int sl_bv() { return 63; }
+		virtual int sl_bv() {
+		        return slbv_2(m_ssob.ro()->m_tab.ro()->ibv((m_bflg>>2)&255), m_core.ro()->grdim[1]); }
 		void upd_conn() {Node::set_conn_2(m_node, BoxGen::node0(m_trg), 0); }
 		void w_sob(int ix, int sl) {  }
 		void w_trg2(){ gui2.setwin(w_oid(),'w'); gui2.ref_title('E', BoxGen::node0(m_trg),3,"target");}
@@ -447,7 +450,6 @@ class SWrapGen : public AWrapGen {
 		AWrapGen * m_trg;
 };
 
-static int slbv_2(int r,int y) { return r>>=2, r | (64&(((0x0e13173f>>(4*(bitcnt_8(r)&6)))&63)-y)); }
 SOB_INIFUN(WrapScVec, 2)
 SOB_INIFUN(WrapCore,  1)
 SOB_INIFUN(WrapSOB,   1)
@@ -991,7 +993,7 @@ double SWrapTab::v1(int j, const double *src) {
 	int k = ix[j], k0 = k&15, k1 = k>>4;
 	if (k0) x = !ce[0] ? 1.0 : ce[0][j], v += ((k0-=2)<0) ? x : x*src[k0];
 	if (k1 &&    ce[1])   x =  ce[1][j], v += ((k1-=2)<0) ? x : x*src[k1];
-	return v;
+	return (v<0.0) ? 0.0 : ((v>1.0) ? 1.0 : v);
 }
 
 int SWrapTab::set_all(int j, const char * a0, const char * a1) {
@@ -1757,21 +1759,22 @@ CH(vfl){if (s[1]==42&&s[2]) { p->m_bflg &= ~255; p->m_bflg |= hex2(s+2); if (p->
 	if ((c=s[2]&1)) p->m_bflg |= m; else p->m_bflg &= ~m;
 	if (p->tab0_open()) {
 		gui2.setwin(p->w_oid(),'w'); gui2.wupd_i1('E', c, 8+j); p->jt_show(); if (c) p->w_jtab(m); }
-	return 0; }
+	return p->w_slbv(2), 0; }
 
 CH(tab){int x, j = s[1]-48, k = 0;
 	if (j&~7) return EEE_RANGE; SWrapSOB * sob = SOB_RWP(p,ssob);
 	switch(s[2]){case 'v':  if (p->m_bflg&WRF_NOCON) p->m_bflg&=~WRF_NOCON, 
 							 sob->m_con.set(DblVec_default(0));
 			        return *sob->con_rw()->addp(j) = at0f(s+3), 0;
-		     case 'c':	        sob->tab_rw()->cc[j] = atoi_h(s+3); k = 4; break;
+		     case 'c':	intv_cmd_uc(sob->tab_rw()->cc+j, s+3, 0, 100, 0x190501); k = 4; break;
 		     case 'a':case 'b': sob->tab_rw()->set_ab(j, s[2]-97, at0f(s+3)); break;
 		     case 'x':case 'y': if ((unsigned int)(x=s[3]-48)>9u) return BXE_RANGE;
-					sob->tab_rw()->set_xy(j, k=s[2]-120, s[3]-48); k+=5; break;
+					sob->tab_rw()->set_xy(j, k=s[2]-120, s[3]-48); k = 21; break;
 		     case '*': return   sob->tab_rw()->set_all(j, s+3, cb->tok());
 		     default : return BXE_CENUM; }
 	if (p->tab0_open()) {   gui2.setwin(p->w_oid(),'w'); p->w_col0_2(p->pflg(), 4<<j);
-				if (k) sob->m_tab.ro()->w1(j, k); }
+				if (k&15) sob->m_tab.ro()->w1(j, k&15); }
+	if (k&16) p->w_slbv(2);
 	return 0;
 }
 
