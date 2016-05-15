@@ -2,7 +2,7 @@
 SDIR="$HOME/g/lflab/s"
 PDIR="$HOME/lf-prod/s"
 mkdir -p "$PDIR/c"
-OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG="";
+OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS="";
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
         case "$1" in
@@ -11,6 +11,7 @@ while [[ -n "$cond" ]]; do
                 -j*)  JARG=$1; shift ;;
                 "-S") SSE="-mno-sse2";  shift ;;
                 "-s") SSE="-msse2";  shift ;;
+		"-md") DEFS="$DEFS -DLF_C_MEMDEBUG"; shift ;;
 		"-0") OPTARG="";    shift ;;
 		"-cf")  UCFLG="$2"; shift 2 ;;
 		"-ocmd") OCMD="$2"; shift 2 ;;
@@ -33,7 +34,7 @@ for a in * c/*; do
 done
 cd "$PDIR"
 CP=$(echo /run/shm/lf.*/A)
-CFLG="CFLAGS=$SSE $OPTARG $UCFLG"
+CFLG="CFLAGS=$SSE $OPTARG $UCFLG$DEFS"
 echo make $JARG "\"$CFLG\"" $*
 if [[ -z "$OCMD$FCMD" ]]; then exec make $JARG "$CFLG" $*; fi
 if [[ ! -p "$CP" ]]; then echo "no pipe found ('$CP')"; exec make $JARG "$CFLG" $*; fi
