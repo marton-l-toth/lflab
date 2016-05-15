@@ -49,6 +49,8 @@ int intv_cmd    (int           *p, const char * arg, int min, int max, int mul4)
    return icmd_t<int>(          p,		arg,	 min, 	  max, 	   mul4); }
 int intv_cmd_c  (char 	       *p, const char * arg, int min, int max, int mul4)  {
    return icmd_t<char>(         p,		arg,	 min, 	  max, 	   mul4); }
+int intv_cmd_sc (  signed char *p, const char * arg, int min, int max, int mul4)  {
+   return icmd_t<  signed char>(p,		arg,	 min, 	  max, 	   mul4); }
 int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4)  {
    return icmd_t<unsigned char>(p,		arg,	 min, 	  max, 	   mul4); }
 int intv_cmd_cfg(cfg_ent       *q, const char * arg, 		       int mul4)  {

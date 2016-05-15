@@ -64,7 +64,8 @@ class B91Writer {
 
 struct cfg_ent;
 int intv_cmd    (int           *p, const char * arg, int min, int max, int mul4=0x01010101);
-int intv_cmd_c  (char          *p, const char * arg, int min, int max, int mul4=0x01010101);
+int intv_cmd_c  (         char *p, const char * arg, int min, int max, int mul4=0x01010101);
+int intv_cmd_sc (  signed char *p, const char * arg, int min, int max, int mul4=0x01010101);
 int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4=0x01010101);
 int intv_cmd_cfg(cfg_ent       *p, const char * arg,                   int mul4=0x01010101);
 
