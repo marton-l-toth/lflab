@@ -4,18 +4,14 @@ prog xterm xterm xterm -ls
 prog fte fte fte
 prog lf/l/ro app /home/tml/lf-prod/s/lf 
 prog lf/l/t1 app /home/tml/lf-prod/s/lf /home/tml/g/lflab/t/t1.lf
+prog lf/l/t2 app /home/tml/lf-prod/s/lf /home/tml/g/lflab/t/t2.lf
 prog lf/l/rw app /home/tml/lf-prod/s/lf -n /home/tml/lf-prod/s/ex.lf
-prog lf/l/T1 app /home/tml/lf-prod/s/lf -iord 1 / /home/tml/g/lflab/t/t1.lf /home/tml/g/lflab/t/tc1.cmd
 prog "Iceweasel" iceweasel iceweasel
 prog lf/inst app /usr/bin/lflab
-prog lf/i/T1 app /usr/bin/lflab -iord 1 / /home/tml/g/lflab/t/t1.lf /home/tml/g/lflab/t/tc1.cmd
 prog XChat xchat xchat
 prog Gimp /usr/share/gimp/2.0/images/wilber-icon.png gimp
 separator
 menu System folder {
-    prog "Control Panel" redhat control-panel
-    prog xload xload xload
-    prog xosview xosview xosview
     menu "Window Managers" folder {
         restart icewm - icewm
         restart icewm-gnome - icewm-gnome
@@ -24,10 +20,6 @@ menu System folder {
     }
 }
 menu Utilities folder {
-    menu Multimedia folder {
-        prog XPlayCD xplaycd xplaycd
-        prog XMixer xmixer xmixer
-    }
     prog "Font Selector" xfontsel xfontsel
     prog Clock xclock xclock
     prog Magnify xmag xmag
@@ -39,7 +31,4 @@ menu Utilities folder {
     prog "Screen Saver" xlock xlock -nolock
     prog "Screen Lock" xlock xlock
 }
-menufile Toolbar folder toolbar
 separator
-menuprog "Gnome" folder icewm-menu-gnome2 --list /usr/share/gnome/vfolders
-menuprog KDE folder icewm-menu-gnome2 --list /usr/share/applnk
