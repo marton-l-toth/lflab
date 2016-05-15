@@ -41,7 +41,8 @@ copied with a middle-click (e.g. on the play grid), other
 objects can only be created in the tree view window.
 ---
 If you make new instruments/tracks/components, save them with
-the "save" button. (or if you exit you can "autosave")
+the "save" button. (autosave is done at regular (configurable)
+intervals, and optionally on exit.)
 THERE IS NO UNDO, SAVE OFTEN!!!
 ==> etc.save files
 {{{?._dtre}}}
@@ -50,7 +51,7 @@ and (unless you started with the "-n" option) the "!e" subtree.
 In "!b" you have the default clipboard "[]", help texts like
 this one under "?", and various builtin boxes. You can open
 a description for each builtin box by double-clicking them.
-"!c" is reserved for contributions, see c/zB.c for details.
+"!c" is reserved for contributions, see c/zB.cc for details.
 In "!e" the numbered items 1,2,... are clipboards (double-click
 on the name(number) to open window), which contain instruments.
 These instruments use builtin boxes and editable (to be exact,
