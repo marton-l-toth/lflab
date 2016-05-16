@@ -494,8 +494,7 @@ class ABoxNode : public ANode {
 }; 
 
 struct BoxEdge {
-        BoxEdge(ABoxNode *_fr, ABoxNode *_to) : cnt(1), fr_bx(_fr->box()), fr(_fr), to(_to),
-                                              fr_p(0), to_p(0) {}
+        BoxEdge(ABoxNode *_fr, ABoxNode *_to) : cnt(1), fr_bx(_fr->box()), fr(_fr), to(_to) {}
         int rsrv, cnt;
         BoxGen *fr_bx;
         ABoxNode *fr, *to;

@@ -1457,8 +1457,8 @@ int Node::conn(ABoxNode * fr, ABoxNode * to) {
         int ec = to -> find_fw(fr, 0); return (ec<0) ? ec : conn2(fr, to);
 }	
 
-#define E_CFR0 (p0 = p->fr_n = fr->m_ef0, fr->m_ef0 = p, (p0) ? (p0->fr_p = p) : (fr->m_efz = p))
-#define E_CTO0 (p0 = p->to_n = to->m_et0, to->m_et0 = p, (p0) ? (p0->to_p = p) : (to->m_etz = p))
+#define E_CFR0 (p0 = p->fr_n = fr->m_ef0, fr->m_ef0 = p, (p0) ? (p0->fr_p = p) : (fr->m_efz = p), p->fr_p = 0)
+#define E_CTO0 (p0 = p->to_n = to->m_et0, to->m_et0 = p, (p0) ? (p0->to_p = p) : (to->m_etz = p), p->to_p = 0)
 #define E_DCFR (pp0=(p0=p->fr_p)?&p0->fr_n:&fr->m_ef0, pp1=(p1=p->fr_n)?&p1->fr_p:&fr->m_efz, *pp0=p1, *pp1=p0)
 #define E_DCTO (pp0=(p0=p->to_p)?&p0->to_n:&to->m_et0, pp1=(p1=p->to_n)?&p1->to_p:&to->m_etz, *pp0=p1, *pp1=p0)
 
@@ -1477,7 +1477,7 @@ void Node::eg_mv_to0(BoxEdge * p) { if (!(p->to_p)) return;
 
 void Node::eg_f_mv_to0(ABoxNode * fr, ABoxNode * to) { 
 	BoxEdge * p = find_edge(fr, to); if (!p) return log("BUG: node/eg_f_mv_to0: find failed");
-	BoxEdge *p0, *p1, **pp0, **pp1; E_DCTO, E_CTO0; }
+	if (!p->to_p) return; BoxEdge *p0, *p1, **pp0, **pp1; E_DCTO, E_CTO0; }
 
 int Node::set_conn_2(ABoxNode * fr, ABoxNode * to1, ABoxNode * to2) {
 	BoxEdge *e1, *e2; 
