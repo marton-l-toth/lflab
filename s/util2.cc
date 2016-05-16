@@ -167,4 +167,9 @@ int B91Reader::get_short_k(int k) {
         return k==1 ? get_short1() : get_short2();
 }
 
+int packflg(int flg, const int * mv) {
+	int fm = mv[0], f2 = flg & fm; if (f2==mv[1]) return -1;
+	int k=0, r=0; BVFOR_JM(fm) r |= ((f2>>j)&1) << (k++);   return r; }
 
+void unpkflg(int *to, int fpk, const int * mv) {
+	int m1, fm = mv[0], k = 0; BVFOR_JM(fm) m1=1<<j, (fpk&(1<<(k++))) ? (*to|=m1) : (*to&=~m1); }

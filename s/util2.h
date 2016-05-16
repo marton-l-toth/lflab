@@ -69,4 +69,7 @@ int intv_cmd_sc (  signed char *p, const char * arg, int min, int max, int mul4=
 int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4=0x01010101);
 int intv_cmd_cfg(cfg_ent       *p, const char * arg,                   int mul4=0x01010101);
 
+int  packflg(         int flg, const int * mv); // mv[0]:mask mv[1]:dflt-val
+void unpkflg(int *to, int fpk, const int * mv);
+
 #endif // __qwe_util2_h__
