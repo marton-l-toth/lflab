@@ -1838,14 +1838,14 @@ static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return dalbl_draw(ww, (cairo_t*)ww->arg[0].p);
 	int k, ch = ww->cl->ch; char *s = DALBL_TXT(ww);
 	switch(arg[0]) {
-		case '+': case 'c': if (ch!='M') goto err; else return dlmenu_ilb(ww, arg[1]-48);
+		case '+': case 'c': if(ch=='Y') goto bo; if(ch!='M') goto err; return dlmenu_ilb(ww,arg[1]-48);
 		case 'C': s = ww->arg[4].c; s[6] = 1; ++arg;
 			  for (k=0; arg[k] && k<6; k++) s[k] = arg[k];
 			  if (k<6 || *(arg+=k)!=':') goto draw;
 		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
 		case 'x':
 		case 's': if (ch!='Y') goto err;
-			  k = arg[1]-'0';
+		bo:  	  k = arg[1]-'0';
 			  if (k&~1) { LOG("dalbl: Y/s: invalid value 0x%x", arg[1]); return; }
 			  if (DABOOL(ww) != k) DABOOL(ww) = k; else return;
 			  goto draw;
@@ -2287,12 +2287,13 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 
 GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
-			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
-	const char ln0[]="({L0s5}3{e19$Xj_v}0{84=$:3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})";
-	static char ln[80]; if (!*ln) memcpy(ln,ln0,80); 
-	topwin * tw = ww->top;
+			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"},
+		ln0[]="({Y0s5$Xj_i}3{e19$Xj_v}0{84=$-3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})";
+	static char ln[80], _cnt = 0, _pos[47];
+	int i;  topwin * tw = ww->top;
 	if (ix<2) return parse_w_s(tw, h[ix]);
-	ln[15] = ln[28] = ln[37] = ln[51] = ln[61] = ln[75] = 46 + ix;
+	if (!_cnt) { memcpy(ln,ln0,80); for (i=0; ln[i]; i++) if (ln[i]=='_') _pos[_cnt++] = i; }
+	for (i=0; i<_cnt; i++) ln[_pos[i]] = 46 + ix;
 	GtkWidget * rw = parse_w_s(tw, ln);
 	int i0 = VB_WBASE(ww) + 8*ix;
 	char * q = DALBL_TXT(widg_p(tw, i0)); 
@@ -2317,7 +2318,7 @@ static void swrap_cmd (struct _topwin * tw, char * arg) {
 				  entry_set(widg_p(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
 			  return;
 		case '-': wi += 8*(arg[1]&7) + 16; i = qh4rs(arg+2);
-			  dacnt_set_x(widg_p(tw, wi+4), i&127, 256);
+			  dacnt_set_x(widg_p(tw, wi+4), (signed char)(i&255), 256);
 			  dlmenu_ilb (widg_p(tw, wi+5), (i>> 8)&15);
 			  dlmenu_ilb (widg_p(tw, wi+6), (i>>12)&15);
 			  for (i=0; i<3; i++) entry_set(widg_p(tw, wi+1+i), hxdoub_str(NULL, arg+6+16*i, 15));
