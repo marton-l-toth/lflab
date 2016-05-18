@@ -945,15 +945,23 @@ static void choo_init() {
 	int i,j; for (i=0; (j=choo_tab[i].ch); i++) 
 		if (chtab_force(&choo_ch,j&127) != i) LOG("choo_init: ixw error"); }
 
-static void choo_ucmd(const char * cmd, char * uri, int ff) {
+static void choo_ucmd_2(const char * cmd, char * uri, int ulen) {
 	if (!uri) return local_error(EEE_FDNOSEL), LOG("choo_ucmd: missing uri");
 	if (memcmp(uri, "file://", 7)) return LOG("choo_ucmd: unexp uri \"%s\"", uri);
-	int clen = strlen(cmd), ulen = strlen(uri+7), cpos = 7 - clen;
+	int clen = strlen(cmd), cpos = 7 - clen;
 	if (cpos<1) return LOG("choo_ucmd: cmd too long/me too lazy");
 	uri[cpos-1] = '~'; memcpy(uri+cpos, cmd, clen); 
-	if (ff) write(1, uri+cpos-1, ulen+clen+1), write(1, ".lf\n", 4);
-	else    uri[7+ulen] = 10, write(1, uri+cpos-1, ulen+clen+2);
-	g_free(uri);
+	uri[7+ulen] = 10; write(1, uri+cpos-1, ulen+clen+2);
+}
+
+static void choo_ucmd(GtkFileChooser * fc, const char * cmd, char * uri, int ff) {
+	if (memcmp(uri, "file://", 7)) return LOG("choo_ucmd: unexp uri \"%s\"", uri);
+	int ulen = strlen(uri+7);
+	if (!ff || !memcmp(uri+ulen+4, ".lf", 4)) return choo_ucmd_2(cmd, uri, ulen), g_free(uri);
+	char uri2[ulen+11]; memcpy(uri2, uri, ulen+7); memcpy(uri2+ulen+7, ".lf", 4); g_free(uri);
+	gtk_file_chooser_set_uri(fc, uri2); char * uri3 = gtk_file_chooser_get_uri(fc);
+	if (dflg&DF_CHOO) LOG("choo: again \"%s\" \"%s\"", uri2, uri3);   
+	if (!uri3 || strcmp(uri2, uri3)) choo_ucmd_2(cmd, uri2, ulen+3);              g_free(uri3);
 }
 
 static void choo_bye(GtkWidget *w, gpointer p) { 
@@ -967,13 +975,13 @@ static void choo_resp(GtkDialog* choo, gint resp, void * p) {
 	if (dflg&DF_CHOO) LOG("choo resp %d \"%s\"", resp, choo ?  gtk_file_chooser_get_uri(fc) : "BUG"); 
 	switch(resp) {
 		case GTK_RESPONSE_HELP:   return CMD("W#2.win.fd.%s",(q->ch&512) ? "set directory" : q->title);
-		case GTK_RESPONSE_ACCEPT: return choo_ucmd(q->c0, gtk_file_chooser_get_uri(fc), ff);
+		case GTK_RESPONSE_ACCEPT: return choo_ucmd(fc, q->c0, gtk_file_chooser_get_uri(fc), ff);
 		case GTK_RESPONSE_REJECT: case GTK_RESPONSE_OK:
 			switch(*q->c1) {
 				case 0:   return LOG("choo_resp: unexp rej for 0x%x'%c'", q->ch&127,q->ch&127);
 				case '$': if (*q->c1=='$') return choo_cmd(q, q->c1+1);
 				case '#': return CMD("%s\n", q->c1+1);
-				default:  return choo_ucmd(q->c1, gtk_file_chooser_get_uri(fc), ff); }
+				default:  return choo_ucmd(fc, q->c1, gtk_file_chooser_get_uri(fc), ff); }
 		case GTK_RESPONSE_CANCEL: return gtk_widget_destroy(q->pg); //, (void)(q->pg = 0);
 		default: return LOG("choo_resp: unknown resp %d", resp);
 	}}
@@ -994,6 +1002,7 @@ static void choo_open(choo_t * q) {
 	g_signal_connect (q->pg, "response", G_CALLBACK(choo_resp), (gpointer)q);
 	g_signal_connect (q->pg, "destroy", G_CALLBACK(choo_bye), (gpointer)q);
 	gtk_file_chooser_set_do_overwrite_confirmation(fc, TRUE);
+	if (!memcmp(q->title, "save", 4)) gtk_file_chooser_set_current_folder(fc, getenv("HOME"));
 	gtk_widget_show(GTK_WIDGET(fc));
 }
 
@@ -2301,13 +2310,14 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	return rw;
 }
 
-GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[4] = { 
+GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] = { 
 "({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}"
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
 "({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS})",
-"({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})"};
-return parse_w_s(ww->top, str[ix]); }
+"({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,0,
+"({Y0iadj.S$XcS}{Y1iadj.T$XcT})" };
+return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
 
 static void swrap_cmd (struct _topwin * tw, char * arg) {
 	ww_t *ww, *vb = widg_lookup_pci(tw, 'E', -1);
@@ -2346,9 +2356,9 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{B_plot(F)$XPF})])"
 		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
 
-static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", ""};
+static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:0}{:ES:80}"};
+				     "{:YW5:1}{:ES:80}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
