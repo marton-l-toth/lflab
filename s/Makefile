@@ -53,6 +53,8 @@ errtab.inc: errtab.txt errtab.sh
 	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<
 %.o: %.cc $(INCS) errtab.inc cfgtab.inc
 	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<
+%.s: %.cc $(INCS) errtab.inc cfgtab.inc
+	$(CC) -S -Wall -Wno-unused-function $(CFLAGS) -o$@ $<
 
 lf.bin: $(OBJS)  
 	$(CC) -g $(OBJS) -lasound -olf.bin
