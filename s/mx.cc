@@ -22,6 +22,9 @@ void wrtfun_2_##nm (double *q, double *x, double *y, int n) { \
 #define MXLOGN if (debug_flags & DFLG_MX) log_n
 #define QLOGV(S) ((debug_flags & DFLG_MX) ? log(S) : (void)0)
 
+#define MXIARG(V,I,C) MxItem * V = mx_ptr(I); \
+	if (V->m_ty!=*#C) return V->m_ty ? MXE_EXP##C : MXE_NOSUCH
+
 struct TFunDesc { tfunmul1_t f1; tfunmul2_t f2; tfunini_t fi; };
 
 struct TFunTab {
@@ -71,20 +74,30 @@ struct MxInP {
 	int fi_cmp(const double *p, int n);
 };
 
+struct MxTrg {
+	double *pt[2], *pp5[6];
+	int siz, lrc01, fdly; // lrc01: 32-chkdelay
+	MxTrg(int n, int f, int flt, double *tmp, double *o0, double *o1);
+	inline void prep(double *q, int dly, int ae) {  for (int i=0 ; i<dly; i++) q[i] = 0.0;
+							for (int i=ae; i<siz; i++) q[i] = 0.0; }
+	int addb(int flg, int dly, int n, const double * v2);
+	int ret();
+};
+
 struct MxItBox {
 	BoxInst * bx;
 	int t, t1, t2, t3, delay;
 	unsigned short ocfg, ctk, ctp, ctn; 
-	char up, dn, flg; unsigned char trec;
+	char up, dn, abflg; unsigned char trec; // abf: (1,2:ou) 4:dir 8:ste 16:flt 32:vol=1
 	double upx[3], dnx[3], v[2];
 	MxInP in;
 };
 
 struct MxItFilt {
-	BoxInst *bx0, *bx1;
+	BoxInst *bx[2];
 	BoxModel *mdl;
 	double vlim;
-	int tlim, t, flg;
+	int tlim, t; int abflg; // abf+: 3:mode 16384:running
 	double v[2], v1, lr;
 	unsigned short ocfg, up;
 	MxInP in;
@@ -112,17 +125,21 @@ struct MxItem {
 		struct { BoxInst * bxi; int flg; unsigned char dat[224]; } l;
 	} u;
 	void b_ini(const char * updnnino, const double * arg, int delay, int tlim);
-	int b_calc(double *to1, double * to2, double * tmp, int n);
+	int b_calc(MxTrg * mtg, int n);
 	int b_evp(double *p, double *q, int n);
 	void b_ccut();
+	void b_fbv(MxItem * up, int ocf, double lr0, double v0);
 	MxItem * r_mfind(BoxModel * mdl, int force);
 	MxItem * m_ffind(int ni, double *arg, int force, int up);
-	void rf_bfor(double *to1, double *to2, double * tmp, int n);
-	int f_calc(double *to1, double *to2, double *tmp, int n); // !!: done
+	void rf_bfor(MxTrg * mtg, int n);
+	int f_calc(MxTrg * mtg, int n);
 	int r_calc(double *to1, double *to2, int n, int f);
 	void rf_clear();
 	void r2_clear();
-	void f_reset() { rf_clear(); u.f.flg=0; delete(u.f.bx0); delete(u.f.bx1); u.f.bx0=u.f.bx1=0; }
+	void f_ini_1(double lr);
+	void f_ini_2();
+	void f_1to2() { u.f.abflg |= 10; u.f.abflg &= ~36; u.f.bx[1] = u.f.mdl->mk_box(); }
+	void f_reset() { rf_clear(); u.f.abflg=0; delete(u.f.bx[0]); delete(u.f.bx[1]); u.f.bx[0]=u.f.bx[1]=0; }
 	int r_isemp() const { return !m_x8 && m_nx==m_id; }
 	int c_find(int k, int f = 0);
 	int c_ins(MxItem * that, int k);
@@ -223,10 +240,88 @@ static void mx_bdel   (MxItem * p) { if (p->u.b.ctp) p->b_ccut();  mx_bdel_rf(p)
 
 static void mx_fdel(MxItem * p) { p->f_reset(); p->u.f.in.del2(); mx_free(p); }
 
+MxTrg::MxTrg(int n, int f, int flt, double *tmp, double *o0, double *o1) : siz(n), fdly(0) {
+	double *q = tmp + 2*n;  pt[0] = tmp;  pt[1] = tmp+n;
+	if (f>1)     pp5[0] = o0, pp5[1] =  o1, pp5[2] =  q, q +=   n, lrc01 = 1280;
+	else if (o1) pp5[0] =  q, pp5[1] =  o1, pp5[2] = o0, q +=   n, lrc01 = 512*f+256;
+	else         pp5[0] =  q, pp5[1] = q+n, pp5[2] = o0, q += 2*n, lrc01 = 512*f;
+	if (flt) pp5[3] = q, pp5[4] = q+n, pp5[5] = 0;
+	else     pp5[3]   =  pp5[4]    =   pp5[5] = 0;
+}
+
+int MxTrg::ret() {
+	int md = (lrc01>>8)&7, n = siz, lrc;
+	double *p0, *p1, *q;
+	switch(lrc = lrc01&7) {
+		case 0: return md<2 ? 0 : (md>4 ? (memset(pp5[0],0,8*n), memset(pp5[1],0,8*n), 2)
+						: (memset(pp5[2],0,8*n), 1));
+		case 1: if (!(md&1)) goto halfz;
+			memset(pp5[1],0,8*n); if (md<4) memcpy(pp5[2], pp5[0], 8*n);  return 2;
+		case 2: if (md&1) return memset(pp5[md&4?0:2],0,8*n), 2; else goto halfz;
+		case 3: if (!(md&1))  { q = pp5[2], p0 = pp5[0], p1=pp5[1];
+					for (int i=0;i<n;i++) q[i]=.5*(p0[i]+p1[i]); return 1; }
+			if (md<4) memcpy(pp5[2],pp5[0],8*n);   return 2;
+		case 4: return md>4 ? (memcpy(pp5[0], pp5[2], 8*n), memcpy(pp5[1], pp5[2], 8*n), 2) : 1;
+		case 5: if (!(md&1)) goto halfp; if (md>4) goto m5_2;
+			q = pp5[2]; p0 = pp5[0]; memcpy(pp5[1], q, 8*n); goto qp2;
+		case 6: if (!(md&1)) goto halfp; if (md>4) goto m5_2;
+			q = pp5[1]; p0 = pp5[2]; goto qp2;
+		case 7: q = pp5[2]; p0 = pp5[0]; p1=pp5[1];
+			if (!(md&1)) { for (int i=0;i<n;i++) q[i] += .5*(p0[i]+p1[i]); return 1; }
+			if (md<4) for (int i=0;i<n;i++) p1[i] += q[i], q[i] += p0[i];
+			else	  for (int i=0;i<n;i++) p1[i] += q[i], p0[i] += q[i];  return 2;
+	}
+qp2: 	for (int i=0;i<n;i++) q[i] += p0[i]; return 2;
+halfz:  q = pp5[2]; p0 = pp5[lrc-1]; for (int i=0;i<n;i++) q[i]  = .5*p0[i]; return 1;
+halfp:  q = pp5[2]; p0 = pp5[lrc-5]; for (int i=0;i<n;i++) q[i] += .5*p0[i]; return 1;
+m5_2:	p0 = pp5[2]; q = pp5[lrc-5]; for (int i=0;i<n;i++) q[i] +=    p0[i]; return 2;
+}
+
+#define MXSW(X0,X1) k  = ((lrc01&m0) ? 0 : (prep(q0, dly, ae), lrc01|=m0, 1)); q0 += dly;        \
+		    k += ((lrc01&m1) ? 0 : (prep(q1, dly, ae), lrc01|=m1, 2)); q1 += dly;         \
+		    switch(k) { case 0: for (int i=0;i<n;i++) q0[i] += (X0), q1[i] += (X1); break; \
+				case 1: for (int i=0;i<n;i++) q0[i]  = (X0), q1[i] += (X1); break; \
+				case 2: for (int i=0;i<n;i++) q0[i] += (X0), q1[i]  = (X1); break; \
+				case 3: for (int i=0;i<n;i++) q0[i]  = (X0), q1[i]  = (X1); break; }
+int MxTrg::addb(int flg, int dly, int n, const double * v2) {
+	static const char tab[32]={0,040,0,0, 0,012,0,0, 0,040,030,070, 0,010,011,020,
+	                           0,043,0,0, 0,013,0,0, 0,043,033,073, 0,013,014,023};
+	int k, m1, ae = dly+n, tf = tab[flg&31]+(flg&32), j = tf&7, m0 = 1<<j, op = tf>>3;
+	double v0, v1, *p0, *p1, *q1, *q0 = pp5[j]; 
+	if (dly<fdly) fdly = dly;
+	MXLOG("addb: flg=0x%x, op=%d, j=%d, dly=%d, n=%d", flg, op, j, dly, n);
+	switch (op&7) { case 4: q1=pp5[j+1]; m1=2*m0; goto c12;    case 1:  goto c11;
+			case 3: q1=pp5[j+1]; m1=2*m0; goto c12x;   case 5:  goto c11u;
+			case 2: q1=pp5[j+1]; m1=2*m0; goto c22;    case 6:  goto c22u;
+			case 7: q1=pp5[j+1]; m1=2*m0; goto xmix;   default: goto oops; }
+c11u:   p0=pt[0]; k = m0 & lrc01;
+	if (!k) { prep(q0, dly, ae); lrc01 |= m0; memcpy(q0+dly, p0, 8*n); }
+	else    { q0 += dly; for(int i=0; i<n; i++) q0[i] += p0[i]; }
+	return flg&32768;
+c22u:   q1=pp5[j+1]; m1=2*m0; p0 = pt[0]; p1 = pt[1];
+	if (lrc01&m0) { q0+=dly; for(int i=0;i<n;i++) q0[i] += p0[i]; } 
+	else { lrc01 |= m0; prep(q0,dly,ae); memcpy(q0+dly, p0, 8*n); }
+	if (lrc01&m1) { q1+=dly; for(int i=0;i<n;i++) q1[i] += p1[i]; } 
+	else { lrc01 |= m1; prep(q1,dly,ae); memcpy(q1+dly, p1, 8*n); }
+	return flg&32768;
+c11:	k = (~flg&1); p0 = pt[k]; v0 = v2[k]; k = m0 & lrc01; 
+	if (!k) { prep(q0, dly, ae); lrc01 |= m0; q0 += dly; for (int i=0; i<n; i++) q0[i]  = v0*p0[i]; }
+	else	{                    	          q0 += dly; for (int i=0; i<n; i++) q0[i] += v0*p0[i]; }
+	return flg&32768;
+c12x:	v0 = -v2[1]; v1 = v2[0]; p0 = pt[1]; goto c12y;
+c12: 	v0 =  v2[0]; v1 = v2[1]; p0 = pt[0];
+c12y:	MXSW(v0*p0[i], v1*p0[i]) return flg&32768;
+c22:	v0 =  v2[0]; v1 = v2[1]; p0 = pt[0]; p1 = pt[1];
+	MXSW(v0*p0[i], v1*p0[i]) return flg&32768;
+xmix:   v0 =  v2[0]; v1 = v2[1]; p0 = pt[0]; p1 = pt[1];
+	MXSW(v0*p0[i]-v1*p1[i], v1*p0[i]+v0*p1[i]) return flg&32768;
+oops:   return log("mx/addb: BUG: flg=0x%x, n=%d", flg, n), 1;
+}
+
 /////// box /////////////////////////////////////////////////////////
 
 void MxItem::b_ini(const char * updnnino, const double * arg, int delay, int tlim) {
-	u.b.flg = (updnnino[3])>1; int t3d = sec2samp(arg[4]);
+	/*u.b.flg = (updnnino[3])>1;*/ int t3d = sec2samp(arg[4]);
 	u.b.t1 = sec2samp(arg[2]); u.b.t2 = min_i(sec2samp(arg[3]), tlim);
 	     u.b.up = TFunTab::ini(u.b.upx, updnnino[0], u.b.t1, 0);
 	if ((u.b.dn = TFunTab::ini(u.b.dnx, updnnino[1], t3d   , 1))) u.b.t3 = u.b.t2 + t3d;
@@ -244,36 +339,19 @@ int MxItem::b_evp(double *p, double *q, int n) {
 	return n;
 }
 
-int MxItem::b_calc(double *to1, double *to2, double * tmp, int n) {
+int MxItem::b_calc(MxTrg * mtg, int n) {
 	if (n<=0) return 0;
-	if (!m_id) bug("mx/b: wtf???");
-	if (u.b.delay) {
-		if(u.b.delay>=n) { u.b.delay -= n; return 0; }
-		int t = u.b.delay; u.b.delay = 0;
-		n -= t; to1 += t; if (to2) to2 += t;
-	}
-	int rv = u.b.dn && u.b.t+n>=u.b.t3 && (n = u.b.t3-u.b.t, 1);
+	int dly = u.b.delay; if (dly) { if(dly>=n) return u.b.delay-=n, 0; else u.b.delay=0, n -= dly; }
+	int rv = (u.b.dn && u.b.t+n>=u.b.t3) ? (n = u.b.t3-u.b.t, 32768) : 0;
 	if (n<=0) return QLOGV("mxstop1"), rv; else u.b.t += n;
-	double vol0 = u.b.v[0], vol1 = u.b.v[1];
-	int oc = u.b.ocfg, o2 = ~oc&0x7c00;
-	if (!m_id) bug("mx/b: wtf2");
-	int of = u.b.bx -> calc_nzo2(u.b.ocfg, tmp, tmp+n, 0, u.b.in.pp, n);
+	int of = u.b.bx -> calc_nzo2(u.b.ocfg, mtg->pt[0], mtg->pt[1], 0, u.b.in.pp, n);
 	if (!m_id) bug("mx/b: wtf3");
 	if (of<=0) return of ? (log("m/f#%x: removing b#%x: \"%s\"(%d)", u.b.up, m_id, err_str(of), of),
 				gui_errq_add(of), 1)
 			     : (!u.b.dn && (u.b.t3+=n) >= u.b.t2 && (QLOGV("mxstop3"),1) );
-	int k = b_evp(tmp+(n&-(of==2)), of==3?tmp+n:0, n); n = k&8191; rv |= (k&32768);
-	if (!to2) { if (!o2) { for (int i=0; i<n; i++) to1[i] += vol0 * tmp[i]; }
-		    else     { for (int i=0; i<n; i++) to1[i] += vol0 * (tmp[i]+tmp[n+i]); }}
-	else if (!o2) { for (int i=0; i<n; i++) to1[i] += vol0*tmp[i], to2[i] += vol1*tmp[i]; }
-	else if (!(m_x8&64)) { if (of&1) for (int i=0; i<n; i++) to1[i] += vol0 * tmp[i];
-			       if (of&2) for (int i=0; i<n; i++) to2[i] += vol1 * tmp[n+i]; }
-	else if (of==3) { for (int i=0; i<n; i++) to1[i] += vol0*tmp[i] + vol1*tmp[n+i],
-						  to2[i] += vol1*tmp[i] - vol0*tmp[n+i]; }
-	else if (of==1) { for (int i=0; i<n; i++) to1[i] += vol0*tmp[ i ], to2[i] += vol1*tmp[ i ]; }
-	else            { for (int i=0; i<n; i++) to1[i] += vol1*tmp[n+i], to2[i] -= vol0*tmp[n+i]; }
+	int k = b_evp(mtg->pt[of==2], (of==3)?mtg->pt[1]:0, n); n = k&8191; rv |= (k&32768);
 	if (rv && (debug_flags & DFLG_MX)) log("mxstop2 %d", rv);
-	return rv;
+	return mtg->addb(u.b.abflg|rv|of, dly, n, u.b.v);
 }
 
 void MxItem::b_ccut() {
@@ -314,7 +392,7 @@ MxItem * MxItem::m_ffind(int ni, double *arg, int force, int up) {
 					 k = sec2samp(arg[0]),
 					 (k > r->u.f.tlim) && (r->u.f.tlim = k)), r;
 	if (!force || m_x8>=120) return 0;
-	r = mx_alloc('f', m_id); r->u.f.flg = 0; r->u.f.bx0 = r->u.f.bx1 = 0;
+	r = mx_alloc('f', m_id); r->u.f.abflg = 0; r->u.f.bx[0] = r->u.f.bx[1] = 0;
 	if (debug_flags & DFLG_MX) { 
 		log_n("m_ffind/new:"); for (int i=0; i<ni+1; i++) log_n(" %.15g", arg[i]); log(""); }
 	r->u.f.tlim = sec2samp(arg[0]); r->u.f.vlim = arg[1]; r->u.f.up = up;
@@ -324,46 +402,31 @@ MxItem * MxItem::m_ffind(int ni, double *arg, int force, int up) {
 	return r;
 }
 
-void MxItem::rf_bfor(double *to1, double *to2, double * tmp, int n) {
-	memset(to1, 0, 8*n); if (to2) memset(to2, 0, 8*n);
+void MxItem::rf_bfor(MxTrg * mtg, int n) {
 	int i0 = m_id, icur = m_nx;
 	while (icur != i0) {
 		MxItem *p = mx_ptr(icur); icur = p->m_nx;
-		if (p->b_calc(to1, to2, tmp, n)) mx_bdel(p); 
+		if (p->b_calc(mtg, n)) mx_bdel(p); 
 	}}
 
-void MxItem::rf_clear() { MxItem * p;
-	for (int i0=m_id, i=m_nx; i!=i0; p=mx_ptr(i), i=p->m_nx, mx_bdel_c(p));
-	m_nx = m_pv = m_id; }
-
-int MxItem::f_calc(double *to1, double *to2, double *tmp, int n) {
+int MxItem::f_calc(MxTrg * mtg, int n) {
 	if (!m_id) bug("mx/f: wtf???");
-	int chkf = (m_nx == m_id), ifg = 1, oc = u.f.ocfg;
-	double *pi1, *pi2;
+	int ifg0, ifg1, dly, r2, chkf = (m_nx==m_id), oc = u.f.ocfg, abf = u.f.abflg&32764, f2 = abf&8;
+	double *pi0, *pi1, **ppi=u.f.in.pp, *pt0 = mtg->pt[0], *pt1 = mtg->pt[1], zr = 0.0;
 	if (chkf){ if (u.f.t >= u.f.tlim) { MXLOG("mx/f_calc: t(%d)>=tlim(%d)", u.f.t, u.f.tlim); return 1; }
-		   pi1 = zeroblkD; pi2 = (u.f.flg&2) ? pi1 : 0; ifg = 0;
-	} else{ u.f.t = 0;   pi1 = tmp; pi2 = (u.f.flg&2) ? tmp+n : 0;
-		rf_bfor(pi1, pi2, tmp+2*n, n); }
-	double *pt1 = tmp+2*n, *pt2 = pi2 ? tmp : 0, **ppi = u.f.in.pp;
-	int r0 =       (*ppi=pi1, u.f.bx0->calc_nzo2(oc, pt1, 0, ifg, ppi, n)),
-	    r1 = pi2 ? (*ppi=pi2, u.f.bx1->calc_nzo2(oc, pt2, 0, ifg, ppi, n)) : 0,  r01 = r0|r1;
-	if (r01<=0) return r01 ? (r0=min_i(r0,r1), gui_errq_add(r01),
-				  log("mx%x: removing f#%x: \"%s\"(%d)", u.b.up, m_id, err_str(r0), r0), 1)
-			       : ((u.f.t+=n) >= u.f.tlim);
-	if (chkf) chkf = r0 ? mx_chkv(pt1, r1?pt2:0, &u.f.t, u.f.tlim, u.f.vlim, n)
-			    : mx_chkv(pt2,    0,     &u.f.t, u.f.tlim, u.f.vlim, n), n = chkf&8191;
-	if (!to2){ if (!r0) r1 = 0, pt1 = pt2;
-		   if (r1)  for (int i=0; i<n; i++) to1[i] += pt1[i] + pt2[i];
-		   else     for (int i=0; i<n; i++) to1[i] += pt1[i]; 
-	} else if (!(u.f.flg&1)) { if (r0) for (int i=0; i<n; i++) to1[i] += pt1[i];
-				   if (r1) for (int i=0; i<n; i++) to2[i] += pt2[i];
-	} else{ double v1 = u.f.v[0], v2 = u.f.v[1];
-		if      (!r1) for (int i=0; i<n; i++) to1[i] += v1*pt1[i], to2[i] += v2*pt1[i];
-		else if (!r0) for (int i=0; i<n; i++) to1[i] += v2*pt2[i], to2[i] -= v1*pt2[i];
-		else	      for (int i=0; i<n; i++) to1[i] += v1*pt1[i] + v2*pt2[i],
-						      to2[i] += v2*pt1[i] - v1*pt2[i]; }
+		   if (!(abf&16384)) return u.f.t+=n, 0; else pi0 = pi1 = &zr, ifg0 = ifg1 = dly = 0; }
+	else	 { u.f.t = 0; mtg->lrc01 &= ~24; mtg->fdly = ~abf & 16384; rf_bfor(mtg, n);
+		   if ((n -= (dly=mtg->fdly)) <= 0) return 0; else u.f.abflg |= 16384;
+		   pi0 = (ifg0 = (mtg->lrc01>>3)&1) ? mtg->pp5[3]+dly : &zr;
+		   pi1 = (ifg1 = (mtg->lrc01>>4)&1) ? mtg->pp5[4]+dly : &zr; }
+	int r0 =      (*ppi = pi0, u.f.bx[0]->calc_nzo2(oc, pt0, 0, ifg0, ppi, n)),
+	    r1 = f2 ? (*ppi = pi1, u.f.bx[1]->calc_nzo2(oc, pt1, 0, ifg1, ppi, n)) : 0;
+	if ((r2 = r0|(2*r1)) <= 0) return r2 ? (gui_errq_add(min_i(r0 , r1), "mx/f_calc"), 1)
+					     : ((u.f.t+=n) >= u.f.tlim);
+	if (chkf) chkf = r0 ? mx_chkv(pt0, r1?pt1:0, &u.f.t, u.f.tlim, u.f.vlim, n)
+			    : mx_chkv(pt1,    0,     &u.f.t, u.f.tlim, u.f.vlim, n), n = chkf&8191;
 	if (chkf &= 32768) MXLOG("mx/f_calc: done, n=%d, tlim=%d, vlim=%.15g", n, u.f.tlim, u.f.vlim);
-	return chkf;
+	return mtg->addb(abf|chkf|r2, dly, n, u.f.v);
 }
 
 void MxItem::r2_clear() {
@@ -373,21 +436,20 @@ void MxItem::r2_clear() {
 		mx_free(pm); // TODO: model unref
 	} m_x8 = 0; }
 
-int MxItem::r_calc(double *to1, double *to2, int n, int f) {
-	int fu = m_nx!=m_id, no = (fu||m_x8) ? 1+(u.r.flg&1) : 0;
-	if (!no) return f ? (clearbuf(to1,n), f>1 ? (clearbuf(to2,n),2) : 1) : 0;
-	double tmp[4*n], *q = (u.r.flg&1) ? to2 : 0;
-	if (fu) { rf_bfor(to1, q, tmp, n); if (!m_x8) return no<f ? (memcpy(to2,to1,8*n),2) : no; }
-	else { clearbuf(to1,n); if (q) clearbuf(q, n); }
-	int nfm = 0, nfm0 = m_x8;
-	unsigned short mi, fi;
-	for (int i=0; i<nfm0; i++) {
-		MxItem * pm = mx_ptr(mi = u.r.mi[i]);
+#define MXR_ZERO (f ? (memset(to0,0,8*n), (f>1) ? (memset(to1,0,8*n),2) : 1) : 0)
+int MxItem::r_calc(double *to0, double *to1, int n, int f) {
+	int fu = m_nx!=m_id, nfm, nfm0 = m_x8;  if (!(fu|nfm0)) return MXR_ZERO;
+	double tmp[(3 + !to1 + 2*!!nfm0)*n]; 
+	MxTrg mtg(n, f, nfm0, tmp, to0, to1);
+	if (fu) { rf_bfor(&mtg, n); if (!nfm0) return mtg.ret(); }
+	for (int i=nfm=0; i<nfm0; i++) {
+		unsigned short fi, mi = u.r.mi[i];
+		MxItem * pm = mx_ptr(mi);
 		int nf = 0, nf0 = pm->m_x8;
 		for (int j=0; j<nf0; j++) {
 			MxItem * pf = mx_ptr(fi = pm->u.m.fi[j]);
 			if (pf->m_ty!='f') bug("mx: r_calc: f expected");
-			if (pf->f_calc(to1, q, tmp, n)) mx_fdel(pf);
+			if (pf->f_calc(&mtg, n)) mx_fdel(pf);
 			else if (nf!=j) pm->u.m.fi[nf++] = fi;
 			else ++nf;
 		}
@@ -395,8 +457,12 @@ int MxItem::r_calc(double *to1, double *to2, int n, int f) {
 		else if (nfm!=i) u.r.mi[nfm++] = mi;
 		else nfm++;
 	}
-	m_x8 = nfm; return no<f ? (memcpy(to2,to1,8*n),2) : no;
+	return m_x8 = nfm, mtg.ret();
 }
+
+void MxItem::rf_clear() { MxItem * p;
+	for (int i0=m_id, i=m_nx; i!=i0; p=mx_ptr(i), i=p->m_nx, mx_bdel_c(p));
+	m_nx = m_pv = m_id; }
 
 /////// control /////////////////////////////////////////////////////
 
@@ -504,26 +570,7 @@ static void mx_l_debug() {
 	log(""); }
 
 /////// export //////////////////////////////////////////////////////
-typedef int (*mx_fp_fun_t) (MxItem*, double*, double, double);
-#define FPDEF(NM, XP) static int mx_fplr_##NM(MxItem*f,double*pv,double v0,double lr){return(XP);}
-FPDEF(m3, (lr-=f->u.f.lr, pv[0]=v0*cos(lr), pv[1]=-v0*sin(lr), 0))
-FPDEF(s3, (pv[0]=v0*f->u.f.v[0], pv[1]=v0*f->u.f.v[1], 64))
-FPDEF(m2, (pv[0]=v0*cos(lr), pv[1]=v0*sin(lr), 0))
-FPDEF(s2, (pv[0]=pv[1]=v0, 0))
-FPDEF(m1, ((fabs(lr-f->u.f.lr)<1e-12) ? (pv[0]=v0, pv[1]=0.0, 0) :
-	      (f->u.f.flg|=3, f->u.f.bx1=f->u.f.mdl->mk_box(), mx_fplr_m3(f,pv,v0,lr))))
-FPDEF(s1, (f->u.f.flg|=3, f->u.f.bx1=f->u.f.mdl->mk_box(), mx_fplr_s3(f,pv,v0,lr)))
-FPDEF(m0, (pv[0]=v0, pv[1]=0.0, f->u.f.v[0]=cos(lr), f->u.f.v[1]=sin(lr), f->u.f.lr = lr,
-	       f->u.f.flg|=1, f->u.f.bx0 = f->u.f.mdl->mk_box(), 0))
-FPDEF(s0, (f->u.f.bx0 = f->u.f.mdl->mk_box(), pv[0]=pv[1]=v0, f->u.f.flg|=2,
-	   f->u.f.bx1 = f->u.f.mdl->mk_box(), 0))
 
-mx_fp_fun_t mx_fp_fun[8] = {mx_fplr_m0, mx_fplr_m1, mx_fplr_m2, mx_fplr_m3,
-			    mx_fplr_s0, mx_fplr_s1, mx_fplr_s2, mx_fplr_s3};
-
-#define MXIARG(V,I,C) MxItem * V = mx_ptr(I); \
-	if (V->m_ty!=*#C) return V->m_ty ? MXE_EXP##C : MXE_NOSUCH
-/////
 int mx_mkroot() {
 	MxItem * p = mx_alloc('r');
 	return p ? (p->m_x8=0, p->m_pv=p->m_nx=p->m_id, p->u.r.flg=0, p->m_id) : MXE_GFULL; }
@@ -561,7 +608,7 @@ int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel) {
 	MXIARG(rnod, trgi, r);
 	MxItem *mnod = rnod->r_mfind(mdl, 1); if (!mnod) return MXE_RFULL;
 	MxItem *fnod = mnod->m_ffind(ni, arg, 1, trgi);
-	if (debug_flags & DFLG_MX) log(" ...res: %d", fnod ? fnod->m_id : -123456789);
+	MXLOG(" ...res: %d", fnod ? fnod->m_id : -123456789);
 	return fnod ? (fnod->u.f.ocfg = osel, fnod->m_id) : MXE_MFULL;
 }
 
@@ -569,25 +616,47 @@ int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel) {
 int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * arg, int ocf,int delay,int tlim){
 	if (trgi & ~65535) return MXE_WRONGID;
 	MxItem *up = mx_ptr(trgi); 
-	int ty = up->m_ty, ff = (ty=='f'), o2f = (updnnino[3]-1);
-	if (debug_flags & DFLG_MX) {
-		log_n("mx_add_box(%d):",trgi); for (int i=0; i<updnnino[2]+6; i++) log_n(" %.15g", arg[i]); log(""); }
-	if (!ff && ty!='r') return bug("mx_add_box: ty=0x%x(%c)", ty, ty?ty:32), ty ? MXE_EXPRF : MXE_NOSUCH;
+	if (debug_flags & DFLG_MX) { log_n("mx_add_box(%d):",trgi); for (int i=0; i<updnnino[2]+6; i++)
+		log_n(" %.15g", arg[i]); log(""); }
 	MxItem *old0 = mx_ptr(up->m_nx), *rn = mx_alloc('b', trgi, old0->m_id);
-	rn->m_x8 = 0; rn->u.b.bx = bxi; rn->u.b.up = trgi;
+	rn->u.b.bx = bxi; rn->u.b.up = trgi;
 	up->m_nx = old0->m_pv = rn->m_id; rn->u.b.ocfg = ocf;
-	double *pv=rn->u.b.v, v0 = arg[0]*arg[1], lr = (.25*M_PI) * (1.0 + arg[5]);
-	char * prf = ff ? &mx_ptr(up->u.f.up)->u.r.flg : &up->u.r.flg;
-	if(ff){ int *pff = &up->u.f.flg;  
-		MXLOG("addbx/f[%d](%d, %p, %.15g, %.15g)", (*pff&3)+4*o2f, up, pv, v0, lr);
-		rn->m_x8 = (*mx_fp_fun[(*pff&3)+4*o2f]) (up, pv, v0, lr); 
-		if (!(*prf&1) && ((*pff&3)>1 || fabs(up->u.f.lr-.25*M_PI)>=1e-12)) *prf |= 1; }
-	else if (o2f) { pv[0] = pv[1] = v0; *prf |= 1; }
-	else { pv[0] = v0*cos(lr); pv[1] = v0*sin(lr); if (!(*prf&1) && fabs(lr-.25*M_PI)>=1e-12) *prf|=1; }
+	rn->b_fbv(up, ocf, arg[5], arg[0]*arg[1]);
 	rn->b_ini(updnnino, arg, delay, tlim);
-	if (debug_flags & DFLG_MX) log("addbx(%d) res: %d, ocfg:0x%x, x8:0x%x", trgi, rn->m_id, rn->u.b.ocfg, rn->m_x8);
+	MXLOG("addbx(%d) res: %d, ocfg:0x%x, abf:0x%x", trgi, rn->m_id, rn->u.b.ocfg, rn->u.b.abflg);
 	return rn->m_id;
 }
+
+void MxItem::b_fbv(MxItem * up, int ocf, double lr0, double v0) {
+	u.b.ocfg = ocf;  int abf, fab, md, ty = up->m_ty;
+	if (ty=='r') { if (~ocf&0x7c00) { abf = 8; u.b.v[1] = v0; goto one; } 
+		       if (abf=0, fabs(lr0)>1e-14) { v0 *= M_SQRT2; goto cs; }
+		       u.b.v[1] = 0.0; goto one; }
+	if (ty!='f') bug("mx/b_fbv: this=%p id=0x%x up(%p):id=0x%x ty=0x%x", this,m_id, up,up->m_id,ty);
+	fab = up->u.f.abflg; md = !!(~ocf&0x7c00); abf = 16+8*md; md += 2*fab;
+	switch(md&7) {
+		case 0: up->f_ini_1(lr0); u.b.v[1] = 0.0; goto one;
+		case 1: up->f_ini_2();    u.b.v[1] =  v0; goto one;
+		case 2: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }
+			up->f_1to2(); goto cs2;
+		case 3: up->f_1to2();
+		case 7: lr0 = -1.0-up->u.f.lr; goto cs2;
+		case 4: goto cs;
+		case 5: goto one;
+		case 6: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }  goto cs2;
+	}
+cs:	lr0 += 1.0; 
+cs2:    lr0 *= (.25*M_PI); u.b.v[0] = v0*cos(lr0); u.b.v[1] = v0*sin(lr0); u.b.abflg = abf; return;
+one:	u.b.abflg = abf | ((fabs((u.b.v[0]=v0)-1.0) < 1e-14) ? 36 : 4);   return;
+}
+
+void MxItem::f_ini_1(double lr) {
+	u.f.lr = lr; u.f.bx[0] = u.f.mdl->mk_box();
+	if (fabs(lr)<1e-14) u.f.v[0] = u.f.v[1] = 1.0, u.f.abflg = 37;
+	else lr+=1.0, lr*=.25*M_PI, u.f.v[0]=M_SQRT2*cos(lr), u.f.v[1]=M_SQRT2*sin(lr), u.f.abflg=1; }
+
+void MxItem::f_ini_2() { u.f.bx[0] = u.f.mdl->mk_box();
+	u.f.abflg = 46;  u.f.bx[1] = u.f.mdl->mk_box();  u.f.v[0] = u.f.v[1] = 1.0; }
 
 int mx_c_stop(int ci, int ky, int f) {
 	MXIARG(cn,ci,c); BoxGen * br = cn->u.c.bref; 
