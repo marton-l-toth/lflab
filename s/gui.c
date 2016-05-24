@@ -1138,6 +1138,8 @@ TDIV_MENU_LN
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
+{'P', 5, 0,5,1, "[avg]left rightA:L,R*:L,R", "01234"},
+{0,   6, 0,5,1, "[avg]left rightavg/Zlft/Zrgt/Z", "012456"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -2352,8 +2354,8 @@ static void wrap_cmd (struct _topwin * tw, char * arg) {
 static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	"([{Mm$Xm|#1}{B_stp$X.1}{B_kill$X.2}]{1w}"
 	"3[3{+#XG.}0{__}]0"
-	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{B_plot(t)$XPT})"
-	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{B_plot(F)$XPF})])"
+	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{M_plot(t)$XPT|P0})"
+	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{M_plot(F)$XPF|P1})])"
 		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};

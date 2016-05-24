@@ -198,6 +198,7 @@ BXE_NOOUT    this object cannot be used as a box
 BXE_WLGDONE  wrap linegrp done (BUG)
 BXE_QSTATDIF plot quick stat mismatch (TEST CASE FAIL)
 BXE_QSTATCNT plot quick stat: wrong sample count (TEST CASE FAIL)
+BXE_ZPLOT    plot is all zeroes -- refusing to open window
 BXE_SORRY    sorry not yet implemented (box)
 S4__________ __________________________________________________________(BUG)__
 MDE_SEVEN    got MIDI data byte where cmd expected

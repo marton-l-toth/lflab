@@ -11,10 +11,10 @@ class PlotPar_arr : public PlotPar {
 	public:
 		double *p;
 		double x0, mul;
-		PlotPar_arr(double *pp, int n, double x_0, double x_1) :
-			p(pp), x0(x_0), mul((double)(n-1)/(x_1-x_0)) {}
-		double y(double x) {
-			return p[ (int)round( mul * (x - x0) ) ]; }
+		PlotPar_arr() : p(0) {}
+		PlotPar_arr(double *pp, int n, double x_0, double x_1) { s(pp,n,x_0,x_1); }
+		inline void s(double *q, int n, double a, double b) { p=q, x0=a, mul=(double)(n-1)/(b-a); }
+		double y(double x) { return p[ (int)round( mul * (x - x0) ) ]; }
 };
 
 typedef double (*plotfun1_t) (double, PlotPar*);
