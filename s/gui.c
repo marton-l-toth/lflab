@@ -1095,9 +1095,9 @@ noderef_t lsr_nodes[96];
 int n_lsr[3];
 
 typedef struct _menu_t {
-	int ty, ni, widf;
+	int ty, ni, widf; // widf: 1:au.wid 2,4:switch 8:setdef
 	int lbll, cmdl;
-	const char *lbl, *cmd;
+	char *lbl, *cmd;
 } menu_t;
 
 menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
@@ -1138,8 +1138,8 @@ TDIV_MENU_LN
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
-{'P', 5, 0,5,1, "[avg]left rightA:L,R*:L,R", "01234"},
-{0,   6, 0,5,1, "[avg]left rightavg/Zlft/Zrgt/Z", "012456"},
+{'P', 6, 8,7,1, "[avg]  avg    left   right  A:L,R  *:L,R  ", "001234"},
+{0,   7, 8,7,1, "[avg]  avg    left   right  avg/Z  lft/Z  rgt/Z  ", "0012456"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -1239,8 +1239,16 @@ static const char * menu_lbl(int ix) {
 static void menu_act(GtkMenuItem *it, gpointer p) {
 	size_t ix = (char*)p - cmenu_dcmd;
 	if (it && (dflg & DF_REC)) CMD("QRm:%s", menu_lbl(ix));
-	if (ix<0 || ix>31) LOG("menu_act: ptr:%p dcmd:%p diff:%d", (char*)p, cmenu_dcmd, ix);
-	else if (cmenu_w->cl->ch=='t') tsc_act(cmenu_w, ix);
+	if (ix<0 || ix>31) return LOG("menu_act: ptr:%p dcmd:%p diff:%d", (char*)p, cmenu_dcmd, ix);
+	if (ix && (cmenu_mt->widf&8192)) {
+		if (ix >= cmenu_mt->ni) return LOG("menu_act: flg8, ix(%d)>=ni(%d)", ix, cmenu_mt->ni);
+		char *sl0 = cmenu_mt->lbl, *sl = sl0 + ix*cmenu_mt->lbll,
+		     *sc0 = cmenu_mt->cmd, *sc = sc0 + ix*cmenu_mt->cmdl;
+		memcpy(sc0, sc, cmenu_mt->cmdl);
+		int ll = min_i(strlen(sl), cmenu_mt->lbll-3);
+		memcpy(sl0+1, sl, ll); sl0[ll+1] = ']'; sl0[ll+2]=0;
+	}
+	if 	(cmenu_w->cl->ch=='t') tsc_act(cmenu_w, ix);
 	else if (ix < cmenu_mt->ni) widg_defcmd(cmenu_w, cmenu_mt->cmd + ix*cmenu_mt->cmdl);
 	else if ((ix-=cmenu_mt->ni) < cmenu_dic) widg_defcmd(cmenu_w, cmenu_dcmd + 32*ix);
 	else LOG("menu_act: invalid ix2=%d", ix);

@@ -1237,7 +1237,7 @@ int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
         if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
 	double res[f7?2*len:len];
 	int k, r = batch_calc(res, f7?res+len:0, i0, len, 0); if (r<=0) return r?r:BXE_ZPLOT;
-	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), flg = 0;
+	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), flg = f7 = 0;
         if (len <= n) {
 		qstat.store(res, f7?2*len:len);
                 PlotPar_arr par0(res, len, t0, t1), par1(res+len, len, t0, t1);
@@ -1292,9 +1292,9 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
         PlotPar_arr p_avg(stat, n, f0, f1);
         PlotPar_arr p_lavg(stat+n, n, f0, f1);
         PlotPar_arr p_lmax(stat+2*n, n, f0, f1);
-        Gnuplot::sg()->setfun1(0, arrfun1, &p_avg, 0, "<avg");
-        Gnuplot::sg()->setfun1(1, arrfun1, &p_lavg, 1, "avgL>");
-        if (statflg) Gnuplot::sg()->setfun1(2, arrfun1, &p_lmax, 1, "maxL>");
+        Gnuplot::sg()->setfun1(0, arrfun1, &p_avg, 0, "avg\0lft\0rgt\0BUG\0A/z\0L/z\0R/z\0BUG"+4*flg);
+        Gnuplot::sg()->setfun1(1, arrfun1, &p_lavg, 1, "lavg");
+        if (statflg) Gnuplot::sg()->setfun1(2, arrfun1, &p_lmax, 1, "lmax");
         Gnuplot::sg()->plot1(statflg ? 7 : 3, f0, f1, n);
 
         delete[] (res); return 0;
