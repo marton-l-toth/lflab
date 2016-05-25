@@ -365,6 +365,29 @@ void MxItem::b_ccut() {
 	if (f&64) mx_free(q); if (bx) box_mxc_notify(bx, k, f);
 }
 
+void MxItem::b_fbv(MxItem * up, int ocf, double lr0, double v0) {
+	u.b.ocfg = ocf;  int abf, fab, md, ty = up->m_ty;
+	if (ty=='r') { if (~ocf&0x7c00) { abf = 8; u.b.v[1] = v0; goto one; } 
+		       if (abf=0, fabs(lr0)>1e-14) { goto cs; } else { u.b.v[1] = 0.0; goto one; }}
+	if (ty!='f') bug("mx/b_fbv: this=%p id=0x%x up(%p):id=0x%x ty=0x%x", this,m_id, up,up->m_id,ty);
+	fab = up->u.f.abflg; md = !!(~ocf&0x7c00); abf = 16+8*md; md += 2*fab;
+	MXLOG("fbv: md=%o, abf=0x%x  fab=0x%x", md&7, abf, fab);
+	switch(md&7) {
+		case 0: up->f_ini_1(lr0); u.b.v[1] = 0.0; goto one;
+		case 1: up->f_ini_2();    u.b.v[1] =  v0; goto one;
+		case 2: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }
+			up->f_1to2(); goto cs2;
+		case 3: up->f_1to2();
+		case 7: lr0 = -1.0-up->u.f.lr; v0 *= (.5*M_SQRT2); goto cs2;
+		case 4: goto cs;
+		case 5: u.b.v[1] = v0; goto one;
+		case 6: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }  goto cs2;
+	}
+cs:	v0 *= M_SQRT2; lr0 += 1.0; 
+cs2:    lr0 *= (.25*M_PI); u.b.v[0] = v0*cos(lr0); u.b.v[1] = v0*sin(lr0); u.b.abflg = abf; return;
+one:	u.b.abflg = abf | ((fabs((u.b.v[0]=v0)-1.0) < 1e-14) ? 36 : 4);   return;
+}
+
 /////// filter //////////////////////////////////////////////////////
 // flg: 1-force arg(f): tlim vlim i_1 ... i_ni-1
 //arg(b): v0 v1 u h d lr i_0 ... i_ni-1
@@ -408,6 +431,14 @@ void MxItem::rf_bfor(MxTrg * mtg, int n) {
 		MxItem *p = mx_ptr(icur); icur = p->m_nx;
 		if (p->b_calc(mtg, n)) mx_bdel(p); 
 	}}
+
+void MxItem::f_ini_1(double lr) {
+	u.f.lr = lr; u.f.bx[0] = u.f.mdl->mk_box();
+	if (fabs(lr)<1e-14) u.f.v[0] = u.f.v[1] = 1.0, u.f.abflg = 37;
+	else lr+=1.0, lr*=.25*M_PI, u.f.v[0]=M_SQRT2*cos(lr), u.f.v[1]=M_SQRT2*sin(lr), u.f.abflg=1; }
+
+void MxItem::f_ini_2() { u.f.bx[0] = u.f.mdl->mk_box();
+	u.f.abflg = 46;  u.f.bx[1] = u.f.mdl->mk_box();  u.f.v[0] = u.f.v[1] = 1.0; }
 
 int MxItem::f_calc(MxTrg * mtg, int n) {
 	if (!m_id) bug("mx/f: wtf???");
@@ -626,37 +657,6 @@ int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * ar
 	MXLOG("addbx(%d) res: %d, ocfg:0x%x, abf:0x%x", trgi, rn->m_id, rn->u.b.ocfg, rn->u.b.abflg);
 	return rn->m_id;
 }
-
-void MxItem::b_fbv(MxItem * up, int ocf, double lr0, double v0) {
-	u.b.ocfg = ocf;  int abf, fab, md, ty = up->m_ty;
-	if (ty=='r') { if (~ocf&0x7c00) { abf = 8; u.b.v[1] = v0; goto one; } 
-		       if (abf=0, fabs(lr0)>1e-14) { v0 *= M_SQRT2; goto cs; }
-		       u.b.v[1] = 0.0; goto one; }
-	if (ty!='f') bug("mx/b_fbv: this=%p id=0x%x up(%p):id=0x%x ty=0x%x", this,m_id, up,up->m_id,ty);
-	fab = up->u.f.abflg; md = !!(~ocf&0x7c00); abf = 16+8*md; md += 2*fab;
-	switch(md&7) {
-		case 0: up->f_ini_1(lr0); u.b.v[1] = 0.0; goto one;
-		case 1: up->f_ini_2();    u.b.v[1] =  v0; goto one;
-		case 2: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }
-			up->f_1to2(); goto cs2;
-		case 3: up->f_1to2();
-		case 7: lr0 = -1.0-up->u.f.lr; goto cs2;
-		case 4: goto cs;
-		case 5: goto one;
-		case 6: if (fabs(lr0-=up->u.f.lr)<1e-14) { u.b.v[1] = 0.0; goto one; }  goto cs2;
-	}
-cs:	lr0 += 1.0; 
-cs2:    lr0 *= (.25*M_PI); u.b.v[0] = v0*cos(lr0); u.b.v[1] = v0*sin(lr0); u.b.abflg = abf; return;
-one:	u.b.abflg = abf | ((fabs((u.b.v[0]=v0)-1.0) < 1e-14) ? 36 : 4);   return;
-}
-
-void MxItem::f_ini_1(double lr) {
-	u.f.lr = lr; u.f.bx[0] = u.f.mdl->mk_box();
-	if (fabs(lr)<1e-14) u.f.v[0] = u.f.v[1] = 1.0, u.f.abflg = 37;
-	else lr+=1.0, lr*=.25*M_PI, u.f.v[0]=M_SQRT2*cos(lr), u.f.v[1]=M_SQRT2*sin(lr), u.f.abflg=1; }
-
-void MxItem::f_ini_2() { u.f.bx[0] = u.f.mdl->mk_box();
-	u.f.abflg = 46;  u.f.bx[1] = u.f.mdl->mk_box();  u.f.v[0] = u.f.v[1] = 1.0; }
 
 int mx_c_stop(int ci, int ky, int f) {
 	MXIARG(cn,ci,c); BoxGen * br = cn->u.c.bref; 
