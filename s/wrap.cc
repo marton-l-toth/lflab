@@ -848,7 +848,7 @@ WrapAVJob::WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int 
 	int t = 1; for (int i=0; i<6; i++) t *= m_xy12ij_lim[i];
         m_fstep = 1000.0 / (double) t;
 	for (int k,i=0; i<4; i++) k = m_xy12ij_lim[i]-1, m_ixmul[i] = k ? 1.0 / (double)(k) : 0.0;
-	m_trg = vtab->dat();
+	m_trg = vtab->dat(); if (!m_trg) bug("avjob / zero trg");
 }
 
 int WrapAVJob::run1() {
@@ -1498,10 +1498,11 @@ int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
 	int ec; switch(ent->i4f) {
 		case 1:
 			ent->plttwwii = 0x6b775924;
-			WrapAutoVol * av; av = SOB_RW(sob)->avol_rw();
+			WrapAutoVol * av; av = (glob_flg&GLF_AVOLSHR) ? m_sob.ro()->m_avol.ro() 
+								      : SOB_RW(sob)->avol_rw();
 			if (arg && *arg && *arg!='w') {
 				if ((ec = av->parse_dim(arg))<0) return ec;
-			} else {
+			} else if (wnfl()) {
 				BXW_GET; if ((ec = av->upd_xy12rt(WR_AVCONF))<0) return ec;
 			}
 			ec = mx_mkroot();
@@ -1646,7 +1647,8 @@ CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
 	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
 	switch(s[1]) {
 		case 'D': sob->m_avol.set(0); break;
-		case ':': ec = sob->avol_rw()->parse_dim(s+2); break;
+		case ':': if (debug_flags&DFLG_VOLTAB) log("vt-conf: #%x", p->m_node->id());
+			  ec = sob->avol_rw()->parse_dim(s+2); break;
 		default:  return BXE_UCMD;
 	}
 	if (ec<0 || !p->wnfl()) return ec;

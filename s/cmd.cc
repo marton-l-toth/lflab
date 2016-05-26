@@ -370,7 +370,10 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'm': return nd_mem_debug();
 		case '_': return midi_cmd(p->m_c_a0+1);
 		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
-		case 'G': return log("glob_flg = 0x%x", glob_flg), 0;
+		case 'G': switch(j=p->m_c_a0[1], i=j?atoi_h(p->m_c_a0+2):0, j) {
+				  case '-': i=~i; case '&': i &= glob_flg; break;
+				  case '+':       case '|': i |= glob_flg; break; default:i=glob_flg; break; }
+			  return j=glob_flg, glob_flg=i, log("glob_flg: 0x%x -> 0x%x", j, i), 0;
 		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
 		case 'W': return ANode::wi_debug(), 0;
 		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = p->m_c_a0[1]&1) ) return EEE_NOEFF;

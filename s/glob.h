@@ -1,6 +1,7 @@
 #ifndef __qwe_glob_h__
 #define __qwe_glob_h__
 
+#define GLF_AVOLSHR   0x80000
 #define GLF_LIBMODE   0x100000
 #define GLF_EMPTY     0x200000
 #define GLF_RECOVER   0x400000
