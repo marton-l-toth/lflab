@@ -1225,9 +1225,13 @@ int AWrapGen::batch_calc(double *to0, double *to1, int skip, int n, int nch) {
 	int nzch = 0, mxid = mx1(0); if (mxid<0) return mxid;
 	while (skip>0) mx_calc(mxid, junkbuf, junkbuf, min_i(skip, 1024), 0), skip -= 1024;
 	for (int n1, j=0; (n1=min_i(n-j,1024)) > 0; j+=n1) { 
-		int r = mx_calc(mxid, to0+j, to1?to1+j:0, n1, nzch);
+		int k, r = mx_calc(mxid, to0+j, to1?to1+j:0, n1, nzch);
 		if ((unsigned int)r > 2u) return (r<0) ? r : (log("BUG: wr/batch: r=%d",r), BXE_WTF);
-		if (r>nzch) nzch = (nzch==1) ? (memcpy(to1, to0, 8*j), r) : r;  }
+		if (r>nzch) { switch(k=2*r+nzch, nzch=r, k) { 
+			case 4: memset(to1,   0, 8*j);
+			case 2: memset(to0,   0, 8*j); break;
+			case 5: memcpy(to1, to0, 8*j); break;
+			default: return log("BUG: wr/batch: k=%d",k), BXE_WTF; }}}
 	mx_del(mxid); if (DBGC) log("batch_mono: %d", clk.get()); return nzch;
 }
 
