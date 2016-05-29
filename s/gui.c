@@ -1120,7 +1120,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {'/',8, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  ","DCwsgict"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
-{'#',5, 0, 8, 3, "[focus] config  help    redraw  wav/flac", "$>*W$ N??M9 XAW"},
+{'#',7, 0,8,4, "[focus] config  help    redraw  wav/flac+autoupd-autoupd", "$>* W$  N?? M9  XAW XAU1XAU0"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',7, 0, 7,2, "help   info1  info2  info4  info*  GUI cfgdelete ", "N?I1I2I4I7EWNd"},
@@ -1853,6 +1853,7 @@ static void dlmenu_ilb(ww_t * ww, int j) {
 	return da_fullre(ww);
 }
 
+static void dabool_set(ww_t * ww, int k) { if (DABOOL(ww) != k) DABOOL(ww) = k, da_fullre(ww); }
 static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) return dalbl_draw(ww, (cairo_t*)ww->arg[0].p);
 	int k, ch = ww->cl->ch; char *s = DALBL_TXT(ww);
@@ -1864,10 +1865,8 @@ static void dalbl_cmd(struct _ww_t * ww, const char * arg) {
 		case 't': strncpy(DALBL_TXT(ww), arg+1, 7); ww->arg[2].c[7] = 0; goto draw;
 		case 'x':
 		case 's': if (ch!='Y') goto err;
-		bo:  	  k = arg[1]-'0';
-			  if (k&~1) { LOG("dalbl: Y/s: invalid value 0x%x", arg[1]); return; }
-			  if (DABOOL(ww) != k) DABOOL(ww) = k; else return;
-			  goto draw;
+		bo:  	  return ((k=arg[1]-'0')&~1) ? LOG("dalbl: Y/s: invalid value 0x%x", arg[1]) 
+				  		     : dabool_set(ww, k);
 		case 'S':
 			  ++arg; get_tok(ww->arg[2].c, 8, &arg, '$'+128);
 			  get_tok(ww->cmd, 16, &arg, 128); goto draw;
@@ -1891,13 +1890,11 @@ static void dalbl_mw18(ww_t * ww, const char * s) {
 
 static void upd_flgvec(topwin * tw, const char* s, int n, int of, int nf) {
 	ww_t * ww0 = wlu_any_s(tw, s); if (!ww0) return LOG("upd_flgvec: widget not found");
-	int ix = ww0->ix, x, i, msk=1, sg=1; 
+	int ix = ww0->ix, i, msk=1, sg=1; 
 	if (n<0) n = -n, sg = -1; if (of<0) of = ~nf;
-	for (i=0; i<n; i++, ix+=sg, msk<<=1) {
-		if (!(msk & (of^nf))) continue;
-		ww_t * ww = widg_p(tw, ix); 
-		if ((x=!!(msk&nf)) != DABOOL(ww)) DABOOL(ww) = x, da_fullre(ww);
-	}}
+	for (i=0; i<n; i++, ix+=sg, msk<<=1)
+		if (msk & (of^nf)) dabool_set(widg_p(tw, ix), !!(msk&nf));
+}
 
 static void dlbtn_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	if (b9==1) widg_defcmd(ww, ""); }
@@ -2064,11 +2061,14 @@ static void daprg_cmd(struct _ww_t * ww, const char * arg) {
 #define DACNT_DOT(x) ((x)->arg[4].c[0])
 #define DACNT_DOTC(x) ( DACNT_CONT(x) ? 0 : (x)->arg[4].c[0] )
 
+static void dagrid_kcmd(ww_t * ww, int b9, int x, int y);
 static void dacnt_act(ww_t * ww, int x) {
 	char buf[16], *s = ww->cmd; int j;
 	if (*s!=36) { buf[hx5(buf, x)] = 0; widg_defcmd(ww, buf); return; }
 	switch(s[1]) {
-		case 'c': ww->top->arg[s[2]-48].c[s[3]&7] = x; return;
+		case 'c': ww->top->arg[s[2]-48].c[s[3]&7] = x; 
+			  if (ww->top->arg[64].i[0]&1) dagrid_kcmd(widg_lookup_ps(ww->top, "#"), 3, -1, -1);
+			  return;
 		case 'C': for (j=s[2]&7, s+=3; *s;) 
 				  (ww=widg_lookup_p(ww->top, (const char**)(&s)))->arg[4].c[j] = x + 37, 
 					  da_fullre(ww); 
@@ -2308,10 +2308,10 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
 			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"},
 		ln0[]="({Y0s5$Xj_i}3{e19$Xj_v}0{84=$-3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})";
-	static char ln[80], _cnt = 0, _pos[47];
+	static char ln[88], _cnt = 0, _pos[47];
 	int i;  topwin * tw = ww->top;
 	if (ix<2) return parse_w_s(tw, h[ix]);
-	if (!_cnt) { memcpy(ln,ln0,80); for (i=0; ln[i]; i++) if (ln[i]=='_') _pos[_cnt++] = i; }
+	if (!_cnt) { memcpy(ln,ln0,85); for (i=0; ln[i]; i++) if (ln[i]=='_') _pos[_cnt++] = i; }
 	for (i=0; i<_cnt; i++) ln[_pos[i]] = 46 + ix;
 	GtkWidget * rw = parse_w_s(tw, ln);
 	int i0 = VB_WBASE(ww) + 8*ix;
@@ -2324,7 +2324,7 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] 
 "({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}"
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
-"({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS})",
+"({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS}{Y4sl.upd$XAU})",
 "({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,0,
 "({Y0iadj.S$XcS}{Y1iadj.T$XcT})" };
 return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
@@ -2337,7 +2337,9 @@ static void swrap_cmd (struct _topwin * tw, char * arg) {
 		case '!': i = 3; BVFOR_JMC(hex2(arg+1))
 				  entry_set(widg_p(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
 			  return;
-		case '-': wi += 8*(arg[1]&7) + 16; i = qh4rs(arg+2);
+		case '-': case '+':
+			  wi += 8*(arg[1]&7) + 16; i = qh4rs(arg+2);
+			  dabool_set( widg_p(tw, wi  ), (*arg>>1)&1);
 			  dacnt_set_x(widg_p(tw, wi+4), (signed char)(i&255), 256);
 			  dlmenu_ilb (widg_p(tw, wi+5), (i>> 8)&15);
 			  dlmenu_ilb (widg_p(tw, wi+6), (i>>12)&15);
@@ -2535,7 +2537,8 @@ static void dagrid_cmd(struct _ww_t * ww, const char * s) {
 
 static void dagrid_kcmd(ww_t * ww, int b9, int x, int y) {
 	if ((dflg & DF_REC) && !(b9&32)) rec_vpf(ww, "k%05x", (b9<<16)|(y<<8)|x);
-	char buf[12], *q = ww->top->arg[9].c; buf[0] = 48|b9; buf[1] = 48+x; buf[2] = 48+y;
+	char buf[12], *q = ww->top->arg[9].c;   buf[0] = 48|b9; buf[1] = 48+(x<0?GRID_CX(ww):x);
+								buf[2] = 48+(y<0?GRID_CY(ww):y);
 	int i; for (i=0; i<6; i++) buf[3+i] = q[i]+48; buf[9] = 0;
 	widg_defcmd(ww, buf);
 }
@@ -2647,6 +2650,8 @@ static void tgrid_cmd (struct _topwin * tw, char * arg) {
 		case '*':
 			ww = widg_lookup_ps(tw, "#");
 			gtk_window_set_focus(GTK_WINDOW(tw->w), ww->w); ++arg; continue;
+		case 'u': tw->arg[64].i[0] |=  1; ++arg; continue;
+		case 'U': tw->arg[64].i[0] &= ~1; ++arg; continue;
 		case 0: return;
 		default: LOG("tgrid: unknown cmd 0x%x(%c)", *arg, *arg); return;
 	}}}
@@ -2657,7 +2662,7 @@ static void tgrid_skel (struct _topwin * tw, char * arg) { const char * str =
     "7({!As1$332$c90}{!Bs2$332$c91}{!Cs3$332$c92}{!Ds4$332$c93}{!Es5$332$c94}{!Fs6$332$c95})]"
      "3{##XG})";
 	if (tw->state) { if (arg) tgrid_cmd(tw, arg); return; }
-	tw->ix4 = 3;
+	tw->ix4 = 3; tw->arg[64].c[0] = 0;
 	tw->arg[0].p = parse_w(tw, &str);
 	gtk_widget_show(GTK_WIDGET(tw->arg[3].p));
 	gtk_widget_show(GTK_WIDGET(tw->arg[4].p));
@@ -3383,7 +3388,7 @@ static void tc_adj_s(tc_t * tc, int i, int v) {
 }
 
 static void ttrk_cmd (struct _topwin * tw, char *s) {
-	ww_t *wn, *wt = widg_lookup_ps(tw, "t");
+	ww_t *wt = widg_lookup_ps(tw, "t");
         tc_t * tc = (tc_t*) wt->etc;
 	int i, k, a[4]; char buf[8];
 	tsr_op(wt, TSR_START, 0);
@@ -3398,7 +3403,7 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 		case '1': tc_adj_d(tc, tsc_y, tsc_x); goto done;
 		case '2': tc_adj_s(tc, tsc_y, tsc_x); goto done;
 		case 'g': ++s; s += trk_g_parse(s, tc->div, tc->gwfr); 
-			  DABOOL(wn=widg_lookup_ps(tw,"A")) = tc->gwfr[2]&1; da_fullre(wn); continue;
+			  dabool_set(widg_lookup_ps(tw,"A"), tc->gwfr[2]&1); continue;
 		case '*':
 			memcpy(buf, "Xmd", 3); memcpy(buf+3, s+1, 2);
 			k = TC_PPB(tc) / tdiv_idsf[tc_effdiv(tc, tc->sely>>4)].d;
@@ -3409,8 +3414,8 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 			case 'S': tc_adj_s(tc, 0, s[2]-48); goto done;
 			case 'W': tc_adj_w(tc, s[2]^s[3]); goto done;
 			case 'M': tc_adj_gd(tc, s[2]); goto done;
-			case 'A': DABOOL(wn=widg_lookup_ps(tw,"A")) = (tc->gwfr[2]^=1)&1;
-				  da_fullre(wn); tsr_op(wt, 4098, -2); goto done;
+			case 'A': dabool_set(widg_lookup_ps(tw,"A"), (tc->gwfr[2]^=1)&1); 
+				  tsr_op(wt, 4098, -2); goto done;
 			default: break; }
 		default: LOG("ttrk: invalid cmd 0x%x \"%s\"", *s, s); goto done;
 	}}
@@ -4105,9 +4110,6 @@ static const char * daerr_txt(int i, int j) {
 	memcpy(buf+k, s, l); buf[k+l] = 0; return buf;
 }
 
-static void err_upd_flg(struct _topwin * tw) {
-	ww_t * ww = widg_lookup_pci(tw, 'A', -1); DABOOL(ww) = err_annoy; da_fullre(ww); }
-
 static void err_upd_nl(struct _topwin * tw) {
 	dacnt_set_x (widg_lookup_pci(tw, 'N', -1), err_nl, 256);
 	vbox_show_bv(widg_lookup_pci(tw, 'E', -1), (1<<err_nl)-1); }
@@ -4126,7 +4128,7 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 			  else if (nl<=red && red<31) memmove(err_tab, err_tab+(red+1-nl), 8*nl), red = nl-1;
 			  break;
 		case 'X': red = 31; for (i=0; i<nl; i++) err_tab[i].i[0] = 0; break;
-		case 'A': err_annoy ^= 1; err_upd_flg(tw); break;
+		case 'A': err_annoy ^= 1; dabool_set(widg_lookup_pci(tw, 'A', -1), err_annoy); break;
 		case '>': ++arg; for (n=0; arg[n]; n++);
 			  for (i=0; i<n; i+=8) if ((k = 65536*qh4rs(arg+i)+qh4rs(arg+4+i))!=0x01FFFFEA)
 				  ++red, red&=-(red<nl), err_tab[red].i[0]=k,err_tab[red].i[1]=t; else af = 1;
@@ -4146,7 +4148,7 @@ static void err_skel (struct _topwin * tw, char * arg) {
 		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_mem$_m}{B_mx$_ML}3()0"
 		"{B_console$_c-1}{B_au.cfg$A0W}{B_?$$?}){:EeN10}]");
 		memcpy(tw->title, "Errors\0", 8); 
-		err_upd_nl(tw); err_upd_flg(tw);
+		err_upd_nl(tw); dabool_set(widg_lookup_pci(tw, 'A', -1), err_annoy);
 	} else if (err_annoy) {
 		int t = time(NULL); 
 		if (t!=err_annoy_t) err_annoy_t = t, gtk_window_present(GTK_WINDOW(tw->w));

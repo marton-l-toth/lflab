@@ -19,6 +19,9 @@
 #define WRF_W_PLOT 0x10000000 // bx
 #define WRF_SHADOW 0x08000000 // bx
 #define WRF_MKSH   0x04000000 // bx
+#define WRF_SLUPD  0x02000000 // bx
+#define WRF_B_RSRV 0x01c00000 // bx (rsrv)
+#define WRF_MVC (WRF_W_CH2|WRF_W_PLOT|WRF_MKSH|WRF_SLUPD|WRF_B_RSRV)
 #define WRF_CLID(X) ('w' - (((X)>>25)&4))
 #define WRF_S_NI   0x0000007c // bxD
 #define WRF_S_NO   0x00000f80 // bxD
@@ -64,8 +67,8 @@ static const double div1tab[52] = { 0.0, 0.0, 1.0, 0.5, 0.333333333333333, 0.25,
 0.0204081632653061, 0.02 };
 static const unsigned char i8tab[8] = {2,3,4,5,6,7,8,9};
 static const double d8tab[8] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
-static const int wr_flg_mv[4] = { WRF_W_CH2|WRF_W_PLOT|WRF_MKSH|   3,  0, 
-	WRF_IADJS|WRF_IADJT|WRF_W_CH2|WRF_W_PLOT|WRF_MKSH|1023, 12 };
+static const int wr_flg_mv[4] = { WRF_MVC|3, 0, WRF_IADJS|WRF_IADJT|WRF_MVC|1023, 12 };
+#define WR_FLG_MV(P) (wr_flg_mv+2*!!((P)->m_bflg&WRF_SHADOW))
 
 static int slbv_2(int r,int y) { return r>>=2, r | (64&(((0x0e13173f>>(4*(bitcnt_8(r)&6)))&63)-y)); }
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk);
@@ -1011,7 +1014,7 @@ int SWrapTab::set_all(int j, const char * a0, const char * a1) {
 }
 
 void SWrapTab::w_jline(int j, double con) {
-	gui2.t0(); gui2.c2('-', j|48); gui2.hex4(256*ix[j]+((unsigned char) cc[j]));
+	gui2.t0(); gui2.c2('-'-2*((iif>>j)&1), j|48); gui2.hex4(256*ix[j]+((unsigned char) cc[j]));
 	gui2.hdbl(con); gui2.hdbl(ce[0] ? ce[0][j] : 1.0); gui2.hdbl(ce[1] ? ce[1][j] : 0.0);
 }
 
@@ -1057,7 +1060,7 @@ int AWrapGen::slf_conv(int k) {
 
 int AWrapGen::aux_window() {
 	gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.nname(m_node);
-	gui2.c1(36); gr_rgbc();
+	gui2.c1(36); gr_rgbc(); if (m_bflg&WRF_SLUPD) gui2.c1('u');
 	WrapCore * cr = core_ro();
 	cr->slcmd(m_xys6, 4095); w_slbv(1); cr->grcmd(m_xys6);
 	if (cr->ktab) gui2.c1('B'), gui2.wr_keylist(cr->ktab->bv, cr->ktab->pk); 
@@ -1068,8 +1071,8 @@ int AWrapGen::save2_aw(SvArg * sv) {
 	BXSV2_HEAD; int k, m, l = 12, bf = m_bflg;
 	char buf[24]; memcpy(buf, "X$G", 3); buf[3] = 51 + 3*!(bf&WRF_NOCON);
 	for (int i=0; i<8; i++) buf[i+4] = m_xys6[i]+48;
-	if ((k=packflg(bf, wr_flg_mv + 2*!!(bf&WRF_SHADOW)))>=0)
-		m = qh4(k), memcpy(buf+l, "\nX$F", 4), memcpy(buf+l+4, &m, 4), l += 8;
+	if ((k=packflg(bf, WR_FLG_MV(this)))>=0)
+		m = qh4(k), memcpy(buf+l, "\nX$F", 4), buf[l+4] = 48+(k>>16), memcpy(buf+l+5, &m, 4), l += 9;
 	buf[l] = 10; CHKERR(f->sn(buf, l+1));
 	if ((k=m_node->etc()->i[0])!=INT_MAX) { CHKERR(sv->out->pf("X$T%x\n", k)); }
 	CHKERR(m_node->sv_wr_backref()); return r;
@@ -1080,7 +1083,8 @@ void AWrapGen::w_tlim(int f) {
 	gui2.setwin(w_oid(), 'w'); 
 	if (f&1) gui2.wupd_i1('Y', mf,  20);
 	if (f&2) gui2.wupd_d('Y', t==INT_MAX ? -1.0 : (double)t/40320.0, 22);
-	if (f&4) gui2.wupd_i1('Y', !!(m_bflg&WRF_MKSH), 23);
+	if (f&4) gui2.wupd_i1('Y', !!(m_bflg&WRF_MKSH),  23);
+	if (f&8) gui2.wupd_i1('Y', !!(m_bflg&WRF_SLUPD), 24);
 }
 
 int AWrapGen::show_tab(int i) {
@@ -1314,7 +1318,7 @@ CH(gmd){p->m_bflg&=~3, p->m_bflg|=(s[1]&3); if (p->wnfl()) p->w_gmd(); return 0;
 CH(c2k){return min_i(0, p->qcopy(0, cb->cnof())); } 
 CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
 CH(xfd){return p->core_rw()->xfd = wr_ixtr(atoi_h(s+1)), 0; }
-CH(flg){return unpkflg(&p->m_bflg, atoi_h(s+1), wr_flg_mv + 2*!!(p->m_bflg&WRF_SHADOW)), 0; }
+CH(flg){return unpkflg(&p->m_bflg, atoi_h(s+1), WR_FLG_MV(p)), p->m_bflg&=~WRF_B_RSRV, 0; }
 
 CH(tf){	float *q = p->core_rw()->tf01; int flg = s[1]; double x; s += 2;
 	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
@@ -1335,16 +1339,18 @@ CH(ky){ WrapCore * cr = p->core_rw();
 	for (++s; s[0]>47 && s[1]>47 && s[2]>47 && s[3]>47; s+=4)
 		cr->set_key(hex2(s)&127, 64*s[2] + s[3] - 3120);   return 0; }
 
-CH(wav){int k = 0, wf = p->m_node->winflg(2048);
+CH(wav){int j, k = 0, wf = p->wnfl(), *q = &p->m_bflg;
 	switch(s[1]) {
 		case 'F': p->m_bflg &= ~(k=WRF_W_ALL); p->m_bflg |= (((s[1]-48)<<WRF_W_SH)&k); goto flgw;
 		case '2': k = WRF_W_CH2; goto flgs;
 		case '-': k = WRF_W_PLOT; goto flgs;
 		case 'W': case 0: return p->write_a20();
-		case 'S': p->m_bflg ^= WRF_MKSH; return (p->wnfl()) ? (p->w_tlim(4), 0) : 0; 
+		case 'S': return k=WRF_MKSH,  (  s[2]&1) ? (*q|=k) : (*q&=~k), wf ? (p->w_tlim(4), 0) : 0;
+		case 'U': return k=WRF_SLUPD, (j=s[2]&1) ? (*q|=k) : (*q&=~k), p->tab_vis(2)&&(p->w_tlim(8),0),
+			         p->wnfl(512)  ? (gui2.setwin(p->w_oid(9),'#'), gui2.t_sn("Uu"+j,1), 0) : 0;
 		default: return BXE_CENUM;
 	}
-flgs:	if (s[2]&1) p->m_bflg |= k; else p->m_bflg &= ~k;
+flgs:	if (s[2]&1) *q |= k; else *q &= ~k;
 flgw:	if (wf) p->w_a20(k);
 	return 0;
 }
@@ -1812,7 +1818,7 @@ CH(tab){int x, j = s[1]-48, k = 0;
 	switch(s[2]){case 'v':  if (p->m_bflg&WRF_NOCON) p->m_bflg&=~WRF_NOCON, 
 							 sob->m_con.set(DblVec_default(0));
 			        return *sob->con_rw()->addp(j) = at0f(s+3), 0;
-		     case 'c':	intv_cmd_sc(sob->tab_rw()->cc+j, s+3, -125, 125, 0x190501); k = 32; break;
+		     case 'c':	intv_cmd_sc(sob->tab_rw()->cc+j, s+3, -125, 125, 0x190501); k = 4; break;
 		     case 'a':case 'b': sob->tab_rw()->set_ab(j, s[2]-97, at0f(s+3)); break;
 		     case 'x':case 'y': if ((unsigned int)(x=s[3]-48)>9u) return BXE_RANGE;
 					sob->tab_rw()->set_xy(j, k=s[2]-120, s[3]-48); k += 21; break;
