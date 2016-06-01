@@ -138,10 +138,8 @@ class WrapCore : public SOB {
 	public:
 		SOBDEF_64(WrapCore);
 		typedef struct { short * pk[4]; unsigned int n5, bv[4]; } key_t;
-		WrapCore(int uarg) : SOB(uarg) {}
-		WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd) { 
-			if (DBGC) log("wrcore copy: %p -> %p", that, this);
-			memcpy(tf01, that->tf01, 16); memcpy(grdim, that->grdim, 10); }
+		WrapCore(int uarg) : SOB(uarg), ktab(0) {}
+		WrapCore(const WrapCore * that, int uarg);
 		~WrapCore() { del_keytab(); }
 		void ini_default(int _) { tf01[0]=tf01[2]=0.0; tf01[1]=1.0; tf01[3]=22050.0;
 			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); } 
@@ -466,6 +464,14 @@ SOB_INIFUN(WrapSOB,   1)
 SOB_INIFUN(SWrapTab,  1)
 SOB_INIFUN(SWrapSOB,  1)
 /////// core SOB (grid config) //////////////////////////////////////////////
+
+WrapCore::WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd) {
+	if (DBGC) log("wrcore copy: %p -> %p", that, this);
+	memcpy(tf01, that->tf01, 16); memcpy(grdim, that->grdim, 10); 
+	key_t * oktab = that->ktab; if (!oktab) { ktab = 0; return; }
+	(ktab = (key_t*)ANode::a64())->n5 = oktab->n5;
+	for (int i=0;i<4;i++) if ((ktab->bv[i]=oktab->bv[i])) ktab->pk[i] = (short*)ANode::cp64(oktab->pk[i]);
+}
 
 void WrapCore::del_keytab() { if (ktab) {
 	for (int i=0; i<4; i++) if (ktab->bv[i]) ANode::f64(ktab->pk[i]);
