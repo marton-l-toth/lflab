@@ -11,6 +11,7 @@ misc="lf lf.ini help.txt ex.lf lf.gtk.rc.def COPYING"
 who="Marton Laszlo Toth (initial dot initial dot fullsurname at gmail dot com)"
 dsc0="audio lab with emphasis on linear filters"
 
+rm -rf $tmplf
 mkdir -p $tmplf
 for a in $bin; do strip -o $tmplf/$a $a || exit 1; done
 cp $misc $tmplf

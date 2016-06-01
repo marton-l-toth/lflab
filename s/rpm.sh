@@ -5,6 +5,7 @@ rm -f rpm
 . pkg.sh
 
 nmv=$nm-$vers2
+rm -rf $tmpr/$nmv
 mv $tmptree $tmpr/$nmv
 rpmdir=$tmpr/$nm-$vers2-rpm
 rm -rf $rpmdir
