@@ -14,11 +14,11 @@ OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  it.o  in.o  b0.o  v.o
 INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h
 
 SRCC = $(shell c/upd_contrib.sh cc c/)
-OBJC = $(shell c/upd_contrib.sh o)
+OBJC = $(shell c/upd_contrib.sh o  c/)
 
 SRCS = $(SRC1) $(SRC2) $(SRC3) $(SRCC)
 INCS = $(INC1) $(INC2) $(INCX)
-OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC) contrib.o
+OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC) contrib.o hlpn.o
 
 GTKINC = -I/usr/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/ -I/usr/include/glib-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0/ -I/usr/include/gdk-pixbuf-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0
 GTKLIB = -lgtk-x11-2.0 -lgdk-x11-2.0 -lcairo -lgobject-2.0 -lglib-2.0 -lm
@@ -65,8 +65,14 @@ lf.gui: gui.c uc0.h uc1.h errtab.inc
 lf.bb:  bb.c uc0.h
 	gcc -g -Wall $(CFLAGS) bb.c -olf.bb -lm
 
-help.txt: helpm.txt $(SRCS)
-	cp helpm.txt help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
+hlpt.txt: hlpt.sh helpm.txt
+	./hlpt.sh helpm.txt > hlpt.txt
+
+hlpn.cc:  hlpc.sh helpm.txt
+	./hlpc.sh helpm.txt > hlpn.cc
+
+help.txt: hlpt.txt $(SRCS)
+	tail -n +2 hlpt.txt > help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
 deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
 	./deb.sh -v

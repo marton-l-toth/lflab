@@ -1339,7 +1339,7 @@ int Node::obj_help(int cl) {
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
-		case 'i': s = "iterated filter"; break;
+		case 'i': s = "iterated box"; break;
 		case 'w'+256: case 's'+256: s = "instrument(play)"; break;
 		case '_': return EEE_NOEFF;
 		default: return NDE_WTF;
@@ -1629,7 +1629,8 @@ ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no
 		                                           const char * cl, const char * fmt, ...) {
 	BoxGen * bx = new (ANode::a64()) PrimBoxGen(qa, k, ni, no, cl+=(*cl=='_'));
 	ANode * ret = 0; ABoxNode * bnd = 0;
-	if ((*cl&120)==48 && !cl[1]) box_bookmark[*cl&7] = bx;
+	if ((*cl&120)==48 && cl[1]<48) { BoxGen** qq = box_bookmark + (*cl&7);
+				         if (*qq) log("BUG: duplicate box_bookmark: %s", nm); *qq = bx; }
 	int ec = Node::mk(&ret, up, nm, '_', NOF_STRICT|NOF_FORCE, 0, bx);
 	if (ec<0 || !ret) qmk_fail("box", up, nm, ec); else bnd = static_cast<ABoxNode*>(ret);
 	if (!fmt || !*fmt) return ret;

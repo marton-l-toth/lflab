@@ -50,8 +50,8 @@ class CmdTab {
 			else debug_flags = atoi_h(p->m_c_a0); return 0; }
                 static int c_gui2(CmdBuf * p) { gui2.brk(); gui2.pf("%s\n", p->m_c_a0); return 0; }
 		static int c_kfw(CmdBuf * p) { CMD_NODE(Clip); return nd->cmd(p); }
-		static int c_info(CmdBuf * p) { char*s = p->tok(); pt_con_op(0);
-						p->m_c_node->debug(s ? *s&7 : 7); return 0;}
+		static int c_info(CmdBuf * p) { char *s = p->tok(), k = s ? *s&7 : 7; 
+						return k ? (pt_con_op(0), p->m_c_node->debug(k), 0) : 0; }
 		static int c_source(CmdBuf * p) { return p->fdok(CmdBuf::read_batch(p->m_c_a0,
 								  p->m_c_nof|NOF_BATCHF), '<'); }
                 static int c_save(CmdBuf * p) { return p->fdok(Node::save_batch(Node::root(), p->m_c_a0,

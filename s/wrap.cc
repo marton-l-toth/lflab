@@ -1403,7 +1403,7 @@ int DWrapGen::get_nm2(char * to) {
 	BoxGen *bxs = m_sfbx[0], *bxf = m_sfbx[1];
 	if (!bxs) return to[0]=to[1]=63, 2;;
 	if (!bxf) return bxs->node()->get_nm2(to);
-	if (bxs==box_bookmark[1] || bxs==box_bookmark[2]) return bxf->node()->get_nm2(to);
+	if (bxs==box_bookmark[1] || bxs==box_bookmark[3]) return bxf->node()->get_nm2(to);
 	char buf[4]; bxs->node()->get_nm2(to); bxf->node()->get_nm2(buf); to[1] = buf[0]; return 2;
 }
 

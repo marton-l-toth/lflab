@@ -571,7 +571,7 @@ void GraphBoxGen::set_model() {
 					m_nodes[ty]->oarg[ag>>16] );
 		for (int j=0; j<nd->no; j++) mdl->dsc_arg(nd->oarg[j]);
 	}
-	BoxModel *cpm = box_bookmark[2]->model(), **mpp = mdl->boxm + nb;
+	BoxModel *cpm = box_bookmark[3]->model(), **mpp = mdl->boxm + nb;
 	for (int i=0; i<n_cp; i++) mpp[i] = cpm, mdl->dsc_nio(1,1),
 				   mdl->dsc_arg(cparg[2*i]), mdl->dsc_arg(cparg[2*i+1]);
 	int d0=2*(nb+n_cp+n_iot), d1=mdl->eob-mdl->iolist; if (d0!=d1) bug("gr/model: %d!=%d", d0, d1);

@@ -51,7 +51,7 @@ PrimBoxGen::PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl) : m
 	m_model = (*qa)(m_mdl_spc, k); m_cl[0] = '_'; cl += (*cl=='_');
 	int i; for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0;  }
 
-void PrimBoxGen::box_window() { doc_window(11); if (!memcmp(m_cl+1, "abou", 4)) pt_show_lic(); }
+void PrimBoxGen::box_window() { doc_window(11); if (this==box_bookmark[2]) pt_show_lic(); }
 int  PrimBoxGen::n_in() const { return m_ni; }
 int  PrimBoxGen::n_out() const { return m_no&31; }
 bool PrimBoxGen::io_alias_perm() const { return !!(m_no&32); }

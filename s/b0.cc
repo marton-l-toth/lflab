@@ -361,23 +361,12 @@ static void sel_ini(ANode *rn) {
 					256*(k-i)+i, inm, 256*k+1, "sel"); 
 		}}}
 
-static const char * help_d[] = { "", "0win", "0etc", "1icfg", "2midi", "1fd", 0 };
-static const char * help_b[] = { "0abou.about", "0strt.getting started", "0plan.planned features",
-"0rbug.reporting bugs",
-"1wcl.clipboard", "1wma.main", "1wtr.tree", "1wtk.track", "1wgr.graph-box", "1wcc.calc-box", "1wcf.config",
-"1wwc.instrument(cfg)", "1wwp.instrument(play)", "1wacv.auconv", "1werr.errors", "1wau.audio",
-"1wit.iterated filter",
-"2dtre.!b and !e", "2puls.pulseaudio", "2gui.gui (general)", "2file.save files", "2boxg.box (general)", 
-"2nanl.[lists]", "2lib.libraries",
-"3wwcg.general(top)", "3wwav.autovol", "3wwsl.scale lines", "3wwsg.scale groups", 
-"4midd.new devices",
-"5wFlo.load", "5wFll.load lib", "5wFsa.save as", "5wFsl.save lib", "5wFds.set directory", 0 };
-
 void b_help_init(ANode * rn) {
-	qmb_arg_t qa = QMB_ARG0(VersionBox);  const char *s, *s2; 
-	ANode *dir[8]; dir[0] = rn; for (int i=1; (s=help_d[i]); i++) dir[i] = qmk_dir(dir[*s&7], s+1);
-	for (int i=0; (s=help_b[i]); i++) { for (s2=s+1; *s2!='.'; s2++);
-					    qmk_box(dir[*s&7], s2+1, qa, 0, 0, 1, s+1, 0); }}
+	extern const char *hlpn_dir[], *hlpn_box[]; // hlpn.cc (generated)
+	qmb_arg_t qa = QMB_ARG0(VersionBox);   const char *s, *s2;   ANode *dir[16]; dir[0] = rn; 
+	for (int i=1; (s=hlpn_dir[i]); i++) dir[i] = qmk_dir(dir[hxd2i(*s)], s+1);
+	for (int i=0; (s=hlpn_box[i]); i++) { for (s2=s+1; *s2!='.'; s2++);
+					      qmk_box(dir[hxd2i(*s)], s2+1, qa, 0, 0, 1, s+1, 0); }}
 
 #define XFT(J) "$x" #J "$fr" #J "$to" #J
 void b_map_init(ANode * rn) {
@@ -392,7 +381,7 @@ void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
 	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
-	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_2", "*i*o*", "kkk%%%", "x", "x");
+	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_3", "*i*o*", "kkk%%%", "x", "x");
 	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
 	qmk_box(mc, "rqosc", QMB_ARG0(RQOsc), 0, 5, 33, "rqo", "*i*", "k%k0%0", "f0$f1$dmp$vlim$samp");
 	qmk_box(nz, "nz0", QMB_ARG0(NZ0Box), 0, 1, 33, "nz", "i*o*R*1", "ty", "out", "zzzOOO");

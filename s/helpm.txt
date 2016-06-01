@@ -1,4 +1,5 @@
-{{{?._abou}}}
+0win 0etc 1icfg 2midi 1fd
+{{{0.about}}}
 lflab - lineral filter based audio lab
 vX.YY
 Copyright (C) Marton Laszlo Toth, 2014-2016.
@@ -14,26 +15,24 @@ http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 ---
 Thanks to all g++,gdb,gtk,graphviz,gnuplot... developers, and
 Steven W. Smith for his free DSP book (dspguide.com) 
-==> getting started
-{{{empty}}}
-perhaps some day a description will be here
-{{{?._strt}}}
+==> 0.getting started
+{{{0.getting started}}}
 lflab is free software with ABSOLUTELY NO WARRANTY:
-==> about
+==> 0.about
 A short overview of GUI elements, and of audio config:
-==> etc.gui (general)
-==> win.audio
+==> 0.gui
+==> 1.audio
 The two windows already open:
-==> win.main
-==> win.tree
+==> 1.main
+==> 1.tree
 "!e" stands for "examples". The items 1,2,... are clipboards
 double click (on the number not the arrow) to open them.
-==> etc.!b and !e
-==> win.clipboard
+==> 2.!b and !e
+==> 1.clipboard
 On the clipboards, left clk. plays (&stops when clicked again),
 but each of these sounds is just a single representative of an
 instrument which can be opened with right click for playing.
-==> win.instrument(play)
+==> 1.instrument(play)
 There is help for most windows (a "?" button or in a menu "+").
 The examples in "!e" are read-only but you can make copies
 or create new objects. (Sounds/instruments can be quickly
@@ -44,8 +43,8 @@ If you make new instruments/tracks/components, save them with
 the "save" button. (autosave is done at regular (configurable)
 intervals, and optionally on exit.)
 THERE IS NO UNDO, SAVE OFTEN!!!
-==> etc.save files
-{{{?._dtre}}}
+==> 2.save files
+{{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
 and (unless you started with the "-n" option) the "!e" subtree.
 In "!b" you have the default clipboard "[]", help texts like
@@ -68,7 +67,7 @@ osc : simple applications of non-linear (rev.quad.) oscillator
 sel : some filter config using selector boxes
 trk : tracks
 wave : waves modulated by other waves
-{{{?._boxg}}}
+{{{2.box (general)}}}
 A box is a little machine with 0...30 input ports and 1...30
 output ports, each of which receives/sends 44100 real(64-bit)
 numbers per second. From simple builtin boxes you can build
@@ -84,18 +83,18 @@ builtin boxes. "Not accepted" variable input does not result
 in an explicit "error", only most of the input is ignored
 (except the first sample, or in some cases the first sample
 in each time-slice). On inputs labeled as "[xy]", lists are
-==> etc.[lists]
+==> 2.[lists]
 expected, these are constant inputs unless noted otherwise.
 ---
 Editable boxes can be of the following types:
-==> win.graph-box
-==> win.iterated filter
-==> win.calc-box
-==> win.track
+==> 1.graph-box
+==> 1.iterated box
+==> 1.calc-box
+==> 1.track
 Browse "!b" and "!e" for primitive boxes and examples of
 editable boxes.
-==> etc.!b and !e
-{{{?._nanl}}}
+==> 2.!b and !e
+{{{2.[lists]}}}
 Some builtin boxes expect lists of small integers on some of
 their input ports (e.g. [3 -4 -5 2]). The maximal list sizes
 (x*y means at most x signed/unsigned y-bit integers) are:
@@ -122,7 +121,7 @@ behaviour would be to drop the last few elements (possibly with
 a message in the "errors" window). Currently a "haircut" is
 is applied instead: the highest bit(s) of each elements are
 silently dropped.
-{{{?._file}}}
+{{{2.save files}}}
 THERE IS NO UNDO, SAVE OFTEN!!!
 This help text describes file handling from the GUI file menu
 (can be opened with the "+" menu button on the tree window). 
@@ -142,7 +141,7 @@ both autosaves and regular save files backups may be made.
 Backup copies have "--1", "--2", ... endings for both autosave
 and normal files. (e.g. when you save to "abc.lf", the previous
 save will be moved to "abc--1.lf", the one before "abc--2.lf")
-==> win.config -- here you can set autosave and backup options
+==> 1.config -- here you can set autosave and backup options
 The "load" window has a button "see autosaves" for convenient
 recovering of autosaves. To make sure autosaves are not over-
 written while you try to recover them, autosave is turned off
@@ -152,9 +151,9 @@ is back to normal (as configured). If you issue an exit/restart
 with autosave command in empty/recover mode, a special autosave
 file "__asv--x.lf" will be created -- unlike other (auto)save
 files, this file never has backup copies.)
-==> etc.libraries -- how to create/load libraries (like ".!e")
+==> 2.libraries -- how to create/load libraries (like ".!e")
 THERE IS NO UNDO, SAVE OFTEN!!!
-{{{?._lib}}}
+{{{2.libraries}}}
 A library is a collection of boxes and instruments which can be
 used in multiple projects. Unless you start the program with
 the "-n" command line optrion, the default "<instdir>/ex.lf"
@@ -186,8 +185,8 @@ files, and edit them before calling "save lib" again. Remember,
 "save lib" saves only the selected folder: unless you _also_
 make a normal save (to a different file), objects outside this
 folder will be lost.
-==> etc.save files
-{{{?._wFlo}}}
+==> 2.save files
+{{{5.load file}}}
 Load file: this is a standard GTK file open window.
 The only addition is the "see autosaves" button which switches
 to the directory where the autosaves can be found.
@@ -204,8 +203,8 @@ by a white-on-blue "(recover)" instead of the filename -- until
 you save with a new name or load a normal save file, autosave
 will be turned off (to avoid overwriting the autosave file(s)
 which you intend to recover).
-==> etc.save files
-{{{?._wFll}}}
+==> 2.save files
+{{{5.load lib}}}
 Load library: this is a standard GTK file open window.
 Here you can load libraries (like the default one ".!e"), which
 were saved with the "save lib" command. The objects loaded from
@@ -224,9 +223,9 @@ alias/shortcut).
 The default library (normally in /usr/share/lflab/ex.lf) is
 always loaded automatically unless lflab is started with the
 "-n" command line option.
-==> etc.libraries
-==> win.fd.save lib
-{{{?._wFsa}}}
+==> 2.libraries
+==> 5.save lib
+{{{5.save as}}}
 Save as...: this is a standard GTK file save window.
 Here you can save your project with a (different) file name.
 (When your project has no filename yet, the "save" button in
@@ -244,9 +243,9 @@ buffer overrun even for medium-size files. To avoid unpleasant
 breaks, you should save only when no sound is being played.
 (autosave, which can be configured in the main config (below),
 works this way automatically.)
-==> etc.save files
-==> win.config
-{{{?._wFsl}}}
+==> 2.save files
+==> 1.config
+{{{5.save lib}}}
 Save lib: this is a standard GTK file save window.
 Here you can create libraries -- collections of boxes
 and instruments to be used from other projects (like the deault
@@ -258,19 +257,19 @@ load the objects as read-only; or as a normal save file with
 You can save the left or the right selected directory. (You can
 select the folder you want to save in the tree window while the
 file dialog is open -- lflab has no "modal" windows.)
-==> etc.libraries
-==> win.fd.load lib
-{{{?._wFds}}}
+==> 2.libraries
+==> 5.load lib
+{{{5.select dir}}}
 Directory select: this is a standard GTK dir. select/create w.,
 with an extra "default" button which -- as you might have
 guessed -- restores the default value for the given directory
 setting. Unless you save the config in the main config window
 (or the audio config window, currently there is only one lf.ini
 file), the setting will be effective only until you exit.
-==> win.config
-{{{?._wma}}}
+==> 1.config
+{{{1.main}}}
 This help text describes the main window. For general help, see
-==> getting started
+==> 0.getting started
 kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restart gnuplot (close all gnuplot windows)
 LR - display tree window (on top)
@@ -288,14 +287,14 @@ Mute mode: Ctrl+right-click on CPU meter (grey when muted)
 In mute mode the audio device is closed, so other programs
 can use it (but close them before "unmuting"), sounds/boxes
 are not stopped, recording (if on) continues.
-==> win.audio
-==> win.tree
-==> win.auconv
+==> 1.audio
+==> 1.tree
+==> 1.auconv
 Note: main window is configured to be "always on top" whenever
 the window manager permits it. This has a side effect: when you
 open a small window (e.g. instrument/play and input windows),
 it may "hide" behind the main window.
-{{{?._puls}}}
+{{{2.pulseaudio}}}
 Disclaimer: I have only tried with pulseaudio 2.0 using a
 more-or-less default configuration. If you know better, please
 dot not hesitate to tell me:
@@ -321,11 +320,11 @@ This only works when PA is configured in a per-user mode (which
 is the default and recommended PA configuration). On most
 systems "-9" is safe (immediate stop of process), but on some 
 machines closing the device too abruptly can cause problems.
-{{{?._wau}}}
+{{{1.audio}}}
 If you are running LFLAB on this machine for the first time,
 you should configure the audio because the default settings are
 not likely to work, especially if you have PulseAudio:
-==> etc.pulseaudio
+==> 2.pulseaudio
 The device name "default" typically means a SW mixer, and
 HW mixers are called "hw:x" or "plughw:w", sometimes having
 sub-devices. If your device name is not listed, you can also
@@ -351,8 +350,8 @@ In most cases clock mode can be left unchanged ("retBS").
 You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
-==> win.config
-{{{?._wcf}}}
+==> 1.config
+{{{1.config}}}
 This help text describes the main config window (available from
 the "++" menu in the main window). For a list of command line
 options, start the program with "lflab -h".
@@ -365,7 +364,7 @@ autocon - automatically open console when debug info is written
 dev - features under development (at your own risk :))
 {wav-|atmp}dir - set WAV/FLAC or audio tmp.file directory (**)
 ask/keep/wav/flac - default action when audio tmp file is ready
-==> win.auconv -- details for writing to WAV/FLAC
+==> 1.auconv -- details for writing to WAV/FLAC
 (*) to avoid unpleasant buffer underruns, autosave happens only
 when no sound is being played, or in mute mode
 (**) it is recommended to make a directory under you home dir.
@@ -382,12 +381,12 @@ for you, you can send commands to the pipe "A" in workdir. :)
 Finally, you can save settings to the file "<userdir>/lf.ini".
 Since there is only one ini file (not counting the backups),
 this button saves all config, just like the save button in:
-==> win.audio
-{{{?._wtr}}}
+==> 1.audio
+{{{1.tree}}}
 This help text describes the tree window. For general help, see
 ==> getting started
 On the top, you can see the name of your file & the file menu:
-==> etc.save files
+==> 2.save files
 Here you can browse and edit the object tree (the same tree is
 visible on left & right views). For object selection (in other
 windows) you have 3 menu buttons ("[" "*" "]"): the middle one
@@ -397,9 +396,9 @@ folder in the left/right tree view (in this window).
 ---
 The object tree can contain the following types of objects:
 folders (see below), intruments, boxes and clipboards.
-==> win.instrument(cfg)
-==> win.clipboard
-==> etc.box (general)
+==> 1.instrument(cfg)
+==> 1.clipboard
+==> 2.box (general)
 A folder can contain up to 32 named objects (of any type).
 Name: up to 20 ASCII characters except dot(.) and dollar sign.
 Folders can be opened by double-clicking on the name or
@@ -411,7 +410,7 @@ On the bottom, there are buttons for rename/local copy/
 copy/move/del and a create object menu button. The text field
 above the buttons is used for all these operations.
 (for copy/move set the text on the "from" side). 
-{{{?._gui}}}
+{{{0.gui}}}
 Gui -- general description
 Cyan (like "save" on main win.) -- simple button
 Yellow (like "++" on main win.) -- menu button
@@ -428,7 +427,7 @@ are standard text fields, with usual copy & paste functions.
 When strange things happen, it can be helpful to open the
 console (from main win./++ menu) because the information
 there is much more detailed then in the "Errors" window.
-{{{?._plan}}}
+{{{0.planned features}}}
 Planned features (please don't take these as promises :) )
 - import of external audio
 - improved track editor usability (block edit?)
@@ -437,8 +436,8 @@ Planned features (please don't take these as promises :) )
 - plot/save/record to backgr. job (like autovol calc.)
 - more builtin boxes and example editable boxes
 - support of various MIDI HW
-==> etc.midi.new devices
-{{{?._midd}}}
+==> 4.new devices
+{{{4.new devices}}}
 If you want support for your favourite MIDI input device,
 please do as follows:
 0. enable "dev" in main config to allow MIDI input, quit and
@@ -462,7 +461,7 @@ forgotten "dev" (see 0.)
 4. unless you finished all keys/controls/pads/etc. go back to 2
 5. flush log (or exit), and send me the lf.log file
 @@@
-{{{?._wwp}}}
+{{{1.instrument(play)}}}
 Small button on the left, below (or between) the sliders:
 left-click: focus (keyboard) on grid, right-click: menu
 --- MOUSE ---
@@ -483,7 +482,7 @@ Use the ESC key to enter / leave key edit mode.
 In key edit mode a purple box cursor is visible.
 Left-click to select square, mid-click to delete key,
 press (non-ESC) key to assign.
-{{{?._wgr}}}
+{{{1.graph-box}}}
 At a time you can have one selected input (blue), a selected
 output (red) and a selected box (purple).
 (external input counts as output, and vice versa)
@@ -507,7 +506,7 @@ usage will increase rapidly).
 Because an external program is started, opening the first 
 graph box window may cause an audio buffer underrun.
 ==> win.tree
-{{{?._wit}}}
+{{{1.iterated box}}}
 An iterated filter is a filter chain consisting of multiple
 instances of the same "simple" filter (*) (which can be set 
 from the L/R sel.folder or shortlist). When scale is "con",
@@ -532,7 +531,7 @@ varied, wrap the filter in a simple graph box.
 ---
 CPU cost is only a little more than (#b) times the cost of the
 simple filter. (#b) is limited to 1024.
-{{{?._wcc}}}
+{{{1.calc-box}}}
 Calculator boxes are stateless boxes (each set of outputs only
 depends on the current set of inputs, not previous ones),
 defined by arithmetic expressions. A calc-box can have 0...30
@@ -554,7 +553,7 @@ means OK, while white-on-red means error:
 ---
 Currently only operators +,-,*,/,^(power) and the conditional
 if<(a,b,c,d) (if a<b then c else d) are supported.
-{{{?._wtk}}}
+{{{1.track}}}
 right now, the track editor is very simple, so the recommended
 way is to write individual sounds (or perhaps simple loops) to
 .wav files, and use a more full-featured tracker to compose
@@ -579,11 +578,11 @@ x - cut & select next
 X or backspace - cut & select previous
 0...9 and a...v - select sound from curr. paste src. clipboard
 (that sound can be dragged out of the top right "clip" button)
-{{{?._wwcg}}}
+{{{3.play/plot}}}
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
 set the play mode (clik/hold/tggl/uniq), described here:
-==> win.instrument(play)
+==> 1.instrument(play)
 "stp" stops, "kill" stops sounds without "down" section
 clicking on the 6-char-icon plays the selected sound
 Right-click on the mini-grid opens the play window, left-click
@@ -597,11 +596,11 @@ The four labels below the plot parameters select the config
 line below them: [#] is grid dimensions config, "tlim" is time
 limit (affects only sounds in a track, in beats not seconds,
 -1 means no limit, auto filled from record-to-track)
-==> win.icfg.autovol -- "a.v" tab (auto volume adjust)
+==> 3.autovol -- "a.v" tab (auto volume adjust)
 ==> win.auconv -- "wav" tab (write to WAV)
 Note: changing grid dimensions can change the selected sound
 (known bug: left col. in scl.grps. is not updated in this case)
-{{{?._wwav}}}
+{{{3.autovol}}}
 When using source/filter pairs with a wide range of inputs,
 the output volume can vary greatly. The automatic volume
 calibration makes convenient playback of such configurations
@@ -618,7 +617,7 @@ The calculation goes left-to-right, so (assuming x=9) when it
 reaches 11.2%, the first column is already playable.
 (known bug: sometimes the progress bar is stuck at 99.x%, but
 it is only a GUI error, the calculation is actually finishes)
-{{{?._wwc}}}
+{{{1.instrument(cfg)}}}
 An instrument/sound is a wrapper object which makes boxes
 playable. You can give constant (DC) inputs to a source box and
 an optional filter box. These inputs can be either fixed or
@@ -635,11 +634,11 @@ the scale groups.)
 ---
 As you may have noticed, this window is somewhat complicated,
 so the description is broken to several parts:
-==> win.icfg.general(top)
-==> win.icfg.autovol
-==> win.icfg.scale lines
-==> win.icfg.scale groups
-{{{?._wwsg}}}
+==> 3.play/plot
+==> 3.autovol
+==> 3.scale lines
+==> 3.scale groups
+{{{3.scale groups}}}
 Open/close scale groups with the "<>" / "><" buttons (right)
 ---volume/envlp(grp 1)---
 "/*" and "\*" menu buttons set the shape of the "up" and "down"
@@ -668,7 +667,7 @@ You can select source/filter box from the object tree with the
 The values are the inputs of the source and filter boxes.
 The first (0th) input of the filter box is not configurable,
 since it is connected to the output of the source box.
-{{{?._wwsl}}}
+{{{3.scale lines}}}
 In every scale line, there are 3 entry fields (for numbers),
 and 3 menu buttons.
 The first field is for constant value -- if the scale (see
@@ -687,7 +686,7 @@ as reference value "=", and can multiply "*" or divide "/"
 other values (typically frqs and impulse lengths) by it.
 (If you want more complicated relations between inputs, create
 a graph box with builtin arithmetic or calculator boxes.)
-{{{?._wcl}}}
+{{{1.clipboard}}}
 A clipboard is a container for at most 32 instrument objects.
 Besides providing a convenient collection, it also serves as a
 source/target for copy/paste operations. 
@@ -705,7 +704,7 @@ left-cl:sel, right-cl:open(play) ctrl+right-cl:open(cfg)
 middle-click: copy
 keybindings for instruments also work from this window
 (first selected obj, then sel. row, then next row etc.)
-{{{?._wacv}}}
+{{{1.auconv}}}
 This program has two ways to write sound data to audio files:
 - "rec" (main window)  starts/ends a (stereo) recording
 (unless tmp dir. is a ramdisk, this can cause serious slowdown)
@@ -736,7 +735,7 @@ strongly recommended), you can still do that without exiting:
 ctrl+right-click on the CPU meter (main win.) to enable mute
 mode (which releases the audio device), and ctrl+rclick on it
 again (when the external player is finished) to enable sound.
-{{{?._werr}}}
+{{{1.error list}}}
 With the controls on the top, you can clear the list, set the
 number of messages, turn "annoying" (raising the message window
 on new error, but at most once per second) on and off, and
@@ -752,8 +751,8 @@ As a general rule, if you can read English at a strong
 intermediate level, do have some experience as a computer user,
 and still do not understand an error message, it is probably my
 fault :)
-==> reporting bugs
-{{{?._rbug}}}
+==> 0.reporting bugs
+{{{0.reporting bugs}}}
 Please send the following:
 - precise instructions how to reproduce the error
 - a save file with which the error is reproducible
