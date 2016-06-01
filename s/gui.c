@@ -1124,7 +1124,8 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',7, 0, 7,2, "help   info1  info2  info4  info*  GUI cfgdelete ", "N?I1I2I4I7EWNd"},
-{'T',10, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)", "txcv96CMNS"},
+{'T',11, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)  rvrs.cut",
+		  "txcv96CMNSr"},
 TDIV_MENU_LN
 {0, 8,0,2,1,"*2*3*5*7/2/3/5/7","01234567"},
 {0,32,0,6,1,"play  stop  play1 play2 play3 play4 play6 play8 play12play16play22play30loop1 loop2 loop3 loop4 "

@@ -290,6 +290,9 @@ int TrackGen::w_sel(sthg * bxw_rawptr) {
 	gui2.bxmini(nd->box0()); return 0;
 }
 
+#define CXC_VR(F) if (!(nd = ClipNode::kcp(2)->ent_sel())) return EEE_NOEFF; \
+		  if ((id = Node::F(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) return id; \
+		  return TR_SEL_ID=id, sel0w(bxw_rawptr, y, x), w_sel(bxw_rawptr), 0
 int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y) {
 	ANode *nd, *q; if (!id || !(nd = ANode::lookup_n_q(id))->is_wrap()) id = 0, nd = 0;
 	int ec; switch(c) {
@@ -305,9 +308,8 @@ int TrackGen::cx_cmd(sthg * bxw_rawptr, CmdBuf * cb, int c, int id, int x, int y
 			   (sel0w(bxw_rawptr, q->cth()->i, q->cth()->j), TR_SEL_ID=id, w_sel(bxw_rawptr), ec);
 		case 'N': return Node::mk(0, m_node, 0, 'w', y|cb->cnof(), x);
 		case 'S': return Node::mk(0, m_node, 0, 's', y|cb->cnof(), x);
-		case 'v': if (!(nd = ClipNode::kcp(2)->ent_sel())) return EEE_NOEFF;
-			  if ((id = Node::copy(nd, m_node, 0, y|(cb->cnof()&~NOF_FGUI), x)) < 0) return id;
-			  return TR_SEL_ID=id, sel0w(bxw_rawptr, y, x), w_sel(bxw_rawptr), 0;
+		case 'v': CXC_VR(copy);
+		case 'r': CXC_VR(move);
 		case 'c': return nd ? Node::copy(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
 		case 'x': return nd ? Node::move(nd, ClipNode::kcp(1), 0, NOF_NOIDX|cb->cnof()) : EEE_NOEFF;
 		case 't': if (TR_SEL_ID) return TR_SEL_ID=0, TR_SEL_XY[1]&=~15, w_sel(bxw_rawptr), 0;
