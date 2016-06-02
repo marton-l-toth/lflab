@@ -1250,7 +1250,8 @@ int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f7 = flg&7;
         if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
 	double res[f7?2*len:len];
-	int k, r = batch_calc(res, f7?res+len:0, i0, len, 0); if (r<=0) return r?r:BXE_ZPLOT;
+	int k, r = batch_calc(res, f7?res+len:0, i0, len, 0);
+	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
 	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), flg = f7 = 0;
         if (len <= n) {
 		qstat.store(res, f7?2*len:len);
@@ -1269,7 +1270,7 @@ int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
 		else samp_stat(res,     len, n, 0, 0.0, st+2*n, st+4*n, st),
 		     samp_stat(res+len, len, n, 0, 0.0, st+3*n, st+5*n, st+n),
 		     spt="agL\0agR\0mnL\0mnR\0mxL\0mxR";
-		qstat.store(st, f7?2*n:n);
+		if (!f7) qstat.store(st+n, n); else if (f7==3) qstat.store(st, 2*n);
 		for (int i=0; i<nst; i++) par[i].s(st+i*n, n, t0, t1),
 				          Gnuplot::sg()->setfun1(i, arrfun1, par+i, 0, spt+4*i);
 		return Gnuplot::sg()->plot1((1<<nst)-1, t0, t1, n), 0;
@@ -1284,7 +1285,8 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
 			   siz = len = (1<<24), bits = 24; }
 	else 		 { while (len>siz) siz+=siz,++bits;   if (!(flg&4)) len=siz; }
         double *buf = (double*)malloc(16*siz), *re, *im;
-	int r = batch_calc(buf, f3?buf+siz:0, i0, len, 0); if (r<=0) return r?r:BXE_ZPLOT;
+	int r = batch_calc(buf, f3?buf+siz:0, i0, len, 0);
+	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
 	if (f3&r&2) re=buf+siz, im=buf; else re=buf, im=buf+siz;
 	memset(im, 0, 8*siz); if (len<siz) memset(re+len, 0, 8*(siz-len));
 	double *res = fft(re, im, bits, false), *res2 = res + siz;  free(buf);
