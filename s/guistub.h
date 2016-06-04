@@ -12,7 +12,8 @@ class GuiStub {
 		typedef int (*fun_t) (void*, char*, int);
 		static int gui_dead(int pid, int stat, int td);
 		GuiStub() : m_pid(0), m_inpipe(-1), m_outpipe(-1), m_tpipe(-1), m_lwi(-1), 
-			    m_errq_n(0), m_bufp(0) { m_errq_t0[0] = m_errq_t0[1] = 0; }
+			    m_errq_n(0), m_bufp(0), m_gnaq_n(0), m_gnaq_t(-9999ll) 
+			  { m_errq_t0[0] = m_errq_t0[1] = 0; }
 		// ~GuiStub () { if (m_pid) stop(); }
 		int start();
 		void stop();
@@ -20,7 +21,8 @@ class GuiStub {
 		int tpipe() const { return m_tpipe; }
 		int flush();
 		void flush_all();
-		int pending() const {return m_bufp!=m_buf0 || glob_flg!=m_gf0 || (m_errq_n|Node::slr_flg());}
+		int pending() const {return m_bufp!=m_buf0 || glob_flg!=m_gf0 ||
+					    (m_gnaq_n|m_errq_n|Node::slr_flg());}
 		inline int cfl() { return ((m_bufp-m_buf0)&0xffff8000) && flush(); }
 		void invd() { m_lwi = -1; }
 		void brk() { *(m_bufp++)='\n'; m_lwi = -1; }
@@ -99,12 +101,14 @@ class GuiStub {
 		void savename();
 		void vol();
 		void set_tlog();
+		int gna_add2q(int id) { return (m_gnaq_n>15) ? 0 : (m_gnaq_id[m_gnaq_n++]=id, 256); }
 	protected:
 		int m_pid, m_inpipe, m_outpipe, m_tpipe, m_gf0;
 		int m_cwt, m_lwi, m_cwi;
 		int m_th, m_wh;
 		int m_errq_v[32], m_errq_n, m_errq_t0[2];
 		char m_buf0[65536], *m_bufp;
+		int m_gnaq_n, m_gnaq_id[16]; long long m_gnaq_t;
 };
 
 extern GuiStub gui2;

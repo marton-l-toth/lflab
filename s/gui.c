@@ -2731,6 +2731,7 @@ static void tkcf_skel (struct _topwin * tw, char * arg) {
 #define TC_GD(X)  (tdiv_gd + (X)->gwfr[0])
 #define TC_PPB(X) (tdiv_gd[(X)->gwfr[1]].v)
 #define TC_UPP(X) (tdiv_gd[95-(X)->gwfr[1]].v)
+#define TC_NBLK   288
 typedef struct { int id, x15y4; unsigned short nx; char s[14]; } trk_24_b;
 typedef union  { unsigned short s[12]; trk_24_b b;  } trk_24;
 
@@ -2741,15 +2742,15 @@ typedef struct {
 	trk_24 * dl_bcur;
 	cairo_t * dl_cr;
         unsigned int rbv, ybv[16];
-        trk_24 * b3k[290];
-        int b3k_n, t24_f, flg, nid, selx, sely;
+        trk_24 * b3k[TC_NBLK];
+        int b3k_n, t24_f, flg, nid, selx, sely, gnav[8], gnaf;
         unsigned short blk[128];
 	unsigned char gwfr[4], div[256];
 } tc_t;
 
 static int tc_mk_b3k(tc_t * tc) {
         int i, k, n = tc->b3k_n;
-        if (n > 289) return LOG("trk 0x%x out of mem!!!", tc->nid), 0; else ++tc->b3k_n, k = 128*n;
+        if (n >= TC_NBLK) return LOG("trk 0x%x out of mem!!!", tc->nid), 0; else ++tc->b3k_n, k = 128*n;
         trk_24 * p = tc->b3k[n] = (trk_24*)alloc3k();
         for (i=0; i<127; i++) p[i].b.nx = k+i+1; p[i].b.nx = 0;
         return k + !n;
@@ -2774,7 +2775,7 @@ static void tc_clear(tc_t * tc, int re) {
 	trk_24 sv, *q;
 	if (re) { memcpy(&sv, tc_p24(tc, 1), sizeof(trk_24));
 		  int i; for (i=0; i<tc->b3k_n; i++) free3k(tc->b3k[i]); }
-        tc->b3k_n = tc->t24_f = tc->flg = 0; tc->x1r = tc->x1a = -1;
+        tc->b3k_n = tc->t24_f = tc->flg = tc->gnaf = 0; tc->x1r = tc->x1a = -1;
 	unsigned short qw=0; q = tc_a24(tc, &qw); if (qw!=1) LOG("BUG: tc_clear: %d!=1", qw);
 	if (re) memcpy(q, &sv, sizeof(trk_24)); else q->b.id = -1; 
 }
@@ -2924,25 +2925,31 @@ typedef void (*trk_dfun) (ww_t*, cairo_t*, int *, int *);
 static void trk_ns(ww_t * ww, cairo_t * cr2, int * blim, int * bclip) {
 	tc_t * tc = (tc_t*) ww->etc;
 	cairo_set_source_rgb (cr2, 1.0, 1.0, 1.0);
-	int i, j, c, ppb = TC_PPB(tc), flg = (blim[2] > 40), nb = tc->w_nb;
-	for (i=0; i<nb; i++) cairo_move_to(cr2, (double)(i*ppb)+60.5, (double)blim[2]+.5),
+	int i, k, c, ppb = TC_PPB(tc), flg = (blim[2] > 40), nb = tc->w_nb, gy0 = blim[2];
+	for (i=0; i<nb; i++) cairo_move_to(cr2, (double)(i*ppb)+60.5, (double)gy0+.5),
 			     cairo_rel_line_to(cr2, 0.0, 19.5);
 	char buf[8]; cairo_stroke(cr2); cairo_set_source_rgb (cr2, .8, .8, .8);
 	for (i=0; i<nb; i++) buf[sprintf(buf, "%d", tc->x0+i)] = 0, 
-			     tx_box(cr2, i*ppb+61, blim[2]+1, ppb-2, 18, conf_lbfs, buf);
+			     tx_box(cr2, i*ppb+61, gy0+1, ppb-2, 18, conf_lbfs, buf);
 	int xul = bclip[1] + 1, xll = bclip[0] - 20;
-	for (i=0; i<3; i++) if (j=20*i, xll<j&&j<xul) arrow(cr2, j, blim[2], 4*"IXL"[i]+2*flg+1);
+	for (i=0; i<3; i++) if (k=20*i, xll<k&&k<xul) arrow(cr2, k, gy0, 4*"IXL"[i]+2*flg+1);
 	if (flg) { for (i=0; i<4; i++) { c = 4*"MCXI"[i];
-		if (c=4*"MCXI"[i], j=20*i+60, xll<j&&j<xul) arrow(cr2, j, blim[2], c);
-		if (j = DA_W(ww)+40-j,        xll<j&&j<xul) arrow(cr2, j, blim[2], c+2); }}
-	else if (xll-30<(j=DA_W(ww)-50)) {
+		if (c=4*"MCXI"[i], k=20*i+60, xll<k&&k<xul) arrow(cr2, k, gy0, c);
+		if (k = DA_W(ww)+40-k,        xll<k&&k<xul) arrow(cr2, k, gy0, c+2); }}
+	else if (xll-30<(k=DA_W(ww)-50)) {
 		cairo_set_source_rgb(cr2, .5, 1.0, 1.0);
-		cairo_rectangle(cr2, (double)(j+1), 1.0, 49.0, 19.0); cairo_fill(cr2);
+		cairo_rectangle(cr2, (double)(k+1), 1.0, 49.0, 19.0); cairo_fill(cr2);
 		cairo_set_source_rgb (cr2, .6667, .6667, .6667);
-		cairo_rectangle(cr2, (double)(j+.5), .5, 50.0, 20.0); cairo_stroke(cr2);
-		cairo_set_source_rgb(cr2, .0, .0, .0); tx_box(cr2, j+3, 3, 46, 16, conf_lbfs, "clip");
+		cairo_rectangle(cr2, (double)(k)+.5, .5, 50.0, 20.0); cairo_stroke(cr2);
+		cairo_set_source_rgb(cr2, .0, .0, .0); tx_box(cr2, k+3, 3, 46, 16, conf_lbfs, "clip");
 	}
-}
+	if (!tc->gnaf) return; else xll += 8;
+	int xx0 = tc->x0 * 40320, upp = TC_UPP(tc);    double rgb[3];
+	BVFOR_JMC(tc->gnaf) {
+		int ax = (tc->gnav[j] - xx0) / upp + 60; if (ax<xll || ax>xul) continue;
+		get_rgb8(rgb, 32*j, 1.0); RGB_D3(cr2, rgb); cairo_move_to(cr2, (double)ax, (double)(gy0+1));
+		cairo_rel_line_to(cr2, 0.0, 18.0); cairo_rel_line_to(cr2, 9.0, -9.0); cairo_fill(cr2);
+	}}
 
 static void trk_e(ww_t * ww, cairo_t * cr2, int * blim, int * bclip) { 
 	tc_t * tc = (tc_t*) ww->etc;
@@ -3272,6 +3279,15 @@ static void tsr_op(ww_t * ww, int y, int x) {
 		gdk_window_invalidate_rect(gtk_widget_get_window(ww->w), &rct, 0);
 	}}}
 
+static void trk_gna_inv(int * frto, ww_t * ww) {
+        tc_t * tc = (tc_t*) ww->etc;
+	int wid = DA_W(ww), xx0 = tc->x0 * 40320, upp = TC_UPP(tc);
+	BVFOR_JMC(tc->gnaf) {
+		int ax = (tc->gnav[j] - xx0) / upp + 60; if (ax<0 || ax>wid) continue;
+		if (ax<frto[0]) frto[0] = ax;
+		if (ax>frto[1]) frto[1] = ax;
+	}}
+
 static void datrk_cmd(struct _ww_t * ww, const char * s) {
 	if (!s) return datrk_draw(ww, (cairo_t*)ww->arg[0].p);
 	if (*s=='>') ++s; else tsr_op(ww, TSR_START, 0);
@@ -3297,6 +3313,17 @@ static void datrk_cmd(struct _ww_t * ww, const char * s) {
 			  tc->ybv[*hx&15] |= ((unsigned int)hx[1]<<16)+hx[2]; tc->flg &= ~TCF_PEND;
 			  da_fullre(ww); tsr_op(ww, TSR_DROP, 0); return;
 		case ',': widg_defcmd(ww, "XR,"); return;
+		case 'a': hx[0] = 9999; hx[1] = -9999; trk_gna_inv(hx, ww);
+			  tc->gnaf = x = hex2(s+1); s += 3;
+			  BVFOR_JMC(x) tc->gnav[j] = (qh4rs(s)<<16) + qh4rs(s+4), s += 8;
+			  trk_gna_inv(hx, ww);
+			  if (hx[0] <= hx[1]) {
+				  struct _GdkRectangle rct; GdkWindow * win = gtk_widget_get_window(ww->w);
+				  rct.height = 20;  rct.x = hx[0]; rct.width = hx[1]-hx[0]+10;
+				  rct.y = 0;           gdk_window_invalidate_rect(win, &rct, 0);
+				  rct.y = DA_H(ww)-20; gdk_window_invalidate_rect(win, &rct, 0);
+			  }
+			  tsr_op(ww, TSR_DROP, 0); return;
 		default:  LOG("datrk_cmd: unknow ch 0x%x(%c)", *s, *s); goto done;
 	}}
 done:	tsr_op(ww, TSR_END, 0);

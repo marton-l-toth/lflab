@@ -158,6 +158,9 @@ void GuiStub::flush_all() {
 	cfl(); slr_upd(); errq_cfl();
 	int x = glob_flg^m_gf0; m_gf0 = glob_flg;
 	if (x & GLF_FSTATE) savename();
+	if (m_gnaq_n && (snd0.total_played()-m_gnaq_t)>(long long)(44*CFG_GUI_TRKUP.i)) {
+		for (int i=0, n=m_gnaq_n; i<n; i++) trk_w_gna(m_gnaq_id[i]);
+		m_gnaq_t = snd0.total_played(); m_gnaq_n = 0; }
 	flush();
 }
 

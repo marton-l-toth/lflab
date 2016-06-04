@@ -41,12 +41,12 @@ class TrackInst : public BoxInst {
 		void mxprep(int bflg, double* bpm, int n);
 		void sane(int n);
 		void unexp_node(ANode * nd);
+		void gna(int x);
 
 		TrackModel * m_m;
 		ANode *m_pn, *m_fn, *m_tn;
-		int m_mxid, m_vti, m_to, m_to2, m_fr2, m_rpc, m_md;
+		int m_mxid, m_vti, m_to, m_to2, m_fr2, m_rpc, m_md, m_aix;
 		double m_vtf;
-		
 };
 
 class TrackModel : public BoxModel {
@@ -78,6 +78,8 @@ class TrackGen : public BoxGen {
 		void   bkm_add(ANode * nd);
 		void   bkm_rm (ANode * nd);
 		int cond_pm(ANode* nd, int pm);
+		void gna_reg(int *pix, int reg);
+		void w_gna();
 	protected:
 		void grab_gsel(sthg *bxw_rawptr){ trgp_node=m_node; trgp_j=TR_SEL_XY[0]; trgp_i=TR_SEL_XY[1]; }
 		void sel0w(sthg *bxw_rawptr, int i, int j) {
@@ -105,6 +107,7 @@ class TrackGen : public BoxGen {
 		unsigned int m_drq_msk;
 		int m_bp10m, m_mxctl;
 		unsigned char m_gwfr[4], m_div[256];
+		int m_gnaf, m_gnav[8];
 };
 
 int BKMK128::find(int i) {
@@ -176,18 +179,22 @@ void BKMK1M::set(int i, int v) {
         ((bv&msk) ? p[i5] : (bv |= msk, p[i5] = (BKMK32k*)ANode::z64())) -> set(i15, v);
 }
 
-TrackInst::TrackInst (TrackModel * m) : m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0) {
+TrackInst::TrackInst (TrackModel * m) : m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0), m_aix(8) {
 	if (DBGC) log("trki: hello"); BoxModel::ref(m); m_mxid=mx_mkroot(); }
 
 TrackInst::~TrackInst() { if (m_mxid>0) mx_del(m_mxid); 
-	if (DBGC) log("trki: bye"); tgn_del(m_m->tn, m_pn); tgn_del(m_m->tn, m_tn); tgn_del(m_m->tn, m_fn);
+	ABoxNode * tn = static_cast<ABoxNode*> (m_m->tn);
+	if (m_aix<8) static_cast<TrackGen*>(tn->box())->gna_reg(&m_aix, -1);
+	if (DBGC) log("trki: bye"); tgn_del(tn, m_pn); tgn_del(tn, m_tn); tgn_del(tn, m_fn);
 	BoxModel::unref(m_m); }
+
+void TrackInst::gna(int x) { static_cast<TrackGen*>(static_cast<ABoxNode*>(m_m->tn)->box())->gna_reg(&m_aix, x); }
 
 #define VTARG(x) ((int)lround(40320.0*inb[x][0]))
 int TrackInst::ini(double **inb) {
 	sane(1);
 	m_md = 1; m_rpc = (int)lround(inb[3][0]);
-	int vti = VTARG(1); m_to = VTARG(2); if ((vti|m_to)<0) return BXE_RANGE;
+	int vti = VTARG(1); m_to = VTARG(2); if ((vti|m_to)<0) return BXE_RANGE; else gna(vti);
 	m_vtf = .5 * natural_bpm;
 	m_pn = tgn_new(m_m->tn, 6, vti,  0);
 	m_tn = tgn_new(m_m->tn, 7, m_to, 0);
@@ -218,12 +225,12 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 		vti += k; vtf -= natural_bpm * (double)k;
 		for (; vti>nextvt; nd=nd->next(), nextvt=nd->cth()->j) {
 			int ci = nd->cth()->i; if (ci>15) {
-				if (!nd->is_wrap()) return unexp_node(nd);
+				if (!nd->is_wrap()) return gna(-1), unexp_node(nd);
 				wrap_nd_2mx(static_cast<ABoxNode*>(nd), m_mxid, *bpm, i);
 				if (DBGC) log("trk2mx: %d", m_mxid);   continue; }
-			if (ci==15) return (void) (m_md = 3);
+			if (ci==15) return m_md = 3, gna(-1);
 			if (nd!=m_tn) continue; 
-			if (!m_rpc) return (void)(m_md=3);
+			if (!m_rpc) return m_md = 3, gna(-1);
 			--m_rpc; vti += (m_fr2 - m_to); nd = m_fn;
 			if (m_md==1) m_md=2, tgn_move(m_m->tn, m_tn, m_to=m_to2, 0);
 		}
@@ -231,7 +238,7 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 	}
 	vti_d = min_i(vti_d, (int)ceil(vtf * natural_bpm_r));
 	m_vtf = vtf - natural_bpm * (double)vti_d;
-	tgn_move(m_m->tn, m_pn, vti + vti_d, nd);
+	tgn_move(m_m->tn, m_pn, vti + vti_d, nd); gna(vti+vti_d);
 }
 
 int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
@@ -260,7 +267,7 @@ int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
 /////////////////////////////////////
 
 TrackGen::TrackGen(ABoxNode *nd, ANode *g0, ANode *g1) : BoxGen(nd), m_m(nd,g0,g1), m_drq_g(0), 
-	m_bp10m(600), m_mxctl(0) {
+	m_bp10m(600), m_mxctl(0), m_gnaf(0) {
 	m_model = &m_m; memcpy(m_gwfr, TRK_DEF_GWFR, 4); m_div[0] = 3; memset(m_div+1, 0, 255); }
 
 int TrackGen::gui_h4(int * to) {
@@ -274,7 +281,7 @@ int TrackGen::gui_h4(int * to) {
 void TrackGen::box_window() {
 	int buf[260], n = gui_h4(buf);
         gui2.cre(w_oid(), 't'); gui2.c1('g'); gui2.sn((char*)buf, 4*n); gui2.c1('.');
-	gui2.own_title(); w_sel(m_node->wdat_raw()); w_bpm(); w_ply(); w_rec();
+	gui2.own_title(); w_sel(m_node->wdat_raw()); w_bpm(); w_ply(); w_rec(); w_gna();
 }
 
 void TrackGen::wdat_cons(sthg * bxw_rawptr) {
@@ -340,76 +347,18 @@ int TrackGen::play(int op, int pos) {
 	return (bi<0) ? bi : mx_c_add(m_mxctl, bi, 1);
 }
 
-#define CH(X) BXCMD_H(TrackGen, X)
-
-CH(cx0){BXW_GETP(p); return p->cx_cmd(bxw_rawptr, cb, s[1], TR_SEL_ID, TR_SEL_XY[0], TR_SEL_XY[1]); }
-CH(upp){BXW_GETP(p); TR_UPP = atoi_h(s+1); return 0; }
-CH(gcf){return trk_g_parse(s+1, p->m_div, p->m_gwfr), 0; }
-CH(pl) {return s[1]>47 ? p->play(s[1]-48, atoi_h(s+2)) : BXE_PARSE; }
-CH(qk) {BXW_GETP(p); return p->grab_gsel(bxw_rawptr), ClipNode::kcp(2)->keyop_f(atoi_h(s+1),5,0,cb->cnof()); }
-
-CH(cky){switch(s[1]) {
-	case 'x': return p->del_n_sel(0, cb->cnof());
-	case 'X': return p->del_n_sel(1, cb->cnof());
-	default:  return EEE_NOEFF; 
-}}
-
-CH(bpm){if (!intv_cmd(&p->m_bp10m,s+1,1,9999,0x64640a01)) return 0;
-	if (p->wnfl()) p->w_bpm(); if (p->m_mxctl) mx_c_bpm_ugly_hack(p->m_mxctl, p->m_bp10m); return 0; }
-
-CH(cx1){int id, x, y, c = s[1]; if (!c) return BXE_NOARG; else id = atoi_h(s+2);
-	if (!(s=cb->tok())) return BXE_NOARG; else y = atoi_h(s);
-	if (!(s=cb->tok())) return BXE_NOARG; else x = atoi_h(s);
-	BXW_GETP(p); return p->cx_cmd(bxw_rawptr, cb, c, id, x, y);
+void TrackGen::gna_reg(int *pix, int x) {
+	int ix = *pix; if (ix>7) { if (x<0) return;
+		      		   int mf = 255 & ~m_gnaf; if (!mf) return;
+		      		   BVFOR_JM(mf) { m_gnaf |= 1<<(*pix = ix = j); break; }}
+	if (x<0) *pix = 8, m_gnaf &= ~(1<<ix); else m_gnav[ix] = x;
+	if (wnfl() && !(m_gnaf&256)) m_gnaf |= gui2.gna_add2q(m_node->id());
 }
 
-CH(view){int i, a[4]; 
-	if ((unsigned int)(a[2] = s[1]-48) > 31 ||
-	    (unsigned int)(a[3] = s[2]-48) > 31   ) return BXE_PARSE;
-	const char *s1, *s2; if (!(s1=cb->tok()) || !(s2=cb->tok())) return BXE_NOARG;
-	if ( ((a[0]=atoi_h(s1)) | (a[1]=atoi_h(s2))) & 0xffffe000 ) return BXE_RANGE;
-	BXW_GETP(p); for (i=0; i<4; i++) TR_V_XY01[i] = (short)a[i]; return 0;
-}
-
-CH(rq){	if (s[1]==',') return p->draw_bx_1();
-	const char * s2 = cb->tok(); if (!s2) return BXE_NOARG;
-	int ec = p->draw_bx_ini(atoi_h(s+1), atoi_h(s2)); return (ec<0) ? ec : p->draw_bx_1();
-}
-
-CH(stp){BXW_GETP(p); int i = TR_SEL_XY[1], j = TR_SEL_XY[0], k = TR_SEL_ID; 
-	ANode *nd, *cur = k ? ANode::lookup_n_q(k) : 0;
-	switch(s[1]) {
-		case '>': nd = Node::trk_fwf(cur ? cur->next() : Node::trk_ij(p->m_node, i, j)); break;
-		case '<': nd = Node::trk_fwb((cur ? cur : Node::trk_ij(p->m_node, i, j))->cth()->pv); break;
-		default: return BXE_CENUM;
-	}
-	return (nd && nd->is_wrap()) ? (p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr), 0) : EEE_NOEFF;
-}
-
-CH(mv){	if (!s[1] || !s[2]) return BXE_NOARG;
-	BXW_GETP(p);
-	int ec, x = TR_SEL_XY[0], y = TR_SEL_XY[1], id = TR_SEL_ID, v = ((0x64640a01>>(8*(s[3]&3)))&255) * ((s[2]&2)-1);
-	ANode * nd = id ? ANode::lookup_n_q(id) : 0;
-	switch (s[1]) {
-		case 'l': y += 16*v; break;
-		case 'b': x += 40320*v; break;
-		case 'd': x += TR_UPP*hex2(s+4)*v; break;
-		case 'p': x += TR_UPP*v; break;
-		case 'u': x += v; break;
-		default: return BXE_CENUM;
-	}
-	if (y<16) y = 16; else if (y>4080) y = 4080;
-	if (x<0) x = 0; else if (x>2096640000) x = 2096640000;
-	if(id && (ec = Node::move(ANode::lookup_n_q(id), p->m_node, 0, y|(cb->cnof()&~NOF_FGUI), x))<0) return ec;
-	if (id) p->sel0wn(bxw_rawptr, nd); else p->sel0w(bxw_rawptr, y, x);
-	p->w_sel(bxw_rawptr);
-	return 0;
-}
-
-CH(rec){if (trk_rec_trg == (BoxGen*)p) return p->stop_rec();
-	if (trk_rec_trg) static_cast<TrackGen*>(trk_rec_trg)->stop_rec();
-	return p->start_rec();
-}
+void TrackGen::w_gna() {
+	int flg = (m_gnaf &= 255); if (!wnfl()) return;
+	gui2.setwin(w_oid(), 't'); gui2.wupd_c0('t','a'); gui2.c2(hexc1(flg>>4), hexc1(flg&15));
+	BVFOR_JM(flg) gui2.hex8(m_gnav[j]); }
 
 int TrackGen::start_rec() {
 	BXW_GET; trk_rec_trg = this; rec_mode = 0; rec_x0 = TR_SEL_XY[0]; rec_line = TR_SEL_XY[1];
@@ -479,6 +428,69 @@ int TrackGen::save2(SvArg * sv) {
 	return r;
 }
 
+#define CH(X) BXCMD_H(TrackGen, X)
+CH(cx0){BXW_GETP(p); return p->cx_cmd(bxw_rawptr, cb, s[1], TR_SEL_ID, TR_SEL_XY[0], TR_SEL_XY[1]); }
+CH(upp){BXW_GETP(p); TR_UPP = atoi_h(s+1); return 0; }
+CH(gcf){return trk_g_parse(s+1, p->m_div, p->m_gwfr), 0; }
+CH(pl) {return s[1]>47 ? p->play(s[1]-48, atoi_h(s+2)) : BXE_PARSE; }
+CH(qk) {BXW_GETP(p); return p->grab_gsel(bxw_rawptr), ClipNode::kcp(2)->keyop_f(atoi_h(s+1),5,0,cb->cnof()); }
+
+CH(cky){switch(s[1]) {
+	case 'x': return p->del_n_sel(0, cb->cnof());
+	case 'X': return p->del_n_sel(1, cb->cnof());
+	default:  return EEE_NOEFF; 
+}}
+
+CH(bpm){if (!intv_cmd(&p->m_bp10m,s+1,1,9999,0x64640a01)) return 0;
+	if (p->wnfl()) p->w_bpm(); if (p->m_mxctl) mx_c_bpm_ugly_hack(p->m_mxctl, p->m_bp10m); return 0; }
+
+CH(cx1){int id, x, y, c = s[1]; if (!c) return BXE_NOARG; else id = atoi_h(s+2);
+	if (!(s=cb->tok())) return BXE_NOARG; else y = atoi_h(s);
+	if (!(s=cb->tok())) return BXE_NOARG; else x = atoi_h(s);
+	BXW_GETP(p); return p->cx_cmd(bxw_rawptr, cb, c, id, x, y); }
+
+CH(view){int i, a[4]; 
+	if ((unsigned int)(a[2] = s[1]-48) > 31 ||
+	    (unsigned int)(a[3] = s[2]-48) > 31   ) return BXE_PARSE;
+	const char *s1, *s2; if (!(s1=cb->tok()) || !(s2=cb->tok())) return BXE_NOARG;
+	if ( ((a[0]=atoi_h(s1)) | (a[1]=atoi_h(s2))) & 0xffffe000 ) return BXE_RANGE;
+	BXW_GETP(p); for (i=0; i<4; i++) TR_V_XY01[i] = (short)a[i]; return 0; }
+
+CH(rq){	if (s[1]==',') return p->draw_bx_1();
+	const char * s2 = cb->tok(); if (!s2) return BXE_NOARG;
+	int ec = p->draw_bx_ini(atoi_h(s+1), atoi_h(s2)); return (ec<0) ? ec : p->draw_bx_1(); }
+
+CH(stp){BXW_GETP(p); int i = TR_SEL_XY[1], j = TR_SEL_XY[0], k = TR_SEL_ID; 
+	ANode *nd, *cur = k ? ANode::lookup_n_q(k) : 0;
+	switch(s[1]) {
+		case '>': nd = Node::trk_fwf(cur ? cur->next() : Node::trk_ij(p->m_node, i, j)); break;
+		case '<': nd = Node::trk_fwb((cur ? cur : Node::trk_ij(p->m_node, i, j))->cth()->pv); break;
+		default: return BXE_CENUM;
+	}
+	return (nd && nd->is_wrap()) ? (p->sel0wn(bxw_rawptr, nd), p->w_sel(bxw_rawptr), 0) : EEE_NOEFF; }
+
+CH(mv){	if (!s[1] || !s[2]) return BXE_NOARG;
+	BXW_GETP(p); int ec, x = TR_SEL_XY[0], y = TR_SEL_XY[1], id = TR_SEL_ID,
+			 v = ((0x64640a01>>(8*(s[3]&3)))&255) * ((s[2]&2)-1);
+	ANode * nd = id ? ANode::lookup_n_q(id) : 0;
+	switch (s[1]) {
+		case 'l': y += 16*v; break;
+		case 'b': x += 40320*v; break;
+		case 'd': x += TR_UPP*hex2(s+4)*v; break;
+		case 'p': x += TR_UPP*v; break;
+		case 'u': x += v; break;
+		default: return BXE_CENUM;
+	}
+	if (y<16) y = 16; else if (y>4080) y = 4080;
+	if (x<0) x = 0; else if (x>2096640000) x = 2096640000;
+	if(id && (ec = Node::move(ANode::lookup_n_q(id), p->m_node, 0, y|(cb->cnof()&~NOF_FGUI), x))<0) return ec;
+	if (id) p->sel0wn(bxw_rawptr, nd); else p->sel0w(bxw_rawptr, y, x);
+	return p->w_sel(bxw_rawptr), 0; }
+
+CH(rec){if (trk_rec_trg == (BoxGen*)p) return p->stop_rec();
+	if (trk_rec_trg) static_cast<TrackGen*>(trk_rec_trg)->stop_rec();
+	return p->start_rec(); }
+
 BXCMD_DEF(TrackGen) { {8192+'\\',0}, {'R'|256, c_rq}, {'C'|256, c_cx1}, {'c'|256, c_cx0},
 	{'V'|256, c_view}, {'m'|256, c_mv}, {'s'|256, c_stp}, {'r', c_rec}, {'u'|256, c_upp},
 	{'g'|256, c_gcf}, {'b', c_bpm}, {'p'|256, c_pl}, {'Q', c_qk}, {'K', c_cky}, {0, 0} };
@@ -506,5 +518,9 @@ int trk_rec(ANode * nd, int mxbi) {
 	if (r<0 || (r = mx_tr_add(mxbi, cpbx=static_cast<ABoxNode*>(cpnd)->box()))<0) return r;
 	wrap_set_trec(cpbx, r); return mxbi;
 }
+
+void trk_w_gna(int id) {
+	ANode * tnd = ANode::lookup_n_q(id); if (tnd->cl_id()!='t') return;
+	static_cast<TrackGen*>(static_cast<ABoxNode*>(tnd)->box())->w_gna(); }
 
 void track_init() { TrackGen::cmd_init(); }

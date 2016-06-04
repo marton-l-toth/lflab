@@ -10,5 +10,6 @@ void trk_bkm_rm(BoxGen * abx, ANode * nd);
 int trk_cond_pm(BoxGen * abx, ANode * nd, int pm);
 int trk_rec(ANode * wnd, int mxbi);
 int trk_glob_paste(BoxGen * bx, int nof);
+void trk_w_gna(int id);
 
 #endif // __qwe_trk_h__
