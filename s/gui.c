@@ -1728,10 +1728,12 @@ static void da_wr18(cairo_t * cr2, int xi, int yi, const char * s0, int xclip) {
 	else	 RGB_D3(cr2,bg), cairo_rectangle(cr2, x+1.0, y+1.0,  16.0, 42.0), cairo_fill(cr2), 
 		 RGB_D3(cr2,fg), MV_TXT(cr2,x+2.0,y+12.0,txt);
 	MV_TXT(cr2, x+2.0, y+25.0, txt+3), MV_TXT(cr2, x+2.0, y+38.0, txt+6);
-	cairo_set_line_width (cr2, 1.0);
-	cairo_move_to(cr2, x+16.5, y+42.5);
-	cairo_line_to(cr2, x+16.5, y+41.5-v);
-	cairo_stroke(cr2);
+	cairo_set_line_width (cr2, 1.0); cairo_move_to(cr2, x+16.5, y+42.5);
+	if 	  (!shf) cairo_rel_line_to(cr2, 0.0, -v-1.0), cairo_stroke(cr2);
+	else if (v<27.0) cairo_rel_line_to(cr2, 0.0, -v-1.0), cairo_stroke(cr2), RGB_D3(cr2,bg),
+			 cairo_move_to(cr2,x+16.5,y+1.5), cairo_rel_line_to(cr2,0.0,14.0), cairo_stroke(cr2);
+	else		 cairo_rel_line_to(cr2, 0.0, -28.0), cairo_stroke(cr2), RGB_D3(cr2,bg),
+			 cairo_move_to(cr2,x+16.5,y+1.5), cairo_rel_line_to(cr2,0.0,41.0-v), cairo_stroke(cr2);
 	cairo_set_source_rgb (cr2, .5, .5, .5); 
 	cairo_rectangle(cr2, x+.5, y+.5, 17.0, 43.0);
 	cairo_stroke(cr2);
