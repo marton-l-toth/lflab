@@ -1171,9 +1171,12 @@ void AWrapGen::w_a20(int flg) { int k; gui2.setwin(w_oid(),'w');
 
 void AWrapGen::w_mini() {
 	if (wnfl()) gui2.setwin(w_oid(), 'w'), gui2.wupd_c0('w', 's'), gui2.bxmini(this);
-	ANode * up = m_node->up(); 
-	if (up->cl_id()=='C' && up->winflg(8)) static_cast<ClipNode*>(up)->draw_1(m_node); // TODO: trk
-}
+	ABoxNode *nd = m_node; ANode *up = m_node->up();
+	switch(up->cl_id()) {
+		case 'C': if (up->winflg(8)) static_cast<ClipNode*>(up)->draw_1(nd);   return;
+		case 't': if (up->winflg(2048)) trk_cond_pm(static_cast<ABoxNode*>(up)->box(), nd, '+');return;
+		default:  return;
+	}}
 
 // f: 1-sel 2-on 4-off 8-uniq
 void AWrapGen::w_gr_xyk(int x0, int y0, int f) {
