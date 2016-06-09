@@ -2,6 +2,7 @@
 #include "box0.h"
 #include "util2.h"
 #include "glob.h"
+#define DBGC (debug_flags&DFLG_FE)
 
 struct FE1 { double y, v, cs[4], w, wgt; };
 struct FEblk {
@@ -12,7 +13,7 @@ struct FEblk {
 	void cs_ini_1(int i);
 	void cs_ini_x(int i, double x);
 	void iv_ini(double z0, double z1);
-	void geom_ini(double *x012, double *y012, double pkx, double pky);
+	void geom_ini(double *x012, double *y012, double pkx, double pky, int flg); // 0:compat 1:fixed
 };
 
 //? {{{!._fe}}}
@@ -50,7 +51,7 @@ static inline void ply_qi(double *q, const double *p, int n) {
 static inline double ply_ev(const double *p, int n, double x) {
 	double y = p[n-1]; for (int i=n-2; i>=0; i--) y*=x,y+=p[i]; return y; }
 
-void FEblk::geom_ini(double *x012, double *y012, double pkx, double pky) {
+void FEblk::geom_ini(double *x012, double *y012, double pkx, double pky, int flg) {
 	double w0_4[5]; memset(w0_4, 0, 40); pky *= pky;
 	for (int i=0; i<3; i++) for (int j=0; j<3; j++) w0_4[i+j] += x012[i]*y012[j];
 	double c0=0.0, ts=0.0, hstp = .5/(double)(m-2),   sprf[3]; ply_qi(sprf, x012, 3);
@@ -63,11 +64,12 @@ void FEblk::geom_ini(double *x012, double *y012, double pkx, double pky) {
 		q[0] = u0; q[1] = u1; p[i+1].wgt = wgt;
 		if (     (u2=u0   +u1)>csmax) csmax = u2;
 		if (i && (u2=q[-1]+u0)>csmax) csmax = u2;
-		swtot += (p[i+1].w = surf / (d2*d2+pky)); p[i+1].y = p[i+1].v = 0.0;
+		swtot += (p[i+1].w = surf / (d2*d2+pky)); p[i+1].y = p[i+1].v = 0.0; if (flg) ts=ts2,tw=tw2;
 	}
 	swtot = 1.0 / swtot; for (int i=1; i<m-1; i++) p[i].w *= swtot;
 	double csmul[2]; csmul[0] = -(csmul[1] = 1.0 / csmax);
 	for (int i=0; i<2*m; i++) cs1[i] *= csmul[i&1];
+	if (DBGC){ log_n("geom_ini(%d):", flg); for (int i=1; i<m-1; i++) log_n(" %d:%g", i,p[i].w);log(""); }
 }
 
 FEblk * FEblk::mk0(int m, int i0, int iw) {
@@ -96,15 +98,16 @@ FEblk * FEBox::ini_blk(double **inb) {
 	int m0 = (int)lround(**pg), m = ((unsigned int)(m0-1)<250u) ? m0+2 : (m0>1?252:3),
 	    ipm0 = (int)ceil(pg[10][0]*(double)(m-2)), ipm = ipm0<1 ? 1 : (min_i(ipm0, m-2));
 	if (m_flg&2) {
-		(m_blk = FEblk::mk0(m, ipm, 0))->geom_ini(x012, y012, pg[12][0], pg[13][0]);
+		(m_blk = FEblk::mk0(m, ipm, 0))->geom_ini(x012, y012, pg[12][0], pg[13][0], 0); // TODO(?)
 	} else {
 		double ipmd = (double)ipm, ihw = 0.5 * pg[11][0], z0 = ipmd - ihw, z1 = ipmd + ihw;
 		int z0i = (int)ceil (z0); if (z0i<1  ) z0i = 1;   else if (z0i>ipm) z0i = ipm;
 		int z1i = (int)floor(z1); if (z1i>m-2) z1i = m-2; else if (z1i>ipm) z1i = ipm;
 		if (z1i<z0i) z0i = z1i = ipm;
 		m_blk = FEblk::mk0(m, z0i, z1i-z0i+1);
-		m_blk->geom_ini(x012, y012, pg[12][0], pg[13][0]);
-		m_blk->iv_ini(z0, z1);
+		m_blk->geom_ini(x012, y012, pg[12][0], pg[13][0], pg[1][0]!=pg[1][0]);
+		m_blk->iv_ini(z0, z1); 
+		if (DBGC) log("fe: geo(%g,%g) iv(%g,%g,%d,%d)", pg[12][0],pg[13][0],z0,z1,m_blk->i0,m_blk->iw);
 	}
 	m_blk->cs1[0] *= pg[8][0]; m_blk->cs1[2*m-5] *= pg[9][0];
 	return m_blk;
