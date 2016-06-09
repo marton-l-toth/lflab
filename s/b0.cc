@@ -345,7 +345,7 @@ static void sel_ini(ANode *rn) {
 	for (int i=3; i<30; i++) nm[3] = 48+i/10, nm[4] = 48+i%10,
 		qmk_box(sd[0],nm,qa, i, i+1, 33 ,"sel", "1i-", 1+256*i, "sel");
 	memcpy(nm, "sel02x2", 8); qa = QMB_ARG1(Sel2Box);
-	qmk_box(sd[1], nm, qa, 0x22, 5, 2, "sel2", "i:o*R*1i-", 1, 0, "a$b", "a$b", "uu%99%", 1025, "sel");
+	qmk_box(sd[1], nm, qa, 0x22, 5, 2, "sel2", "i:o*R*1i-", 0, 0, "a$b", "a$b", "uu%99%", 1025, "sel");
 	for (int i=3; i<15; i++) nm[3] = 48+i/10, nm[4] = 48+i%10,
 		qmk_box(sd[1],nm,qa, 32+i, 2*i+1, 2, "sel2", "1i-", 1+512*i, "sel");
 	nm[4] = 'x'; nm[6] = 0; char inm[48], onm[16];
