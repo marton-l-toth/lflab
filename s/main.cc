@@ -15,7 +15,7 @@
 
 int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
 double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625, junkbuf[4096];
-char zeroblkC[32768], save_file_name[1024];
+char zeroblkC[32768], save_file_name[1024], debug_utxt_buf[1024];
 const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 

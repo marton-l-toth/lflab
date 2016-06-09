@@ -33,6 +33,7 @@
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk "\
 		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
 		  "4000-wrap 8000-trkcalc 10000:pt"
+#define DEBUG_UTXT(J) (debug_utxt_buf + 64*(J))
 extern int glob_flg;
 extern int debug_flags;
 extern int sample_rate;
@@ -43,7 +44,7 @@ extern int qstat_size;
 #define zeroblkD ((double*)(zeroblkC))
 extern char zeroblkC[32768];
 extern double junkbuf[4096];
-extern char save_file_name[1024];
+extern char save_file_name[1024], debug_utxt_buf[1024];
 
 extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
 extern int 	   tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;

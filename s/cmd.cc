@@ -353,37 +353,37 @@ int CmdTab::c_wav(CmdBuf * p) {
 }
 
 int CmdTab::c_misc(CmdBuf * p) {
-	int i,j; switch(*p->m_c_a0) {
+	int i,j; char *s = p->m_c_a0; switch(*s) {
 		case 'g': Gnuplot::sg() -> restart(); return 0;
 		case 'F': pzrf_show_last(); return 0;
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
-		case 'w': i = p->m_c_a0[1]&1 ? snd0.hcp_start(20903400) : snd0.hcp_end();
+		case 'w': i = s[1]&1 ? snd0.hcp_start(20903400) : snd0.hcp_end();
 			  gui2.setwin(7,'.'); gui2.wupd_i1('W',!!snd0.hcp()); return i;
-		case 'c': return pt_con_op(p->m_c_a0+1); 
-		case 'L': log_load(atoi(p->m_c_a0+1)); return 0;
+		case 'c': return pt_con_op(s+1); 
+		case 'L': log_load(atoi(s+1)); return 0;
 		case 'l': return pt_show_lic();
-		case 'V': if (sscanf(p->m_c_a0+1, "%d.%d", &i, &j)!=2) return GCE_PARSE;
+		case 'V': if (sscanf(s+1, "%d.%d", &i, &j)!=2) return GCE_PARSE;
 		          if (i!=v_major || j!=v_minor) log("save file is from version %d.%d", i, j);
 			  p->m_sv_M = i; p->m_sv_m = j; return 0;
 		case 'K': return cfg_write();
-		case 'M': return mx_debug(p->m_c_a0+1);
+		case 'M': return mx_debug(s+1);
 		case 'm': return nd_mem_debug();
-		case '_': return midi_cmd(p->m_c_a0+1);
-		case 's': return u_sleep((int)lround(1000.0*atof(p->m_c_a0+1))), 0;
-		case 'G': switch(j=p->m_c_a0[1], i=j?atoi_h(p->m_c_a0+2):0, j) {
+		case '_': return midi_cmd(s+1);
+		case 's': return u_sleep((int)lround(1000.0*atof(s+1))), 0;
+		case 'G': switch(j=s[1], i=j?atoi_h(s+2):0, j) {
 				  case '-': i=~i; case '&': i &= glob_flg; break;
 				  case '+':       case '|': i |= glob_flg; break; default:i=glob_flg; break; }
 			  return j=glob_flg, glob_flg=i, log("glob_flg: 0x%x -> 0x%x", j, i), 0;
 		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
 		case 'W': return ANode::wi_debug(), 0;
-		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = p->m_c_a0[1]&1) ) return EEE_NOEFF;
+		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = s[1]&1) ) return EEE_NOEFF;
 		          glob_flg ^= GLF_RECORD; gui2.pf("\tdf%x", j<<11);
 			  log("cmd/event recording st%sed", "opp\0art"+4*j);
 			  if (j) log("cmd_rec:0000 ^_Sn%d", qstat.size());
 			  else   fflush(stderr), i='f', pt_iocmd((char*)&i);    return 0;
-		case 'S': return p->m_c_a0[1]=='c' ? ((p->m_cont = qstat.chk0(p->m_c_a0+2)) ? 0 : BXE_QSTATDIF)
-						   : qstat.cmd(p->m_c_a0+1);
-		case '>': return log("_> %s", p->m_c_a0+1), 0;
+		case 'S': return s[1]=='c' ? ((p->m_cont=qstat.chk0(s+2)) ? 0 : BXE_QSTATDIF) : qstat.cmd(s+1);
+		case 'D': return (j=s[1]) ? (strncpy(DEBUG_UTXT(hxd2i(j)), s+2, 63), 0) : GCE_PARSE;
+		case '>': return log("_> %s", s+1), 0;
 		default: return GCE_UMISC;
 	}}
 

@@ -1296,7 +1296,7 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
 	int fmx = -1; double fmv = -1.0;
         for (int i=0; i<=siz/2; i++)
                 if ((res[i] = sqrt(res[i]*res[i] + res2[i]*res2[i]))>fmv) fmv = res[i], fmx = i;
-	log("plot_f: max @ %g Hz", (double)fmx / (double)siz * (double)sample_rate);
+	log("plot_f: (max@Hz) %s%.9g", DEBUG_UTXT(15), (double)fmx / (double)siz * (double)sample_rate);
         int ix0 = (int)round(f0 * sample_length * (double)(siz));
         int ix1 = (int)round(f1 * sample_length * (double)(siz));
         if (ix1<siz-1) ++ix1;
