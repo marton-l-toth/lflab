@@ -1029,7 +1029,7 @@ int ABoxNode::save_sob() {
 
 int ABoxNode::cond_del() {
 	if (m_et0) return NDE_USEDBY;
-	// TODO: minidir
+	if (m_winflg&1) return NDE_BUSY;
 	return m_box -> cond_del();
 }
 
