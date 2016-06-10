@@ -608,23 +608,18 @@ diff:	int sep = (s[i]==46);
 	return (i==l) ? sep^1 : ((-sep)|r);
 }
 
-int NDirNode::incr() {
-	unsigned int * p;
-	switch (m_siz) {
-		case  8: p = (unsigned int*)a64();
-			 memcpy(p, m_e[1] = m_e[0], 32); m_e[0] = p; return 0;
-		case 24: p = (unsigned int*)a64();
-			 memcpy(p, m_e[1], 32); m_e[1] = p; return 0;
-		case 32: return NDE_FULL;
-		default: return 0;
-	}}
+int NDirNode::incr() { 
+	if (!(m_siz&8)) return (m_siz==32) ? NDE_FULL : 0;
+	if (m_siz==8) { if (!m_e[1]) m_e[1]=m_e[0], memcpy(m_e[0]=(unsigned int*)a64(), m_small, 32); }
+	else { 		if (m_e[1]==m_small) 	    memcpy(m_e[1]=(unsigned int*)a64(), m_small, 32); }
+	return 0;
+}
 
-void NDirNode::decr() {
-	switch(m_siz) {
-		case 24: memcpy(m_small, m_e[1], 32); f64((char*)m_e[1]); m_e[1] = m_small; return;
-		case 8:  memcpy(m_small, m_e[0], 32); f64((char*)m_e[0]); m_e[0] = m_small; m_e[1] = 0;
-		default: return;
-	}}
+void NDirNode::decr() { switch(m_siz) {
+	case 24: if (m_e[1]!=m_small) memcpy(m_small,m_e[1], 32), f64((char*)m_e[1]), m_e[1] = m_small; return;
+	case 8:  if (m_e[1]) m_e[1]=0,memcpy(m_small,m_e[0], 32), f64((char*)m_e[0]), m_e[0] = m_small; return;
+	default: return;
+}}
 
 int NDirNode::find2(const char* name, int h12, int lo, int hi) {
 	int ofs=0, r;
