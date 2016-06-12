@@ -152,8 +152,8 @@ class WrapCore : public SOB {
 			if (gui9&1) gui2.setwin(gui9|11,'w'), gui2.w0(), grcmd(i8);
 			if (gui9&8) gui2.setwin(gui9| 9,'#'), gui2.w0(), grcmd(i8); }
 		void slcmd(const char * i8, int flg) { gui2.c1('!');
-			for (int k=1,i=2; i<8; i++,k*=4)
-				gui2.c2(flg&k ? i8[i]+48 : 44, flg&(2*k) ? grdim[i]+47 : 44); }
+			for (int i=2; i<8; i++, flg>>=1)
+				(flg&1) ? gui2.c2(i8[i]+48, grdim[i]+47) : gui2.c2(44,44); }
 		void i2v(double *v11, const char *i8, int flg) {
 			BVFOR_JM(~flg&255) v11[j] = div1tab[(int)grdim[j]] * (double)i8[j]; }
 		int has_key(int i) { return ktab && (ktab->bv[(i>>5)&3] & (1u<<(i&31))); }
@@ -355,12 +355,13 @@ class AWrapGen : public BoxGen {
 			: Node::mk(0, ClipNode::kcp(1), 0, 'W'^((m_bflg>>24)&4), nof|NOF_NOIDX, 0, this); }
 		int batch_calc(double * to0, double * to1, int skip, int n, int nch);
 		int write_a20();
+		int lim8(const char * q);
 		void w_gr_xyk(int x0, int y0, int f);
 		void w_mini();
 		void w_gmd() { gui2.setwin(w_oid(), 'w'); gui2.wupd('m'); gui2.c2('+', 48+(m_bflg&3)); }
 		void w_a20(int flg);
 		void w_tlim(int flg);
-		void w_dim(int f20);
+		void w_dim(int gis6, int wf);
 		void w_tab0(int f20);
 		void w_slbv(int flg); // 1: force 2: setwin
 		int show_tab(int i);
@@ -1068,7 +1069,7 @@ int AWrapGen::aux_window() {
 	gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.nname(m_node);
 	gui2.c1(36); gr_rgbc(); if (m_bflg&WRF_SLUPD) gui2.c1('u');
 	WrapCore * cr = core_ro();
-	cr->slcmd(m_xys6, 4095); w_slbv(1); cr->grcmd(m_xys6);
+	cr->slcmd(m_xys6, 63); w_slbv(1); cr->grcmd(m_xys6);
 	if (cr->ktab) gui2.c1('B'), gui2.wr_keylist(cr->ktab->bv, cr->ktab->pk); 
 	return 16*'#'+9;
 }
@@ -1097,7 +1098,7 @@ int AWrapGen::show_tab(int i) {
 	BXW_GET; if (i<0) i=WR_TAB; else if (i==WR_TAB) return 0; else WR_TAB=i;
 	gui2.setwin(w_oid(), 'w'); gui2.wupd_0('Y', ".W"); gui2.c1(48+i);
 	switch(i) {
-		case 0: w_tab0(0xaaaaa); return 0;
+		case 0: w_tab0(-1); return 0;
 		case 1: w_a20(-1); return 0;
 		case 2: w_tlim(-1); return 0;
 		default: return show_tab_2(bxw_rawptr, i);
@@ -1159,6 +1160,9 @@ void AWrapGen::delayed_clip_upd() {
 		default:  log("BUG: wr/delayed_clip_upd: up() is no clipb or trk"); return;
 	}}
 
+int AWrapGen::lim8(const char * q) { 
+	int i,r=0; for (i=0; i<8; i++) if (m_xys6[i]>=q[i]) m_xys6[i]=q[i]-1, ++r;  return r; }
+
 int AWrapGen::mini(char *to) {
 	get_nm2(to); for (int i=0; i<4; i++) to[i+2] = i2aA(m_xys6[i]);
 	to[6] = i2aA(m_xys6[7]); to[7] = ':' + !!(m_bflg&WRF_SHADOW);
@@ -1187,28 +1191,8 @@ void AWrapGen::w_gr_xyk(int x0, int y0, int f) {
 		if (f&8) gui2.c3('u', (f&4)?33:x, y);
 	}}}
 
-void AWrapGen::w_tab0(int f20) { gui2.setwin(w_oid(), 'w'); const char *s = core_ro()->grdim;
-	for (int i=0,j=2; i<10; i++,j*=4) if (f20&j) gui2.wupd_c48('Y', s[i], i); }
-
-// flg: 16:slupd 17:xry 18:slf 19:yry
-void AWrapGen::w_dim(int f20) {
-	int wf = wnfl(2560); if (!wf) return;
-	WrapCore * cr = core_ro();
-	int grf = f20 & 0xa000f;
-	if (f20 & 0x14055) w_mini();
-	if (wf & 512) {
-		gui2.setwin(w_oid(9), '#'); gui2.t0();
-		int slf = (f20>>4) & (f20&65536 ? 0xfff : 0xaaa);
-		if (slf) cr->slcmd(m_xys6, slf);
-		w_slbv(0);
-		if (grf) cr->grcmd(m_xys6);
-	}
-	if (wf & 2048) {
-		BXW_GETV("wr/dim"); gui2.setwin(w_oid(), 'w');
-		if (!WR_TAB && (f20&0xaaaaa)) w_tab0(f20);
-		if (grf) gui2.w0(), cr->grcmd(m_xys6);
-		if (f20 & 0x5555) w_col0(pflg());
-	}}
+void AWrapGen::w_tab0(int f10) { gui2.setwin(w_oid(), 'w'); const char *s = core_ro()->grdim;
+	BVFOR_JM(f10&1023) gui2.wupd_c48('Y', s[j], j); }
 
 void AWrapGen::w_slbv(int flg) {
 	if (!m_node->winflg(512)) return; BXW_GETV("slbv"); 
@@ -1376,19 +1360,24 @@ CH(cut){int *q = p->m_node->etc()->i; double x = 0.0;
 	if (p->m_node->winflg(2048)) p->w_tlim(1);    return 0;
 }
 
-CH(gr){	int k, i = s[2] & 7, wdf = 65536;
-	WrapCore * core = p->core_rw();
+CH(gr){	int k, i = s[2] & 7, g9 = p->m_node->gui9(), f10 = 0;
+	WrapCore * cr = p->core_rw();
 	switch (s[1]) {
-		case 'd': wdf |= intv_cmd_c(core->grdim+i, s+3, 2, 51, 0x33330801) << (1+2*i); break;
-		case 'R': i&=1; core->grdim[i+8] = (s[3]-48) & 127; wdf |= 131072 << (2*i); break;
+		case 'd': intv_cmd_c(cr->grdim+i, s+3, 2, 51, 0x33330801); f10 |= 1<<i; break;
+		case 'R': i&=1; cr->grdim[i+8] = (s[3]-48) & 127;          f10 |= 256<<i;  break;
 		case '*':
-			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) core->grdim[i] = k+2;
-			  if (i==8 && s[10]) core->grdim[8] = (s[10]-48) & 127,
-				  	     core->grdim[9] = (s[11]-48) & 63, i+=2;
-			  wdf |= ((1<<(2*i))-1) & 0xaaaaa; break;
+			  for (i=0; i<8 && (unsigned int)(k=s[i+2]-50)<50u; i++) cr->grdim[i] = k+2;
+			  if (i==8 && s[10]) cr->grdim[8] = (s[10]-48) & 127,
+				  	     cr->grdim[9] = (s[11]-48) & 63, i+=2;
+			  f10 = 1023; break;
 		default: return BXE_CENUM;
 	}
-	p->w_dim(wdf); return 0;
+	if (p->lim8(cr->grdim) || (f10&128)) p->w_mini();
+	if (!(g9&9)) return 0;
+	if (f10&771) cr->upd_grid(p->m_xys6, g9);
+	if (p->tab_vis(0)) p->w_tab0(f10);
+	if ((g9&8) && (f10>>=2, f10&=63)) gui2.setwin(g9|9, '#'), gui2.t0(), cr->slcmd(p->m_xys6, f10);
+	return 0;
 }
 
 CH(rvt){ANode * nd = cb->lookup(s+1); if (!nd) return BXE_ARGLU;

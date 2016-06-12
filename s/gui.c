@@ -2633,10 +2633,10 @@ static void tgrid_cmd (struct _topwin * tw, char * arg) {
 		case '!':
 			for (i=0; i<6; i++) {
 				if (!(j=arg[2*i+1]) || !(k=arg[2*i+2])) return;
-				if ((j-=48)<0) j = -1234567890; if ((k-=48)<2) k = 0;
+				if ( ((j-=48)|(k-=48)) < 0 )  continue;
 				tw->arg[9].c[i] = j;
-				*arg = 65+i; dacnt_set_x(widg_lookup_ps(tw, arg), j, 768+k);
-				*arg = 97+i; dacnt_set_x(widg_lookup_ps(tw, arg), j, 768+k);
+				dacnt_set_x(widg_lookup_pci(tw, 65+i, 0),  j, 768+k);
+				dacnt_set_x(widg_lookup_pci(tw, 97+i, 0),  j, 768+k);
 			}
 			arg += 13; continue;
 		case 'M':
