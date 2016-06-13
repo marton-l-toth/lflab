@@ -433,6 +433,7 @@ class SWrapGen : public AWrapGen {
 		virtual WrapCore * core_rw() { return SOB_RW(core); }
 		virtual const char * v_rgb() { return m_trg ? m_trg->v_rgb() : "EEE%%%"; }
 		virtual void spec_debug();
+		virtual void wdat_cons(sthg * p) { return wdat_cons_aw(p); }
 		int sob_from(int ix, BoxGen * bx0);
 		int set_trg(AWrapGen * q);
 	protected:
@@ -1753,7 +1754,7 @@ int SWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 	// SWrapSOB * ssob = m_ssob.ro();
 	gui2.setwin(oid, 'w'); if (!of) gui2.wupd_0(gc, ".+1");
 	switch (ix) {
-		case 0:  if (of) gui2.t_sn("&",1), gui2.hexn(m_bflg>>2,2), jt_show(), w_jtab(m_bflg&1020);
+		case 0:  if (of) jt_show(), gui2.t_sn("&",1), gui2.hexn(m_bflg>>2,2), w_jtab(m_bflg&1020);
 			 w_trg2(); break;
 		default: return BXE_WTF;
 	}

@@ -251,6 +251,7 @@ char * mk_3k_blk() { char * p = alloc_64k(); int i;
 		     for (i=0; i<61440; i+=3072) *(char**)(p+i) = p+i+3072; *(char**)(p+i)=NULL; return p;}
 char * alloc3k() { char * p = freeptr_3k ? freeptr_3k : (freeptr_3k = mk_3k_blk());
 		   freeptr_3k = *(char**)p; return p; }
+char * alloc3k_z() { char * p = alloc3k(); memset(p, 0, 3072); return p; }
 void free3k(void *p) { *(char**)p = freeptr_3k; freeptr_3k = (char*)p; }
 	
 static int get_tok(char * to, int n, const char ** pp, int delim) {
@@ -530,7 +531,7 @@ static void tw_free(topwin *tw) {
 	for (i=0; i<32; i++) {
 		ww_t * p = tw->pp_sub[i]; if (!p) continue;
 		for (j=0; j<32; j++) if (p[j].cl) ww_free(p+j);
-		free(p);
+		free3k(p);
 	}
 	if ((tw->id&15) != 7) free(tw); else memset(tw, 0, sizeof(topwin));
 }
@@ -664,46 +665,37 @@ static topwin * tw_lookup(int id) {
 	}
 }
 
-static ww_t * widg_p(topwin * tw, int ix) {
+static inline ww_t * widg_qp(topwin * tw, int ix) { return tw->pp_sub[ix>>5] + (ix&31); }
+static 	      ww_t * widg_fp(topwin * tw, int ix) {
 	if (ix&~1023) return NULL;
 	int ix0 = ix >> 5, ix1 = ix & 31;
-	ww_t ** pp = tw->pp_sub + ix0;
-	if (!*pp) *pp = calloc(sizeof(ww_t), 32);
-	(*pp)[ix1].ix = ix;
-	return *pp + ix1;
+	ww_t **pp = tw->pp_sub + ix0, *r = (*pp ? *pp : (*pp=(ww_t*)alloc3k_z())) + ix1;
+	return r->ix = ix, r;
 }
 
-static int widg_lookup(topwin * tw, const char ** pp, int force) {
-	if(!**pp) return -1;
-	if(**pp=='_') {
-		++*pp; if (force) return (--tw->anon_w)&1023;
-		int k = hex2(*pp); *pp+=2; return 1023 - k;
-	}
-	if (force&2) {
-		int i = chtab_get(&tw->sub_ch, **pp);
-		if (i<99) { LOG("widg 0x%x already ex. (%c)", **pp, **pp); return -1; }
-	}
-	int ix = force ? chtab_force(&tw->sub_ch, *((*pp)++))
-	               : chtab_get(&tw->sub_ch, *((*pp)++));
-	return (ix>99) ? -1 : ix;
-}
+static int widg_mk(topwin *tw, int c) {
+	if (c=='_') return (--tw->anon_w)&1023;
+	return (chtab_get(&tw->sub_ch, c) < 99) ? (LOG("widg 0x%x already ex. (%c)",c,c), -1)
+					        : chtab_force(&tw->sub_ch, c); }
 
-static ww_t * widg_lookup_p(topwin * tw, const char ** pp) { return widg_p(tw, widg_lookup(tw, pp, 0)); }
-static ww_t * widg_lookup_ps(topwin * tw, const char * p) { return widg_p(tw, widg_lookup(tw, &p, 0)); }
-static int widg_lookup_ci(topwin * tw, int c, int i) {
-	char s[4]; const char *p = s; 
-	s[0] = c; s[1] = hexc1(i>>4); s[2] = hexc1(i&15), s[3]=0; 
-	return widg_lookup(tw, &p, 0); }
-static ww_t * widg_lookup_pci(topwin * tw, int c, int i) { return widg_p(tw, widg_lookup_ci(tw, c, i)); }
+static inline int   widg_lu1_ic(topwin *tw, int c) { return c=chtab_get(&tw->sub_ch,c), c>98 ? -1: c; }
+static inline ww_t* widg_lu1_pc(topwin *tw, int c) { return c=chtab_get(&tw->sub_ch,c), c>98?0:widg_qp(tw,c);}
+
+static int widg_lu1_ip(topwin * tw, const char ** pp) {
+	int k=**pp; return !k ? 0 : (k=='_' ? 1023-hex2((*pp+=3)-2) : (++*pp, widg_lu1_ic(tw,k))); }
+
+static ww_t * widg_lu1_pp(topwin * tw, const char ** pp) {
+	int k=**pp; return !k ? 0 : (k=='_' ? widg_qp(tw,1023-hex2((*pp+=3)-2)) : (++*pp,widg_lu1_pc(tw,k)));}
+
+static inline ww_t * widg_lu1_ps(topwin * tw, const char * p) { return widg_lu1_pp(tw, &p); } 
 
 static ww_t * widg_new(topwin * tw, const char ** pp) {
 	if(!**pp) return NULL; 
 	ww_cl * cl = ww_cltab + chtab_get(&ww_clch, *((*pp)++));
 	if (cl->ch=='?') return NULL;
-	int ix = tw->vb_c_ix ? tw->vb_c_ix + (*(*pp)++) - 48
-			     : widg_lookup(tw, pp, 3);
-	ww_t * p = widg_p(tw, ix);
-	if (!p) { LOG("widget lookup(%d,f) failed", ix); return p; }
+	int c = *((*pp)++), ix = tw->vb_c_ix ? tw->vb_c_ix + c - 48 : widg_mk(tw, c);
+	ww_t * p = widg_fp(tw, ix);
+	if (!p) { LOG("widg_new (0x%x, %d,f) failed", tw->id, ix); return p; }
 	p->cl = cl; p->top = tw; p->ix = ix; p->w = NULL; p->etc = NULL;
 	(*cl->skel) (p, pp);
 	if (!p->w) p->w = OOPS;
@@ -724,7 +716,7 @@ static void fw_cmd(topwin * tw, const char *s1, const char *s2) {
 	ww_t * ww;
 	if (!tw) cmd1(buf);
 	else if (tw->cl->cmd) (*tw->cl->cmd)(tw, buf);
-	else s1=buf, ww=widg_lookup_p(tw, &s1), (ww->cl->cmd)(ww, s1);
+	else s1=buf, ww=widg_lu1_pp(tw, &s1), (ww->cl->cmd)(ww, s1);
 }
 
 static int cmd_esc(ww_t * ww, const char *s1, const char *s2) { switch(*s1) {
@@ -774,13 +766,13 @@ static int widg_defcmd(ww_t * ww, const char * arg) {
 				case '.': memcpy(cmd+i, ww->arg[4].c, 6); i+=6; s++; continue;
 				case '$': kill(getppid(), hxd2i(s[1])); return 0;
 				case '-': case '+':
-					  ww2 = widg_p(tw, ww->ix + (44-*s)*hxd2i(s[1]));
+					  ww2 = widg_qp(tw, ww->ix + (44-*s)*hxd2i(s[1]));
 					  if (ww2) i += (*ww2->cl->get)(cmd+i, ww2, 's'); else cmd[i++]='?';
 					  s += 2; continue;
 				default: break;
 			}
 			if ((k=chtab_get(&tw->sub_ch, *(s++)))<99) {
-				ww_t * ww2 = widg_p(tw, k);
+				ww_t * ww2 = widg_qp(tw, k);
 				i += (ww2->cl->get)(cmd+i, ww2, 's'); 
 				continue;
 			}}
@@ -1335,14 +1327,14 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, int btn, GdkEventButton
 #define VB_LINE(x, i) ( ((GtkWidget**)(x)->etc)[i] )
 
 static ww_t * wlu_any_pp(topwin * tw, const char ** pp) { 
-	ww_t * ww = widg_p(tw, widg_lookup(tw, pp, 0));
-	if (!ww) return NULL;
-	if (!ww->cl) return LOG("widget %p(%x:%x) has zero class", ww, tw->id, ww->ix), NULL;
+	ww_t * ww = widg_lu1_pp(tw, pp);  if (!ww) return NULL;
+	if (!ww->cl) return LOG("BUG: widget %p(%x:%x) has zero class", ww, tw->id, ww->ix), NULL;
 	if (ww->cl->ch!=':') return ww;
 	if (**pp=='.') return ++*pp, ww;
-	int k = hex2(*pp); *pp += 2;
+	int cre = VB_LCRE(ww)*VB_WPL(ww), k = hex2(*pp); *pp += 2;
+	if (k>=cre) LOG("BUG: wlu_any: k=%d, cre=%d", k, cre);
 	//LOG("wlu_any: Cxx k=%d(0x%x), WBASE=%d", k, k, VB_WBASE(ww));
-	return widg_p(tw, VB_WBASE(ww) + k);
+	return widg_qp(tw, VB_WBASE(ww) + k);
 }
 
 static ww_t * wlu_any_s(topwin * tw, const char * p) { return wlu_any_pp(tw, &p); }
@@ -1355,7 +1347,7 @@ static int ww_rev_lu(char * to, ww_t * ww) {
 		int j = q[i];
 		if (j==ix) return *to=i+32, 1;
 		if (j>99) continue;
-		ww_t * w2 = widg_p(tw, j); if (w2->cl->ch != ':') continue;
+		ww_t * w2 = widg_qp(tw, j); if (w2->cl->ch != ':') continue;
 		int ns = VB_WPL(w2) * VB_LMAX(w2), k = ix - VB_WBASE(w2);
 		if (k>=0 && k<ns) return *to=i+32, to[1]=hexc1(k>>4), to[2]=hexc1(k&15), 3;
 	}
@@ -1649,7 +1641,7 @@ static void dabmp_skel(struct _ww_t * ww, const char **pp) {
 static void dabmp_cmd(struct _ww_t * ww, const char * arg) { return dabmp_draw(ww, (cairo_t*)ww->arg[0].p); }
 
 static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
-	if (!ww && !(ww = widg_lookup_ps(ot_etc, "2"))) return LOG("default bitmap not found");
+	if (!ww && !(ww = widg_lu1_pc(ot_etc, '2'))) return LOG("default bitmap not found");
 	unsigned int *q = (unsigned int *)(cpu_bmp);
 	int k, i, j, n = nf&63; 
 	for (j=0; j<n; j++) {
@@ -1702,7 +1694,7 @@ static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
 static void da_wr18(cairo_t * cr2, int xi, int yi, const char * s0, int xclip) {
 	//LOG("da_wr18: x=%d, y=%d, clp=%d", xi, yi, xclip);
 	if (!xclip) return;
-	double x = (double)xi, y = (double)yi, y2, fg[6], *bg = fg+3;
+	double x = (double)xi, y = (double)yi, fg[6], *bg = fg+3;
 	char txt[9]; const char * s = s0;
 	if (s[2]=='0') {
 		cairo_set_source_rgb (cr2, .2, .2, .2);
@@ -1896,7 +1888,7 @@ static void upd_flgvec(topwin * tw, const char* s, int n, int of, int nf) {
 	int ix = ww0->ix, i, msk=1, sg=1; 
 	if (n<0) n = -n, sg = -1; if (of<0) of = ~nf;
 	for (i=0; i<n; i++, ix+=sg, msk<<=1)
-		if (msk & (of^nf)) dabool_set(widg_p(tw, ix), !!(msk&nf));
+		if (msk & (of^nf)) dabool_set(widg_qp(tw, ix), !!(msk&nf));
 }
 
 static void dlbtn_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
@@ -2070,10 +2062,10 @@ static void dacnt_act(ww_t * ww, int x) {
 	if (*s!=36) { buf[hx5(buf, x)] = 0; widg_defcmd(ww, buf); return; }
 	switch(s[1]) {
 		case 'c': ww->top->arg[s[2]-48].c[s[3]&7] = x; 
-			  if (ww->top->arg[64].i[0]&1) dagrid_kcmd(widg_lookup_ps(ww->top, "#"), 3, -1, -1);
+			  if (ww->top->arg[64].i[0]&1) dagrid_kcmd(widg_lu1_pc(ww->top, '#'), 3, -1, -1);
 			  return;
 		case 'C': for (j=s[2]&7, s+=3; *s;) 
-				  (ww=widg_lookup_p(ww->top, (const char**)(&s)))->arg[4].c[j] = x + 37, 
+				  (ww=widg_lu1_pp(ww->top, (const char**)(&s)))->arg[4].c[j] = x + 37, 
 					  da_fullre(ww); 
 			  return;
 		default:  LOG("dacnt_act: unknown esc 0x%x(%c)", s[1], s[1]); return;
@@ -2300,10 +2292,10 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 	int i, j, k = VB_ARG(ww);
 	int ix2 = VB_WBASE(ww) + 8*ix;
 	if (k&2) j = ix + (ix>6 ? 89 : 31),
-		memcpy(DALBL_TXT(widg_p(tw, ix2)), "vol1\0vol2\0up\0  wait\0dn/l\0LR\0  Fwt\0 Flim"+5*ix-5, 5);
+		memcpy(DALBL_TXT(widg_qp(tw, ix2)), "vol1\0vol2\0up\0  wait\0dn/l\0LR\0  Fwt\0 Flim"+5*ix-5, 5);
 	else j = ix - 1 + (65 &- (k&1));
 	char h2[2]; h2[0] = hexc1(j>>4), h2[1] = hexc1(j&15);
-	for (i=1; i<7; i++) memcpy(widg_p(tw, ix2+i)->cmd+2, h2, 2);
+	for (i=1; i<7; i++) memcpy(widg_qp(tw, ix2+i)->cmd+2, h2, 2);
 	return rw;
 }
 
@@ -2318,7 +2310,7 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	for (i=0; i<_cnt; i++) ln[_pos[i]] = 46 + ix;
 	GtkWidget * rw = parse_w_s(tw, ln);
 	int i0 = VB_WBASE(ww) + 8*ix;
-	char * q = DALBL_TXT(widg_p(tw, i0)); 
+	char * q = DALBL_TXT(widg_qp(tw, i0)); 
 	if (ix<4) q[0] = 'v'+ix, q[1] = 0; else q[0]='s', q[1]=45+ix, q[2]=0;
 	return rw;
 }
@@ -2333,20 +2325,20 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] 
 return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
 
 static void swrap_cmd (struct _topwin * tw, char * arg) {
-	ww_t *ww, *vb = widg_lookup_pci(tw, 'E', -1);
+	ww_t *vb = widg_lu1_pc(tw, 'E');
 	int i, wi = VB_WBASE(vb);
 	switch(*arg) {
 		case '&': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return;
 		case '!': i = 3; BVFOR_JMC(hex2(arg+1))
-				  entry_set(widg_p(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
+				  entry_set(widg_qp(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
 			  return;
 		case '-': case '+':
 			  wi += 8*(arg[1]&7) + 16; i = qh4rs(arg+2);
-			  dabool_set( widg_p(tw, wi  ), (*arg>>1)&1);
-			  dacnt_set_x(widg_p(tw, wi+4), (signed char)(i&255), 256);
-			  dlmenu_ilb (widg_p(tw, wi+5), (i>> 8)&15);
-			  dlmenu_ilb (widg_p(tw, wi+6), (i>>12)&15);
-			  for (i=0; i<3; i++) entry_set(widg_p(tw, wi+1+i), hxdoub_str(NULL, arg+6+16*i, 15));
+			  dabool_set( widg_qp(tw, wi  ), (*arg>>1)&1);
+			  dacnt_set_x(widg_qp(tw, wi+4), (signed char)(i&255), 256);
+			  dlmenu_ilb (widg_qp(tw, wi+5), (i>> 8)&15);
+			  dlmenu_ilb (widg_qp(tw, wi+6), (i>>12)&15);
+			  for (i=0; i<3; i++) entry_set(widg_qp(tw, wi+1+i), hxdoub_str(NULL, arg+6+16*i, 15));
 			  return;
 		default: return LOG("swrap_cmd: unknown cmd 0x%x/%c", *arg, *arg);
 	}}
@@ -2355,13 +2347,13 @@ static void swrap_cmd (struct _topwin * tw, char * arg) {
 static void wrap_cmd (struct _topwin * tw, char * arg) {
 	if (*arg<48) return swrap_cmd(tw, arg);
 	int i, ix = hex2(arg), flg = hex2(arg+2), sh = (ix>>2)&24, j = (ix+(0x7000101>>sh)) & 31;
-	ww_t *p, *ww = widg_lookup_pci(tw, (0x455a4553 >> sh) & 127, -1);
+	ww_t *p, *ww = widg_lu1_pc(tw, (0x455a4553 >> sh) & 127);
 	int wi = VB_WBASE(ww) + j * VB_WPL(ww);
 	const char * s = arg + 4;
 	for (i=0; i<4; i++) if (flg&(1<<i))
-		get_tok((p = widg_p(tw, wi+((0x6320>>(4*i))&7)))->arg[2].c, 8, &s, 164), da_fullre(p);
+		get_tok((p = widg_qp(tw, wi+((0x6320>>(4*i))&7)))->arg[2].c, 8, &s, 164), da_fullre(p);
 	for (i=0; i<3; i++) if (flg&(32<<i))
-		entry_set(widg_p(tw,wi+((0x541>>(4*i))&7)), hxdoub_str(NULL, s, 15)), s += 16;
+		entry_set(widg_qp(tw,wi+((0x541>>(4*i))&7)), hxdoub_str(NULL, s, 15)), s += 16;
 }
 
 static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
@@ -2620,8 +2612,7 @@ static void tgrid_cmd (struct _topwin * tw, char * arg) {
 			k = 256*hxd2i(arg[1]) + hex2(arg+2);
 			kd = k & ~tw->arg[8].i[0]; tw->arg[8].i[0] = k;
 			for (i=0; i<12; i++) {
-				*arg = 65 + (i>>1) + 32 * (i&1);
-				ww = widg_lookup_ps(tw, arg);
+				ww = widg_lu1_pc(tw, 65 + (i>>1) + 32 * (i&1));
 				GtkWidget * w = GTK_WIDGET(ww->arg[4].p);
 				if (!(k & (1<<i))) gtk_widget_hide(w);
 				else if (gtk_widget_show(w), kd & (1<<i))
@@ -2635,23 +2626,23 @@ static void tgrid_cmd (struct _topwin * tw, char * arg) {
 				if (!(j=arg[2*i+1]) || !(k=arg[2*i+2])) return;
 				if ( ((j-=48)|(k-=48)) < 0 )  continue;
 				tw->arg[9].c[i] = j;
-				dacnt_set_x(widg_lookup_pci(tw, 65+i, 0),  j, 768+k);
-				dacnt_set_x(widg_lookup_pci(tw, 97+i, 0),  j, 768+k);
+				dacnt_set_x(widg_lu1_pc(tw, 65+i),  j, 768+k);
+				dacnt_set_x(widg_lu1_pc(tw, 97+i),  j, 768+k);
 			}
 			arg += 13; continue;
 		case 'M':
-			ww = widg_lookup_ps(tw, arg); 
+			ww = widg_lu1_ps(tw, arg); 
 			q = ww->arg[2].c; q[0] = arg[1]; q[1] = arg[2]; q[2] = 0;
 			q = ww->arg[4].c; memcpy(q, arg+3, 6); q[6] = 1;
 			da_fullre(ww); arg += 9; continue;
 		case '#':
-			ww = widg_lookup_ps(tw, arg); (*ww->cl->cmd)(ww, arg+1); return;
+			ww = widg_lu1_ps(tw, arg); (*ww->cl->cmd)(ww, arg+1); return;
 		case 'T':
 			tw->title[0] = '#';
 			for (i=1; i<20 && arg[i]&&arg[i]!=36; i++) tw->title[i] = arg[i]; tw->title[i] = 0;
 			if (!arg[i]) return;  arg += i+1; continue;
 		case '*':
-			ww = widg_lookup_ps(tw, "#");
+			ww = widg_lu1_pc(tw, '#');
 			gtk_window_set_focus(GTK_WINDOW(tw->w), ww->w); ++arg; continue;
 		case 'u': tw->arg[64].i[0] |=  1; ++arg; continue;
 		case 'U': tw->arg[64].i[0] &= ~1; ++arg; continue;
@@ -2687,9 +2678,9 @@ static void dakcf_draw(ww_t * ww, cairo_t * cr2) {
 	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE); cairo_set_line_width(cr2, 2.0);
 	cairo_set_source_rgb(cr2, .05*(ix&4), .1*(ix&2), .2*(ix&1)); cairo_paint(cr2);
 	cairo_set_source_rgb(cr2, .8, .8, .8);
-	for (i=0; i<=wid; i++) if (x = 1+i*w1, x>=x0-1, x<=x1+1)
+	for (i=0; i<=wid; i++) if (x = 1+i*w1, x>=x0-1 && x<=x1+1)
 		cairo_move_to(cr2, (double)x, 0.0), cairo_rel_line_to(cr2, 0.0, (double)(htot+2));
-	for (i=0; i<=heig;i++) if (y = 1+i*h1, y>=y0-1, y<=y1+1)
+	for (i=0; i<=heig;i++) if (y = 1+i*h1, y>=y0-1 && y<=y1+1)
 		cairo_move_to(cr2, 0.0, (double)y), cairo_rel_line_to(cr2, (double)(wtot+2), 0.0);
 	cairo_stroke(cr2);
 }
@@ -3156,7 +3147,7 @@ static void trkclk_w(ww_t * ww, int b9, int cx, int cy, GdkEventButton *ev) {
 	if (dflg&DF_TRK) LOG("trkclk_w: b%c x:%d y:%d", 48+b9, cx, cy);
 	if (cx<20) return LOG("trkclk_w: nothing happens");
         tc_t * tc = (tc_t*) ww->etc;   tsc_y = cy/48+tc->y0; tsc_ww = ww;
-	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lookup_ps(ww->top,"d"))&~1u, b9, ev);
+	if (cy%48<24) tsc_md=1, popup2(ww, tsc_mi+1, DLM_MSK(widg_lu1_pc(ww->top,'d'))&~1u, b9, ev);
 	else tsc_md=2, popup2(ww, tsc_mi+2, 0x7ffffff^tdiv_sdbv[(int)tdiv_idsf[tc_effdiv(tc,tsc_y)].i], b9,ev);
 }
 
@@ -3218,12 +3209,12 @@ static void trk_sel(ww_t * ww, int i, int j, int id, const char * s14) {
 	     tsr_op(ww,tc->sely,tc->selx);
 	if (tsc_drag_id==-1) tsc_drag_id = id, tsc_drag_xd -= (j-40320*tc->x0)/TC_UPP(tc);
 	int k, d = tdiv_idsf[tc_effdiv(tc, i>>4)].d, d2 = 40320/d;
-	if (f&2) dacnt_set_x(widg_lookup_ps(tw,"L"), i, 256), d99(DACNT_LBL(widg_lookup_ps(tw,"D")), d);
+	if (f&2) dacnt_set_x(widg_lu1_pc(tw,'L'), i, 256), d99(DACNT_LBL(widg_lu1_pc(tw,'D')), d);
 	if(f&1){int a[4]; k=TC_UPP(tc), a[0]=j/40320; j%=40320; a[1]=j/d2; j%=d2; a[2]=j/k; a[3]=1000*(j%k)/k;
-		for (k=0;k<4;k++) dacnt_set_x(widg_lookup_ps(tw, "B\0D\0P\0U" + 2*k), a[k], 256);        }
+		for (k=0;k<4;k++) dacnt_set_x(widg_lu1_pc(tw, "BDPU"[k]), a[k], 256);        }
 	trk_24 * q = tc_p24(tc, 1);
-	if (id) q->b.id = id, memcpy(q->b.s, s14, 14), dalbl_mw18(widg_lookup_ps(tw, "S"), s14);
-	else if (q->b.id) q->b.id = 0, dalbl_mw18(widg_lookup_ps(tw, "S"), 0);
+	if (id) q->b.id = id, memcpy(q->b.s, s14, 14), dalbl_mw18(widg_lu1_pc(tw, 'S'), s14);
+	else if (q->b.id) q->b.id = 0, dalbl_mw18(widg_lu1_pc(tw, 'S'), 0);
 }
 
 static void trk_send_gcf(ww_t * ww, unsigned int * bv9) {
@@ -3332,7 +3323,7 @@ done:	tsr_op(ww, TSR_END, 0);
 }
 
 static void trk_upd_gds(topwin *tw, int i, int v, unsigned int m) {
-	ww_t * ww2 = widg_lookup_ps(tw, "M\0d\0s"+2*i);
+	ww_t * ww2 = widg_lu1_pc(tw, "Mds"[i]);
 	int k; char * s = DALBL_TXT(ww2); 
 	s[0] = i ? "?/:"[i] : (k=v/100, v-=100*k, k+48-16*!k);
 	s[1] = 48+v/10; s[2] = 48+v%10; s[3] = 0;  DLM_MSK(ww2) = m;  da_fullre(ww2);
@@ -3341,9 +3332,9 @@ static void trk_upd_gds(topwin *tw, int i, int v, unsigned int m) {
 static void trk_upd_wgd(ww_t * ww, int flg) { // 1:div 2:gd 4:wid
         tc_t * tc = (tc_t*) ww->etc;   topwin * tw = ww->top;
 	const tdiv_idsf_t * q;
-	if (flg&4) dacnt_set_x(widg_lookup_ps(tw, "W"), TC_PPB(tc), 256);
+	if (flg&4) dacnt_set_x(widg_lu1_pc(tw, 'W'), TC_PPB(tc), 256);
 	if (flg&2) trk_upd_gds(tw, 0, TC_GD(tc)->v, 255 ^ TC_GD(tc)->m),
-		 DLM_MSK(widg_lookup_ps(tw, "d")) = (2 * ~TC_GD(tc)->d) + 1;
+		 DLM_MSK(widg_lu1_pc(tw, 'd')) = (2 * ~TC_GD(tc)->d) + 1;
 	if (flg&1) q = tdiv_idsf+tc->div[0], trk_upd_gds(tw, 1, q->d, ~(2*TC_GD(tc)->d)),
 					     trk_upd_gds(tw, 2, q->s, ~tdiv_sdbv[(int)q->i]);
 }
@@ -3418,7 +3409,7 @@ static void tc_adj_s(tc_t * tc, int i, int v) {
 }
 
 static void ttrk_cmd (struct _topwin * tw, char *s) {
-	ww_t *wt = widg_lookup_ps(tw, "t");
+	ww_t *wt = widg_lu1_pc(tw, 't');
         tc_t * tc = (tc_t*) wt->etc;
 	int i, k, a[4]; char buf[8];
 	tsr_op(wt, TSR_START, 0);
@@ -3433,7 +3424,7 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 		case '1': tc_adj_d(tc, tsc_y, tsc_x); goto done;
 		case '2': tc_adj_s(tc, tsc_y, tsc_x); goto done;
 		case 'g': ++s; s += trk_g_parse(s, tc->div, tc->gwfr); 
-			  dabool_set(widg_lookup_ps(tw,"A"), tc->gwfr[2]&1); continue;
+			  dabool_set(widg_lu1_pc(tw,'A'), tc->gwfr[2]&1); continue;
 		case '*':
 			memcpy(buf, "Xmd", 3); memcpy(buf+3, s+1, 2);
 			k = TC_PPB(tc) / tdiv_idsf[tc_effdiv(tc, tc->sely>>4)].d;
@@ -3444,7 +3435,7 @@ static void ttrk_cmd (struct _topwin * tw, char *s) {
 			case 'S': tc_adj_s(tc, 0, s[2]-48); goto done;
 			case 'W': tc_adj_w(tc, s[2]^s[3]); goto done;
 			case 'M': tc_adj_gd(tc, s[2]); goto done;
-			case 'A': dabool_set(widg_lookup_ps(tw,"A"), (tc->gwfr[2]^=1)&1); 
+			case 'A': dabool_set(widg_lu1_pc(tw,'A'), (tc->gwfr[2]^=1)&1); 
 				  tsr_op(wt, 4098, -2); goto done;
 			default: break; }
 		default: LOG("ttrk: invalid cmd 0x%x \"%s\"", *s, s); goto done;
@@ -3459,12 +3450,12 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 	   "{8LL$.bXml}{8BB$5Xmb}{8D08\\$02$>*}{8Pp$02Xmp}{8Um$03Xmu}3()0"
 	   "{Ypplay$Xp}{8bbpm$.4Xb}{YRrec$Xr}{MM999$$>GM|T3}{Md$$>GD|T1}{Ms$$>GS|T2}{8Wp/b$3$>GW})3{tt}]";
 	if (!tsc_mi) tsc_mi = menutab_lu('T', 0);
-	if (tw->state) { ww_t *wt = widg_lookup_ps(tw, "t");
+	if (tw->state) { ww_t *wt = widg_lu1_pc(tw, 't');
 			 if (wt && wt->etc) tc_clear((tc_t*)(wt->etc), 1), da_fullre(wt);
 			 if (arg) ttrk_cmd(tw, arg); return; }
 	tw->arg[0].p = parse_w(tw, &str);
 	if (arg) ttrk_cmd(tw, arg); 
-	trk_upd_wgd(widg_lookup_ps(tw, "t"),  7);
+	trk_upd_wgd(widg_lu1_pc(tw, 't'),  7);
 }
 
 ///////////////// doc ////////////////////////////////////////////////////////
@@ -3539,12 +3530,12 @@ static void doc_skel (struct _topwin * tw, char * arg) {
 }
 
 static void doc_cmd (struct _topwin * tw, char * s) {
-	ww_t * w = widg_lookup_ps(tw, "D.");
+	ww_t * w = widg_lu1_pc(tw, 'D');
 	if (*s=='!') s = help_lu(s+1);
 	int i, i0 = VB_WBASE(w), n = *(s++) - 48;
 	if (n>32) LOG("BUG: help txt has %d lines, cut to 32", n), n = 32;
 	vbox_show_bv(w, (n==32 ? 0 : (1<<n))-1); const char * ahh = s;
-	for (i=0; i<n; i++) daclb_set(widg_p(tw, i0+i), &ahh, 15), ahh+=(*ahh==36);
+	for (i=0; i<n; i++) daclb_set(widg_qp(tw, i0+i), &ahh, 15), ahh+=(*ahh==36);
 }
 
 ///////////////// gui conf ///////////////////////////////////////////////////
@@ -3555,11 +3546,11 @@ GtkWidget * gconf_vbl (struct _ww_t * ww, int ix) {
 			"{L4o.99}[{e55$E20}{_3}])"); // TODO: def.v, desc
 	int ix0 = VB_WBASE(ww) + 8*ix,
 	    ten = ix<10 ? 48 : 49 + (ix>19), one = ix + 528 - 10 * ten;
-	char * s = DALBL_TXT(widg_p(tw, ix0  )); s[1] = ten; s[2] = one; s[3] = 0;
-	       s = DALBL_TXT(widg_p(tw, ix0+4)); s[1] = ten; s[2] = one; s[3] = 0;
-	           //DALBL_TXT(widg_p(tw, ix0+6))[0] = ">>>short description 63c/ln>>>"[ix];
-	s = widg_p(tw, ix0 + 1)->cmd; s[1] += (ix>>4); s[2] = hexc1(ix&15);
-	s = widg_p(tw, ix0 + 5)->cmd; s[1] += (ix>>4); s[2] = hexc1(ix&15);
+	char * s = DALBL_TXT(widg_qp(tw, ix0  )); s[1] = ten; s[2] = one; s[3] = 0;
+	       s = DALBL_TXT(widg_qp(tw, ix0+4)); s[1] = ten; s[2] = one; s[3] = 0;
+	           //DALBL_TXT(widg_qp(tw, ix0+6))[0] = ">>>short description 63c/ln>>>"[ix];
+	s = widg_qp(tw, ix0 + 1)->cmd; s[1] += (ix>>4); s[2] = hexc1(ix&15);
+	s = widg_qp(tw, ix0 + 5)->cmd; s[1] += (ix>>4); s[2] = hexc1(ix&15);
         return rw;
 }
 
@@ -3569,22 +3560,22 @@ static void gconf_skel (struct _topwin * tw, char * arg) { const char * str =
 	if (tw->state) { if (arg) gconf_cmd(tw, arg); return; }
 	tw->ix4 = 3;
 	tw->arg[0].p = parse_w(tw, &str);
-	ww_t * ww = widg_lookup_ps(tw, "w"); memcpy(ww->arg[3].c, "FG^vBGM:", 8);
-	ww = widg_lookup_ps(tw, "L."); vbox_cmd(ww, "+N");
+	ww_t * ww = widg_lu1_pc(tw, 'w'); memcpy(ww->arg[3].c, "FG^vBGM:", 8);
+	ww = widg_lu1_pc(tw, 'L'); vbox_cmd(ww, "+N");
 	if (arg) gconf_cmd(tw, arg);
 }
 
 static void gconf_cmd (struct _topwin * tw, char * s) {
 	int i,i0=0; ww_t *w, *w2; char *p; while (*s) { switch (*s) {
-		case 'R': for (++s, i=0; i<6; i++) dacnt_set_x(widg_lookup_ps(tw,"rgbRGB"+i), s[i]-37,  0x355);
-			  for (i=0; i<3; i++) memcpy(p=(w2=widg_lookup_ps(tw, "wny"+i))->arg[4].c, s, 6),
+		case 'R': for (++s, i=0; i<6; i++) dacnt_set_x(widg_lu1_pc(tw,"rgbRGB"[i]), s[i]-37,  0x355);
+			  for (i=0; i<3; i++) memcpy(p=(w2=widg_lu1_pc(tw, "wny"[i]))->arg[4].c, s, 6),
 				  	      p[6] = i, da_fullre(w2);
 			  s += 6; break;
 		case 48: case 49: case 50: case 51:
-			  if (!i0) i0 = VB_WBASE(w = widg_lookup_pci(tw, 'L', -1));
+			  if (!i0) i0 = VB_WBASE(w = widg_lu1_pc(tw, 'L'));
 			  i = i0 + 1 + 2*(*s&2) + 8*(16*(s[0]&1)+hxd2i(s[1])); s += 2;
 			  p = s; while (*s && *s!=36) ++s; if (*s==36) *(s++) = 0;
-			  entry_set(widg_p(tw, i), p);
+			  entry_set(widg_qp(tw, i), p);
 			  break;
 		case 'T':
 			  for (i=0, s++; i<59 && *s && *s!=36; i++, s++) tw->title[i] = *s;
@@ -4040,7 +4031,7 @@ static void graph_skel (struct _topwin * tw, char * arg) {
 	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Ms++$X|g0})"
 	"3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
-	if (s && *s) daclb_set(widg_lookup_ps(tw, "."), &s, 1);
+	if (s && *s) daclb_set(widg_lu1_pc(tw, '.'), &s, 1);
 	if (!tw->state) gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 400);
 }
 
@@ -4141,11 +4132,11 @@ static const char * daerr_txt(int i, int j) {
 }
 
 static void err_upd_nl(struct _topwin * tw) {
-	dacnt_set_x (widg_lookup_pci(tw, 'N', -1), err_nl, 256);
-	vbox_show_bv(widg_lookup_pci(tw, 'E', -1), (1<<err_nl)-1); }
+	dacnt_set_x (widg_lu1_pc(tw, 'N'), err_nl, 256);
+	vbox_show_bv(widg_lu1_pc(tw, 'E'), (1<<err_nl)-1); }
 
 static void err_cmd (struct _topwin * tw, char * arg) {
-	ww_t *p, *ww = widg_lookup_pci(tw, 'E', -1);
+	ww_t *p, *ww = widg_lu1_pc(tw, 'E');
 	int i, k, n, af = 0, wi = VB_WBASE(ww), nl = err_nl, red = err_red, t = time(NULL);
 	switch(*arg) {
 		case 0: return;
@@ -4158,7 +4149,7 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 			  else if (nl<=red && red<31) memmove(err_tab, err_tab+(red+1-nl), 8*nl), red = nl-1;
 			  break;
 		case 'X': red = 31; for (i=0; i<nl; i++) err_tab[i].i[0] = 0; break;
-		case 'A': err_annoy ^= 1; dabool_set(widg_lookup_pci(tw, 'A', -1), err_annoy); break;
+		case 'A': err_annoy ^= 1; dabool_set(widg_lu1_pc(tw, 'A'), err_annoy); break;
 		case '>': ++arg; for (n=0; arg[n]; n++);
 			  for (i=0; i<n; i+=8) if ((k = 65536*qh4rs(arg+i)+qh4rs(arg+4+i))!=0x01FFFFEA)
 				  ++red, red&=-(red<nl), err_tab[red].i[0]=k,err_tab[red].i[1]=t; else af = 1;
@@ -4167,8 +4158,8 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 	}
 	if (red!=err_red) err_tab[err_red].i[0] &= ~0x80000000, err_tab[err_red=red].i[0] |= 0x80000000;
 	if (nl!=err_nl) err_nl = nl, err_upd_nl(tw);
-	for (i=0; i<nl; i++) if (p = widg_p(tw, wi+i), memcmp(p->arg+2, err_tab+i, 8))
-						       memcpy(p->arg+2, err_tab+i, 8), da_fullre(p);
+	for (i=0; i<nl; i++) if (p = widg_qp(tw, wi+i), memcmp(p->arg+2, err_tab+i, 8))
+						        memcpy(p->arg+2, err_tab+i, 8), da_fullre(p);
 	if (af && !err_annoy) gtk_window_present(GTK_WINDOW(tw->w));
 }
 
@@ -4178,7 +4169,7 @@ static void err_skel (struct _topwin * tw, char * arg) {
 		"[({B_clear$$>X}{8N#L$2$>N}{YAannoy$$>A}3()0{B_mem$_m}{B_mx$_ML}3()0"
 		"{B_console$_c-1}{B_au.cfg$A0W}{B_?$$?}){:EeN10}]");
 		memcpy(tw->title, "Errors\0", 8); 
-		err_upd_nl(tw); dabool_set(widg_lookup_pci(tw, 'A', -1), err_annoy);
+		err_upd_nl(tw); dabool_set(widg_lu1_pc(tw, 'A'), err_annoy);
 	} else if (err_annoy) {
 		int t = time(NULL); 
 		if (t!=err_annoy_t) err_annoy_t = t, gtk_window_present(GTK_WINDOW(tw->w));
@@ -4204,7 +4195,7 @@ static void mcfg_skel (struct _topwin * tw, char * arg) {
 		tw->arg[0].p = parse_w_s(tw, ws);
 		memcpy(tw->title, "config", 6);
 		int i; const char *s;
-		for (i=0; i<7; i++) s = d[i], daclb_set(widg_lookup_pci(tw, 48+i, 0), &s, 3);
+		for (i=0; i<7; i++) s = d[i], daclb_set(widg_lu1_pc(tw, 48+i), &s, 3);
 	} else {  gtk_window_present(GTK_WINDOW    (tw->w)); }
 }
 
@@ -4237,7 +4228,8 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 	q[0] = ')'; q[1] = 0;
 	tw->arg[0].p = parse_w_s(tw, ws);
 	int ni = min_i(n, l>>1);
-	for (i=0; i<ni; i++) LOG("setarg %d %d", i, hex2(p+2*i)), dacnt_set_x(widg_lookup_pci(tw, hexc1(i), 0), hex2(p+2*i), 512);
+	for (i=0; i<ni; i++) LOG("setarg %d %d", i, hex2(p+2*i)),
+			     dacnt_set_x(widg_lu1_pc(tw, hexc1(i)), hex2(p+2*i), 512);
 }
 
 ///////////////// audio file dialog //////////////////////////////////////////
@@ -4257,13 +4249,13 @@ static void a20_skel (struct _topwin * tw, char * arg) {
 GtkWidget * calc_vbl (struct _ww_t * ww, int ix) {
 	topwin * tw = ww->top;
 	GtkWidget * rw = parse_w_s(tw, "({L0w88:}3{e130$Xx}0{L2W}");
-	ww_t * lbl = widg_p(tw, VB_WBASE(ww) + 3*ix);
+	ww_t * lbl = widg_qp(tw, VB_WBASE(ww) + 3*ix);
 	char * s = DALBL_TXT(lbl);
 	s[0] = 'z'-VB_ARG(ww);
 	if (ix<10)      s[1] = 48+ix, s[2] = ':', s[3] = 0;
 	else if (ix<20) s[1] = 49, s[2] = 38+ix;
 	else		s[1] = 50, s[2] = 28+ix;
-	ww_t * ent = widg_p(tw, VB_WBASE(ww) + 3*ix + 1);
+	ww_t * ent = widg_qp(tw, VB_WBASE(ww) + 3*ix + 1);
 	char * p = ent->cmd; 
 	p[1] = s[0]; p[2] = s[1]; 
 	if (s[2]==':') p[3] = 36, p[4] = 0; else p[3] = s[2], p[4] = 36, p[5] = 0;
@@ -4366,9 +4358,8 @@ static void daclip_skel(struct _ww_t * ww, const char **pp) {
 static void clip_setflg(struct _topwin * tw, int flg) {
 	const char * s;
 	for (s="DACPX"; *s; s++,flg>>=1) {
-		char nm[2]; nm[0] = *s; nm[1] = 0;
-		ww_t * ww = widg_lookup_ps(tw, nm);
-		if (!ww) { LOG("clip_setflg: %c not found"); return; }
+		ww_t * ww = widg_lu1_pc(tw, *s);
+		if (!ww) { LOG("clip_setflg: %c not found", *s); return; }
 		ww->arg[3].c[0] = (flg&1);
 		da_fullre(ww);
 	}}
@@ -4381,16 +4372,16 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 		"{KK}{:WK230}]";
 	ww_t * cl;
 	if (tw->state) {
-		cl = widg_lookup_ps(tw, "K"); if (!cl) {
+		cl = widg_lu1_pc(tw, 'K'); if (!cl) {
 			LOG("clip_skel: da not found"); return; }
 		int i; for (i=0; i<32; i++) ((char*)cl->etc)[14*i+2] = 48;
 	} else {
 		tw->arg[0].p = parse_w(tw, &str);
-		cl = widg_lookup_ps(tw, "K");
+		cl = widg_lu1_pc(tw, 'K');
 	}
 	const char *s = arg;
-	ww_t *ww = widg_lookup_pci(tw, 'W', -1); vbox_show_bv(ww, 1);
-	if (!s || !*s || (daclb_set(widg_lookup_ps(tw, "."), &s, 1), !*s)) DACLIP_SEL(cl) = 0;
+	ww_t *ww = widg_lu1_pc(tw, 'W'); vbox_show_bv(ww, 1);
+	if (!s || !*s || (daclb_set(widg_lu1_pc(tw, '.'), &s, 1), !*s)) DACLIP_SEL(cl) = 0;
 	else if ((DACLIP_SEL(cl)=b32_to_i(*s), *++s) && (clip_setflg(tw, *s - 48), *++s)) daclip_cmd(cl, s);
 }
 
@@ -4550,10 +4541,10 @@ static const char * lastname(const char * s, int l) {
 }
 
 static void t2sel_upd(int lr, int nid, int ty, const char * rgb, const char * s) {
-	int l = strlen(s)+1;
-	ww_t * ww = widg_lookup_ps(ot_etc+1, "Y\0y\0"+2*lr);
+	int l = strlen(s)+1, loca = 32*lr;
+	ww_t * ww = widg_lu1_pc(ot_etc+1, 'Y'+loca);
 	DALBL_TXT(ww)[1] = ty; da_fullre(ww);
-	ww = widg_lookup_ps(ot_etc+1, "G\0g\0"+2*lr);
+	ww = widg_lu1_pc(ot_etc+1, 'G'+loca);
 	if (ww->etc) free(ww->etc);
 	ww->etc = malloc(l); memcpy(ww->etc, s, l);
 	if (rgb && *rgb)  memcpy(ww->arg[2].c, rgb, 6), ww->arg[2].c[6]=',';
@@ -4563,7 +4554,7 @@ static void t2sel_upd(int lr, int nid, int ty, const char * rgb, const char * s)
 	da_fullre(ww);
 	const char *s1 = lastname(s, l-1), *s2 = s1;
 	char *q = lr_dirname + 24*lr;
-	entry_set(widg_lookup_ps(ot_etc+1, "E\0e"+2*lr), s1);
+	entry_set(widg_lu1_pc(ot_etc+1, 'E'+loca), s1);
 	if (ty!='d'&&ty!='k') s2 = lastname(s, s2-s-1);	
 	while(*s2&&(*s2-'.')) *(q++) = *(s2++);   *q = 0;
 	return;
