@@ -142,7 +142,7 @@ class WrapCore : public SOB {
 		void ini_default(int _) { tf01[0]=tf01[2]=0.0; tf01[1]=1.0; tf01[3]=22050.0;
 			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); } 
                 int save2(SvArg * p);
-		void debug2() { log("WrapCore: sorry"); } // TODO
+		void debug2() { log("WrapCore: xfd=0x%x(0x%x)", xfd, wr_ixtr_r(xfd)); } 
 		int sv_tf01(char * to);
 		void grcmd(const char * i8) { gui2.c4('#', 'g', grdim[0]+48, grdim[1]+48);
 			gui2.c4(grdim[8]+48, grdim[9]+48, i8[0]+48, i8[1]+48); }
@@ -404,6 +404,7 @@ class DWrapGen : public AWrapGen {
 		BXCMD_DECL(DWrapGen) c_in, c_bw, c_sf, c_ud, c_vt, c_so;
 		int set_sf(int ff, BoxGen * bx);
 		int set_sf_2(int ff, BoxGen * bx);
+		int xfd_chk(int ff, int tf);
 		void upd_updn(int flg);
 		int grid_cmd(const char * s);
 		void w_sob(int ix, int sl);
@@ -1440,6 +1441,14 @@ int DWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs)
 int DWrapGen::qdiff(DWrapGen * that) {
 	return (this!=that) && (m_sob.ro() != that->m_sob.ro() || memcmp(m_xys6, that->m_xys6, 8)); }
 
+int DWrapGen::xfd_chk(int ff, int tf) {
+	int xfd, xfd1 = m_sob.ro()->m_core.ro()->xfd;
+	if (xfd1==63 || (xfd1>>6)!=ff) return 0; else xfd = wr_ixtr_r(xfd1);
+	return  (!(xfd&32) && ((m_bflg>>(2+10*ff))&31)<=(xfd&31)) ||
+		(tf&&m_sob.ro()->m_scl[ff].ro()->item(xfd1&63,0)->uses_xf()) ?
+			(SOB_RW(sob)->core_rw()->xfd=63) : 0;
+}
+	
 int DWrapGen::set_sf_2(int ff, BoxGen * bx) {
 	int ec, sh = 2 + (10 &- ff), ni, no, msk = ~(1023<<sh);
 	if (bx) ni = bx->n_in(), no = bx->n_out();
@@ -1450,27 +1459,26 @@ int DWrapGen::set_sf_2(int ff, BoxGen * bx) {
 	return 0;
 }
 
+#define SFUPD(X) w_mini(); w_slbv(2); if (wf) { BXW_GET; X ; wlg(bxw_rawptr, ff+1, 0); if (cf) w_col0_d(1); }
 int DWrapGen::set_sf(int ff, BoxGen * bx) {
 	BoxGen ** ppbx = m_sfbx + (ff&=1);
 	if (bx==this || bx==*ppbx) return EEE_NOEFF;
-	int ec, wf = wnfl(2048);
-	if (bx && bx->node()->cl_id()=='w') {
-		DWrapGen * that = dynamic_cast<DWrapGen*> (bx); if (!that) return BXE_SORRY;
+	int ec, cf, wf = wnfl(2048);
+	if (bx && bx->node()->is_wrap()) {
+		DWrapGen * that = dynamic_cast<DWrapGen*> (bx); if (!that) return BXE_SORRY; //TODO (?)
 		if ((ec=set_sf_2(ff, that->m_sfbx[ff]))<0) return ec;
 		sob_from(4+ff, that, 1);
-		sob_from(2+ff, that, 1);
-		w_mini(); w_slbv(2); if (wf) { BXW_GET; wlg(bxw_rawptr, 0, 0); wlg(bxw_rawptr, ff+1, 0); } }
-	else {  if ((ec=set_sf_2(ff, bx))<0) return ec;
-		w_mini(); w_slbv(2); if (wf) { BXW_GET; wlg(bxw_rawptr, ff+1, 0); } }
+		sob_from(2+ff, that, 1);  cf = xfd_chk(ff,1);  SFUPD(wlg(bxw_rawptr, 0, 0)); }
+	else {  if ((ec=set_sf_2(ff, bx))<0) return ec; else cf = xfd_chk(ff,0);  SFUPD( ); }
 	return 0;
 }
 
 void DWrapGen::notify_nio(BoxGen * bx) {
 	if (DBGC) log("wr%d/notify_nio: %d", id(), bx->id());
 	int ec = 0, ni, no, flg = (bx==m_sfbx[0]) + 2*(bx==m_sfbx[1]);
-	if (flg&1) m_bflg &= ~0xffc, m_bflg |= 4*(32*bx->n_out()+bx->n_in());
+	if (flg&1) m_bflg &= ~0xffc, m_bflg |= 4*(32*bx->n_out()+bx->n_in()), xfd_chk(0,0);
 	if (flg&2) ((no=bx->n_out())==1 && (ni=bx->n_in())) ? 
-		(m_bflg&=~0x3ff000, m_bflg |= (32*no+ni)<<12) : (set_sf(1, 0), ec = BXE_FILTRM);
+		(m_bflg&=~0x3ff000, m_bflg |= (32*no+ni)<<12) : (set_sf(1, 0), ec = BXE_FILTRM), xfd_chk(1,0);
 	if (ec) gui_errq_add(ec, "wrap/nio"); if (!flg || !wnfl()) return;
 	sthg * q = m_node->wdat_raw(); if (!q) return gui_errq_add(BXE_WTF, "wrap/nio/w");
 	if (flg&1) wlg(q,1,0); if (flg&2) wlg(q,2,0); 
