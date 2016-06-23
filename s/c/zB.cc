@@ -1,9 +1,9 @@
 // This is an example source file. illustrating how to implement new primitive boxes
-// The name of the contrib dir (under "!c") will be the name of the source file (without the ".cc")
+// The name of the contrib folder will be the name of the source file (without the ".cc")
 // This name has to begin with a letter and be a valid C identifier
-// So please write only one source file for your collection of contrib boxes
-// After adding/removing/renaming files in the "c" directory, run upd.sh from there, and then
-// you can run "make" from the source root.
+// It will be placed under ".!c.<first_letter>" in the object tree
+// Please create only one source file for your collection of contrib boxes, in s/c
+// It is recommended to use ../../t/prod.sh for compiling (change SDIR and possibly PDIR)
 
 // first, some includes
 
@@ -36,7 +36,7 @@
 // (1) define a class (subcl. of BoxInst) with a calc() function
 //     (either explicitly or using a convenience macro)
 // (2) insert a node referring to the class into the object tree
-//     (do this in the ci_<dirname>() init function, see at the end of this file)
+//     (do this in the ci_<foldername>() init function, see at the end of this file)
 
 // the simplest case: stateless box (1 in, 1 out) computing a single-variable function
 // just use the following macro FUN1_BOX(<classname>, <expression>) to define the class
@@ -102,7 +102,7 @@ STATELESS_BOX_1(ZBSel) {
 
 // If you want to implement a box with a state (other than pole/zero filters, see below),
 // you have to explicitly define a class. Beside the calc() function you also have to
-// define a contructor to initialize the state (default (zero arg) constructor for
+// define a contructor to initialize the state (default (no args) constructor for
 // singular boxes, and one with an int argument for parametrized boxes. )
 // (for the stateless boxes above, the contructors are defined by the macros.)
 // Unless you explicitly allocate heap memory, you don't have to write a destructor.
@@ -163,18 +163,18 @@ QUICK_PZFILT(ZBEqLF) {
 }
 
 // And finally, the init function (called before files are read or GUI started)
-// You start with an empty directory node (the parameter), and you can add more directories
+// You start with an empty folder node (the parameter), and you can add more folders
 // and boxes with the qmk_dir() and qmk_box() functions.
 
-// directories (folders) are easy: you pass a node pointer and a name, the function:
+// folders are easy: you pass a node pointer and a name, the function:
 // ANode * qmk_dir(ANode * up, const char * nm);
-// returns the address of the newly created dir. node, which you can use in further
+// returns the address of the newly created folder node, which you can use in further
 // qmk_dir() or qmk_box() calls.
 
 // boxes are a little more complicated, the function is:
 // ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no, 
 //				               const char * cl, const char * fmt, ...);
-// up: parent node (must be a directory)
+// up: parent node (must be a folder)
 // nm: name
 // qa: QMB_ARG0(simple_box_class) or QMB_ARG1(param_box_class), type is ptr-to-function
 // k:  parameter (for single boxes it is ignored)
@@ -199,7 +199,7 @@ QUICK_PZFILT(ZBEqLF) {
 // graph boxes containing this box might allocate one more temporary buffer)
 
 // In the early initialization there is no fancy error handling: when an operation fails,
-// the program quits with a core dump. (since you start with an empty subtree, nothing
+// the program quits with a core dump. (since you start with an empty folder, nothing
 // surprising should happen.) In case something impossible happens, you too can abort the
 // program with the bug() function; if you only want to write a debug message to log/console
 // use the log() function -- both log() and bug() take printf-style arguments.
