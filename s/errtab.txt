@@ -30,6 +30,7 @@ EEE_A20      tmp audio open/write failed (path/permission problem?)
 EEE_LONGSTR  string too long
 EEE_NONAME   no name for save
 EEE_ASVFAIL  autosave failed
+EEE_PARSE    parse error (most likely a bug)
 EEE_FDNOSEL  file dialog: nothing selected
 EEE_RANGE    value out of range
 EEE_NOEFF    nothing happens
