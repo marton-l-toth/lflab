@@ -42,4 +42,5 @@ if make $JARG "$CFLG" $*; then
 	[[ -n "$OCMD" ]] && (echo "$OCMD" > "$CP")
 else
 	[[ -n "$FCMD" ]] && (echo "$FCMD" > "$CP")
+	exit 1
 fi
