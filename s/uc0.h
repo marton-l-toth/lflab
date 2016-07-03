@@ -42,7 +42,12 @@ void d999(char *p, int v) { int ht = (v*205)>>11, h = (ht*205)>>11;
 const char * tpipe_name(int c) {
         static char path[256];  static int ix = -1;
         if (ix<0) {
-                const char * s = getenv("LF_TMPDIR");
+                const char * s =
+#ifdef QENV
+			QENV('t');
+#else
+			getenv("LF_TMPDIR");
+#endif
                 if (!s || !*s || (ix=strlen(s))>248) s="/tmp", ix = 4;
                 memcpy(path, s, ix); memcpy(path+ix, "/_\0", 4); ix++;
         }

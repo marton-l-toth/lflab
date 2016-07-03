@@ -6,6 +6,7 @@
 #define D_GUIFUN0(GF,CL,CF) inline void GF(CL *obj) { m_bufp += obj->CF(m_bufp); }
 #define D_GUIFUN1(GF,CL,CF) inline void GF(CL *obj, int x) { m_bufp += obj->CF(m_bufp,x); }
 int mx_c_dump_keys(char*, int), wrap_dump_keytab(char*, unsigned int *, short**);
+struct cfg_ent;
 
 class GuiStub {
 	public:

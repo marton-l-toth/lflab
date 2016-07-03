@@ -1,6 +1,6 @@
 INI_ORDER   |i|0          |0   |1    |iord  |starts gui before (x=1) or after (x=0) reading files
-AU_NAME     |s|default    |1   |255  |anm   |name of ALSA PCM output device
-AU_CHCFG    |s|lr         |1   |255  |chcfg |channel cfg [lracsz]* (Left Right Avg Center(sqrt2*Avg) Sum Zero)
+AU_NAME     |s|default    |1   |99   |anm   |name of ALSA PCM output device
+AU_CHCFG    |s|lr         |1   |19   |chcfg |channel cfg [lracsz]* (Left Right Avg Center(1.41*A) Sum Zero)
 AU_SPD      |i|35         |0   |99   |asp   |audio buffer size: 2^(11-.05*x) frames
 AU_RSRV     |i|120        |1   |250  |arsrv |audio buffer reserve (percentage of buffer size)
 AU_CLK      |i|2          |0   |2    |aclk  |set clock from avail(0), delay(1) or retBS(2)
@@ -8,20 +8,24 @@ AU_CLKLIM   |i|100        |0   |250  |aclkt |time limit for setclk (only for acl
 AU_TRY_N    |i|10         |1   |99   |artn  |(re)try audio init x times
 AU_TRY_MS   |i|50         |10  |250  |artt  |millisecs. to wait between audio init retry
 AU_KILL_PA  |i|0          |0   |3    |kpa   |pulseaudio: 0-don't kill 1-sig15 3-sig9
-SV_EXEC     |i|0          |0   |1    |svexe |1:save files have exec perm and '#!/usr/bin/lflab' as first line
+SV_EXEC     |i|0          |0   |1    |svexe |1:save files have exec perm and '#!/usr/bin/lflab' as 1.line
 SV_BACKUP   |i|5          |1   |31   |svbk  |# of backups for save file
 ASV_BACKUP  |i|5          |1   |31   |asbk  |# of backups for autosave
 ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosave (0: none)
 TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit
 TLOG_BACKUP |i|2          |0   |31   |tkbk  |# of backups for tlog
+LOG_BACKUP  |i|3          |0   |31   |lbk   |# of backups for log
 AO_ACTION   |i|0          |0   |3    |aoact |default action for tmp audio (0:ask 1:keep 2:wav 3:flac)
 AO_TLIM     |i|60         |15  |900  |aolim |time limit for (auto mode) audio writing
 AO_DIR      |s|           |0   |255  |aodir |directory for tmp. audio output (default /run/shm or /tmp)
 WAV_DIR     |s|           |0   |255  |wvdir |directory for WAV / FLAC output (default is home dir.)
 TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
-XTERM       |s|xterm      |0   |255  |xterm |terminal emulator (used for console & license display)
+XTERM       |s|           |0   |255  |xterm |terminal emulator (used for console & license display)
 AUTOCON     |i|1          |0   |1    |aucon |automatically open console for debug info
-GUI_TRKUP   |i|100	  |10  |999  |trkup |track play (arrow) update interval (msec.)
+GUI_TRKUP   |i|100        |10  |999  |trkup |track play (arrow) update interval (msec.)
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
 QTST_ADIF   |i|24         |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 
-QTST_RDIF   |i|20         |10  |52   |qtstr |quicktest/samp: -log2 of max rel diff 
+QTST_RDIF   |i|20         |10  |52   |qtstr |quicktest/samp: -log2 of max rel diff
+_1_NOEX     |i|0          |0   |1    |n     |skip default example tree (!e)
+_H1         |i|0          |0   |1    |h     |show help
+_H2         |i|0          |0   |1    |?     |show help

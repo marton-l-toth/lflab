@@ -286,7 +286,7 @@ static void bye(int kf) {
 	if (!kf) exit(1);
 	con_end(); search_and_destroy(killer_fd); del_workdir();
 	if (!rs_ts || time(NULL)>rs_ts+5) LOG("bye"), log_sn(0,-1,0), exit(0);
-	const char *es, *fn = getenv("LF_SCRIPT"); 
+	const char *es, *fn = getenv("LF_BIN"); 
 	if (!fn) LOG("restart failed (missing env)"), log_sn(0,-1,0), exit(1);
 	LOG("restarting (%s)...", fn); log_sn(0, -1, 0); close_all();
 	execl(fn, fn, (char*)0); es = strerror(errno);

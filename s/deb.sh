@@ -21,7 +21,7 @@ dpkg -S $libdep |  cut -d: -f1 | sort -u | (while read a; do echo -n ", $a" >> $
 echo -en "\nMaintainer: $who\nDescription:" >> $ctl
 grep -v '^#' lf.dsc.txt | sed 's/^/ /' >> $ctl
 
-(echo -en "#!/bin/sh\nln -sf $trgdir/lf /usr/bin/$nm"
+(echo -en "#!/bin/sh\nln -sf $trgdir/lf.bin /usr/bin/$nm"
 for t in $bblnk; do echo -n " && ln -s $trgdir/lf.bb $t"; done; echo) > $debdir/postinst
 echo -e "#!/bin/sh\nrm /usr/bin/$nm $bblnk" >> $debdir/prerm
 chmod 755 $debdir/postinst $debdir/prerm

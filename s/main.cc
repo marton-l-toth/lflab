@@ -16,8 +16,6 @@
 int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
 double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625, junkbuf[4096];
 char zeroblkC[32768], save_file_name[1024], debug_utxt_buf[1024];
-const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
-int         tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 GuiStub gui2;
 JobQ jobq;
@@ -32,32 +30,30 @@ void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s",
 	    "Copyright (C) 2014-2016 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
 	    "see the file \"COPYING\" for details"); }
 
-#define INI_LIST pt_init(), hi(), nd0_init(), cfg_init(), nz_init(), calc_init(), graph_init(), nd_init(), \
-		 mx_init(), wrap_init(), track_init(), itb_init(), midi_init()
-static void ini0() {
-	extern void INI_LIST; INI_LIST;
-	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
-	if (CFG_INI_ORDER.i) gui2.start();
-}
-
-static void rf(char ** nms, int n) {
-	Clock clk; for (int i=0, rwix=n-1; i<n; i++) {
-		if (!nms[i][0] || (nms[i][0]=='/' && !nms[i][1] && (rwix=i+1,1))) continue;
-		clk.reset(); log("reading %s... (r%c)", nms[i], 111+8*(i>=rwix));
-		int ec = CmdBuf::read_batch(nms[i], NOF_BATCHF|(i<rwix)); if (ec<0) gui_errq_add(ec);
-		log("%s: %s (%d)", nms[i], ec<0 ? err_str(ec) : "ok", ec<0 ? ec : clk.get());
+static void rf(const char ** ppf) {
+	Clock clk; for (int ec, i=0, ro=1; ppf[i]; i++) {
+		if (!ppf[i][0]) continue;
+		if (ppf[i][0]=='/' && !ppf[i][1]) { ro = 0; continue; }
+		clk.reset(); log("reading %s... (r%c)", ppf[i], 119-8*ro);
+		if ((ec = CmdBuf::read_batch(ppf[i], NOF_BATCHF|(ro&&ppf[i+1]))) < 0) gui_errq_add(ec);
+		log("%s: %s (%d)", ppf[i], ec<0 ? err_str(ec) : "ok", ec<0 ? ec : clk.get());
 	}}
 
-static void ini1() {
-	if (!CFG_INI_ORDER.i) gui2.start();
+#define INI_LIST hi(), nd0_init(), nz_init(), calc_init(), graph_init(), nd_init(), mx_init(), wrap_init(), \
+		 track_init(), itb_init(), midi_init()
+static void ini(const char ** ppf) {
+	extern void INI_LIST; INI_LIST;
+	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
+	if (CFG_INI_ORDER.i) gui2.start(), rf(ppf); else rf(ppf), gui2.start();
 	sl_cmd[0].init(pt_cp_i2m, NOF_ERRMSG);
 	sl_cmd[1].init(gui2.outpipe(), NOF_GUI, 126);
 	sl_cmd[2].init(0, NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
-	gui2.root_expand(); gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(1)));
-	                    gui2.tree_expand(1,static_cast<ADirNode*>(ANode::lookup_n_q(2)));
+	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
+		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
+	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);
 	log("### tlp=%d i2m=%d, gcp=%d", gui2.tpipe(), pt_cp_i2m, gui2.outpipe());
-	if (getenv("LF_HITHERE")) snd0.w(-1);
+	if (glob_flg&GLF_HITHERE) {const char *s="getting started"; snd0.w(-1); hlp->sn(&s)->draw_window(11);}
 	if (CFG_DEVEL.i) pt_con_op("-1");
 	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
 	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1;
@@ -82,4 +78,4 @@ static void sel_loop() {
 			   snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
-int main(int ac, char** av) { ini0(); rf(av+1, ac-1); ini1(); sel_loop(); }
+int main(int ac, char** av) { ini(pt_init(ac,av)); sel_loop(); }

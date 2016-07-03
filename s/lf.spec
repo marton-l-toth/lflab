@@ -22,7 +22,7 @@ cp -a usr %{buildroot}
 mkdir %{buildroot}/usr/bin
 
 %post
-ln -sf %{LF_DIR}/lf /usr/bin/%{LF_NM}
+ln -sf %{LF_DIR}/lf.bin /usr/bin/%{LF_NM}
 ln -sf %{LF_DIR}/lf.bb /usr/bin/lf.acv
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.con
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.io

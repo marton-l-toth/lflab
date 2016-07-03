@@ -2,7 +2,6 @@
 #include "uc0.h"
 #include "util.h"
 #include "glob.h"
-#include "cfgtab.inc"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -17,19 +16,226 @@
 #define FPU_INI pt_hello="sse2:n"
 #endif
 
+static int osb_hash(const char *s) { // od|sed|bc
+	int r=0; while (*s) r *= (*s>99)?1000:100, r += *s, s++;   return r&0x3fffffff; }
+#define QWE_DEFINE_CFGTAB
+#include "cfgtab.inc"
+
 volatile int pt_chld_flg = 0;
-int pt_cp_i2m = -1;
-const char * pt_hello;
+int pt_cp_i2m = -1,    pt_qenv_l[32];
+const char *pt_hello, *pt_qenv_v[32];
+// e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
+static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
 
 typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
 
-static int pt_cp_m2i = -1, pt_constat = 0, pt_nullfd = -1;
+static int pt_cp_m2i = -1, pt_constat = 0, pt_nullfd = -1, pt_pid;
 static volatile pt_tab_t pt_tab[PT_COUNT];
 static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0;
-static const char *qenv_v[26], *qenv_i[] = {
-	"lLF_LOG","/tmp/lflab.noenv.log", "bLF_BB",0, "dLF_DEBUGFLG","0", "gLF_LICB",0, "hHOME","/tmp",
-	"iLF_IO",0, "kLF_KILLER",0, "tLF_TMPROOT",0,  "uLF_USERDIR",0, "wLF_TMPDIR",0, 0,0 };
-#define QENV(c) qenv_v[(int)c-97]
+static uid_t pt_uid, pt_gid;
+static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
+static const char** ppath = 0;
+static struct timeval tv_zero;
+
+static void qfail(const char * fmt, ...) {
+	va_list ap; va_start(ap, fmt);
+	char buf[1024]; memcpy(buf, "lflab: quick FAIL: ", 19);
+	int l = 19+vsnprintf(buf+19, 1000, fmt, ap); va_end(ap); buf[l++] = 10;
+	int fd = open(QENV('>'), O_WRONLY|O_APPEND|O_CREAT, 0644);
+	if (fd>=0) write(fd, buf, l), close(fd);
+	write(2, buf, l); exit(1);
+}
+
+static void ee_add(int ec) { if (ec<0) return (void)(ee_flg |= -ec); else ee_flg |= (ec&(7<<28));
+			     if (ee_n<64) ee_v[ee_n++]=ec; }
+static inline void qe_set2(int c, const char *s, int l) { QENV(c)=s; QENVL(c)=l; }
+static inline void qe_len1(int c) { QENVL(c) = strlen(QENV(c)); }
+static void qe_len(const char *ls) { while (*ls) qe_len1(*ls), ls++; }
+static int stat2(const char *nm, int op) {
+	struct stat buf; if (stat(nm, &buf)<0) return 0;
+	int k = buf.st_mode; if (((op&32) ? !S_ISREG(k) : !S_ISDIR(k))) return 0;
+	int flg = k & (7 | (070&-(pt_gid==buf.st_gid)) | (0700&-(pt_uid==buf.st_uid)));
+	switch(op|32) { case 'r': return !!(flg&0444);
+			case 'w': return !!(flg&0222);
+			case 'x': return !!(flg&0111);
+			default: return 0; }}
+
+static void mk_ppath() {
+        const char * p0 = getenv("PATH");
+        if (!p0) { ppath_n = 2; ppath_maxlen = 8;
+                   ppath = (const char**)malloc(2*sizeof(char*)); ppath_len = (int*)malloc(2*sizeof(int));
+                   ppath[0]="/bin"; ppath[1]="/usr/bin"; ppath_len[0] = 4; ppath_len[1] = 8; return; }
+        int i0, i, ltot = strlen(p0), np = 1;
+        char * p1 = (char*)malloc(ltot+1); memcpy(p1, p0, ltot); p1[ltot]=':';
+        for (i=0; i<ltot; i++) if (p1[i]==':') ++np;
+        ppath = (const char**)malloc(np*sizeof(char*)); ppath_len = (int*)malloc(np*sizeof(int));
+        for (i0=i=0; i<=ltot; i++) { if (p1[i]==':') {
+                int l = i-i0; if (l>ppath_maxlen) ppath_maxlen = i;
+                if (l>0) ppath[ppath_n] = p1+i0, ppath_len[ppath_n] = l, p1[i]=0, ++ppath_n;
+                i0 = i+1; }}}
+
+static int pfind(const char * nm) {
+        if (!ppath) mk_ppath();
+        int i, l = strlen(nm);
+        char buf[l+ppath_maxlen+2];
+        buf[ppath_maxlen]='/'; memcpy(buf+ppath_maxlen+1, nm, l+1);
+        for (i=0; i<ppath_n; i++) {
+                int k = ppath_len[i], j = ppath_maxlen - k;
+                memcpy(buf+j, ppath[i], k); if (stat2(buf+j, 'x')) return 1; }
+        return 0;
+}
+
+static const char * pfind_ls(const char ** pp) {
+	while (*pp) if (pfind(*pp)) return *pp; else pp++;   return "(none)"; }
+
+static void qe_dump() { for (int i=59; i<91; i++) if (QENV(i))
+	fprintf(stderr, "QENV('%c')=\"%s\", len=%d\n", i, QENV(i), QENVL(i)); }
+
+static char wdir[24];
+static void qe_ini() {
+	static const char * self = "/proc/self/exe";
+	static const char * rel[] = { "uh/.lflab", 
+		">u/lf.log", "ju/lf.ini", "=u/lf.tlog", "au/__asv.lf", "xu/__asv--x.lf", "zw/killer-file",
+		"ip/lf.io", "bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
+		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def"};
+	static const char * sete[] = { "kLF_CON", "?LF_HLP", "zLF_KILLER", "cLF_LIC", ">LF_LOG", "=LF_TLOG",
+		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", 0};
+	static const int nrel = sizeof(rel)/sizeof(char*);
+	int rlen[sizeof(rel)/sizeof(char*)];
+
+	QENV('>') = "/tmp/lflab.quick-fail.log";
+	if (!(pt_gid=getegid(), pt_uid=geteuid())) qfail("it is a bad idea to run lflab as root");
+	if ((QENV('h')=getenv("HOME"))) qe_len1('h'); else qe_set2('h', "/tmp", 4);
+	stat2("/run/shm", 'W') ? qe_set2('t', "/run/shm", 8) : qe_set2('t', "/tmp", 4);
+	qe_set2('w', wdir, sprintf(wdir, "%s/lf.%d", QENV('t'), pt_pid=getpid()));
+
+	char pkgs[1024]; int pkl = readlink(self, pkgs, 1023);
+	if (pkl<0) qfail("%s: %s", self, strerror(errno));
+	if (pkl>999) qfail("%s: path too long", self);
+	if (pkl<2 || pkgs[0]!='/') qfail("%s: what???", self);
+	for (--pkl; pkgs[pkl]!='/'; --pkl); 
+	pkgs[QENVL('p')=pkl] = 0;
+
+	int bi, buflen = pkl + 1;   QENVL('u') = QENVL('h')+7;
+	for (int i=0; i<nrel; i++) {
+		const char * s = rel[i];
+		buflen += QENVL(s[1]) + (rlen[i] = strlen(s+2)) + 1; }
+	char * buf = (char*) malloc(buflen); QENV('p') = buf;
+	memcpy(buf, pkgs, pkl+1); bi = pkl+1;
+	for (int i=0; i<nrel; i++) {
+		const char * s = rel[i];  int l1 = QENVL(s[1]); if (*s!='>' && QENV(*s)) qfail("qe:%c",*s);
+		memcpy(buf+bi,    QENV(s[1]), l1);
+		memcpy(buf+bi+l1, s+2,        rlen[i]);
+		QENV(*s) = buf+bi; bi += 1 + (QENVL(*s) = rlen[i]+l1);
+	}
+	for (const char **pp = sete; *pp; pp++) setenv(*pp+1, QENV(**pp), 1);
+	if (bi!=buflen) qfail("qe_ini: blen=%d, bi=%d\n", buflen, bi);
+	if (mkdir(QENV('w'), 0700)<0) qfail("mkdir(%s): %s", QENV('w'), strerror(errno));
+	if (!stat2(QENV('u'), 'W') && (glob_flg|=GLF_HITHERE, (mkdir(QENV('u'),0700)<0)))
+		qfail("mkdir(%s): %s", QENV('u'), strerror(errno));
+	int kff=0, kf = creat(QENV('z'), 0600); if (kf>2) return (void)(killer_fd = kf);
+	if (kf<0) qfail("creat(%s): %s", QENV('z'), strerror(errno));
+	do { if (kff |= 1<<kf, (kf=dup(kf))<0) qfail("dup(%s): %s",QENV('z'),strerror(errno)); } while(kf<3);
+	for (int i=0; i<3; i++) if (kff&(1<<i)) close(i);     killer_fd = kf;
+}
+
+void cfg_setint(cfg_ent *p, int k) { p->i = ivlim(k, p->i_m, p->i_M); }
+int cfg_setstr(cfg_ent *p, const char *s) {
+	int l01 = p->i_M, l0 = l01>>16, l1 = l01&65535, l = strlen(s);
+        return l0<=l && l<=l1 && (memcpy(p->s, s, (p->i=l)+1), 1); }
+void cfg_setx(cfg_ent *p, const char *s) {if (p->i_m==0x7fffffff) cfg_setstr(p,s); else cfg_setint(p,atoi(s));}
+
+static void cfg0() {
+	const char *s;  char *q = cfg_sbuf; 
+	for (cfg_ent *p = cfg_tab+1; p->s_vd; p++) { if (p->i_m==0x7fffffff) {
+		p->s=q; q+=(p->i_M&65535)+1;
+		for (s = p->s_vd; *s; s++);   cfg_setstr(p, s+1);
+	}}
+	if (q-cfg_sbuf != sizeof(cfg_sbuf)) qfail("cfg0: diff=%d, siz=%d\n", q-cfg_sbuf, sizeof(cfg_sbuf));
+}
+
+static void il_parse(int ln, char * s) {
+	int i,j,l = strlen(s); if (s[l-1]==10) s[--l] = 0;
+	if (!memcmp(s,"LF_",3)) s+=3, l-=3;
+	for (i=0; i<l; i++) if (s[i]=='=') goto eqfound;
+	return ee_add((1<<29)+ln);
+eqfound:s[i++]=0; if (s[i]=='"' && (++i<l) && s[l-1]=='"') s[--l]=0;
+	if ((j=osb_find(s))<0) ee_add((1<<29)+ln); else cfg_setx(cfg_tab+j, s+i);
+}
+
+static const char * hlp_head = "usage: lflab <options> <lib>* <save_file>\n"
+			       "    or lflab <options> <lib>* / <save_file>*\n"
+			       "(<lib>s will be read as a collection of read-only objects)\n"
+			       "options: (x:integer arg. s:string arg. [current-value|default|min..MAX])\n"
+			       "-ni      skip lf.ini file (must be the first option)\n"
+			       "-i     s read <s> instead of lf.ini (must be the first option)\n";
+static void show_help(FILE *f) {
+	fprintf(f, "%s", hlp_head);
+	cfg_ent * ce; const char *he, *s;
+	for (int i=1; he=cfg_help[i], (ce=cfg_tab+i)->s_vd; i++) {
+		int ty = (ce->s_vd[0]=='_') ? ' ' : 'x'-5*(ce->i_m==0x7fffffff), mx=ce->i_M;
+		fprintf(f, "-%s%c %s", he, ty, he+7); if (ty==' ') { fprintf(f,"\n"); continue; }
+		if (ty=='s') { for (s=ce->s_vd; *s; s++);
+			       fprintf(f, " [%s|%s|%d..%d]\n", ce->s, s+1, mx>>16, mx&65535); }
+		else	     { fprintf(f, " [%d|%d|%d..%d]\n", ce->i, ce->i_d, ce->i_m, mx); }
+}}
+
+static const char * xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-terminal", "konsole", "lxterminal",
+	"uxterm", "terminator", "rxvt", 0 };
+
+static void mklog() {
+	int lfd = creat(QENV('>'), 0644); if (lfd<0) qfail("creat(%s): %s", QENV('>'), strerror(errno));
+	struct tm * lt = localtime(&tv_zero.tv_sec);
+	char lbuf[256];
+	int lbl = snprintf(lbuf, 255,"-----lflab_%d.%02d----(%d)-----[%d.%02d.%02d/%02d:%02d:%02d.%06d]------",
+				     v_major, v_minor, pt_pid, 1900+lt->tm_year, lt->tm_mon+1, lt->tm_mday,
+				     lt->tm_hour, lt->tm_min, lt->tm_sec, (int)tv_zero.tv_usec);
+	lbuf[lbl]=10; write(lfd, lbuf, lbl+1); close(lfd);
+}
+
+int cfg_write(int lg) {
+        backup(QENV('j'), 9);  int k = -1;  const char *v;
+        FILE * f = fopen(QENV('j'), "w"); if (!f) goto err0;
+        for (cfg_ent * p = cfg_tab+1; (v=p->s_vd); p++)
+                if (*v!='_' && (k = (p->i_m==0x7fffffff) ? fprintf(f, "%s=\"%s\"\n", v, p->s)
+							 : fprintf(f, "%s=%d\n",     v, p->i)) < 0) goto err1;
+	if (fclose(f)) goto err0;
+	if (lg) log("config written to \"%s\"", QENV('j'));    return 0;
+err1:	fclose(f);
+err0:	return lg ? (k?EEE_ERRNO:EEE_ZEROLEN) : (ee_add(-2), ee_errno = (k?errno:0), -1);
+}
+
+static const char ** cfg1(int ac, char**av) {
+	int i, j, skip = 1, dfi = 1;
+	const char **rv, *s, *inif = QENV('j');
+	if (ac>1 && (s=av[1])[0]=='-') {
+		if (s[1]=='n' && s[2]=='i' && !s[3]) skip=2, dfi=0, inif=0;
+		else if (s[1]=='i' && !s[2]) (ac>2) ? (inif=av[2],dfi=0,skip=3) : (ee_add(-4),skip=2);
+	}
+	if (inif) { FILE * f = fopen(inif, "r");
+		    if (!f) { ee_add(-1); dfi *= 2; }
+		    else    { char buf[256]; for(int i=1; fgets(buf,255,f); i++) il_parse(i,buf); fclose(f); }}
+	for (i=skip; i<ac; i++) {
+		if (*(s=av[i])=='-') ++s; else break;
+		if ((j = osb_find(s))<0) { ee_add((1<<30)+i); continue; }
+		cfg_ent * ce = cfg_tab + j;
+		if (ce->s_vd[0]=='_') { switch(ce->s_vd[1]) {
+			case '1': ce->i = 1; continue;
+			case 'H': show_help(stdout); exit(0);
+			default: ee_add(-8); continue;
+		}}
+		if (i==ac-1) ee_add(-4); else cfg_setx(ce, av[i+1]), ++i;
+	}
+	if (!*CFG_XTERM.s) cfg_setstr(&CFG_XTERM, pfind_ls(xterm_ls));
+	if (dfi==2) cfg_write(0);
+	backup(QENV('>'), CFG_LOG_BACKUP.i); mklog();
+	setenv("LF_XTERM", CFG_XTERM.s, 1);
+	ac -= i; rv = (const char**) malloc((ac+3)*sizeof(char*));
+	if (CFG__1_NOEX.i) { if (ac) memcpy(rv, av+i, ac*sizeof(char*)); rv[ac]=0; return rv; }
+	rv[0] = QENV('e'); if (ac) memcpy(rv+1, av+i, ac*sizeof(char*)), rv[ac+1]=0;
+			   else    rv[ac+1] = "/"; rv[ac+2] = 0;
+	return rv;
+}
 
 static void log_pidstat(const char *s, int pid, int stat) {
         if (WIFEXITED(stat)) log("%s %d exited (%d)", s, pid, WEXITSTATUS(stat));
@@ -37,7 +243,7 @@ static void log_pidstat(const char *s, int pid, int stat) {
         else log("something happened to %s %d (0x%x)", s, pid, stat); }
 
 static void pt_dlog(const char * s) {
-        int fd = open(QENV('l'), O_WRONLY|O_APPEND);
+        int fd = open(QENV('>'), O_WRONLY|O_APPEND);
 	switch(fd) {
 		case 1:  dup2(1, 2); break;
 		case 2:  dup2(2, 1); break;
@@ -71,7 +277,7 @@ static int iop_dead(int pid, int stat, int td) {
 static int io_start(int re) {
 	char a2[16], *aa = a2; *(int*)aa = killer_fd>0 ? qh4(killer_fd) : 33; a2[4] = 0;
 	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;
-	int pf1, pf2, pf3, pid = launch(QENV('i'), "!><+>", &pf1, &pf2, QENV('l'), &pf3, a2, a2+8, (char*)0);
+	int pf1, pf2, pf3, pid = launch(QENV('i'), "!><+>", &pf1, &pf2, QENV('>'), &pf3, a2, a2+8, (char*)0);
 	if ((pid|pf1|pf2|pf3)<0) return -1;
 	if (!re) pt_reg(PT_IOP, pid, &iop_dead);
 	fflush(stdout); fflush(stderr);
@@ -140,8 +346,8 @@ void pt_chld_act() {
 int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 	int sdl, tdl, pid, op = opw & 255, nwf = opw & 256;
 	const char *sdir, *tdir, *src, *trg;
-	if ((sdl = CFG_AO_DIR.i )) sdir = CFG_AO_DIR.s;  else sdl = tmp_dir_len, sdir = tmp_dir;
-	if ((tdl = CFG_WAV_DIR.i)) tdir = CFG_WAV_DIR.s; else tdl = hsh_dir_len, tdir = hsh_dir;
+	if ((sdl = CFG_AO_DIR.i )) sdir = CFG_AO_DIR.s;  else sdl = QENVL('t'), sdir = QENV('t');
+	if ((tdl = CFG_WAV_DIR.i)) tdir = CFG_WAV_DIR.s; else tdl = QENVL('h'), tdir = QENV('h');
 	switch(op) {
 		case 0xf: return nwf ? 0 : (gui_closewin(ACV_WIN(id)), 0);
 		case 0xd: pid = launch("/bin/rm", "!(kk", au_file_name(sdir,sdl,id,0,0,"a20"), (char*)0);
@@ -161,28 +367,37 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 ret:	return (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
 }
 
-int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('g'), (char*)0); }
+int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('v'), (char*)0); }
 
 int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
 					EEE_ERRNO : 0; }
 
-void pt_init() {
+// e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
+static void ee_msg() {
+	if (ee_flg&1) log("ini file(%s) not found", QENV('j'));
+	if (ee_flg&2) gui_errq_add(PTE_INICRE), log("unable to create \"%s\": %s",
+						    QENV('j'), ee_errno?strerror(ee_errno):"disk full/bug?");
+	if (ee_flg&4) log("last option needs an argument");
+	if (ee_flg&((1<<30)+4)) gui_errq_add(PTE_CMDLINE);
+	if (ee_flg&((1<<29))  ) gui_errq_add(PTE_INIPARSE);
+	for (int k,i=0; i<ee_n; i++) k = ee_v[i]&0xffffff,
+		(ee_v[i]&(1<<30)) ? log("unknown option (arg #%d)", k)
+				  : log("error in \"%s\", line %d", QENV('j'), k);
+}
+
+const char ** pt_init(int ac, char ** av) {
+	gettimeofday(&tv_zero, 0);
+	struct rlimit cl; cl.rlim_cur=cl.rlim_max=1<<28; setrlimit(RLIMIT_CORE, &cl);
 	FPU_INI; vstring_set(v_major, v_minor);
-	for (const char **q2, **q = qenv_i; *q; q+=2) 
-		if (q2=&QENV(**q), !(*q2=getenv(*q+1)) && !(*q2=q[1])) pt_dlog(q[0]+1), exit(1);
-	debug_flags = atoi_h(QENV('d')); pt_dlog("...\n");
+	qe_ini(); cfg0(); // qe_dump(); 
+	const char ** ret = cfg1(ac, av);
+	debug_flags = 0; // TODO: debug
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
 	if ((pt_nullfd = open("/dev/null", O_RDONLY)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("nullfd"), exit(1);
-	if ((killer_fd=open(QENV('k'),O_RDONLY))<0) log("\"%s\": %s", QENV('k'), strerror(errno));
-	wrk_dir_len=strlen(wrk_dir=QENV('w')); usr_dir_len=strlen(usr_dir=QENV('u'));
-	tmp_dir_len=strlen(tmp_dir=QENV('t')); hsh_dir_len=strlen(hsh_dir=QENV('h'));
-	char *s1 = (char*)malloc(usr_dir_len+10); memcpy(s1, usr_dir, usr_dir_len);
-	char *s2 = (char*)malloc(usr_dir_len+13); memcpy(s2, usr_dir, usr_dir_len);
-	memcpy(s1+usr_dir_len,  "/__asv.lf",    10); autosave_name   = s1;
-	memcpy(s2+usr_dir_len,  "/__asv--x.lf", 13); autosave_name_x = s2;
 	signal(SIGCHLD, &pt_sigchld);
 	for (const char* s = FIFO_LIST; *s; s++) if (mkfifo(tpipe_name(*s), 0600)<0)
-		log("FATAL: failed mkfifo '%c': %s", *s, strerror(errno)), exit(1);
-	if (io_start(0) < 0) log("FATAL: io_start failed"), exit(1);
+		log("FATAL: failed mkfifo '%c'(%s): %s", *s, tpipe_name(*s), strerror(errno)), exit(1);
+	if (io_start(0) < 0) log("FATAL: io_start failed"), exit(1); 
+	if (ee_flg) ee_msg();    return ret;
 }

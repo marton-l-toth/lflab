@@ -5,6 +5,7 @@
 
 #include <cstring>
 
+#include "pt.h"
 #include "util.h"
 #include "util2.h"
 #include "cmd.h"
@@ -14,7 +15,6 @@
 #include "guistub.h"
 #include "mx.h"
 #include "asnd.h"
-#include "pt.h"
 #include "midi.h"
 #include "cfgtab.inc"
 
@@ -315,7 +315,7 @@ static void log_load(int n) { for (int i=0; i<n; i++) log("log load test -------
 
 int CmdTab::c_cfg(CmdBuf * p) {
 	char *s = p->m_c_a0; int fd = 0, f = 0; switch(*(s++)) {
-		case '>': return cfg_write();
+		case '>': return cfg_write(1);
 		case 's': CFG_SV_EXEC.i   = *s&1; f =     4; break;
 		case 't': CFG_TLOG_AUTO.i = *s&1; f =    16; gui2.set_tlog(); break;
 		case 'K': CFG_AO_ACTION.i = *s&3; f =  1024; break;
@@ -365,7 +365,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'V': if (sscanf(s+1, "%d.%d", &i, &j)!=2) return GCE_PARSE;
 		          if (i!=v_major || j!=v_minor) log("save file is from version %d.%d", i, j);
 			  p->m_sv_M = i; p->m_sv_m = j; return 0;
-		case 'K': return cfg_write();
+		case 'K': return cfg_write(1);
 		case 'M': return mx_debug(s+1);
 		case 'm': return nd_mem_debug();
 		case '_': return midi_cmd(s+1);

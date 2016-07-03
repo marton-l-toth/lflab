@@ -23,7 +23,7 @@ OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC) contrib.o hlpn.o
 GTKINC = -I/usr/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/ -I/usr/include/glib-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0/ -I/usr/include/gdk-pixbuf-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0
 GTKLIB = -lgtk-x11-2.0 -lgdk-x11-2.0 -lcairo -lgobject-2.0 -lglib-2.0 -lm
 
-all: lf.gui lf.bb lf.bin lf lf.ini help.txt lf.io lf.con lf.acv lf.lic
+all: lf.gui lf.bb lf.bin lf help.txt lf.io lf.con lf.acv lf.lic
 
 lf.io:
 	ln -sf lf.bb lf.io
@@ -33,18 +33,14 @@ lf.acv:
 	ln -sf lf.bb lf.acv
 lf.lic:
 	ln -sf lf.bb lf.lic
+lf:
+	ln -sf lf.bin lf
 
 contrib.cc: c c/upd_contrib.sh
 	c/upd_contrib.sh
 
-lf: cfgtab.txt lf.src cfg2sh.sh
-	./cfg2sh.sh cfgtab.txt lf.src > lf; chmod 755 lf
-
 cfgtab.inc: cfgtab.txt cfg2inc.sh
 	./cfg2inc.sh cfgtab.txt > cfgtab.inc
-
-lf.ini: cfgtab.txt cfg2ini.awk
-	awk '-F|' -f cfg2ini.awk < cfgtab.txt > lf.ini
 
 errtab.inc: errtab.txt errtab.sh
 	./errtab.sh errtab.txt > errtab.inc
@@ -74,10 +70,10 @@ hlpn.cc:  hlpc.sh helpm.txt
 help.txt: hlpt.txt $(SRCS)
 	tail -n +2 hlpt.txt > help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
-deb:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
+deb:	lf.gui lf.bb lf.bin help.txt ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
 	./deb.sh -v
 
-rpm:	lf.gui lf.bb lf.bin lf help.txt lf.ini ex.lf lf.dsc.txt COPYING rpm.sh lf.spec pkg.sh
+rpm:	lf.gui lf.bb lf.bin help.txt ex.lf lf.dsc.txt COPYING rpm.sh lf.spec pkg.sh
 	./rpm.sh 
 
 clean:

@@ -15,14 +15,13 @@
 #include <errno.h>
 
 #define QWE_UTILC_DEF
-#define QWE_DEFINE_CFGTAB
-
 #include "uc0.h"
 #include "uc1.h"
 #include "util.h"
 #include "errtab.inc"
 #include "cfgtab.inc"
 #include "glob.h"
+#include "pt.h"
 //#include "lwarr.h"
 
 const double smalldiv63[64] = { 0.0, 1.0, 0.5, 0.333333333333333, 0.25, 0.2, 0.166666666666667,
@@ -50,30 +49,6 @@ char * alloc_32k() {
 		if (bs<(1<<24)) bs += bs;
 	}
 	char * p = cur; cur += 32768; return p;
-}
-
-void cfg_setint(cfg_ent *p, int k) { p->i = ivlim(k, p->i_m, p->i_M); }
-int cfg_setstr(cfg_ent *p, const char *s) { int l01 = p->i_M, l0 = l01>>16, l1 = l01&65535, l = strlen(s);
-	return l0<=l && l<=l1 && (memcpy(p->s, s, (p->i=l)+1), 1); }
-
-void cfg_init() {
-	for (cfg_ent * p = cfg_tab+1; p->s_vd; p++) {
-                const char * s = getenv(p->s_vd);
-                if (p->i_m==0x7fffffff) {
-			p->s = (char*)malloc((p->i_M&65535)+1);
-			if (!s || !cfg_setstr(p, s)) { for (s = p->s_vd; *s; s++); cfg_setstr(p, s+1); }
-		} else if (s) { cfg_setint(p, atoi(s)); }}}
-
-int cfg_write() {
-	const char * fn = getenv("LF_INIFILE"); if (!fn) return EEE_ENVUNDEF;
-	backup(fn, 9);
-	FILE * f = fopen(fn, "w"); if (!f) return EEE_ERRNO;
-	for (cfg_ent * p = cfg_tab+1; p->s_vd; p++) {
-		int k = (p->i_m==0x7fffffff) ? fprintf(f, "%s=\"%s\"\n", p->s_vd, p->s)
-					     : fprintf(f, "%s=%d\n", p->s_vd, p->i);
-		if (k<=0) return k ? EEE_ERRNO : EEE_ZEROLEN;
-	}
-	return fclose(f)<0 ? EEE_ERRNO : (log("config written to \"%s\"", fn), 0);
 }
 
 int u_sleep(int x) {
@@ -541,9 +516,9 @@ const char * au_file_name(int id, int j) {
 	switch(j&6) {
 		case 0:
 		case 6: if (*(dir=CFG_AO_DIR.s)) dlen = CFG_AO_DIR.i;
-			else  dir=tmp_dir, 	 dlen = tmp_dir_len;     break;
+			else  dir=QENV('t'), 	 dlen = QENVL('t');     break;
 		case 2: dir = ".", dlen = 1; break;
-		case 4: dir = hsh_dir, dlen = hsh_dir_len; break;
+		case 4: dir = QENV('h'), dlen = QENVL('h'); break;
 		default: return "WTF";
 	}
 	if (!j) ext=FA_SUFFIX, elen=FA_SUFFIX_ZLEN; else ext = ".wav\0.flac"+5*(j&1), elen = 5+(j&1);
@@ -624,7 +599,7 @@ double Scale01::f(double x) { double z; switch(m_ty) {
 
 // file util
 int is_asv_name(const char *s) { // /.../__asv.lf /.../__asv--x.lf
-	int c, l = strlen(s);   const char * as = autosave_name;
+	int c, l = strlen(s);   const char * as = QENV('a');
 	if (!memcmp(s, as, l+1)) return '0';
 	return (!memcmp(s,as,l-6) && !memcmp(s+l-6,"--",2) && (c=s[l-4]) && !memcmp(s+l-3,".lf",4)) ? c : 0; }
 

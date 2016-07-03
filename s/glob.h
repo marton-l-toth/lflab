@@ -1,6 +1,7 @@
 #ifndef __qwe_glob_h__
 #define __qwe_glob_h__
 
+#define GLF_HITHERE   0x40000
 #define GLF_AVOLSHR   0x80000
 #define GLF_LIBMODE   0x100000
 #define GLF_EMPTY     0x200000
@@ -46,9 +47,6 @@ extern int qstat_size;
 extern char zeroblkC[32768];
 extern double junkbuf[4096];
 extern char save_file_name[1024], debug_utxt_buf[1024];
-
-extern const char *tmp_dir,    *usr_dir,    *wrk_dir,    *hsh_dir, *autosave_name, *autosave_name_x;
-extern int 	   tmp_dir_len, usr_dir_len, wrk_dir_len, hsh_dir_len;
 
 extern int v_major, v_minor;
 

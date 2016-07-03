@@ -9,12 +9,22 @@
 #define PT_COUNT 5
 #define PT_STR "ioprc\0  gui\0    dot\0    gnuplot\0auconv\0 "
 
-typedef int (*pt_wfun)(int,int,int);
-extern volatile int pt_chld_flg;
-extern int pt_cp_i2m;
-extern const char * pt_hello;
+#define QENV(c)  pt_qenv_v[(int)c&31]
+#define QENVL(c) pt_qenv_l[(int)c&31]
 
 #define ACV_WIN(J) (0xf00007 + 16*(J&65535))
+
+typedef int (*pt_wfun)(int,int,int);
+extern volatile int pt_chld_flg;
+extern int pt_cp_i2m, 	      pt_qenv_l[32];
+extern const char *pt_hello, *pt_qenv_v[32];
+
+int cfg_write(int lg); 
+struct cfg_ent; 
+void cfg_setint(cfg_ent *p, int k); 
+int cfg_setstr(cfg_ent *p, const char *s); 
+
+const char ** pt_init(int ac, char** av);
 void pt_reg(int ix, int pid, pt_wfun fun);
 void pt_wait();
 void pt_chld_act();

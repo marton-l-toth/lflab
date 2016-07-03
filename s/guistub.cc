@@ -48,9 +48,9 @@ int GuiStub::gui_dead(int pid, int stat, int td) {
 
 int GuiStub::start() {
         if (m_pid) return log("gui2 already started: pid %d", m_pid), PTE_WTF;
-	static const char * path = 0; if (!path && !(path=getenv("LF_GUI"))) path = "./lf.gui";
 	int pfi, pfo, pft;
-	if ((m_pid = launch(path, "!><u>", &pfi, &pfo, &pft, (char*)0))<0) log("FATAL: %s\n", path), bye(1);
+	if ((m_pid = launch(QENV('g'), "!><u>", &pfi, &pfo, &pft, (char*)0)) < 0)
+		log("FATAL: %s\n", QENV('g')), bye(1);
 	pt_reg(PT_GUI, m_pid, &gui_dead);
 	m_gf0 = glob_flg;
 	set_fd(&m_inpipe, pfi); set_fd(&m_outpipe, pfo); set_fd(&m_tpipe, pft);
@@ -197,8 +197,8 @@ void GuiStub::mcfg_win(int flg) {
 	if (flg&    32) wupd_i2('S', CFG_SV_BACKUP.i);
 	if (flg&    64) wupd_i2('A', CFG_ASV_BACKUP.i);
 	if (flg&   128) wupd_i2('T', CFG_TLOG_BACKUP.i);
-	if (flg&   256) mcfg_ud('k', &CFG_AO_DIR,  tmp_dir, tmp_dir_len);
-	if (flg&   512) mcfg_ud('w', &CFG_WAV_DIR, hsh_dir, hsh_dir_len);
+	if (flg&   256) mcfg_ud('k', &CFG_AO_DIR,  QENV('t'), QENVL('t'));
+	if (flg&   512) mcfg_ud('w', &CFG_WAV_DIR, QENV('h'), QENVL('h'));
 	if (flg&  1024) wupd_ls('K', CFG_AO_ACTION.i);
 	if (flg&  2048) wupd_i ('L', CFG_AO_TLIM.i);
 	if (flg&  8192) wupd_i1('d', CFG_DEVEL.i);

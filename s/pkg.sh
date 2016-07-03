@@ -7,7 +7,7 @@ trgdir=/usr/share/$nm
 tmptree=$tmpr/$$
 tmplf=$tmptree$trgdir
 bin="lf.bb lf.gui lf.bin"
-misc="lf lf.ini help.txt ex.lf lf.gtk.rc.def COPYING"
+misc="help.txt ex.lf lf.gtk.rc.def COPYING"
 who="Marton Laszlo Toth (initial dot initial dot fullsurname at gmail dot com)"
 dsc0="audio lab with emphasis on linear filters"
 

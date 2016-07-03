@@ -124,7 +124,7 @@ int Dot::dot_dead(int pid, int stat, int td) {
 
 int Dot::start() {
         if (m_pid) { log("dot already started: pid %d", m_pid); return -3; }
-	const char * path = getenv("LF_DOT_PATH"); if (!path) path = "dot";
+	const char * path = "dot"; // TODO: config(?)
 	m_pid = launch(path, "!>Tt", &m_pipe, "-Tplain-ext", (char*)0);
 	pt_reg(PT_DOT, m_pid, &dot_dead);
 	return (m_pid<0) ? (log("failed to start %s\n", path), -1) : 0;
@@ -133,8 +133,8 @@ int Dot::start() {
 void Dot::flush() {
 	static char * t_dot = 0;
 	if (debug_flags & DFLG_GRTMP) {
-		if (!t_dot) t_dot = (char*)malloc(wrk_dir_len+8), memcpy(t_dot, wrk_dir, wrk_dir_len),
-								  memcpy(t_dot+wrk_dir_len, "/gr.dot", 8);
+		if (!t_dot) t_dot = (char*)malloc(QENVL('w')+8), memcpy(t_dot, QENV('w'), QENVL('w')),
+								  memcpy(t_dot+QENVL('w'), "/gr.dot", 8);
 		int fd = creat(t_dot, 0644);
 		if (fd<0) perror(t_dot);
 		else write(fd, m_buf, m_n), close(fd);

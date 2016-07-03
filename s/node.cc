@@ -4,6 +4,7 @@
 #include <fcntl.h>
 
 #include "glob.h"
+#include "pt.h"
 #include "cmd.h"
 #include "trk.h"
 #include "guistub.h"
@@ -1330,12 +1331,12 @@ int Node::obj_help(int cl) {
 	log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
-		case 'w': case 's': s = "instrument(cfg)"; break;
+		case 'w': case 's': s = "wrap/cfg"; break;
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
 		case 'i': s = "iterated box"; break;
-		case 'w'+256: case 's'+256: s = "instrument(play)"; break;
+		case 'w'+256: case 's'+256: s = "wrap/play"; break;
 		case '_': return EEE_NOEFF;
 		default: return NDE_WTF;
 	}
@@ -1551,8 +1552,8 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	if (!fn || !*fn) {
 		if ((!*(fn=save_file_name) && (ec=EEE_NONAME)) || (coward(fn) && (ec=EEE_COWARD)))
 			return (flg|NOF_FGUI) ? (gui2.sn("\tf>W", 4), ec) : ec; }
-	else if (!memcmp(fn, "/" , 2)) { asvf = 1; fn = autosave_name;   n_bk = CFG_ASV_BACKUP.i; }
-	else if (!memcmp(fn, "//", 3)) { asvf = 1; fn = autosave_name_x; n_bk = 0; }
+	else if (!memcmp(fn, "/" , 2)) { asvf = 1; fn = QENV('a');   n_bk = CFG_ASV_BACKUP.i; }
+	else if (!memcmp(fn, "//", 3)) { asvf = 1; fn = QENV('x'); n_bk = 0; }
 	else if (coward(fn)) { return EEE_COWARD; }
 	else if (is_asv_name(fn)) { return EEE_OVWASV; }
 	else if (!dir->id()) { snf = 1; }

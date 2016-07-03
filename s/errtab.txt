@@ -60,7 +60,10 @@ PTE_ACVSIG   Audio converter crashed
 PTE_ACVZERO  Audio file contained only zeroes, nothing written
 PTE_ACVHMM   Audio converter not exited, not signalled, hmmm????
 PTE_WHAT     Child process not exited, not signalled, hmmm????
-PTE_PKWAIT   command 'killall pulseaudio did not return in spec. wait time
+PTE_PKWAIT   command 'killall pulseaudio' did not return in spec. wait time
+PTE_CMDLINE  error(s) in command line options (see console/log)
+PTE_INICRE   failed to create ini file (see console/log)
+PTE_INIPARSE error(s) in ini file (see console/log)
 PTE_WTF      you just have found a bug (pt)
 S15_________ __________________________________________________________(BUG)__
 NDE_WTF      you just have found a bug (node)

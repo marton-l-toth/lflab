@@ -1,5 +1,11 @@
 #!/bin/bash
+function osbtab {
+        cut '-d|' -f$1 $in | od -tu1 -w$2 | sed 's/^[0-9]*//;s/\(32 *\)*10 *$//;s/ //g;s/$/%1073741824/' |
+             grep -v '^%' | bc | grep -n ^ | sed 's/\([0-9]*\):\(.*\)/    case \2: return \1;/'
+}
+
 if [[ -z "$1" ]]; then echo "usage: $0 <input-file>"; exit 1; fi
+in="$1"
 TMPF=/tmp/mk_errtab.$$
 nv=$(expr $(wc -l < "$1") + 2)
 echo -e "#ifndef __qwe_cfgtab_inc\n#define __qwe_cfgtab_inc\n"
@@ -9,14 +15,18 @@ echo -e "struct cfg_ent { int i, i_d, i_m, i_M; char *s; const char *s_vd; };"
 grep -on '^[a-zA-Z0-9_]*' "$1" | sed 's/\(^[0-9]*\):\(.*$\)/#define CFG_\2 (cfg_tab[\1])/'
 
 echo -e "\n#ifndef QWE_DEFINE_CFGTAB\nextern cfg_ent cfg_tab[$nv];\n#else"
-echo -e "cfg_ent cfg_tab[$nv] = {{0,0,0,0,0}, "
+echo "static int osb_find(const char *s) { switch(osb_hash(s)) {"
+osbtab 1 13
+osbtab 6 7
+echo -e "    default: return -1; }}\ncfg_ent cfg_tab[$nv] = {{0,0,0,0,0}, "
 
-sed 's/ *|/|/g' "$1" | awk '-F|' \
-	'{ if ($2=="s") print "{ 0,0,0x7fffffff," 65536*$4+$5 ",0,\"LF_"$1"\\0"$3"\" },";
-		else print "{"$3","$3","$4","$5",0,\"LF_"$1"\\0\"\""$3"\"},"; } '
+sed 's/ *|/|/g' "$1" | awk '-F|' 'BEGIN{sbl=0}
+	{ if ($2=="s") { sbl += $5+1; print "{ 0,0,0x7fffffff," 65536*$4+$5 ",0,\""$1"\\0"$3"\" },"}
+		else print "{"$3","$3","$4","$5",0,\""$1"\\0\"\""$3"\"},"; }
+	END{print "{0,0,0,0,0}};"; print "static char cfg_sbuf[" sbl "];";} '
 
-echo -e "{0,0,0,0,0}}; \n#endif // define_cfgtab\n\n#endif  // __qwe_cfgtab_inc"
+echo "static const char * cfg_help[] = { 0,"
+cut '-d|' -f6,7 $in | sed 's/|/\\0""/;s/^/"/;s/$/",/'
+echo "0};"
 
-
-
-
+echo -e "#endif // define_cfgtab\n\n#endif  // __qwe_cfgtab_inc"
