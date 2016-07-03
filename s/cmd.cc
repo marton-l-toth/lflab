@@ -94,6 +94,7 @@ void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
 }
 
 int CmdBuf::read_batch(const char * name, int nof1) {
+	Clock clk; clk.reset();
 	int ec, fd = open(name, O_RDONLY);
 	if (fd<0) return GCE_FOPEN;
 	if (nof1&1) { if (!(glob_flg&GLF_EMPTY)) return NDE_EXPVIRG;  Node::lib_start(); }
@@ -104,8 +105,9 @@ int CmdBuf::read_batch(const char * name, int nof1) {
 	CmdBuf cb; cb.init(fd, nof1&(NOF_FLAGS&~NOF_FGUI));
 	do ec = cb.read_f(); while (ec>=0);
 	if (nof1&1) Node::lib_end();
-	if (ec==GCE_EOF) ec = 0;
-	close(fd); return ec ? ec : (EEE_SUM &-!!cb.m_errcnt);
+	if (ec==GCE_EOF) ec = (EEE_SUM &-!!cb.m_errcnt);
+	close(fd); if (!ec) log("read_batch OK, t=%d", clk.get());
+	return ec ? ec : (EEE_SUM &-!!cb.m_errcnt);
 }
 
 int CmdBuf::bprep(int siz) {

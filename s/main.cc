@@ -31,12 +31,12 @@ void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s",
 	    "see the file \"COPYING\" for details"); }
 
 static void rf(const char ** ppf) {
-	Clock clk; for (int ec, i=0, ro=1; ppf[i]; i++) {
+	for (int ec, i=0, ro=1; ppf[i]; i++) {
 		if (!ppf[i][0]) continue;
 		if (ppf[i][0]=='/' && !ppf[i][1]) { ro = 0; continue; }
-		clk.reset(); log("reading %s... (r%c)", ppf[i], 119-8*ro);
+		log("reading %s... (r%c)", ppf[i], 119-8*ro);
 		if ((ec = CmdBuf::read_batch(ppf[i], NOF_BATCHF|(ro&&ppf[i+1]))) < 0) gui_errq_add(ec);
-		log("%s: %s (%d)", ppf[i], ec<0 ? err_str(ec) : "ok", ec<0 ? ec : clk.get());
+		if (ec<0) log("%s: %s(%d)", ppf[i], err_str(ec), ec);
 	}}
 
 #define INI_LIST hi(), nd0_init(), nz_init(), calc_init(), graph_init(), nd_init(), mx_init(), wrap_init(), \
