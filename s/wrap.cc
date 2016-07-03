@@ -698,19 +698,23 @@ int WrapAutoVol::parse_dim(const char * s) {
 	t[5] = atoi(s+6); return upd_xy12rt(t);
 }
 
-#define AVLOOP4(F) for (int i=0; i<nx; i++) { for (int j=0; j<ny; j++) {     \
-		       for (int k=0; k<n1; k++) { for (int l=0; l<n2; l++) {  \
-			   if (vol_ix(i,j,k,l)!=cnt) return VTE_IXDIFF;        \
-			   m_dat[cnt++] = F (i,j,k,l) + tr.get_short_k(ver); }}}}
+#define AVLOOP4(F,V) for (int i=0; i<nx; i++) { for (int j=0; j<ny; j++) {    \
+		         for (int k=0; k<n1; k++) { for (int l=0; l<n2; l++) { \
+			     m_dat[cnt++] = F (i,j,k,l) + tr.get_short##V(); }}}}
 
 int WrapAutoVol::fill_data(char *s, int ver, int cflg) {
         B91Reader tr; tr.init(s);
         int cnt=0, nx=m_xy12rt[0], ny=m_xy12rt[1], n1=m_xy12rt[2], n2=m_xy12rt[3];
 	if (DBGCV) log("fill_data: compat flg = %d", cflg);
-	if (cflg) { AVLOOP4(pred2o); }
-	else 	  { AVLOOP4(pred2);  } 
-	return 0;
-}
+	switch(4*!!cflg + ver) {
+		case 0: AVLOOP4(pred2, 0) return 0;
+		case 1: AVLOOP4(pred2, 1) return 0;
+		case 2: AVLOOP4(pred2, 2) return 0;
+		case 4: AVLOOP4(pred2o, 0) return 0;
+		case 5: AVLOOP4(pred2o, 1) return 0;
+		case 6: AVLOOP4(pred2o, 2) return 0;
+		default: return VTE_WTF;
+	}}
 
 #define PREDN(X,Y) m_dat[ix+m_hood[4*X+Y]]
 

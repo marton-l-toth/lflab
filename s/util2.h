@@ -26,20 +26,24 @@ int b91_cost0(const short *q, int n), b91_cost1(const short *q, int n), b91_cost
 
 class B91Reader {
         public: 
-                void init(char *p) { s=p; bits = 0;}
+                void init(char *p) { s=p; bits = 0; cur=0;}
                 bool eof() { return *s<36 || *s>126; }
-                int get_bit() { if (!bits) get_bit_2();
-				int r = (cur&1); cur>>=1; --bits; return r; }
-		void get_bit_2();
-                int get_bebin(int n);
+                inline int get_bit()   { int r = (cur&1); cur>>=1; --bits; return r; }
+		inline void get13() {
+			if (*s<36 || *s>126) bits+=13;
+			else if (s[1]<36 || s[1]>126) cur |= (*(s++)-36)<<bits, bits+=13;
+			else cur |= ((*s-36)*91 + (s[1]-36))<<bits, s+=2, bits+=13; }
+		inline void fill20() { if (bits<20) get13(); if (bits<20) get13(); }
+		inline void fill13() { if (bits<20) get13(); }
+                inline int get_bebin(int n) {
+			int r=0; for (int i=0; i<n; i++) r = 2*r+(cur&1), cur>>=1; return bits-=n, r; }
                 int get_short0();
                 int get_short1();
                 int get_short2();
-                int get_short_k(int k);
         protected:
                 char *s;
                 int bits;
-                int cur;
+                unsigned int cur;
 };
 
 class B91Writer {

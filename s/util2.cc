@@ -84,14 +84,6 @@ int b91_cost2(const short * q, int n) {
 	int v = 0; for (int k,i=0; i<n; i++) k = abs(q[i]), v += B91_SEL2(k, 2, 5, 8, 13, 19);
 	return v; }
 
-void B91Reader::get_bit_2() {
-	if (*s<36 || *s>126) cur=0, bits=-1;
-	else if (s[1]<36 || s[1]>126) cur = *(s++)-36, bits=13;
-	else cur = (*s-36)*91 + (s[1]-36), s+=2, bits=13; }
-
-int B91Reader::get_bebin(int n) {
-        int r = 0; for (int i=0; i<n; i++) r = r+r+get_bit();    return r; }
-
 static unsigned char rev8[256] = {
           0, 128,  64, 192,  32, 160,  96, 224,  16, 144,  80, 208,  48, 176, 112, 240, 
           8, 136,  72, 200,  40, 168, 104, 232,  24, 152,  88, 216,  56, 184, 120, 248, 
@@ -133,17 +125,17 @@ void B91Writer::put_short_tpn(int ty, const short *p, int n) { switch(ty) {
 	default: log("BUG: b91/kpn: ty=%d", ty); return; }}
 
 int B91Reader::get_short0() {
-        int base, bits;
+        int base, bits; fill20();
         if (!get_bit()) return 0;
         if (!get_bit()) base=bits=1;
         else if (!get_bit()) base=3, bits=2;
         else if (!get_bit()) base=7, bits = 4;
-        else get_bit() ? (base=0x57, bits=15) : (base=0x17, bits=6); 
+        else get_bit() ? (fill13(), base=0x57, bits=15) : (base=0x17, bits=6); 
 	return get_bit() ? -base-get_bebin(bits) : base+get_bebin(bits);
 }
 
 int B91Reader::get_short1() {
-        int base, bits;
+        int base, bits; fill20();
         if (!get_bit()) {
                 if (!get_bit()) return 0;
                 base=1; bits=1;
@@ -155,16 +147,11 @@ int B91Reader::get_short1() {
 }
 
 int B91Reader::get_short2() {
-        int base, bits;
+        int base, bits; fill20();
         if (!get_bit()) { if (!get_bit()) return 0; base=1, bits=2; }
         else if (!get_bit()) { base = bits = 5;  }
         else { if (get_bit()) base=0x225, bits=15; else base=0x25, bits=9; }
         return get_bit() ? -base-get_bebin(bits) : base+get_bebin(bits);
-}
-
-int B91Reader::get_short_k(int k) {
-        if (!k) return get_short0();
-        return k==1 ? get_short1() : get_short2();
 }
 
 int packflg(int flg, const int * mv) {
