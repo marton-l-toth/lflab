@@ -291,7 +291,7 @@ class SWrapSOB : public SOB {
 		SWrapSOB(int uarg) : SOB(uarg) {}
 		SWrapSOB(const SWrapSOB * that, int uarg);
 		void ini_default(int k);
-                int save2(SvArg * p) { return log("swrsob/save %d", p->st),  p->st2=-1, 1; }
+                int save2(SvArg * p) { if (DBGC) log("swrsob/save %d", p->st); return  p->st2=-1, 1; }
                 void debug2();
 		SOB_RW_F0(con, DblVec) 
 		SOB_RW_F0(tab, SWrapTab)
@@ -1040,7 +1040,7 @@ void SWrapSOB::debug2() {
 }	
 
 void SWrapSOB::ini_default(int k) {
-	log("SWrapSOB::ini_default %d", k);
+	if (DBGC) log("SWrapSOB::ini_default %d", k);
 	m_con.set(DblVec_default(0));
 	m_tab.set(SWrapTab_default(0));
 }
