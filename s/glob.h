@@ -31,7 +31,8 @@
 #define DFLG_WRAP   0x4000
 #define DFLG_TRK_C  0x8000
 #define DFLG_PT     0x10000
-#define DFLG_FE     0x10000
+#define DFLG_FE     0x20000
+#define DFLGZ       0x3ffff
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk "\
 		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
 		  "4000-wrap 8000-trkcalc 10000:pt 20000:fe"

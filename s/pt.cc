@@ -226,6 +226,7 @@ static const char ** cfg1(int ac, char**av) {
 		}}
 		if (i==ac-1) ee_add(-4); else cfg_setx(ce, av[i+1]), ++i;
 	}
+	debug_flags = CFG_DEBUG_FLG.i;
 	if (!*CFG_XTERM.s) cfg_setstr(&CFG_XTERM, pfind_ls(xterm_ls));
 	if (dfi==2) cfg_write(0);
 	backup(QENV('>'), CFG_LOG_BACKUP.i); mklog();
@@ -391,7 +392,6 @@ const char ** pt_init(int ac, char ** av) {
 	FPU_INI; vstring_set(v_major, v_minor);
 	qe_ini(); cfg0(); // qe_dump(); 
 	const char ** ret = cfg1(ac, av);
-	debug_flags = 0; // TODO: debug
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
 	if ((pt_nullfd = open("/dev/null", O_RDONLY)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("nullfd"), exit(1);

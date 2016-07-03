@@ -26,6 +26,7 @@ GUI_TRKUP   |i|100        |10  |999  |trkup |track play (arrow) update interval 
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
 QTST_ADIF   |i|24         |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 
 QTST_RDIF   |i|20         |10  |52   |qtstr |quicktest/samp: -log2 of max rel diff
+DEBUG_FLG   |i|0          |0   |DFLGZ|dflg  |init. debug_flg (decimal, type 'd?' in console)
 _1_NOEX     |i|0          |0   |1    |n     |skip default example tree (!e)
 _H1         |i|0          |0   |1    |h     |show help
 _H2         |i|0          |0   |1    |?     |show help
