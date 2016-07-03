@@ -19,31 +19,22 @@ Steven W. Smith for his free DSP book (dspguide.com)
 {{{0.getting started}}}
 lflab is free software with ABSOLUTELY NO WARRANTY:
 ==> 0.about
-A short overview of GUI elements, and of audio config:
-==> 0.gui
+If you are running lflab for the first time, you probably have
+to configure the audio output:
 ==> 1.audio
-The two windows already open:
-==> 1.main
-==> 1.tree
-"!e" stands for "examples". The items 1,2,... are clipboards
-double click (on the number not the arrow) to open them.
-==> 2.!b and !e
-==> 1.clipboard
-On the clipboards, left clk. plays (&stops when clicked again),
-but each of these sounds is just a single representative of an
-instrument which can be opened with right click for playing.
-==> 1.instrument(play)
-There is help for most windows (a "?" button or in a menu "+").
-The examples in "!e" are read-only but you can make copies
-or create new objects. (Sounds/instruments can be quickly
-copied with a middle-click (e.g. on the play grid), other
-objects can only be created in the tree view window.
----
-If you make new instruments/tracks/components, save them with
-the "save" button. (autosave is done at regular (configurable)
-intervals, and optionally on exit.)
-THERE IS NO UNDO, SAVE OFTEN!!!
-==> 2.save files
+You can check if audio is working by opening one of the example
+clipboards, and click on the icons (various colors, 2x3 chars)
+==> .!e.6 -- left-click:play right-click: open instrument
+==> 1.wrap/play -- the window opened by right-click
+Most windows either have a "?" button, or a "+" menubutton with
+a "help" command. If you are new to lflab, it is recommended to
+read the following general help texts:
+==> 0.gui/general -- overview of GUI elements
+==> 2.object tree -- general overview
+==> 2.wrap -- sound/instrument objects
+==> 2.box -- basic building blocks of sounds
+==> 2.!b and !e -- overview of builtins and examples
+==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
 {{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
 and (unless you started with the "-n" option) the "!e" subtree.
@@ -67,33 +58,164 @@ osc : simple applications of non-linear (rev.quad.) oscillator
 sel : some filter config using selector boxes
 trk : tracks
 wave : waves modulated by other waves
-{{{2.box (general)}}}
+{{{2.object tree}}}
+The object tree can be browsed in the "LR" window (the left and
+right views are the same tree).
+==> 1.tree -- create new objects, open/copy/move/...
+==> 2.save files -- saving/reloading the objects you created
+The object tree can contain the following kinds of objects:
+- Folder: contains at most 32 of any kind of named objects
+- Clipboard: contains at most 32 unnamed (0..9,a..v) wraps
+- Box: a machine with 0...30 input and 1...30 output ports
+- Wrap: playable sound/instrument object, a front-end for boxes
+---
+Tracks are of a somewhat mixed category: they are fully usable
+as boxes (but also directly playable), and also a collection of
+wrap objects.
+==> 2.!b and !e -- builtin and example objects
+==> 2.box
+==> 2.wrap
+==> 1.clipboard
+{{{2.LTI filters}}}
+LTI (linear & time-invariant) filters are defined as follows:
+- When you multiply the input by a constant (amplify), the
+output will also be multiplied by the same constant
+- When you add (mix) the filtered output of two inputs, the
+output is the same as for filtering the sum of two inputs
+- When you delay the input, the output will be delayed by the
+same amount (otherwise unchanged).
+---
+Builtin and example filters (names beginning with "=") are LTI
+filters (some of them can have variable parameters -- these
+filters are only time-invariant when all parameters (2nd, 3rd
+etc. inputs) are constant.)
+---
+When you chain LTI filters, or sum their outputs with constant
+weights, you get LTI filters as a result.
+---
+In wrap (instrument) config, as "filter box" an LTI filter is
+expected -- this allows sharing a filter between multiple
+source boxes. (when you give a non-LTI filter as filter, volume
+setting and/or mixing will not work as expected -- if you want
+to use non-LTI filters, build a graph box connecting the source
+to the filter.
+==> 1.graph-box
+{{{2.wrap}}}
+In lflab, the basic building blocks are boxes:
+==> 2.box -- machine with 0..30 input and 1..30 output ports
+Because most boxes need input on their input ports and all have
+undefined duration, they are not directly playable (except for
+tracks). Wraps provide a generic interface for boxes, where the
+sound is selected via (at most) 8 controls (grid column/row + 6
+sliders). Wraps have the following two windows:
+==> 1.wrap/play -- play/set/quick copy
+==> 1.wrap/config -- configure instrument, plot, ==>wav
+There are no separate "instrument" and "sound" objects in the
+object tree -- if you configure an instrument once, individual
+sounds (e.g. in a track) will be copies of this object (with
+different control positions), and the instrument configuration 
+will be reachable/editable from each individual sound.
+---
+It is possible to create wraps as named objects in folders,
+but generally it is more convenient to use clipboards. Wraps
+are also the building blocks for tracks. In clipboards and
+tracks wraps are represented by as small icon (also visible in
+the wrap/config window): the top 2 letters (and bg/fg colour)
+come from the (src/filter) boxes used, the other 4 letters show
+the x,y,s1,s2 control positions.
+---
+There are two kinds of wraps:
+==> 2.direct wrap -- maps the 8 controls to constant inputs for
+a source box, an (optional) filter box, and general parameters
+(volume/duration/left-right balance etc.)
+==> 2.shadow wrap -- maps the 8 controls to controls of another
+wrap (useful for track editing, by changing a single "reference
+wrap" you can shift a melody or change the instrument without
+editing every single sound).
+{{{2.direct wrap}}}
+When a direct wrap is played, a source box is started with
+constant (DC) inputs on all input ports. If there is no filter
+box, the output(s) are played/plotted/written(wav) directly.
+If there is a filter box (which must have exactly one output
+and at least one input port), the source box output is fed to
+the first (0th) input of the filter box, and the filter box
+output is played.
+---
+Currently there is no output configuration: source boxes with
+at least 2 output are assumed to be stereo with the first two
+outputs as left and right channel.
+---
+The filter box is assumed be linear and time independent.
+==> 2.LTI filters
+When using filters (especially complicated ones) the output
+volume can vary greatly. For the first 4 controls (x,y,s1,s2)
+this can be compensated automatically. By default, s5 is for
+L/R and s6 is for volume, so it is recommended to use s3/s4 for
+inputs which do not significantly affect output volume.
+==> 3.autovol -- GUI for autovol config
+There are two ways for defining duration of a box: you either
+specify up/hold/down time or (when the box itself goes silent
+after a while) stop the box after a (specified, default 0.5sec)
+long "silence" (specified, default: output below 1/100000).
+(for filters, only the latter option is available).
+---
+All the source/filter input values (except first filter input
+which comes from the source box) and volume/duration/left-right
+parameters can either be constant or an interval mapping from
+one of the 8 controls (col.,row,6 sliders).
+==> 1.wrap/config -- wrap config GUI
+{{{2.shadow wrap}}}
+When a shadow wrap is played, the control positions are mapped
+to controls of a different wrap object ("target"). The target
+wrap may also be a shadow wrap, but to make an actual sound,
+you need a direct wrap at the end of the chain. (circular
+references are not allowed.)
+---
+For each control, you have the following options:
+- keep control position of target wrap
+- pass a real number in [0..1] interval
+- pass an integer
+---
+You may also set a (weighted) sum 
+Shadow wrap: you can set another wrap object as "target", and
+specify a mapping/reordering from x,y,s1...s6 values to target
+x,y,s1...s6 values. (these are optional, some of x,y,s* can be
+set to constant or "keep target value". The target can also be
+a shadow wrap, but -- in order to hear some sound -- at the end
+of the chain a direct wrap is needed. 
+==> 1.wrap/config -- wrap config GUI
+(TODO : examples)
+{{{2.box}}}
 A box is a little machine with 0...30 input ports and 1...30
 output ports, each of which receives/sends 44100 real(64-bit)
-numbers per second. From simple builtin boxes you can build
-more complicated ones, and ultimately wrap them in an
-instrument configuration to be able to conveniently select
-their inputs and hear their outputs.
+numbers per second. Boxes can be builtin boxes or user-defined
+boxes. Click the following links for details:
+==> 2.!b and !e -- builtin and example user-def. boxes
+(if you want to code your own builtin box, see s/c/zB.cc)
+==> 1.graph-box -- directed acyclic graph of other boxes
+==> 1.iterated box -- the same box chained multiple times
+==> 1.calc-box -- stateless calculator box
+==> 1.track -- collection of (timed) wrap objects
+Since most boxes have inputs on which they need values, and all
+boxes have undefined duration, they cannot be played directly.
+(Exc.: tracks have play/loop button/menu for convenience.)
+Wrap (sound/instrument) objects provide a generic interface to
+make playable (and recordable) sounds from boxes.
+==> 2.wrap
+Each input of a box can be constant or variable over time.
+Some boxes do not accept variable inputs on some ports: this
+means that all but the first sample (or, for some boxes, all
+but the first sample in each (about 10ms) segment) of the
+variable input will be ignored.
 ---
+Box/port naming conventions (in !b and !e) :
 Most non-filter boxes can accept constant or variable input on
 all input ports (except "phs" for waves "~xyz"), and most 
 filters "=xyz" can take variable input only on the first input
 port. Exceptions to this are mentioned in the description of
-builtin boxes. "Not accepted" variable input does not result
-in an explicit "error", only most of the input is ignored
-(except the first sample, or in some cases the first sample
-in each time-slice). On inputs labeled as "[xy]", lists are
+builtin boxes. On inputs labeled as "[xy]", lists are
 ==> 2.[lists]
 expected, these are constant inputs unless noted otherwise.
----
-Editable boxes can be of the following types:
-==> 1.graph-box
-==> 1.iterated box
-==> 1.calc-box
-==> 1.track
-Browse "!b" and "!e" for primitive boxes and examples of
-editable boxes.
-==> 2.!b and !e
 {{{2.[lists]}}}
 Some builtin boxes expect lists of small integers on some of
 their input ports (e.g. [3 -4 -5 2]). The maximal list sizes
@@ -135,7 +257,8 @@ object trees will be merged, and you can save them in one file.
 (You get errors for name collisions; lots of them when you try
 to load the same file twice.) You can return to "empty" state
 with the "restart" commands from the main/file menus.
----
+==> 5.load file
+==> 5.save as
 Unless turned off, autosaves are made at regular intervals. For
 both autosaves and regular save files backups may be made.
 Backup copies have "--1", "--2", ... endings for both autosave
@@ -229,9 +352,8 @@ always loaded automatically unless lflab is started with the
 Save as...: this is a standard GTK file save window.
 Here you can save your project with a (different) file name.
 (When your project has no filename yet, the "save" button in
-the main window also opens this window.) It is recommended to
-choose a file name which ends with ".lf", so that the file will
-be shown in the "load" window using the default filter.
+the main window also opens this window.) If the filter is on
+("lflab saves") a ".lf" ending will automatically be appended.
 ---
 lflab will refuse to overwrite non-regular files (directories/
 symlinks/sockets/...), files which do not seem to be lflab save
@@ -276,24 +398,23 @@ LR - display tree window (on top)
 ++ - main menu (here you can open the console, show the
 pole-zero diagram for the last filter, configure audio, write
 timing log, and exit)
-save - save file (name can be changed in the tree window)
-rec - start/stop recording (see auconv link below)
 CPU meter: green-OK, yellow-high load, red-danger grey-muted
 CPU meter should run about 1 dashed line / sec, depending
 on the speed setting.
 (if stopped or very fast then something doesn't work...)
----
+save - save file ("save as" is in the file menu in tree window)
+rec - start/stop recording (see auconv link below)
+==> 1.tree
+==> 1.auconv
 Mute mode: Ctrl+right-click on CPU meter (grey when muted)
 In mute mode the audio device is closed, so other programs
 can use it (but close them before "unmuting"), sounds/boxes
 are not stopped, recording (if on) continues.
 ==> 1.audio
-==> 1.tree
-==> 1.auconv
 Note: main window is configured to be "always on top" whenever
 the window manager permits it. This has a side effect: when you
-open a small window (e.g. instrument/play and input windows),
-it may "hide" behind the main window.
+open a small window (e.g. wrap/play and input windows), it may 
+"hide" behind the main window.
 {{{2.pulseaudio}}}
 Disclaimer: I have only tried with pulseaudio 2.0 using a
 more-or-less default configuration. If you know better, please
@@ -396,7 +517,7 @@ folder in the left/right tree view (in this window).
 ---
 The object tree can contain the following types of objects:
 folders (see below), intruments, boxes and clipboards.
-==> 1.instrument(cfg)
+==> 1.wrap/config
 ==> 1.clipboard
 ==> 2.box (general)
 A folder can contain up to 32 named objects (of any type).
@@ -410,7 +531,7 @@ On the bottom, there are buttons for rename/local copy/
 copy/move/del and a create object menu button. The text field
 above the buttons is used for all these operations.
 (for copy/move set the text on the "from" side). 
-{{{0.gui}}}
+{{{0.gui/general}}}
 Gui -- general description
 Cyan (like "save" on main win.) -- simple button
 Yellow (like "++" on main win.) -- menu button
@@ -461,7 +582,7 @@ forgotten "dev" (see 0.)
 4. unless you finished all keys/controls/pads/etc. go back to 2
 5. flush log (or exit), and send me the lf.log file
 @@@
-{{{1.instrument(play)}}}
+{{{1.wrap/play}}}
 Small button on the left, below (or between) the sliders:
 left-click: focus (keyboard) on grid, right-click: menu
 --- MOUSE ---
@@ -507,11 +628,16 @@ Because an external program is started, opening the first
 graph box window may cause an audio buffer underrun.
 ==> win.tree
 {{{1.iterated box}}}
-An iterated filter is a filter chain consisting of multiple
-instances of the same "simple" filter (*) (which can be set 
-from the L/R sel.folder or shortlist). When scale is "con",
-all filters have the same parameters; you can also have the
-last parameter (**) vary along a specified scale.
+An iterated box is a compound box consinsting of multiple
+instances of the same "simple" box, chained (the first input
+of the (i+1)th box is connected to the (only) output of the
+(i)th box. This arrangement is specifically fitting for filter
+chains (when the simple box is a linear filter, the iter. box
+will also be one), but the simple box can be set (from L/R sel.
+folder or shortlist) to any box with at least one input and
+exactly one output. The first input is used for chaining, the
+last input (**) may vary on a specified scale, all other inputs
+are shared between all instances of the simple box. 
 ---
 The iterated filter inherits all inputs from the simple filter
 (except the last one, when a scale is specified). Extra inputs:
@@ -524,8 +650,8 @@ The iterated filter inherits all inputs from the simple filter
 (#b) is always present, (z0) when scale is not "con", "z1=z0zr"
 switches between (z1) and (z*)
 ---
-(*) if (#b) is zero or "simple filter" is undefined, the iter.
-filter simply copies the (first) input to the output.
+(*) if (#b) is zero or "simple box" is undefined, the iter. box
+simply copies the (first) input to the output.
 (**) if you want an other parameter (or multiple ones) to be
 varied, wrap the filter in a simple graph box.
 ---
@@ -582,7 +708,7 @@ X or backspace - cut & select previous
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
 set the play mode (clik/hold/tggl/uniq), described here:
-==> 1.instrument(play)
+==> 1.wrap/play
 "stp" stops, "kill" stops sounds without "down" section
 clicking on the 6-char-icon plays the selected sound
 Right-click on the mini-grid opens the play window, left-click
@@ -617,27 +743,30 @@ The calculation goes left-to-right, so (assuming x=9) when it
 reaches 11.2%, the first column is already playable.
 (known bug: sometimes the progress bar is stuck at 99.x%, but
 it is only a GUI error, the calculation is actually finishes)
-{{{1.instrument(cfg)}}}
-An instrument/sound is a wrapper object which makes boxes
-playable. You can give constant (DC) inputs to a source box and
-an optional filter box. These inputs can be either fixed or
-selectable from a (linear/logarithmic/quadratic etc.) interval
-using grid click x and y coordinates and some (max.6) sliders.
-In addition to the box inputs, you can set duration, simple
-enveloping, volume, and L/R balance.
+{{{1.wrap/config}}}
+This help text describes the instrument config window. For a
+general description of how wrap objects work in lflab, see:
+==> 2.wrap
+For playing the instrument, open the play window by right-
+clicking on the mini-grid (top center):
+==> 1.wrap/play
+You can also play a sound by left-clicking the mini-grid (but
+the sliders are only available in the play window), or clicking
+the sound icon (left to the mini-grid).
 ---
-This object is called "instrument/sound" because from every
-single sound the whole instr. config can be edited, and every
-instrument config has a specific "selected" sound (marked by
-an "X" on the play grid, and specified by the first column of
-the scale groups.)
----
-As you may have noticed, this window is somewhat complicated,
-so the description is broken to several parts:
-==> 3.play/plot
-==> 3.autovol
-==> 3.scale lines
-==> 3.scale groups
+The following links describe parts of the window, from top to
+bottom ( (D) : direct wrap only, (S) : shadow wrap only )
+==> 3.play/plot -- clik/hold/..., icon, mini-grid, plot(t/F)
+Tab select: [#], wav, cfg... (selects contents of line below)
+==> 3.grid config -- "[#]" tab
+==> 3.write to file -- "wav" tab
+==> 3.autovol -- "a.v" tab (D)
+==> 3.shadow cfg -- "sic" tab (S)
+Line groups: (open/close with "<>"/"<>" button on the right)
+==> 3.volume/envp -- (D)
+==> 3.source/filter -- (D)
+==> 3.scale lines -- (D)
+==> 3.target -- (S)
 {{{3.scale groups}}}
 Open/close scale groups with the "<>" / "><" buttons (right)
 ---volume/envlp(grp 1)---
