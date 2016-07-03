@@ -20,7 +20,7 @@ struct FEblk {
 //? Linear finite-element based filter (string/membrane/etc.)
 //? in - filter input
 //? #s - number of segments (CPU usage approx. linear with this)
-//? opt - reserved for future use
+//? opt - [] (empty list): default, 0: compatibility (buggy) mode
 //? x2, x1, x0 - coeff. for surface (quadratic) function
 //? y2, y1, y0 - coeff. for thickness (q.) function
 //? su0, su1 - suspension coeff. (1.0 - normal, 0.0 - floating)

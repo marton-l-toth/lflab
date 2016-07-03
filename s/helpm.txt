@@ -1,4 +1,4 @@
-0win 0etc 1icfg 2midi 1fd
+0win 0etc 1wr 2midi 1fd
 {{{0.about}}}
 lflab - lineral filter based audio lab
 vX.YY
@@ -390,8 +390,8 @@ setting. Unless you save the config in the main config window
 file), the setting will be effective only until you exit.
 ==> 1.config
 {{{1.main}}}
-This help text describes the main window. For general help, see
-==> 0.getting started
+This help text describes the main window (title "lf").
+==> 0.getting started -- click here for general help
 kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restart gnuplot (close all gnuplot windows)
 LR - display tree window (on top)
@@ -504,22 +504,23 @@ Since there is only one ini file (not counting the backups),
 this button saves all config, just like the save button in:
 ==> 1.audio
 {{{1.tree}}}
-This help text describes the tree window. For general help, see
-==> getting started
+This help text describes the tree window (title "LR").
+==> getting started -- click here for general help
+==> 2.object tree -- general description of object tree
 On the top, you can see the name of your file & the file menu:
 ==> 2.save files
 Here you can browse and edit the object tree (the same tree is
 visible on left & right views). For object selection (in other
 windows) you have 3 menu buttons ("[" "*" "]"): the middle one
 (with variable label) shows a shortlist of recently opened or
-edited objects, and "["/"]" show the objects in the selected  
-folder in the left/right tree view (in this window).
+edited objects, and "["/"]" show the objects in the left/right
+selected folder here.
 ---
 The object tree can contain the following types of objects:
 folders (see below), intruments, boxes and clipboards.
-==> 1.wrap/config
-==> 1.clipboard
-==> 2.box (general)
+==> 2.wrap -- sound/instrument
+==> 1.clipboard -- collection of wraps
+==> 2.box -- machines, building blocks of sounds
 A folder can contain up to 32 named objects (of any type).
 Name: up to 20 ASCII characters except dot(.) and dollar sign.
 Folders can be opened by double-clicking on the name or
@@ -536,14 +537,18 @@ Gui -- general description
 Cyan (like "save" on main win.) -- simple button
 Yellow (like "++" on main win.) -- menu button
 Green number + grey label (like vol. on main win.) -- counter
+---
 On counters, left click increments, right clicks decrements.
 For some counters, shift+click and ctrl+click incr/decr more.
 (not all counters have an attached slider)
+---
 For most menu buttons left & right click have the same effect,
 but for menus where the first item is in [brackets], left
 click activates the first item, without opening the menu.
-Text fields (like file name in top line of tree view window)
-are standard text fields, with usual copy & paste functions.
+---
+Text fields (like the two text fields at the bottom of the tree
+window, above the buttons) are standard text fields, with usual
+copy & paste functions.
 ---
 When strange things happen, it can be helpful to open the
 console (from main win./++ menu) because the information
@@ -556,6 +561,7 @@ Planned features (please don't take these as promises :) )
 - description for non-builtin boxes
 - plot/save/record to backgr. job (like autovol calc.)
 - more builtin boxes and example editable boxes
+- auto-tune for finite-element filters
 - support of various MIDI HW
 ==> 4.new devices
 {{{4.new devices}}}
@@ -580,7 +586,8 @@ You should see messages starting with "midi_c". When you don't,
 either the Linux kernel does not see your device, or you have
 forgotten "dev" (see 0.)
 4. unless you finished all keys/controls/pads/etc. go back to 2
-5. flush log (or exit), and send me the lf.log file
+5. flush log (or exit), and send me the lf.log file (you can
+find it in the ".lflab" directory under your home directory)
 @@@
 {{{1.wrap/play}}}
 Small button on the left, below (or between) the sliders:
@@ -603,6 +610,31 @@ Use the ESC key to enter / leave key edit mode.
 In key edit mode a purple box cursor is visible.
 Left-click to select square, mid-click to delete key,
 press (non-ESC) key to assign.
+{{{1.wrap/config}}}
+This help text describes the instrument config window. For a
+general description of how wrap objects work in lflab, see:
+==> 2.wrap
+For playing the instrument, open the play window by right-
+clicking on the mini-grid (top center):
+==> 1.wrap/play
+You can also play a sound by left-clicking the mini-grid (but
+the sliders are only available in the play window), or clicking
+the sound icon (left to the mini-grid).
+---
+The following links describe parts of the window, from top to
+bottom ( (D) : direct wrap only, (S) : shadow wrap only )
+==> 3.play/plot -- clik/hold/..., icon, mini-grid, plot(t/F)
+Tab select: [#], wav, cfg... (selects contents of line below)
+==> 3.grid config -- "[#]" tab
+==> 3.write to file -- "wav" tab
+==> 3.general config -- "cfg" tab
+==> 3.autovol -- "a.v" tab (D)
+==> 3.shadow cfg -- "sic" tab (S)
+Line groups: (open/close with "<>"/"<>" button on the right)
+==> 3.volume/envp -- (D)
+==> 3.source/filter -- (D)
+==> 3.scale lines -- (D)
+==> 3.target -- (S)
 {{{1.graph-box}}}
 At a time you can have one selected input (blue), a selected
 output (red) and a selected box (purple).
@@ -727,6 +759,7 @@ limit (affects only sounds in a track, in beats not seconds,
 Note: changing grid dimensions can change the selected sound
 (known bug: left col. in scl.grps. is not updated in this case)
 {{{3.autovol}}}
+"a.v" tab in the (direct) wrap config window
 When using source/filter pairs with a wide range of inputs,
 the output volume can vary greatly. The automatic volume
 calibration makes convenient playback of such configurations
@@ -743,33 +776,26 @@ The calculation goes left-to-right, so (assuming x=9) when it
 reaches 11.2%, the first column is already playable.
 (known bug: sometimes the progress bar is stuck at 99.x%, but
 it is only a GUI error, the calculation is actually finishes)
-{{{1.wrap/config}}}
-This help text describes the instrument config window. For a
-general description of how wrap objects work in lflab, see:
-==> 2.wrap
-For playing the instrument, open the play window by right-
-clicking on the mini-grid (top center):
-==> 1.wrap/play
-You can also play a sound by left-clicking the mini-grid (but
-the sliders are only available in the play window), or clicking
-the sound icon (left to the mini-grid).
+{{{3.shadow cfg}}}
+"sic" tab in the (shadow) wrap config window
+Currently there are two toggle buttons here:
+iadj.S/iadj.T mean source/target side integer adjustment.
+For controls in real interval mode (leftmost label "off"),
+these are ignored; they only matter for integer mode.
 ---
-The following links describe parts of the window, from top to
-bottom ( (D) : direct wrap only, (S) : shadow wrap only )
-==> 3.play/plot -- clik/hold/..., icon, mini-grid, plot(t/F)
-Tab select: [#], wav, cfg... (selects contents of line below)
-==> 3.grid config -- "[#]" tab
-==> 3.write to file -- "wav" tab
-==> 3.autovol -- "a.v" tab (D)
-==> 3.shadow cfg -- "sic" tab (S)
-Line groups: (open/close with "<>"/"<>" button on the right)
-==> 3.volume/envp -- (D)
-==> 3.source/filter -- (D)
-==> 3.scale lines -- (D)
-==> 3.target -- (S)
-{{{3.scale groups}}}
+When iadj.T is on, the control positions of the target wrap
+are added to the passed (integer) values.
+When iadj.S is on, the control positions of the used controls
+in the source (the shadow wrap in which you enable iadj.S) are
+added to the passed integers. This is only recommended to wraps
+which are used indirectly (TODO: example), because for direct
+use this means multiplying the control values by 2.
+==> 3.target -- how to change/configure target wrap
+{{{3.volume/envp}}}
 Open/close scale groups with the "<>" / "><" buttons (right)
----volume/envlp(grp 1)---
+The first scale group is for configuring volume, left-right
+and enveloping function.
+---
 "/*" and "\*" menu buttons set the shape of the "up" and "down"
 sections of the enveloping function (for the source box):
 (L)inear, (Q)uadratic, (E)xponential, (G)aussian, (S)igmoid, 
@@ -777,26 +803,41 @@ sections of the enveloping function (for the source box):
 (except for "A") is given by "up" and "dn/l" in seconds.
 The down section starts after "wait" seconds. (counted from the
 start, not the end of "up" -- so if "wait"<"up" then the two
-sections overlap and are multiplied). 
+sections overlap and are multiplied).
+---
 Auto mode "A": the src box ends when output is under the limit
 "dn/l" for "wait" seconds. Filters are always in auto mode,
-ending when under "Flim" for "Fwt" seconds.
+ending when output vol. is under "Flim" for "Fwt" seconds.
 Volume is vol1*vol2 (in most cases vol2 is fixed at 1.0)
 LR: left-right balance (-1:left 0:center 1:right)
+==> 3.scale lines -- set controls -> values mapping
 HINT1: with small up/wait/down values you can create simple
 impulses (with src=!b.misc.copy) or "contaminated" impulses
 (with src=!e.box.nz.nz01) of various shapes.
 HINT2: you can easily visualise enveloping functions with
 gnuplot (source box:"!b.misc.copy", x=1, filter:none) --
 the copy box outputs constant 1, so you only see the evp.func.
----src/filter (grp 2/3)---
-You can select source/filter box from the object tree with the
-3 menu buttons ([, S/F and ]), as described here (bottom of pg)
-==> win.tree
-The values are the inputs of the source and filter boxes.
-The first (0th) input of the filter box is not configurable,
+{{{3.source/filter}}}
+Open/close scale groups with the "<>" / "><" buttons (right)
+The second and third scale group is for configuring the source
+and the filter box. A filter box must have at least one input,
+and exactly one output, and should be an LTI filter.
+==> 2.LTI filters
+To change the source/filter box, you have to select a box (or
+at least the containing folder) in the tree window, then you
+can select the box from the "[" or "]" menu. In the middle menu
+("S" or "F") you find a shortlist of recently opened objects.
+==> 1.tree -- here you can select objects
+If you select another wrap object from the menu, the whole
+source or filter scale group will be copied from that wrap obj.
+---
+The values in the source/filter group are the (constant/DC)
+inputs for the source and filter boxes.
+The first input of the filter box is not configurable,
 since it is connected to the output of the source box.
+==> 3.scale lines -- set controls -> values mapping
 {{{3.scale lines}}}
+Open/close scale groups with the "<>" / "><" buttons (right)
 In every scale line, there are 3 entry fields (for numbers),
 and 3 menu buttons.
 The first field is for constant value -- if the scale (see
@@ -815,6 +856,60 @@ as reference value "=", and can multiply "*" or divide "/"
 other values (typically frqs and impulse lengths) by it.
 (If you want more complicated relations between inputs, create
 a graph box with builtin arithmetic or calculator boxes.)
+'A' means multiply by autovol (default setting for vol0)
+==> 3.autovol
+{{{3.target}}}
+Here you can select the target wrap for a shadow wrap. As with
+other object selections, you have left&right selected (in tree
+window) directory: "[" and "]", and shortlist: "T". (The target
+may also be a shadow wrap, but in order to hear a sound, you
+need a direct wrap at the end of the chain.)
+---
+With "<>"/"><" you can open/close the target config.
+In the first line, you can select which controls of the target
+you want to configure at all. (for unconfigured controls, the
+current value of the target box will be taken.)
+---
+For each configured line, you have the following options:
+Label (left): "on" means integer mode (useful for freq./notes),
+"off" means real (0..1 interval)
+2nd column: constant value (computed or hand-configured, like
+1st col for direct wraps)
+Counter (=x): adjustment (mult. by 0.01 in interval mode)
+Menu-number pairs: you can set the target control to be the
+sum of (at most) 2 weighted source side controls.
+TODO: examples
+==> 3.shadow cfg -- extra options
+{{{3.grid config}}}
+"[#]" tab in the wrap config window
+Here you can set the number of columns(x) and rows(y) of the
+grid, and the resolution of the sliders (1,2,...6). You can
+also set the coloring of the grid (a:b means that every b-th
+line is red instead of grey, and every a-th red line is changed
+to yellow. For "x" you also have the option of piano-style
+shading ("C"..."H").
+Note: When you change the resolution (and the control position
+is fixed), the sound may change.
+{{{3.write to file}}}
+"wav" tab in the wrap config window.
+Here you can write the sound to a wav/flac file.
+"stereo" -- toggle 2-channel output
+"from-to" -- only write the selected (plot(t), top right) part
+"write" -- click this to write to file
+For details how audio file output works, see these help texts:
+==> 1.auconv -- this will pops up, unless ...
+==> 1.config -- ... you set a default action here
+{{{3.general config}}}
+"cfg" tab in the wrap config window
+Here you can change the following settings for a wrap:
+- mute: when on, the wrap is silent in a track
+- t: time limit (beats, not in sec., useful for tracks)
+- >shdw: middle-click creates a shadow wrap instead of a copy
+- sl.upd: slider pos. updated when slider moving (when off,
+update only happens at right-click).
+---
+Mute is useful for "reference" shadow wraps in tracks.
+"t" is automatically set by "record-to-track"
 {{{1.clipboard}}}
 A clipboard is a container for at most 32 instrument objects.
 Besides providing a convenient collection, it also serves as a
