@@ -106,8 +106,7 @@ int CmdBuf::read_batch(const char * name, int nof1) {
 	do ec = cb.read_f(); while (ec>=0);
 	if (nof1&1) Node::lib_end();
 	if (ec==GCE_EOF) ec = (EEE_SUM &-!!cb.m_errcnt);
-	close(fd); if (!ec) log("read_batch OK, t=%d", clk.get());
-	return ec ? ec : (EEE_SUM &-!!cb.m_errcnt);
+	close(fd); if (!ec) log("read_batch OK, t=%d", clk.get());    return ec;
 }
 
 int CmdBuf::bprep(int siz) {
