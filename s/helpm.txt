@@ -36,6 +36,8 @@ read the following general help texts:
 ==> 2.shadow wrap -- config instr. using another wrap
 ==> 2.box -- basic building blocks of sounds
 ==> 2.!b and !e -- overview of builtins and examples
+==> 1.auconv -- how to write to wav/flac
+==> 1.config -- some settings you might change
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
 {{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
@@ -54,6 +56,7 @@ fb : simple examples for feedback
 fe : string/membrane wrappers for the finite-elem builtin "=fe"
 filt : some simple compound filters
 hpar : combination (almost iteration) of parallel p/z filters
+imp : impulses
 iter : iterated filters
 nz : noise-based boxes
 osc : simple applications of non-linear (rev.quad.) oscillator
@@ -178,16 +181,17 @@ For each control, you have the following options:
 - pass a real number in [0..1] interval
 - pass an integer
 ---
-You may also set a (weighted) sum 
-Shadow wrap: you can set another wrap object as "target", and
-specify a mapping/reordering from x,y,s1...s6 values to target
-x,y,s1...s6 values. (these are optional, some of x,y,s* can be
-set to constant or "keep target value". The target can also be
-a shadow wrap, but -- in order to hear some sound -- at the end
-of the chain a direct wrap is needed. 
+You may also set a (weighted) sum of two controls. The most
+simple usage is swapping two controls (e.g. y<->s1) without
+having to recalculate the autovol table. Shadow wraps also make
+it easy to define a set of keys (*) once, and use it for many
+different instruments. 
+(*) currently only (PC) keyboard is supported -- for later
+versions, MIDI HW support is also planned.
 ==> 1.wrap/config -- wrap config GUI
-In the following examples, the tracks differ in only one wrap
-(the muted "reference wrap" in line 04)
+Shadow wraps make track editing much easier: in the following
+examples, the tracks differ in only one wrap (the muted
+"reference wrap" in line 04):
 ==> .!e.5 -- wraps 8,9,A,B (use tracks below)
 ==> .!e.box.trk.boci.1 -- make a copy and experiment
 ==> .!e.box.trk.boci.2 -- ref. wrap control changed
