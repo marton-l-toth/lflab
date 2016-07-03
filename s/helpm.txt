@@ -32,6 +32,8 @@ read the following general help texts:
 ==> 0.gui/general -- overview of GUI elements
 ==> 2.object tree -- general overview
 ==> 2.wrap -- sound/instrument objects
+==> 2.direct wrap -- config instr. using boxes
+==> 2.shadow wrap -- config instr. using another wrap
 ==> 2.box -- basic building blocks of sounds
 ==> 2.!b and !e -- overview of builtins and examples
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
@@ -184,7 +186,12 @@ set to constant or "keep target value". The target can also be
 a shadow wrap, but -- in order to hear some sound -- at the end
 of the chain a direct wrap is needed. 
 ==> 1.wrap/config -- wrap config GUI
-(TODO : examples)
+In the following examples, the tracks differ in only one wrap
+(the muted "reference wrap" in line 04)
+==> .!e.5 -- wraps 8,9,A,B (use tracks below)
+==> .!e.box.trk.boci.1 -- make a copy and experiment
+==> .!e.box.trk.boci.2 -- ref. wrap control changed
+==> .!e.box.trk.boci.3 -- ref. wrap target changed
 {{{2.box}}}
 A box is a little machine with 0...30 input ports and 1...30
 output ports, each of which receives/sends 44100 real(64-bit)
