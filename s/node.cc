@@ -976,7 +976,7 @@ const char * ABoxNode::rgb() { return m_box ? m_box->v_rgb() : "zz%z%%"; }
 
 void ABoxNode::del2() { 
 	BoxEdge * p; while ((p = m_ef0)) Node::disconn(this, p->to);
-	if (is_wrap()) f64(m_box); else delete(m_box); }
+	if (is_wrap()) m_box->~BoxGen(), f64(m_box); else delete(m_box); }
 
 int ABoxNode::save1() {
 	SvArg * p = &m0_sv;
