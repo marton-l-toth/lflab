@@ -2752,6 +2752,7 @@ static int tc_mk_b3k(tc_t * tc) {
 static inline int le40320(int x, int y) { return x<=y && (x&7)<=(y&7) && !(x&~y&24); }
 static inline int tc_effdiv(tc_t * tc, int i) { return i=tc->div[i], i?i:tc->div[0]; }
 static inline trk_24 * tc_p24(tc_t * tc, int ix) { return tc->b3k[ix>>7]+(ix&127); }
+static void tc_del(tc_t * tc) { int i; for (i=0; i<tc->b3k_n; i++) free3k(tc->b3k[i]);    free3k(tc); }
 
 static int tc_f24(tc_t * tc, int ix) {
 	if (!ix) return 0; trk_24 * p = tc_p24(tc, ix); int k = p->b.nx;
@@ -3283,8 +3284,9 @@ static void trk_gna_inv(int * frto, ww_t * ww) {
 
 static void datrk_cmd(struct _ww_t * ww, const char * s) {
 	if (!s) return datrk_draw(ww, (cairo_t*)ww->arg[0].p);
-	if (*s=='>') ++s; else tsr_op(ww, TSR_START, 0);
         tc_t * tc = (tc_t*) ww->etc;
+	if (*s=='~') return ww->etc=0, tc_del(tc);
+	if (*s=='>') ++s; else tsr_op(ww, TSR_START, 0);
 	int i,hx[4],r, x, y;
 	while (1) { switch(*s) {
 		case 0:   goto done;
