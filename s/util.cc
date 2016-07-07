@@ -58,8 +58,8 @@ int u_sleep(int x) {
 void shuffle(int * p, int n) { for (int j, t, i=0; i<n-1; i++) 
 		j = i + (random() % (n-i)), t = p[i], p[i] = p[j], p[j] = t; }
 
-void set_fd(int *to, int from) { if (*to!=from) *to<0 ? (*to=from) 
-	: (close(*to), from<0 ? (*to=from) : (dup2(from, *to), close(from))); }
+void set_fd(int *to, int from, int keep) { if (*to!=from) *to<0 ? (*to=from) 
+	: (close(*to), from<0 ? (*to=from) : (dup2(from, *to), (keep||close(from)))); }
 
 static const char*fontwid_16= "566=:?<3668=5655::::::::::55===9@;;;<:9<<55:9=<=:=;:9<;A;9<656=889:9:96::3393?::::796:9=:99:5:=";
 

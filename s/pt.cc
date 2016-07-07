@@ -24,16 +24,16 @@ static int osb_hash(const char *s) { // od|sed|bc
 #include "cfgtab.inc"
 
 volatile int pt_chld_flg = 0;
-int pt_cp_i2m = -1,    pt_qenv_l[32];
+int pt_nullfd = -1,    pt_qenv_l[32];
 const char *pt_hello, *pt_qenv_v[32];
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
 
 typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
 
-static int pt_cp_m2i = -1, pt_constat = 0, pt_nullfd = -1, pt_pid;
+static int pt_cp_m2i = -1, pt_constat = 0, pt_pid;
 static volatile pt_tab_t pt_tab[PT_COUNT];
-static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0;
+static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0, *pt_io_pfd = 0;
 static uid_t pt_uid, pt_gid;
 static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
 static const char** ppath = 0;
@@ -274,7 +274,7 @@ found:  if (!i) pt_dlog("\nERROR: ioprc exited, some logs will be lost...\n");
 static int io_start(int);
 static int iop_dead(int pid, int stat, int td) {
 	if (td<2) log("FATAL: ioprc exited again in < 2 seconds"), bye(1);
-	gui_errq_add(PTE_IOCRASH);
+	gui_errq_add(PTE_IOCRASH); 
 	int pid2 = io_start(1); if (pid2<0) log("FATAL: ioprc restart failed"), bye(1);
 	if (pt_constat>0) kill(pt_constat, 9); pt_constat = 0;
 	return pid2;
@@ -282,13 +282,13 @@ static int iop_dead(int pid, int stat, int td) {
 
 static int io_start(int re) {
 	char a2[16], *aa = a2; *(int*)aa = killer_fd>0 ? qh4(killer_fd) : 33; a2[4] = 0;
-	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;
-	int pf1, pf2, pf3, pid = launch(QENV('i'), "!><+>", &pf1, &pf2, QENV('>'), &pf3, a2, a2+8, (char*)0);
-	if ((pid|pf1|pf2|pf3)<0) return -1;
+	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;   p_close(pt_io_pfd);
+	int pf1, pf3, pid = launch(QENV('i'), "!><+>", &pf1, pt_io_pfd, QENV('>'), &pf3, a2, a2+8, (char*)0);
+	if ((pid|pf1|*pt_io_pfd|pf3)<0) return -1;
 	if (!re) pt_reg(PT_IOP, pid, &iop_dead);
 	fflush(stdout); fflush(stderr);
 	close(1), close(2), dup2(pf3, 1), dup2(pf3, 2), close(pf3);
-	set_fd(&pt_cp_m2i, pf1); set_fd(&pt_cp_i2m, pf2);
+	set_fd(&pt_cp_m2i, pf1, 0); 
 	return pid;
 }
 
@@ -308,7 +308,6 @@ static int con_started(const char *s) {
 
 //////// export ////////////////////////////////////////////
 
-void pt_con_fd_ptr(int *p) { pt_con_pfd = p; }
 int pt_iocmd_sn(const char *s, int n) { int r = write(pt_cp_m2i,s,n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
 
 int pt_iocmd(char *s) {
@@ -391,14 +390,15 @@ static void ee_msg() {
 				  : log("error in \"%s\", line %d", QENV('j'), k);
 }
 
-const char ** pt_init(int ac, char ** av) {
+const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con) {
 	gettimeofday(&tv_zero, 0);
 	struct rlimit cl; cl.rlim_cur=cl.rlim_max=1<<28; setrlimit(RLIMIT_CORE, &cl);
-	FPU_INI; vstring_set(v_major, v_minor);
+	FPU_INI; vstring_set(v_major, v_minor);  signal(SIGPIPE, SIG_IGN);
+	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io;
 	qe_ini(); cfg0(); // qe_dump(); 
 	const char ** ret = cfg1(ac, av);
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
-	if ((pt_nullfd = open("/dev/null", O_RDONLY)) < 0 ||
+	if ((pt_nullfd = open("/dev/null", O_RDWR)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("nullfd"), exit(1);
 	signal(SIGCHLD, &pt_sigchld);
 	for (const char* s = FIFO_LIST; *s; s++) if (mkfifo(tpipe_name(*s), 0600)<0)

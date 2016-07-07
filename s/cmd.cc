@@ -84,8 +84,7 @@ char * CmdTok::un() {
 void CmdBuf::st_init() { CmdTab::init(); }
 
 void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
-	if (!fd) m_fd = -1, pt_con_fd_ptr(&m_fd);
-	else m_fd = fd>-32 ? fd : open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
+	if (fd>=0) m_fd = fd; else if (fd<-31) m_fd = open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
 	m_nof0 = nof; m_prefix = px; m_rsiz = rs; m_buf = (char*)malloc(m_bsiz = bs); 
 	m_lineno = m_rpos = m_cpos = m_try = 0;
 	memset(m_nd_var, 0, 8*sizeof(int));
@@ -119,15 +118,14 @@ int CmdBuf::bprep(int siz) {
 
 int CmdBuf::read_f() {
         int r, len = bprep(m_rsiz);   if (len<1) return GCE_FULLBUF;
-        if ((r = read(m_fd, m_buf+m_rpos, len))>0) return (m_try=0, chunk(r));
-	log("read_f(): %s: %s (%cx)", m_fd?(m_iname?m_iname:"(unnamed)"):"(stdin)",
-		                      r ? strerror(errno) : "EOF", m_try+49);
-	if (!m_fd) return pt_con_op("-4");
-	close(m_fd); 
-	if (!r && (m_nof0 & NOF_EXPEOF)) return GCE_EOF; else ++m_try;
-	if (!m_iname) return set_fd(&m_fd, open("/dev/null", O_RDWR)), r ? GCE_FREAD : GCE_EOF;
-	if (m_try>5) return m_fd = -1, r ? GCE_FREAD : GCE_EOF;
-	return (m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
+        if ((r = read(m_fd, m_buf+m_rpos, len))>0) return m_try=0, chunk(r); else ++m_try;
+	if (m_nof0&NOF_EXPEOF) return p_close(&m_fd), 
+		r ? (log("read_f(%s): %s", m_iname, strerror(errno)), GCE_FREAD) : GCE_EOF;
+	log("read_f(): %s(%d): %s (%dx)", m_iname?m_iname:"<unnamed>", m_fd,
+		                          r ? strerror(errno) : "EOF", m_try);
+	if (!m_fd) return m_fd=-1, pt_con_op("-4");
+	if (!m_iname || m_try>5) return p_close(&m_fd), r ? GCE_FREAD : GCE_EOF;
+	return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
 }
 
 int CmdBuf::vpf(const char * fmt, va_list ap) {

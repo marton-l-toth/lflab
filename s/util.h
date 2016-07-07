@@ -73,7 +73,8 @@ inline static int parse_sep(const char *s, int c) { for (int i=0; 1; i++) if (s[
 int parse_num(void * to, const char * s);
 inline static double at0f(const char *s) { double r = 0.0; parse_num(&r, s); return r; }
 const char * dbl2str_s(int ix, double x);
-void set_fd(int *to, int from);
+void set_fd(int *to, int from, int keep);
+inline void p_close(int *pfd) { if (*pfd>=0) close(*pfd), *pfd=-1; }
 
 struct blk2k { unsigned short xp16, lo[818]; unsigned char rsrv, hi[409]; };
 struct fa_writer { blk2k blk; unsigned short toc[1024]; int fd,cnt,cur,nch,id; unsigned int buf[818]; };

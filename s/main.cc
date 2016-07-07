@@ -23,6 +23,7 @@ ASnd snd0;
 QuickStat qstat;
 
 #define N_SLCMD 4
+#define PFD(J) sl_cmd[J].pfd()
 static CmdBuf sl_cmd[N_SLCMD];
 static int asv_ts[2];
 
@@ -44,15 +45,15 @@ static void rf(const char ** ppf) {
 static void ini(const char ** ppf) {
 	extern void INI_LIST; INI_LIST;
 	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
-	if (CFG_INI_ORDER.i) gui2.start(), rf(ppf); else rf(ppf), gui2.start();
-	sl_cmd[0].init(pt_cp_i2m, NOF_ERRMSG);
-	sl_cmd[1].init(gui2.outpipe(), NOF_GUI, 126);
-	sl_cmd[2].init(0, NOF_ERRMSG);
+	if (CFG_INI_ORDER.i) gui2.start(PFD(1)), rf(ppf); else rf(ppf), gui2.start(PFD(1));
+	sl_cmd[0].init( -1,  NOF_ERRMSG);
+	sl_cmd[1].init( -1,  NOF_GUI, 126);
+	sl_cmd[2].init( -1 , NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
 	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
 		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
 	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);
-	log("### tlp=%d i2m=%d, gcp=%d", gui2.tpipe(), pt_cp_i2m, gui2.outpipe());
+	log("### tlp=%d i2m=%d, gcp=%d", gui2.tpipe(), *PFD(0), *PFD(1));
 	if (glob_flg&GLF_HITHERE) {const char *s="getting started"; snd0.w(-1); hlp->sn(&s)->draw_window(11);}
 	if (CFG_DEVEL.i) pt_con_op("-1");
 	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
@@ -78,4 +79,4 @@ static void sel_loop() {
 			   snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
-int main(int ac, char** av) { ini(pt_init(ac,av)); sel_loop(); }
+int main(int ac, char** av) { ini(pt_init(ac,av,PFD(0),PFD(2))); sel_loop(); }

@@ -38,7 +38,8 @@ class CmdBuf : public AOBuf {
 		char * a2() const { return m_c_a2; }
 		int  cnof() const { return m_c_nof; }
 		ANode * cnode() const { return m_c_node; }
-		int fd() const { return m_fd; }
+		inline int fd() const { return m_fd; }
+		inline int *pfd() { return &m_fd; }
 		void show_error(int ec);
 		int perm(ANode * nd, int f) { return (m_c_nof&NOF_FORCE) ? f : nd->perm(f); }
 		int cperm(int f) { return perm(m_c_node, f); }

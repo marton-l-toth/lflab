@@ -46,14 +46,15 @@ int GuiStub::gui_dead(int pid, int stat, int td) {
 	return gui2.m_pid;
 }
 
-int GuiStub::start() {
+int GuiStub::start(int * pfd) {
         if (m_pid) return log("gui2 already started: pid %d", m_pid), PTE_WTF;
-	int pfi, pfo, pft;
-	if ((m_pid = launch(QENV('g'), "!><u>", &pfi, &pfo, &pft, (char*)0)) < 0)
+	if (pfd) m_pfd = pfd; else if (!m_pfd) bug("gui start without pfd");
+	int pfi, pft;  p_close(m_pfd);
+	if ((m_pid = launch(QENV('g'), "!><u>", &pfi, m_pfd, &pft, (char*)0)) < 0)
 		log("FATAL: %s\n", QENV('g')), bye(1);
 	pt_reg(PT_GUI, m_pid, &gui_dead);
 	m_gf0 = glob_flg;
-	set_fd(&m_inpipe, pfi); set_fd(&m_outpipe, pfo); set_fd(&m_tpipe, pft);
+	set_fd(&m_inpipe, pfi, 0); set_fd(&m_tpipe, pft, 0);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor); 
 	set_tlog(); savename(); vol(); flush();
 	return 0;
@@ -61,7 +62,7 @@ int GuiStub::start() {
 
 void GuiStub::stop() {
         if (!m_pid) return;
-        close(m_inpipe); close(m_outpipe);
+        close(m_inpipe); p_close(m_pfd);
         kill(m_pid, 9);
         m_pid = 0;
 }
