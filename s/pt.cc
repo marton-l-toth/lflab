@@ -8,6 +8,8 @@
 #include <time.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #ifdef __SSE2__
 #include <xmmintrin.h>
@@ -91,6 +93,9 @@ static const char * pfind_ls(const char ** pp) {
 static void qe_dump() { for (int i=59; i<91; i++) if (QENV(i))
 	fprintf(stderr, "QENV('%c')=\"%s\", len=%d\n", i, QENV(i), QENVL(i)); }
 
+static int set_tmp(const char *s, int l) {
+	char buf[256]; return (stat2(s,'W') && readlink(s,buf,255)<0) ? (qe_set2('t', s, l),0) : -1; }
+
 static char wdir[24];
 static void qe_ini() {
 	static const char * self = "/proc/self/exe";
@@ -106,7 +111,7 @@ static void qe_ini() {
 	QENV('>') = "/tmp/lflab.quick-fail.log";
 	if (!(pt_gid=getegid(), pt_uid=geteuid())) qfail("it is a bad idea to run lflab as root");
 	if ((QENV('h')=getenv("HOME"))) qe_len1('h'); else qe_set2('h', "/tmp", 4);
-	stat2("/run/shm", 'W') ? qe_set2('t', "/run/shm", 8) : qe_set2('t', "/tmp", 4);
+	if (set_tmp("/run/shm",8) && set_tmp("/dev/shm",8) && set_tmp("/tmp",4)) qfail("no tmpdir found");
 	qe_set2('w', wdir, sprintf(wdir, "%s/lf.%d", QENV('t'), pt_pid=getpid()));
 
 	char pkgs[1024]; int pkl = readlink(self, pkgs, 1023);
