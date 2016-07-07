@@ -63,6 +63,9 @@ osc : simple applications of non-linear (rev.quad.) oscillator
 sel : some filter config using selector boxes
 trk : tracks
 wave : waves modulated by other waves
+---
+the "sc" folder contains examples for "soundcloud.com/lflab".
+in each (numbered) subdir, "T" is the main track
 {{{2.object tree}}}
 The object tree can be browsed in the "LR" window (the left and
 right views are the same tree).
