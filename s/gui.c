@@ -729,7 +729,7 @@ static int cmd_esc(ww_t * ww, const char *s1, const char *s2) { switch(*s1) {
 			  case '.': s2 = "main";   break;
 			  case '/': s2 = "tree";   break;
 			  case 'F': s2 = "config"; break;
-			  case 'E': s2 = "errors"; break;
+			  case 'E': s2 = "error list"; break;
 			  case 'S': s2 = "audio";  break;
 			  case 'A': s2 = "auconv"; break;
 			  default: return LOG("builtin help not found"), 0; }

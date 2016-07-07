@@ -1331,7 +1331,7 @@ int Node::obj_help(int cl) {
 	log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
-		case 'w': case 's': s = "wrap/cfg"; break;
+		case 'w': case 's': s = "wrap/config"; break;
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
