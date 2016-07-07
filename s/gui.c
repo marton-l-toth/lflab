@@ -57,6 +57,7 @@
 #define DF_MENU 1024
 #define DF_REC  2048
 #define DF_CHOO 4096
+#define DF_WLUVB 8192
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]))
@@ -220,7 +221,7 @@ static int conf_portwid;
 static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf 40:track\n"
-			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo";
+			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo 2000:vblu";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -1326,14 +1327,15 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, int btn, GdkEventButton
 #define VB_ARG(x) ((x)->arg[2].i[1])
 #define VB_LINE(x, i) ( ((GtkWidget**)(x)->etc)[i] )
 
-static ww_t * wlu_any_pp(topwin * tw, const char ** pp) { 
+static ww_t * wlu_any_pp(topwin * tw, const char ** pp) {
+	static const char * fmt = "BUG: wlu_any: k=%d, cre=%d, WBASE=%d, s=\"%s\", tw=0x%x";
 	ww_t * ww = widg_lu1_pp(tw, pp);  if (!ww) return NULL;
 	if (!ww->cl) return LOG("BUG: widget %p(%x:%x) has zero class", ww, tw->id, ww->ix), NULL;
 	if (ww->cl->ch!=':') return ww;
 	if (**pp=='.') return ++*pp, ww;
 	int cre = VB_LCRE(ww)*VB_WPL(ww), k = hex2(*pp); *pp += 2;
-	if (k>=cre) LOG("BUG: wlu_any: k=%d, cre=%d", k, cre);
-	//LOG("wlu_any: Cxx k=%d(0x%x), WBASE=%d", k, k, VB_WBASE(ww));
+	if (k>=cre) return LOG(fmt  , k, cre, VB_WBASE(ww), *pp-3, tw->id), NULL;
+	if (dflg&DF_WLUVB) LOG(fmt+5, k, cre, VB_WBASE(ww), *pp-3, tw->id);
 	return widg_qp(tw, VB_WBASE(ww) + k);
 }
 
