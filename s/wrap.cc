@@ -1705,8 +1705,10 @@ int SWrapGen::sob_from(int ix, BoxGen * bx0) {
 	if (cl!='s') return NDE_EXPWRAPS;
 	SWrapGen * that = static_cast<SWrapGen*>(bx0);
 	if (ix==1) return m_ssob.from(that->m_ssob), 0;
-	//SWrapSOB *sob = SOB_RW(ssob), *sob2 = that->m_ssob.ro();
+	SWrapSOB *sob = SOB_RW(ssob), *sob2 = that->m_ssob.ro();
 	switch (ix) {
+		case 2: sob->m_tab.from(sob2->m_tab); return 0;
+		case 3: sob->m_con.from(sob2->m_con); return 0;
 		default: return BXE_IDX;
 	}}
 
