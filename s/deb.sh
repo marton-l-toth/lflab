@@ -3,7 +3,7 @@
 set -e
 rm -f deb
 . pkg.sh
-libdep=$(ldd $bin | awk '/=>.*\//{print $3}' | sort -u | grep -v libffi)
+libdep=$(ldd $bin | awk '/=>.*\//{print $3}' | sort -u | grep -Ev 'libffi|libpango')
 arch=$(dpkg-architecture -qDEB_HOST_ARCH)
 pkgnm=$nm-$vers-$arch
 pkgdir=$tmpr/$pkgnm
@@ -26,6 +26,6 @@ for t in $bblnk; do echo -n " && ln -s $trgdir/lf.bb $t"; done; echo) > $debdir/
 echo -e "#!/bin/sh\nrm /usr/bin/$nm $bblnk" >> $debdir/prerm
 chmod 755 $debdir/postinst $debdir/prerm
 
-dpkg-deb -b $pkgdir && cp $tmpr/$pkgnm.deb ./
+fakeroot dpkg-deb -b $pkgdir && cp $tmpr/$pkgnm.deb ./
 dpkg -I ./$pkgnm.deb > deb || rm deb
 [[ "$1" != "-v" ]] || cat deb
