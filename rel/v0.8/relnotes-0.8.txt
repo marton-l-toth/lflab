@@ -1,0 +1,41 @@
+lflab v0.8
+
+quicktest.sh was run in the following environments:
+(warning, the next 4 lines contain a lot of (registered) trademarks)
+rel/v0.8/lflab-0.8-0-amd64.deb  : Debian 7 on Dell I17R, ALC283, MAYA44USB
+rel/v0.8/lflab-0.8-0-i386.deb   : Linux Mint 17.3 (VirtualBox), PulseAudio
+rel/v0.8/lflab-0.8-0.x86_64.rpm : openSUSE Leap 42.1 (VirtualBox), PulseAudio
+rel/v0.8/lflab-0.8-0.i686.rpm   : Fedora 23 (VirtualBox), PulseAudio
+
+Features:
+- shadow wrap (indirect instruments, see help)
+- plotting: avg/left/right selectable
+- wrap: slider update config: right-click (old behaviour) / immediate
+- trk: position indicator while playing; reverse cut (move: clipb->trk)
+- faster startup/file load
+- new help texts and examples
+
+Fixes:
+- gui config win. can now be opened for tracks
+- auto suffix ".lf" for save files when filter is on
+- linear finite-element system (=fe) geometry bug (see note(1))
+- mixer mono/stereo bug (sqrt(2) multiplier, see note(2))
+- label were wrong for some selector boxes
+- wrap/grid config "sudden zero" bug
+- wrap: invisible "=" (last column) bug
+- crash when removing newly created #9 or #25 element in folder
+- crash when wrap is deleted during playing/autovol calculation
+- better recovery when gui/ioprc crashes
+- fixed file ownership and some compatibility problems in .deb packages
+
+Known problems:
+- some options can only be set from command line ("save config" also saves these)
+- there is no convenient way to delete a large number of objects
+
+Notes:
+(1) because the old (buggy) geometry also produced an audible sound,
+    a "compatibility mode" is still available, open ".!b.filt.=fe" for help
+(2) because the old behaviour was inconsistent, no "compatibility mode"
+    is available here, some existing sounds/tracks may have changed, sorry
+(3) on some Debian systems, you will get error messages for "gnuplot-x11":
+    search for the package name/error message, it is a known bug (and not mine :))

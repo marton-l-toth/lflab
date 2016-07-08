@@ -20,6 +20,7 @@ if [[ "$1" == "-k" ]]; then shift; else rm -r "$WDIR.old"; mv "$WDIR" "$WDIR.old
 if [[ -z "$1" ]]; then LAUNCH="/usr/bin/lflab"; else LAUNCH="$1"; fi
 ln -sf "$(dirname $(readlink -f "$LAUNCH"))/lf.bb" "$TOOL"
 LF_TMPROOT="$(readlink -f /run/shm)"
+[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /dev/shm)"
 [[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /tmp)"
 echo "tdir=\"$TDIR\" launch=\"$LAUNCH\""
 $LAUNCH &
