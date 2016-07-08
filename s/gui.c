@@ -2267,6 +2267,7 @@ static void dawr1_draw(ww_t * ww, cairo_t * cr2) {
 }
 
 static void dawr1_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
+	if ((ww->top->id&15)==12) return CMD("W#2.win.box-gui");
 	int x = 0x305058 + (b9<<16); widg_defcmd(ww, (const char*)&x); }
 
 static void dawr1_skel(struct _ww_t * ww, const char **pp) {

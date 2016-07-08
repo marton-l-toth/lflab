@@ -603,7 +603,22 @@ forgotten "dev" (see 0.)
 5. flush log (or exit), and send me the lf.log file (you can
 find it in the ".lflab" directory under your home directory)
 @@@
+{{{1.box-gui}}}
+Here you can configure the input/output labels and FG/BG colors
+for graph and calculator boxes. (iterated boxes "inherit" these
+properties by the simple box used.)
+---
+These labels and colors are visible in wraps and graphs using
+the box. Change of labels has immediate effect, colors only
+change when you click the "OK" button.
+---
+Unlike for number of inputs/outputs box GUI config does not
+cause redrawing of every affected object. (you can manually
+redraw boxes/wraps by clicking on the "internal" title.
 {{{1.wrap/play}}}
+In this window you can play and quick-copy sounds/instruments.
+==> 2.wrap -- general description
+==> 1.wrap/config -- configure instrument
 Small button on the left, below (or between) the sliders:
 left-click: focus (keyboard) on grid, right-click: menu
 --- MOUSE ---
@@ -644,34 +659,40 @@ Tab select: [#], wav, cfg... (selects contents of line below)
 ==> 3.general config -- "cfg" tab
 ==> 3.autovol -- "a.v" tab (D)
 ==> 3.shadow cfg -- "sic" tab (S)
-Line groups: (open/close with "<>"/"<>" button on the right)
+Line groups: (open/close with "<>"/"><" button on the right)
 ==> 3.volume/envp -- (D)
 ==> 3.source/filter -- (D)
 ==> 3.scale lines -- (D)
 ==> 3.target -- (S)
 {{{1.graph-box}}}
+A graph box is a compound box made from other boxes by
+connecting their inputs/outputs. Every input (*) is either set
+to a constant value (set sel. input with "==" button) connected
+to an output (conn. sel.input & sel.output with "--->" button).
+(*) viewed from inside the box, external output counts here as
+"input" and external output as "input".
+---
 At a time you can have one selected input (blue), a selected
 output (red) and a selected box (purple).
-(external input counts as output, and vice versa)
 Top toolbar: number of inputs, output, feedback (see below),
-reserved (later, there will be a 'replace' mode), box select
-(left/sl/right, see tree view for obj selection),
-connect (sel. output to sel. input), set value (sel. input)
-remove (selected box), and shuffle.
-Every input has either a constant value (== button), or
-is connected to an output (or external input) (---> button).
-Shuffle does not work for all graphs (and sometimes it only
-changes the serial nr. of boxes not the layout).
+reserved (later, there will be a 'replace' mode), box select,
+==> 1.tree -- see how "[" "*" "]" menubuttons work
+connect, set value, remove ("X") and graph menu ("++"):
+- [shuffle] (reorder boxes, not always possible)
+- rgb:sel sets graph FG/BG colors to selected box
+- inlbl:sel sets input labels using conn. to selected box
+- inlbl:all sets input labels using conn. to all boxes
+(menu opens for right-click, left-clk shuffles)
+==> 1.box-gui -- set colors and in/out labels manually
 Because graph layout is calculated by an external program
 (graphviz/dot, many thanks to its developers!), after every
-new/deleted connection the graph is redrawn.
+new/deleted connection the graph is redrawn. Drawing the first
+graph may cause delay/buffer underrun.
+---
 Feedback: The delay (!i) is expected to be a >0 constant.
 The special output >i comes back to the special input <i
 with !i delay. (when delay goes below 0.01 (10ms), CPU
 usage will increase rapidly).
----
-Because an external program is started, opening the first 
-graph box window may cause an audio buffer underrun.
 ==> win.tree
 {{{1.iterated box}}}
 An iterated box is a compound box consinsting of multiple
@@ -725,6 +746,10 @@ means OK, while white-on-red means error:
 ---
 Currently only operators +,-,*,/,^(power) and the conditional
 if<(a,b,c,d) (if a<b then c else d) are supported.
+You can change the in/out labels (and FG/BG color) here:
+==> 1.box-gui
+However, in the expressions the inputs/outputs will still be
+called "x0", "x1", ... "x<n>" and "y0", "y1" ... "y<n>".
 {{{1.track}}}
 right now, the track editor is very simple, so the recommended
 way is to write individual sounds (or perhaps simple loops) to
@@ -750,6 +775,8 @@ x - cut & select next
 X or backspace - cut & select previous
 0...9 and a...v - select sound from curr. paste src. clipboard
 (that sound can be dragged out of the top right "clip" button)
+---
+You can find examples in ".!e.box.trk" and ".!e.sc".
 {{{3.play/plot}}}
 This help text describes the top part (above "vol/envlp/LR") of
 the instrument config window. In the top left corner, you can
