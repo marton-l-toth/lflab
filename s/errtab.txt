@@ -19,7 +19,17 @@ EEE_ZEROLEN  read/write returned unexpected zero (unexp.EOF/disk full?)
 EEE_ENVUNDEF missing environment variable
 EEE_MKFAIL_M main build failed (unless using prod. script this is a BUG)
 EEE_MKFAIL_G GUI build failed (unless using prod. script this is a BUG)
-EEE_TWNTYTWO this error message is supposed to be invisible (22, BUG)
+EEE_EDALRDY  editor already open for this box
+EEE_EDFAIL   unable to open editor (see console/log)
+EEE_EDLONG   description file too long
+EEE_EDREAD   cannot read result from text editor
+EEE_RSRV26   this error message is supposed to be invisible (26, BUG)
+EEE_RSRV27   this error message is supposed to be invisible (27, BUG)
+EEE_RSRV28   this error message is supposed to be invisible (28, BUG)
+EEE_RSRV29   this error message is supposed to be invisible (29, BUG)
+EEE_RSRV30   this error message is supposed to be invisible (30, BUG)
+EEE_NOEFF    nothing happens
+EEE_EOPEN32  this error message is supposed to be invisible (32, BUG)
 EEE_NOPRC    process missing
 EEE_STATE    either you can click very fast or you have found a bug
 EEE_SUM      errors in save file (see console/log for details)
@@ -33,7 +43,6 @@ EEE_ASVFAIL  autosave failed
 EEE_PARSE    parse error (most likely a bug)
 EEE_FDNOSEL  file dialog: nothing selected
 EEE_RANGE    value out of range
-EEE_NOEFF    nothing happens
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
 RTE_RANGE    box parameter out of range (runtime)
@@ -127,6 +136,9 @@ NDE_EXPVIRG  loading of libraries only possible in empty state
 NDE_SLROOT   whole object tree (root node) cannot be saved as library
 NDE_NOQCP    quick copy not available for this object (BUG)
 NDE_BUSY     unable to delete object while job is running
+NDE_DSC_XY   box descr.: max allowed size is 63x32, 2x truncated
+NDE_DSC_X    box descr.: a line can be max. 63 char. long, truncated
+NDE_DSC_Y    box descr.: max. 32 lines are allowed, truncated
 NDE_SORRY    sorry not yet implemented (node)
 S2__________ __________________________________________________________(BUG)__
 GCE_WTF      you just have found a bug (cmd)

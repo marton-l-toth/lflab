@@ -36,7 +36,7 @@ class GuiStub {
 		inline void hex1(int x) { *(m_bufp++) = hexc1(x); }
 		void sn(const char * s, int n) { memcpy(m_bufp, s, n); m_bufp += n; }
 		void sz(const char * s) { m_bufp += s__cat(m_bufp, s); }
-		void hex5(int x) { m_bufp += hx5(m_bufp, x); }
+		void hex5(int x) { h5f(m_bufp, x); m_bufp += 5; }
 		void hex4(int x) { *(int*)m_bufp = qh4(x); m_bufp += 4; }
 		void hex8(int x) { hex4((int)((unsigned int)x>>16)); hex4(x&65535); }
 		void hexn(int x, int w) { while (--w>=0) *(m_bufp++) = hexc1   ((x>>(4*w))&15); }

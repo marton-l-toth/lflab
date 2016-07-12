@@ -1116,7 +1116,8 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {'#',7, 0,8,4, "[focus] config  help    redraw  wav/flac+autoupd-autoupd", "$>* W$  N?? M9  XAW XAU1XAU0"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
-{'+',7, 0, 7,2, "help   info1  info2  info4  info*  GUI cfgdelete ", "N?I1I2I4I7EWNd"},
+{'+',7, 0, 7,2, "help   descr. info1  info2  info4  info*  GUI cfgdelete ", "N?MtI1I2I4I7EWNd"},
+{0,  4, 0, 6,3, "->box edit  from@lfrom@r","W$ EE ## ##"},
 {'T',11, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)  rvrs.cut",
 		  "txcv96CMNSr"},
 TDIV_MENU_LN
@@ -3530,7 +3531,10 @@ char * help_lu(const char * ky) {
 GtkWidget * doc_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "{C0448$0$%%%ccc}"); }
 
 static void doc_skel (struct _topwin * tw, char * arg) {
-	if (!tw->state) tw->arg[0].p = parse_w_s(tw, "[(3{C_300$1$ttt666...}0{__}{M_+$|+0}){:DdS10}]");
+	static const char * ws[2] = {"[(3{C_300$1$ttt666...}0{__}{M_+$|+0}){:DdS10}]",
+				     "[(3{C_300$1$ttt666...}0{__}{M_+$|+1}){:DdS10}]"};
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws[(tw->id&15)==13]);
+	else gtk_window_present(GTK_WINDOW(tw->w)); 
    	if (arg) doc_cmd(tw, arg);
 }
 
@@ -4156,7 +4160,7 @@ static void err_cmd (struct _topwin * tw, char * arg) {
 		case 'X': red = 31; for (i=0; i<nl; i++) err_tab[i].i[0] = 0; break;
 		case 'A': err_annoy ^= 1; dabool_set(widg_lu1_pc(tw, 'A'), err_annoy); break;
 		case '>': ++arg; for (n=0; arg[n]; n++);
-			  for (i=0; i<n; i+=8) if ((k = 65536*qh4rs(arg+i)+qh4rs(arg+4+i))!=0x01FFFFEA)
+			  for (i=0; i<n; i+=8) if ((k = 65536*qh4rs(arg+i)+qh4rs(arg+4+i))!=0x01FFFFE0)
 				  ++red, red&=-(red<nl), err_tab[red].i[0]=k,err_tab[red].i[1]=t; else af = 1;
 			  break;
 		default: LOG("err_cmd: undef: 0x%x '%c'", *arg, *arg); break;

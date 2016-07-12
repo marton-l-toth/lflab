@@ -326,10 +326,13 @@ class BoxDesc : public SOB {
         public:
                 SOBDEF_64(BoxDesc);
                 BoxDesc(int arg) : SOB(arg) {}
-                BoxDesc(const BoxDesc * that, int arg) : SOB(arg) { memcpy(m_u.ky, that->m_u.ky, 48);}
+                BoxDesc(const BoxDesc * that, int arg) : SOB(arg) {
+			int i,n=that->n; set_n(n); for(i=0;i<n;i++) memcpy(ln(i),that->ln(i),64); }
                 ~BoxDesc() {}
-		int dsc(char * to);
-		union { char ** pp[4]; char ky[48]; } m_u;
+		char * ln(int i) const { return pp[i>>3][i&7]; }
+		void set_n(int k);
+		int n, rsrv[3];
+		char ** pp[4];
 };
 
 class DblVec : public SOB {
@@ -393,6 +396,7 @@ class BoxUI : public SOB {
 		~BoxUI() {}
                 int save2(SvArg * sv) { return sv->st2=-1, sv->out->pf("E$G%.6s\n", m_rgb); }
                 void ini_default(int k);
+		int dump_dsc(char *to, int flg);
 		int cmd(const char *s);
                 SOB_RW_F0(dv, DblVec) SOB_RW_F1(nm, NameVec)
 		int draw_window_2(ANode * nd);
@@ -469,6 +473,7 @@ class ABoxNode : public ANode {
 		const char * own_rgb() { return m_ui.ro()->m_rgb; }
 		int get_ionm(char *to, int io, int j);
 		int dsc(char * to);
+		int cmd_H(CmdBuf * p);
 		void ab_debug(int flg);
 		sthg * etc() { return &m_etc; }
 		int sv_wr_backref();

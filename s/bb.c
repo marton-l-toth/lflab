@@ -12,8 +12,12 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
+#include <sys/select.h>
+#include <sys/inotify.h>
+
 
 #define QWE_UTILC_DEF
 #include "uc0.h"
@@ -141,13 +145,21 @@ static int a_main(int ac, char ** av) {
 	return (opt&1) ? (unlink(inname)<0 && (perror(inname),1)) : 0;
 }
 
-//// console ////////////////////////////////////////////////////////////////
-int c_main() {
+int c_main() { /* console */
 	const char * cnm = tpipe_name('C');
 	FILE * f = fopen(cnm, "a"); if (!f) return perror(cnm), sleep(3), 1;
 	fprintf(f, "_c/proc/%d/fd/1\n", getpid()); fclose(f); while(1) sleep(60);  }
 
 /**************** log i/o ****************************************************/
+
+volatile int chld_flg = 0;
+static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1, wrkdir_l = 0,
+	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0, dflg = 0;
+static char xterm_nbuf[256];
+static const char *xterm_name, *wrkdir;
+static unsigned int ino_bv = 0u;
+static int ino_epid[32], ino_oid[32], ino_fd = -1;
+static char ino_inm[80];
 
 static void LOG(const char * fmt, ...), bye(int kf);
 
@@ -162,11 +174,6 @@ static void ts_9(char *to) {
         }
 	memcpy(to, sbuf, 6); d999(to+6, tv.tv_usec/1000);
 }
-
-static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1,
-	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0;
-static char xterm_nbuf[256];
-static const char *xterm_name;
 
 /*** shutdown --- shutdn_flg: 1-ppid 2-cmdin 4-.log 8-ulog */
 
@@ -186,6 +193,19 @@ static void shutdn(int ev) {
 	}
 	if (shutdn_flg!=oldf || st>=0) LOG("shutdown (%d, %d)", shutdn_flg, us);
 	if (st>=0) bye(st);
+}
+
+static void del_n_log(const char *s, int f){ if ((f?rmdir:unlink)(s)<0) LOG("del %s: %s",s,strerror(errno));}
+static void rm_r(const char * dn) {
+	DIR * dir = opendir(dn); if (!dir) return LOG("rm_r: opendir: %s\n", strerror(errno));
+	struct dirent * ent;  
+	int l0 = strlen(dn); char buf[l0+1026]; memcpy(buf, dn, l0); buf[l0++] = '/'; buf[1024]=buf[1025]=0;
+	while ((ent = readdir(dir))) {
+		const char * s = ent->d_name; 
+		if (*s=='.' && (!s[1] || (s[1]=='.'&&!s[2]))) continue;
+		strncpy(buf+l0, s, 1024); del_n_log(buf, 0);
+	}
+	buf[l0] = 0; del_n_log(buf,1);
 }
 
 static void search_and_destroy(int kfd) {
@@ -215,10 +235,9 @@ msg:		LOG("kill %5s %c %s", s, ec, exe);
         closedir(dir);
 }
 
-static void del_n_log(const char *s, int f){ if ((f?rmdir:unlink)(s)<0) LOG("del %s: %s",s,strerror(errno));}
 static void del_workdir() {
-        const char *s, *s0 = getenv("LF_TMPDIR"); if (!s0) return;
-        int l0 = strlen(s0);
+        const char *s, *s0 = wrkdir;  int l0 = wrkdir_l;
+	ino_inm[l0+3] = ino_inm[l0+43] = 0; rm_r(ino_inm); rm_r(ino_inm+40);
         char buf[l0+16]; memcpy(buf, s0, l0); buf[l0] = '/'; buf[l0+2] = 0;
         for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0);
         memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0);
@@ -282,6 +301,8 @@ static void LOG(const char * fmt, ...) {
 	buf[r+11] = 10; log_sn(buf, r+12, buf[11]=='`' ? INT_MIN : 0);
 }
 
+static void fail(const char*s) { LOG("%s", s); log_sn(0,-1,0), exit(5); }
+
 static void bye(int kf) {
 	if (!kf) exit(1);
 	con_end(); search_and_destroy(killer_fd); del_workdir();
@@ -295,8 +316,78 @@ static void bye(int kf) {
 	write(fd2, es, strlen(es)); write(fd2, " (restart failed)\n", 18); close(fd2); exit(4);
 }
 
-/*** cmd **********************/
+/*** inotify ******************/
+#define INEV_SIZ (sizeof(struct inotify_event))
+static const char * ino_nm(int t, int oi) { char*q = ino_inm+40*t; h5f(q+wrkdir_l+4,oi); return q; }
+static int ino_find(int *p, int id) { BVFOR_JMC(ino_bv) if (p[j]==id) return (int)j;   return -1; }
+static void ino_bye(int j) { if (dflg&2) LOG("ino_bye: %d", j);
+			     ino_bv &= ~(1u<<j); unlink(ino_nm(0,j)); unlink(ino_nm(1,j)); }
 
+static void ino_ini() {
+	int l = wrkdir_l;
+	memcpy(ino_inm,    wrkdir, l); memcpy(ino_inm   +l, "/ds/00000.txt",14);
+	memcpy(ino_inm+40, wrkdir, l); memcpy(ino_inm+40+l, "/d0/00000.txt",14);
+	ino_inm[l+3] = ino_inm[l+43] = 0; 
+	if (mkdir(ino_inm,0700)<0 || mkdir(ino_inm+40,0700)<0 || (ino_fd=inotify_init1(IN_CLOEXEC))<0 ||
+	    inotify_add_watch(ino_fd, ino_inm, IN_CLOSE_WRITE)<0) 
+		return ino_fd=-1, LOG("ino_ini: %s", strerror(errno));
+	ino_inm[l+3] = ino_inm[l+43] = '/';
+}
+
+#define SERR(X) ((void) write(1, "_E" #X "\n", 5))
+#define SERRC(X) (close(fd), (void) write(1, "_E" #X "\n", 5))
+static void ino_add(int id, char * txt, int len) {
+	if (ino_fd<0) return SERR(15);
+	if (ino_find(ino_oid, id)>=0) return SERR(16);
+	BVFOR_JMC(~ino_bv) goto found;
+	return LOG("dsc-edit table full (32)");
+found:; const char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
+	int i, fd = creat(nm1, 0600); if (fd<0) goto err2;
+	for (i=0; i<len; i++) if (txt[i]==36) txt[i]=10; if (txt[len-1]!=10) txt[len++] = 10;
+	txt-=7; len+=7; memcpy(txt, "#DSCR: ", 7);
+	if (write(fd, txt, len)<0) goto err1; else close(fd);
+	if (rename(nm1, nm0)<0 || creat(nm1, 0600)<0) goto err2;
+	if (write(fd, txt, len)<0) goto err1; else close(fd);
+	ino_bv |= (1u<<j); ino_oid[j] = id; 
+	ino_epid[j] = launch("xedit", "!(TT", nm0, NULL);
+	return; // TODO: open ed
+err1:   return close(fd), LOG("ino_add:w: %s", strerror(errno));
+err2:	return LOG("ino_add:c/m: %s", strerror(errno));
+}
+
+static void ino_ev(struct inotify_event *ev) {
+	const char * s = ev->name;
+	if (dflg&2) LOG("ino_ev: name=\"%s\"", s);
+	int i; for (i=0; i<5; i++) if ((unsigned int)(s[i]-48)>9u && (unsigned int)(s[i]-65)>5u) return;
+	if (memcmp(s+5, ".txt", 5)) return;
+	int id = atoi_h(s); if (dflg&2) LOG("ino_ev: close(w) for 0x%x", id);
+	const char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
+	char buf0[2560], buf1[2560];
+	int i0=8, r, r2, fd = open(nm0, O_RDONLY); if (fd<0) return SERR(19);
+	if ((r =read(fd, buf0+i0, 2500))<0) return SERRC(19); else if (r==2500) return SERRC(18);
+	close(fd); if ((fd=open(nm1, O_RDONLY))<0) return SERR(19);
+	if ((r2=read(fd, buf1+i0, 2501))<0) return SERRC(19); else close(fd);
+	if (r==r2 && !memcmp(buf0+i0, buf1+i0, r)) { if(dflg&2)LOG("ino_ev: file(0x%x)==backup",id); return;}
+	fd=creat(nm1,0600); write(fd, buf0+i0, r); close(fd);
+	if (buf0[i0+r-1]!=10) buf0[i0+r++] = 10;
+	if (r>6 && !memcmp(buf0+i0, "#DSCR:", 6)) {
+		for (i0+=6,r-=6; buf0[i0]!=10; i0++,r--);     }
+	for (i=i0; i<i0+r-1; i++) if (buf0[i]==10) buf0[i]='$';
+	buf0[i0-8]='H'; buf0[i0-7]='#'; h5f(buf0+i0-6, id); buf0[i0-1] = '$'; 
+	write(1, buf0+i0-8, r+8);
+	write(2, buf0+i0-8, r+8);
+}
+
+static void ino_read() {
+        char buf[4096], *s = buf;   int r;
+        if ((r = read(ino_fd, buf, 4096))<=0) { perror("read/ino"); return; }
+        while(1) {
+                struct inotify_event *ev = (struct inotify_event*)s;
+                ino_ev(ev);
+                int l = INEV_SIZ + ev->len; if ((r-=l)<=0) return; else s+=l;
+        }}
+
+/*** cmd **********************/
 static int start_con() {
 	static const char * sh = 0;
 	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xterm_name, "!)x1", "-e", sh, (char*)0)<0); }
@@ -317,6 +408,8 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'r': return (void) (rs_ts = time(NULL));
 	case 'x': return (n>255) ? LOG("x: str too long") 
 		  	         : (void) (memcpy(xterm_nbuf, s+1, n), xterm_name=xterm_nbuf);
+	case 'h': return (n>6 && s[6]=='.') ? ino_add(atoi_h(s+1), s+7, n-7) : LOG("'h': parse error");
+	case 'd': return (void) (dflg = atoi_h(s+1));
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 
@@ -360,16 +453,27 @@ static void ib_read(ibuf * b) {
 
 /*** main *****/
 
+static void i_chld(int _) { chld_flg = 1; signal(SIGCHLD, &i_chld); }
+
 static void hello() {
 	char buf[1024]; int k = (int)readlink("/proc/self/fd/2", buf, 1023);
 	if (k<0) LOG("ioprc started, /proc/self/fd/2: %s", strerror(errno));
 	else buf[k] = 0, LOG("ioprc started, logfile is \"%s\"", buf);
 }
 
+static void ch_bye() { 
+	int j, x, pid = waitpid(-1, &x, WNOHANG);
+	if (pid<=0) return LOG("wait: %s", pid<0 ? strerror(errno) : "WTF???");
+ 	if (dflg&1) LOG("wait: pid=%d", pid);
+	if ((j=ino_find(ino_epid, pid))>=0) ino_bye(j);
+}
+
 #define FOR_IB for(i=0; i<N_IBUF; i++) if ((k=ib[i].fd)>=0)
 int i_main(int ac, char ** av) {
-	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN);
-	hello();
+	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN); signal(SIGCHLD, i_chld);
+	hello(); 
+	if (!(wrkdir=getenv("LF_TMPDIR")) || (wrkdir_l=strlen(wrkdir))>20) fail("workdir");
+	ino_ini();
 	if (!(xterm_name = getenv("LF_XTERM"))) xterm_name = "xterm";
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
 	killer_fd = (ac<3||*av[2]<48) ? 0 : qh4r(*(int*)av[2]);
@@ -377,17 +481,18 @@ int i_main(int ac, char ** av) {
 	int i, k;
 	fd_set rset; struct timeval tv;
 	while(1) {
-		FD_ZERO(&rset);
-		int maxfd = 0;
-		FOR_IB { FD_SET(k, &rset); if (k>maxfd) maxfd = k; }
+		FD_ZERO(&rset); int maxfd = 0;
+		FOR_IB 		   { FD_SET(k, &rset); if (k>maxfd) maxfd = k; }
+		if ((k=ino_fd)>=0) { FD_SET(k, &rset); if (k>maxfd) maxfd = k; }
 		tv.tv_sec=0; tv.tv_usec = selwt;
-		int x, r = select(maxfd+1, &rset, 0, 0, &tv);
+		int r = select(maxfd+1, &rset, 0, 0, &tv);
 		if (r<0) { LOG("select(): %s", strerror(errno)); r = 0; }
-		waitpid(-1, &x, WNOHANG);
+		if (chld_flg) chld_flg = 0, ch_bye();
 		shutdn(0);
 		if(!r){ if ((errtemp -= 20)<0) errtemp = 0;  continue; }
 		if ((errtemp -= r)<0) errtemp = 0;
 		FOR_IB if (FD_ISSET(k, &rset)) ib_read(ib+i);
+		if (FD_ISSET(ino_fd, &rset)) ino_read();
 	}}
 
 

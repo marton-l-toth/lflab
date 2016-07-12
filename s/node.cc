@@ -235,15 +235,28 @@ void NameVec::ini_default(int k) { switch (k) {
 	case 5: set_nm(63, "BPM$from$to$rpt#$r.fr$r.to"); return;
 }}
 
-int BoxDesc::dsc(char * to) {
-	if (!(m_u8_refcnt&(1<<24))) return *to=33, 1+s__cat(to+1,m_u.ky);
-	return s__cat(to, "2dynamic description:$sorry not yet implemented");
-}
+void BoxDesc::set_n(int k) {
+	if (k==n) return;
+	if (k>n) { do { int n2=n>>3, n3=n&7; if (!n3) pp[n2] = (char**)ANode::z64();
+			pp[n2][n3] = (char*)ANode::a64(); ++n; } while(k>n); }
+	else	 { do { --n; int n2=n>>3, n3=n&7; ANode::f64(pp[n2][n3]); pp[n2][n3]=0;
+			if (!n3) ANode::f64(pp[n2]),pp[n2]=0;  } while(k<n); }}
 
 BoxUI::BoxUI(const BoxUI * that, int uarg) : SOB(uarg) {
         memcpy(m_rgb, that->m_rgb, 6);
         m_dv.from(that->m_dv); m_nm[0].from(that->m_nm[0]);
                                m_nm[1].from(that->m_nm[1]); }
+
+int BoxUI::dump_dsc(char *to, int flg) {
+	BoxDesc * dsc = m_dsc.ro(); 
+	if (!dsc) return flg ? (memcpy(to, "1no description",15), 15) : 0;
+	int n=dsc->n, r = flg?(*to=48+n,1):0;
+	for (int i=0; i<n; i++) {
+		if (i) to[r++] = '$';
+		const char * s = dsc->ln(i); int l = strlen(s); memcpy(to+r,s,l); r+=l;
+	}
+	return r;
+}
 
 void BoxUI::ini_default(int k) {
         static const char * rgb = "uuu%%e  %%%uu0  Pz%%0%  zz%%z%  %%%fYu";
@@ -253,11 +266,13 @@ void BoxUI::ini_default(int k) {
         m_nm[1].set(NameVec_default( (0x11311>>(4*k)) & 15 ));
 }
 
-int BoxUI::cmd(const char *s) {
-	if (s[0]=='G') return (s[1]==33) || memcpy(m_rgb, s+1, 6);
-	int i = *s - 48; if ((unsigned int)i>3u || !s[1]) return NDE_PARSE;
-	return SOB_RW(nm[i>>1])->set_nm_1(16*(i&1)+hxd2i(s[1]), s+2), 0;
-}
+int BoxUI::cmd(const char *s) { int i; switch(s[0]) {
+	case 'G': return (s[1]==33) || memcpy(m_rgb, s+1, 6);
+	case '0': case '1': case '2': case '3':
+		  i = *s - 48; if (!s[1]) return NDE_PARSE;
+		  return SOB_RW(nm[i>>1])->set_nm_1(16*(i&1)+hxd2i(s[1]), s+2), 0;
+	default:  return NDE_PARSE;
+}}
 
 void BoxUI::w_rgb(int oid) { if (oid) gui2.setwin(oid, 'C'), gui2.t0();
 			    gui2.c1('R'); gui2.sn(m_rgb, 6); }
@@ -1041,6 +1056,12 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 	char * s = cb->a1();
 	if (*s == 'W') return draw_window(0x1c);
 	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
+	if (*s == 'E') {
+		char buf[4096]; buf[0]='h'; h5f(buf+1, m_id); buf[6]='.';
+		int l = 8+get_path_uf(buf+7,120); buf[l-1] = '$';
+		l += m_ui.ro()->dump_dsc(buf+l,0);
+		buf[l++] = 10; return pt_iocmd_sn(buf, l);
+	}
 	if (*s != 'O') {
 		int ec = SOB_RW(ui)->cmd(s); if (ec<0) return ec;
 		if ((ec&1) && winflg(4096)) m_ui.ro()->w_rgb(16*m_id+12);
@@ -1060,10 +1081,11 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 int ABoxNode::draw_window_2(int x) {
 	if (!m_box) return NDE_NULLBOX; else Node::shl_add(this);
 	switch(x) {
-		case 0: case 0xb: return m_box->box_window(), 16*cl_id() + 0xb;
+		case 0: case 0xb: return m_box->box_window(), 16*id()+0xb;
 		case 0x9: return m_box->aux_window();
 		case 0xe: return m_box->extra_window();
 		case 0xc: return (m_box->ifflg()&BIF_GC) ? m_ui.ro()->draw_window_2(this) : NDE_NOGUI;
+		case 0xd: return (m_box->ifflg()&BIF_GC) ? (m_box->doc_window(13),16*id()+13) : NDE_NOGUI;
 		default: return BXE_CENUM;
 	}}
 
@@ -1107,7 +1129,7 @@ void ABoxNode::qc_rgb(int c, const char * s) { memcpy(m_ui.rw_o0()->m_rgb+3*(c==
 void ABoxNode::qc_dfv(int bv, double * dv) { m_ui.rw_o0()->m_dv.rw_o0()->add_bv(bv, dv); }
 void ABoxNode::qc_ptn(int trg, int i, int j, const char *s) {m_ui.rw_o0()->m_nm[trg=='o'].rw_o0()->qpt(i,j,s);}
 void ABoxNode::qc_iot(int trg, int bv, const char *s) {  BoxUI * ui = m_ui.rw_o0();
-	if ((trg|=32)=='t') strncpy(ui->m_dsc.rw_o0()->m_u.ky, s, 47); 
+	if ((trg|=32)=='t') bug("strncpy(ui->m_dsc.rw_o0()->m_u.ky, s, 47)"); 
 	else ui->m_nm[trg=='o'].rw_o0()->set_nm(bv, s); }
 void ABoxNode::qc_st8(int trg, int j) {
 	static SOB_p<BoxUI> store[8];
@@ -1123,13 +1145,27 @@ void ABoxNode::qc_st8(int trg, int j) {
 	}}
 
 int ABoxNode::dsc(char * to) {
-	BoxDesc * pd = m_ui.ro()->m_dsc.ro(); if (pd) return pd->dsc(to);
-	if (cl_id() != '_') return memcpy(to, "!empty", 6), 6;
+	if (cl_id() != '_') return m_ui.ro()->dump_dsc(to, 1);
 	ANode * p; int j,n = 1; *to = 33;
 	for (p = m_up; !p->is_dir(); p = p->up()) ;
 	p = static_cast<ADirNode*>(p)->get_hroot();
 	n += ((j=p->id())<3) ? (j && (to[n] = 3+30*j,1)) : p->get_name(to+n);
 	to[n++] = '.'; return n + s__cat(to+n, m_box->cl_name());
+}
+
+int ABoxNode::cmd_H(CmdBuf * p) {
+	BoxUI* ui = SOB_RW(ui);
+	char *av[33]; int n, e, rv = 0;
+	for (n=0; n<33; n++) if (!(av[n]=p->tok())) break;
+	if (!n) { ui->m_dsc.set(0); }
+	else {  n -= (e = (n==33));
+		BoxDesc * dsc = SOB_RWP(ui, dsc);  dsc->set_n(n);
+		for (int i=0; i<n; i++) { char *s = av[i], *q = dsc->ln(i); int l = strlen(s); 
+			          	  if (l>63) memcpy(q,s,63),q[63]=0,e|=2; else memcpy(q,s,l+1); }
+		if (e) rv = NDE_DSC_Y-1+e;
+	}
+	if (m_winflg&8192) draw_window(29);
+	return rv;
 }
 
 void ABoxNode::ab_debug(int flg) {

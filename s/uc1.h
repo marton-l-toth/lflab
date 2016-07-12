@@ -7,7 +7,6 @@
 #define CUT300(X) cut300(X)
 #endif
 
-#define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define TRK_DEF_GWFR ((const unsigned char*)"$%\0")
 
 #define FA_SUFFIX ".a20"
@@ -32,15 +31,8 @@ static inline const char * str0(const char *s) { return s?s:"(null)"; }
 static inline double cut300(double x) { return fabs(x)>=1e-300 ? x : 0.0; }
 static inline int is_hx(int c) { return (unsigned int)(c-48)<10u || (unsigned int)((c|32)-97)<6u; }
 static inline int hex2(const char*s) { return 16*hxd2i(*s)+hxd2i(s[1]); }
-static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
-
 #define HEX2(p,v) ( *(p) = hexc1(((v)>>4)&15), (p)[1] = hexc1((v)&15), (p) += 2 )
-
 static inline int i_to_b32(int x) { return x<10 ? '0'+x : 'a'-10+x ; }
-
-static inline int atoi_h(const char *s) { int r = 0, x = 0;
-	for (*s=='-'&&s++&&(--x); *s&80; s++) r=16*r+hxd2i(*s); return (r^x)-x; }
-
 static inline int chtab_get(chtab * p, int c) { c-=32; if(c<0||c>95) c=95; return p->tab[c]; }
 static inline int s__cat(char * to, const char * s) { int i = 0; while (s[i]) to[i] = s[i], i++; return i; }
 static inline int bitcnt_8(int c) { return c=(c&0x55)+((c>>1)&0x55), c = (c&0x33)+((c>>2)&0x33), (c&15)+(c>>4);}

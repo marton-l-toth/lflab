@@ -50,6 +50,7 @@ class CmdTab {
 			else debug_flags = atoi_h(p->m_c_a0); return 0; }
                 static int c_gui2(CmdBuf * p) { gui2.brk(); gui2.pf("%s\n", p->m_c_a0); return 0; }
 		static int c_kfw(CmdBuf * p) { CMD_NODE(Clip); return nd->cmd(p); }
+		static int c_dsc(CmdBuf * p) { CMD_NODE(ABox); return nd->cmd_H(p); }
 		static int c_info(CmdBuf * p) { char *s = p->tok(), k = s ? *s&7 : 7; 
 						return k ? (pt_con_op(0), p->m_c_node->debug(k), 0) : 0; }
 		static int c_source(CmdBuf * p) { return p->fdok(CmdBuf::read_batch(p->m_c_a0,
@@ -173,7 +174,7 @@ run:    if ((ec = (*pe->f)(this)) >= 0) return ec;
         if (ec==GCE_PREFIX) { s = m_c_a0; goto start; }
 err:    if (m_c_nof & NOF_ERRMSG) show_error(ec);
 	if (ec == EEE_NOEFF) return 0; else ++m_errcnt;
-	if (is_gui()) gui2.errq_add(ec);
+	if (m_c_nof&NOF_FGUI) gui2.errq_add(ec);
 	return ec;
 }
 
@@ -373,7 +374,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 				  case '-': i=~i; case '&': i &= glob_flg; break;
 				  case '+':       case '|': i |= glob_flg; break; default:i=glob_flg; break; }
 			  return j=glob_flg, glob_flg=i, log("glob_flg: 0x%x -> 0x%x", j, i), 0;
-		case 'E': return gui2.errq_add(EEE_TWNTYTWO), 0;
+		case 'E': return gui2.errq_add(s[1] ? -atoi_h(s+1) : -32, s[1]?"_E":0), 0;
 		case 'W': return ANode::wi_debug(), 0;
 		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = s[1]&1) ) return EEE_NOEFF;
 		          glob_flg ^= GLF_RECORD; gui2.pf("\tdf%x", j<<11);
@@ -457,4 +458,4 @@ CmdTab::ent_t CmdTab::m0_tab[] = {
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx}, {'Q',c_rpl},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
 {'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {'R', c_report},
-{'w'|CF_TOK1,c_wav}, {0,0} };
+{'w'|CF_TOK1,c_wav}, {'H'|CF_NODE, c_dsc}, {0,0} };

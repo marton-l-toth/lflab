@@ -46,7 +46,7 @@ static void ini(const char ** ppf) {
 	extern void INI_LIST; INI_LIST;
 	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
 	if (CFG_INI_ORDER.i) gui2.start(PFD(1)), rf(ppf); else rf(ppf), gui2.start(PFD(1));
-	sl_cmd[0].init( -1,  NOF_ERRMSG);
+	sl_cmd[0].init( -1,  NOF_ERRMSG|NOF_FGUI);
 	sl_cmd[1].init( -1,  NOF_GUI, 126);
 	sl_cmd[2].init( -1 , NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);

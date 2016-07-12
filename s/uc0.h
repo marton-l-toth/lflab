@@ -6,6 +6,10 @@
 static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
+static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
+static inline int atoi_h(const char *s) { int r = 0, x = 0;
+	for (*s=='-'&&s++&&(--x); *s&80; s++) r=16*r+hxd2i(*s); return (r^x)-x; }
+#define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 
 #define qh4rs(P) qh4r(*(const int*)(P))
 
@@ -14,6 +18,7 @@ extern volatile char vstring[16];
 void vstring_set(int i, int j);
 void d999(char *p, int v);
 int qh4(unsigned int x), qh4r(unsigned int x);
+void h5f(char *to, int x);
 const char * tpipe_name(int c);
 int launch(const char * exe, const char * iocfg, ...);
 #else
@@ -34,6 +39,14 @@ int qh4r(unsigned int x) {
         x = (x&0xf0f0f0f) + 9*(ten>>6);
         x = (x&0xf000f00) | ((x&0xf000f)<<12);
         return (int)((x&0xff00) | ((x>>24)&255));
+}
+
+void h5f(char *to, int x) {
+	to[0] = hexc1(x>>16);
+        x = (x&0xff00) | ((x&255)<<24);
+        x = (x&0xf000f00) | ((x>>12)&0xf000f);
+        unsigned int ten = (x+0x6060606)&0x10101010;
+        *(int*)(to+1) = (int)(x + 0x30303030 + (ten>>1) - (ten>>4));
 }
 
 void d999(char *p, int v) { int ht = (v*205)>>11, h = (ht*205)>>11;
