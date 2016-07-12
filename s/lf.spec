@@ -25,6 +25,7 @@ mkdir %{buildroot}/usr/bin
 ln -sf %{LF_DIR}/lf.bin /usr/bin/%{LF_NM}
 ln -sf %{LF_DIR}/lf.bb /usr/bin/lf.acv
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.con
+ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.ed
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.io
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.lic
 

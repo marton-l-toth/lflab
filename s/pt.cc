@@ -102,9 +102,9 @@ static void qe_ini() {
 	static const char * rel[] = { "uh/.lflab", 
 		">u/lf.log", "ju/lf.ini", "=u/lf.tlog", "au/__asv.lf", "xu/__asv--x.lf", "zw/killer-file",
 		"ip/lf.io", "bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
-		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def"};
+		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def", "@p/lf.ed" };
 	static const char * sete[] = { "kLF_CON", "?LF_HLP", "zLF_KILLER", "cLF_LIC", ">LF_LOG", "=LF_TLOG",
-		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", 0};
+		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", "@LF_ED", 0};
 	static const int nrel = sizeof(rel)/sizeof(char*);
 	int rlen[sizeof(rel)/sizeof(char*)];
 
@@ -395,7 +395,7 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con) {
 	struct rlimit cl; cl.rlim_cur=cl.rlim_max=1<<28; setrlimit(RLIMIT_CORE, &cl);
 	FPU_INI; vstring_set(v_major, v_minor);  signal(SIGPIPE, SIG_IGN);
 	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io;
-	qe_ini(); cfg0(); // qe_dump(); 
+	qe_ini(); cfg0(); 
 	const char ** ret = cfg1(ac, av);
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
 	if ((pt_nullfd = open("/dev/null", O_RDWR)) < 0 ||

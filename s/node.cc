@@ -253,7 +253,7 @@ void BoxDesc::set_n(int k) {
 
 int BoxDesc::save2(SvArg * sv) {
 	if (!n) return log("BUG: saving empty boxdesc"), 1;
-	char buf[3072]; int len = 5; memcpy(buf, "E$D0\n", 5); buf[3] += n;
+	char buf[3072]; int len = 5; memcpy(buf, "E$C0\n", 5); buf[3] += n;
 	for (int i=0; i<n; i++) {
 		const char * s = ln(i); int l1 = strlen(s);
 		buf[len++] = '<'; memcpy(buf+len, s, l1); buf[len+l1] = 10; len+=l1+1;
@@ -1085,9 +1085,9 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 	char * s = cb->a1();
 	if (*s == 'W') return draw_window(0x1c);
 	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
-	if (*s == 'E') {
-		char buf[4096]; buf[0]='h'; h5f(buf+1, m_id); buf[6]='.';
-		int l = 8+get_path_uf(buf+7,120); buf[l-1] = '$';
+	if ((*s|1) == 'E') {
+		char buf[4096]; buf[0]='h'; buf[1]=*s; h5f(buf+2, m_id); buf[7]='.';
+		int l = 9+get_path_uf(buf+8,120); buf[l-1] = '$';
 		l += m_ui.ro()->dump_dsc(buf+l,0);
 		buf[l++] = 10; return pt_iocmd_sn(buf, l);
 	}

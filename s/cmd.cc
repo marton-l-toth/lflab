@@ -281,7 +281,7 @@ int CmdTab::c_wfw(CmdBuf * p) {
 
 int CmdTab::c_efw(CmdBuf * p) { 
 	CMD_NODE(ABox); int ec;
-	if (*p->m_c_a1=='D') return (p->m_cont = nd->dsc_reader(p->m_c_a1[1]-48)) ? 0 : NDE_NOGUI;
+	if (*p->m_c_a1=='C') return (p->m_cont = nd->dsc_reader(p->m_c_a1[1]-48)) ? 0 : NDE_NOGUI;
 	do { ec = nd->ui_cmd(p); } while (ec>=0 && (p->m_c_a1 = p->tok()));
 	return ec;
 }

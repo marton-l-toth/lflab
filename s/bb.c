@@ -150,13 +150,21 @@ int c_main() { /* console */
 	FILE * f = fopen(cnm, "a"); if (!f) return perror(cnm), sleep(3), 1;
 	fprintf(f, "_c/proc/%d/fd/1\n", getpid()); fclose(f); while(1) sleep(60);  }
 
+int e_main() { /* editor */
+	const char * cnm = tpipe_name('C'), *jt = getenv("LF_ED_TMPF"); FILE *f;
+	int x, r = fork(); switch(r) {
+		case 0: execlp("vim", "vim", jt+1, NULL); perror("exec"); exit(1);
+		case 1: perror("fork"), exit(1);
+		default: waitpid(r,&x,0); exit((f=fopen(cnm, "a")) ? (fprintf(f,"-%c\n",*jt),fclose(f),0) 
+			 				           : (perror(cnm),1)); }}
+
 /**************** log i/o ****************************************************/
 
 volatile int chld_flg = 0;
 static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1, wrkdir_l = 0,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0, dflg = 0;
 static char xterm_nbuf[256];
-static const char *xterm_name, *wrkdir;
+static const char *xterm_name, *wrkdir, *lf_ed;
 static unsigned int ino_bv = 0u;
 static int ino_epid[32], ino_oid[32], ino_fd = -1;
 static char ino_inm[80];
@@ -237,7 +245,7 @@ msg:		LOG("kill %5s %c %s", s, ec, exe);
 
 static void del_workdir() {
         const char *s, *s0 = wrkdir;  int l0 = wrkdir_l;
-	ino_inm[l0+3] = ino_inm[l0+43] = 0; rm_r(ino_inm); rm_r(ino_inm+40);
+	ino_inm[l0+4] = ino_inm[l0+44] = 0; rm_r(ino_inm+1); rm_r(ino_inm+41);
         char buf[l0+16]; memcpy(buf, s0, l0); buf[l0] = '/'; buf[l0+2] = 0;
         for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0);
         memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0);
@@ -318,30 +326,32 @@ static void bye(int kf) {
 
 /*** inotify ******************/
 #define INEV_SIZ (sizeof(struct inotify_event))
-static const char * ino_nm(int t, int oi) { char*q = ino_inm+40*t; h5f(q+wrkdir_l+4,oi); return q; }
+static char * ino_nm(int t, int oi) { char*q = ino_inm+1+40*t; h5f(q+wrkdir_l+4,oi); return q; }
 static int ino_find(int *p, int id) { BVFOR_JMC(ino_bv) if (p[j]==id) return (int)j;   return -1; }
-static void ino_bye(int j) { if (dflg&2) LOG("ino_bye: %d", j);
-			     ino_bv &= ~(1u<<j); unlink(ino_nm(0,j)); unlink(ino_nm(1,j)); }
+static void ino_bye(int j) { unsigned int m = 1u<<j, k = !(m&ino_bv); 
+			     if (k|(dflg&2)) LOG("BUG:ino_bye: %d"+4*!k, j);
+			     ino_bv &= ~m; unlink(ino_nm(0,j)); unlink(ino_nm(1,j)); }
 
 static void ino_ini() {
 	int l = wrkdir_l;
-	memcpy(ino_inm,    wrkdir, l); memcpy(ino_inm   +l, "/ds/00000.txt",14);
-	memcpy(ino_inm+40, wrkdir, l); memcpy(ino_inm+40+l, "/d0/00000.txt",14);
-	ino_inm[l+3] = ino_inm[l+43] = 0; 
-	if (mkdir(ino_inm,0700)<0 || mkdir(ino_inm+40,0700)<0 || (ino_fd=inotify_init1(IN_CLOEXEC))<0 ||
-	    inotify_add_watch(ino_fd, ino_inm, IN_CLOSE_WRITE)<0) 
+	memcpy(ino_inm+ 1, wrkdir, l); memcpy(ino_inm+ 1+l, "/ds/00000.txt",14);
+	memcpy(ino_inm+41, wrkdir, l); memcpy(ino_inm+41+l, "/d0/00000.txt",14);
+	ino_inm[l+4] = ino_inm[l+44] = 0; 
+	if (mkdir(ino_inm+1,0700)<0 || mkdir(ino_inm+41,0700)<0 || (ino_fd=inotify_init1(IN_CLOEXEC))<0 ||
+	    inotify_add_watch(ino_fd, ino_inm+1, IN_CLOSE_WRITE)<0) 
 		return ino_fd=-1, LOG("ino_ini: %s", strerror(errno));
-	ino_inm[l+3] = ino_inm[l+43] = '/';
+	ino_inm[l+4] = ino_inm[l+44] = '/';
 }
 
 #define SERR(X) ((void) write(1, "_E" #X "\n", 5))
 #define SERRC(X) (close(fd), (void) write(1, "_E" #X "\n", 5))
-static void ino_add(int id, char * txt, int len) {
+static void ino_add(int id, int edx, char * txt, int len) {
+	if (dflg&2) LOG("ino_add: id=0x%x edx=%d, txt=\"%s\"", id, edx, txt);
 	if (ino_fd<0) return SERR(15);
 	if (ino_find(ino_oid, id)>=0) return SERR(16);
 	BVFOR_JMC(~ino_bv) goto found;
 	return LOG("dsc-edit table full (32)");
-found:; const char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
+found:; char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
 	int i, fd = creat(nm1, 0600); if (fd<0) goto err2;
 	for (i=0; i<len; i++) if (txt[i]==36) txt[i]=10; if (txt[len-1]!=10) txt[len++] = 10;
 	txt-=7; len+=7; memcpy(txt, "#DSCR: ", 7);
@@ -349,7 +359,9 @@ found:; const char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
 	if (rename(nm1, nm0)<0 || creat(nm1, 0600)<0) goto err2;
 	if (write(fd, txt, len)<0) goto err1; else close(fd);
 	ino_bv |= (1u<<j); ino_oid[j] = id; 
-	ino_epid[j] = launch("xedit", "!(TT", nm0, NULL);
+	ino_epid[j] = edx ? (nm0[-1] = j+48, setenv("LF_ED_TMPF", nm0-1, 1),
+			     launch(xterm_name,"!)x1","-e",lf_ed, NULL), -1)
+			  : launch("xedit", "!(TT", nm0, NULL);
 	return; // TODO: open ed
 err1:   return close(fd), LOG("ino_add:w: %s", strerror(errno));
 err2:	return LOG("ino_add:c/m: %s", strerror(errno));
@@ -403,12 +415,13 @@ static void con_started(char *s, int n) {
 static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'c': if (start_con()<0) LOG("start_con failed"); return;
 	case '_': return con_started(s, n);
+	case '-': return ino_bye(s[1]-48);
 	case 'Z': return con_end();
 	case 'f': return log_sn(0, -1, 0);
 	case 'r': return (void) (rs_ts = time(NULL));
 	case 'x': return (n>255) ? LOG("x: str too long") 
 		  	         : (void) (memcpy(xterm_nbuf, s+1, n), xterm_name=xterm_nbuf);
-	case 'h': return (n>6 && s[6]=='.') ? ino_add(atoi_h(s+1), s+7, n-7) : LOG("'h': parse error");
+	case 'h': return (n>7 && s[7]=='.') ? ino_add(atoi_h(s+2), s[1]&1,  s+8, n-8) : LOG("h: parse error");
 	case 'd': return (void) (dflg = atoi_h(s+1));
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
@@ -473,6 +486,7 @@ int i_main(int ac, char ** av) {
 	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN); signal(SIGCHLD, i_chld);
 	hello(); 
 	if (!(wrkdir=getenv("LF_TMPDIR")) || (wrkdir_l=strlen(wrkdir))>20) fail("workdir");
+	if (!(lf_ed=getenv("LF_ED"))) fail("ed-wrap");
 	ino_ini();
 	if (!(xterm_name = getenv("LF_XTERM"))) xterm_name = "xterm";
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
@@ -677,6 +691,7 @@ int main(int ac, char ** av) {
 	if (memcmp(q, "lf.", 3)) return usage(q);
 	switch(q[3]) {
 		case 'c': return c_main();
+		case 'e': return e_main();
 		case 'a': return a_main(ac, av);
 		case 'i': return i_main(ac, av);
 		case 'q': return q_main(ac, av);
