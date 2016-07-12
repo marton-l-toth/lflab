@@ -34,6 +34,6 @@ int pt_con_op(const char * arg); // -1:start -2:stop -3:restart -4:killed /:prcl
 int pt_acv_op(int id, int op, const char *a1, const char *a2);
 int pt_kill_pa(int flg);
 int pt_show_lic();
-void pt_con_fd_ptr(int * pfd);
+void pt_debug();
 
 #endif // __qwe_pt_h__

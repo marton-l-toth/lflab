@@ -24,6 +24,8 @@ void bug(const char * fmt, ...);
 
 char * bigblk(int n);
 char * alloc_32k();
+inline char * nf_alloc(int x) { extern int nfa_siz; extern char *nfa_cur, *nf_alloc_2(int); x+=7,x&=~7;
+	char*p=nfa_cur; int n=nfa_siz-x; return (n<0) ? nf_alloc_2(x) : (nfa_cur+=x, nfa_siz=n, p); }
 
 extern int sample_rate; extern double sample_length;
 extern const double smalldiv63[64];

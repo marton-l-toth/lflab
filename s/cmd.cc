@@ -369,6 +369,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'K': return cfg_write(1);
 		case 'M': return mx_debug(s+1);
 		case 'm': return nd_mem_debug();
+		case 'p': return pt_debug(), 0;
 		case '_': return midi_cmd(s+1);
 		case 's': return u_sleep((int)lround(1000.0*atof(s+1))), 0;
 		case 'G': switch(j=s[1], i=j?atoi_h(s+2):0, j) {

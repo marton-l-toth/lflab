@@ -51,6 +51,8 @@ static void qfail(const char * fmt, ...) {
 static void ee_add(int ec) { if (ec<0) return (void)(ee_flg |= -ec); else ee_flg |= (ec&(7<<28));
 			     if (ee_n<64) ee_v[ee_n++]=ec; }
 static inline void qe_set2(int c, const char *s, int l) { QENV(c)=s; QENVL(c)=l; }
+static inline void qe_set2a(int c, const char *s, int l) { 
+	QENVL(c) = l++; char *q = nf_alloc(l); memcpy(q, s, l); QENV(c) = q; }
 static inline void qe_len1(int c) { QENVL(c) = strlen(QENV(c)); }
 static void qe_len(const char *ls) { while (*ls) qe_len1(*ls), ls++; }
 static int stat2(const char *nm, int op) {
@@ -104,9 +106,8 @@ static void qe_ini() {
 		"ip/lf.io", "bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
 		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def", "@p/lf.ed" };
 	static const char * sete[] = { "kLF_CON", "?LF_HLP", "zLF_KILLER", "cLF_LIC", ">LF_LOG", "=LF_TLOG",
-		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", "@LF_ED", 0};
-	static const int nrel = sizeof(rel)/sizeof(char*);
-	int rlen[sizeof(rel)/sizeof(char*)];
+		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", "@LF_ED"};
+	static const int nrel = sizeof(rel)/sizeof(char*), nsete = sizeof(sete)/sizeof(char*);
 
 	QENV('>') = "/tmp/lflab.quick-fail.log";
 	if (!(pt_gid=getegid(), pt_uid=geteuid())) qfail("it is a bad idea to run lflab as root");
@@ -115,26 +116,15 @@ static void qe_ini() {
 	qe_set2('w', wdir, sprintf(wdir, "%s/lf.%d", QENV('t'), pt_pid=getpid()));
 
 	char pkgs[1024]; int pkl = readlink(self, pkgs, 1023);
-	if (pkl<0) qfail("%s: %s", self, strerror(errno));
-	if (pkl>999) qfail("%s: path too long", self);
-	if (pkl<2 || pkgs[0]!='/') qfail("%s: what???", self);
-	for (--pkl; pkgs[pkl]!='/'; --pkl); 
-	pkgs[QENVL('p')=pkl] = 0;
+	if ((unsigned int)pkl>999u) qfail("%s: %s", self, pkl<0 ? strerror(errno) : "linktrg too long");
+	if (pkl<2 || pkgs[0]!='/') pkgs[pkl]=0, qfail("%s: \"%s\": what???", self, pkgs);
+ 	for (--pkl; pkgs[pkl]!='/'; --pkl);   pkgs[pkl]=0; qe_set2a('p', pkgs, pkl);
 
-	int bi, buflen = pkl + 1;   QENVL('u') = QENVL('h')+7;
 	for (int i=0; i<nrel; i++) {
-		const char * s = rel[i];
-		buflen += QENVL(s[1]) + (rlen[i] = strlen(s+2)) + 1; }
-	char * buf = (char*) malloc(buflen); QENV('p') = buf;
-	memcpy(buf, pkgs, pkl+1); bi = pkl+1;
-	for (int i=0; i<nrel; i++) {
-		const char * s = rel[i];  int l1 = QENVL(s[1]); if (*s!='>' && QENV(*s)) qfail("qe:%c",*s);
-		memcpy(buf+bi,    QENV(s[1]), l1);
-		memcpy(buf+bi+l1, s+2,        rlen[i]);
-		QENV(*s) = buf+bi; bi += 1 + (QENVL(*s) = rlen[i]+l1);
-	}
-	for (const char **pp = sete; *pp; pp++) setenv(*pp+1, QENV(**pp), 1);
-	if (bi!=buflen) qfail("qe_ini: blen=%d, bi=%d\n", buflen, bi);
+		const char *s=rel[i]; char*q; int l1=QENVL(s[1]), l2=strlen(s+2), l12 = QENVL(*s) = l1+l2;
+		memcpy(q=nf_alloc(l12+1), QENV(s[1]), l1); memcpy(q+l1, s+2, l2+1);     QENV( *s) = q; }
+	for (int i=0; i<nsete; i++) setenv(sete[i]+1, QENV(sete[i][0]), 1);
+
 	if (mkdir(QENV('w'), 0700)<0) qfail("mkdir(%s): %s", QENV('w'), strerror(errno));
 	if (!stat2(QENV('u'), 'W') && (glob_flg|=GLF_HITHERE, (mkdir(QENV('u'),0700)<0)))
 		qfail("mkdir(%s): %s", QENV('u'), strerror(errno));
@@ -373,7 +363,7 @@ ret:	return (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = 
 }
 
 int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('v'), (char*)0); }
-
+void pt_debug()   { return qe_dump(); }
 int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
 					EEE_ERRNO : 0; }
 

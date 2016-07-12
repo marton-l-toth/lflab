@@ -51,6 +51,10 @@ char * alloc_32k() {
 	char * p = cur; cur += 32768; return p;
 }
 
+int nfa_siz = 0; char *nfa_cur = 0;
+char * nf_alloc_2(int x) { if (x>32768) return (char*)malloc(x);
+			   char * p = alloc_32k();  nfa_cur = p+x; nfa_siz=32768-x; return p; }
+
 int u_sleep(int x) {
 	struct timespec ts; ts.tv_sec = 0; ts.tv_nsec = 1000*x; int ec;
 	do ec = nanosleep(&ts, &ts); while (ec==EINTR); return ec; }
