@@ -29,6 +29,15 @@ SOB_INIFUN(BoxUI, 5)
 
 ///////// decl ///////////////////////////////////////////////////////////////
 
+class DscReader : public AReader {
+	public:
+		DscReader(BoxDesc * dsc, int n) : m_dsc(dsc), m_i(0), m_n(n) {}
+		virtual int line(char * s);
+	protected:
+		BoxDesc * m_dsc;
+		int m_i, m_n;
+};
+
 class NDirNode : public ADirNode {
         public: 
                 friend class Node;
@@ -241,6 +250,25 @@ void BoxDesc::set_n(int k) {
 			pp[n2][n3] = (char*)ANode::a64(); ++n; } while(k>n); }
 	else	 { do { --n; int n2=n>>3, n3=n&7; ANode::f64(pp[n2][n3]); pp[n2][n3]=0;
 			if (!n3) ANode::f64(pp[n2]),pp[n2]=0;  } while(k<n); }}
+
+int BoxDesc::save2(SvArg * sv) {
+	if (!n) return log("BUG: saving empty boxdesc"), 1;
+	char buf[3072]; int len = 5; memcpy(buf, "E$D0\n", 5); buf[3] += n;
+	for (int i=0; i<n; i++) {
+		const char * s = ln(i); int l1 = strlen(s);
+		buf[len++] = '<'; memcpy(buf+len, s, l1); buf[len+l1] = 10; len+=l1+1;
+	}
+	return sv->st2=-1, sv->out->sn(buf, len);
+}
+
+int DscReader::line(char*s) {
+	if (!m_i) m_dsc->set_n(m_n);
+	int l = strlen(s); char *q = m_dsc->ln(m_i++);
+	if (l<64) memcpy(q,s,l+1); else memcpy(q,s,63), q[63] = 0;
+	return m_i < m_n;
+}
+AReader * ABoxNode::dsc_reader(int n) {
+	BoxUI * ui = SOB_RW(ui); return new DscReader(SOB_RWP(ui,dsc), n); }
 
 BoxUI::BoxUI(const BoxUI * that, int uarg) : SOB(uarg) {
         memcpy(m_rgb, that->m_rgb, 6);
@@ -1035,6 +1063,7 @@ int ABoxNode::save_sob() {
 		case 8: 	  return m_ui.save(&m0_sv);
 		case 9: 	  return m_ui.ro()->m_dv.save(&m0_sv);
 		case 10: case 11: return m_ui.ro()->m_nm[*ps&1].save(&m0_sv);
+		case 12:	  return m_ui.ro()->m_dsc.save(&m0_sv);
 		default:	  return *ps=16, 1;
 	}}
 

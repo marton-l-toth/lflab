@@ -329,6 +329,7 @@ class BoxDesc : public SOB {
                 BoxDesc(const BoxDesc * that, int arg) : SOB(arg) {
 			int i,n=that->n; set_n(n); for(i=0;i<n;i++) memcpy(ln(i),that->ln(i),64); }
                 ~BoxDesc() {}
+		int save2(SvArg * sv);
 		char * ln(int i) const { return pp[i>>3][i&7]; }
 		void set_n(int k);
 		int n, rsrv[3];
@@ -474,6 +475,7 @@ class ABoxNode : public ANode {
 		int get_ionm(char *to, int io, int j);
 		int dsc(char * to);
 		int cmd_H(CmdBuf * p);
+		AReader * dsc_reader(int n);
 		void ab_debug(int flg);
 		sthg * etc() { return &m_etc; }
 		int sv_wr_backref();
