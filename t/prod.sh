@@ -1,7 +1,6 @@
 #!/bin/bash
-SDIR="$HOME/g/lflab/s"
+SDIR="$PWD"
 PDIR="$HOME/lf-prod/s"
-mkdir -p "$PDIR/c"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS="";
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
@@ -18,9 +17,13 @@ while [[ -n "$cond" ]]; do
 		"-fcmd") FCMD="$2"; shift 2 ;;
 		"-rsm")  OCMD="^q2"; FCMD="^C47\$E>00ffffec"; shift ;;
 		"-rsg")  OCMD="^q";  FCMD="^C47\$E>00ffffeb"; shift ;;
+		"-sd") SDIR="$2"; shift 2 ;;
+		"-pd") PDIR="$2"; shift 2 ;;
 		*) cond="" ;;
 	esac
 done
+mkdir -p "$PDIR/c"
+mkdir -p "$PDIR/co"
 [[ -z "$JARG" ]] && JARG=-j$(expr $(grep '^processor[[:space:]]*:' /proc/cpuinfo | wc -l) + 1)
 if [[ "$SSE" == "i" ]]; then
 	SSE=""; grep -q 'flag.*sse2' /proc/cpuinfo && SSE="-msse2"

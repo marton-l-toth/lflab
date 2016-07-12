@@ -14,7 +14,7 @@ OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  it.o  in.o  b0.o  v.o
 INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h
 
 SRCC = $(shell c/upd_contrib.sh cc c/)
-OBJC = $(shell c/upd_contrib.sh o  c/)
+OBJC = $(shell c/upd_contrib.sh o  co/)
 
 SRCS = $(SRC1) $(SRC2) $(SRC3) $(SRCC)
 INCS = $(INC1) $(INC2) $(INCX)
@@ -45,7 +45,7 @@ cfgtab.inc: cfgtab.txt cfg2inc.sh
 errtab.inc: errtab.txt errtab.sh
 	./errtab.sh errtab.txt > errtab.inc
 
-%.o: c/%.cc $(INCS) errtab.inc cfgtab.inc
+co/%.o: c/%.cc $(INCS) errtab.inc cfgtab.inc
 	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<
 %.o: %.cc $(INCS) errtab.inc cfgtab.inc
 	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<

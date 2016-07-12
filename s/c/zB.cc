@@ -3,7 +3,8 @@
 // This name has to begin with a letter and be a valid C identifier
 // It will be placed under ".!c.<first_letter>" in the object tree
 // Please create only one source file for your collection of contrib boxes, in s/c
-// It is recommended to use ../../t/prod.sh for compiling (change SDIR and possibly PDIR)
+// It is recommended to use ../../t/prod.sh for compiling
+// (see script for options, default target dir is $HOME/lf-prod/s)
 
 // first, some includes
 
