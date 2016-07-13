@@ -75,6 +75,7 @@ inline static int parse_sep(const char *s, int c) { for (int i=0; 1; i++) if (s[
 int parse_num(void * to, const char * s);
 inline static double at0f(const char *s) { double r = 0.0; parse_num(&r, s); return r; }
 const char * dbl2str_s(int ix, double x);
+inline void bump_dec2(char *s) { if (s[1]=='9') ++*s, s[1]='0'; else ++s[1]; }
 void set_fd(int *to, int from, int keep);
 inline void p_close(int *pfd) { if (*pfd>=0) close(*pfd), *pfd=-1; }
 
