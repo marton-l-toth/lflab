@@ -53,7 +53,7 @@ class FEBox : public BoxInst {
 };
 
 static inline void ply_qi(double *q, const double *p, int n) {
-	for (int i=0; i<n; i++) q[i] = p[i] * smalldiv63[i+1]; }
+	for (int i=0; i<n; i++) q[i] = p[i] * smalldiv128[i+2]; }
 static inline double ply_ev(const double *p, int n, double x) {
 	double y = p[n-1]; for (int i=n-2; i>=0; i--) y*=x,y+=p[i]; return y; }
 

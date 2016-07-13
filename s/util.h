@@ -28,7 +28,7 @@ inline char * nf_alloc(int x) { extern int nfa_siz; extern char *nfa_cur, *nf_al
 	char*p=nfa_cur; int n=nfa_siz-x; return (n<0) ? nf_alloc_2(x) : (nfa_cur+=x, nfa_siz=n, p); }
 
 extern int sample_rate; extern double sample_length;
-extern const double smalldiv63[64];
+extern const double smalldiv128[130];
 
 int approx_cmp(double x, double y);
 int approx_cmp_v(const double *x, const double *y, int n);
