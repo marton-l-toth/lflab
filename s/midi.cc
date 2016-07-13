@@ -13,6 +13,8 @@
 #include "errtab.inc"
 #include "cfgtab.inc"
 
+#define DBGC (debug_flags&DFLG_MIDIEV)
+
 // .0078740157480315
 int rawmidi_desc(char *to, int id, int maxlen); //asnd.cc
 static unsigned int mi_dfltc[256];
@@ -78,7 +80,7 @@ found:	mi_log(i, "system", p, ++j); return j; }
 
 static void midi_kc(int i, int ch, int kc, int v) {
  	unsigned int *p = mi_rw(i, ch, kc);
-	log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, kc, v, *p);
+	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, kc, v, *p);
 	*p = v; // TODO 
 }
 
