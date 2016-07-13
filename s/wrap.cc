@@ -1612,7 +1612,7 @@ int DWrapGen::av_guiconf(int c, const char * s) {
 }
 
 void DWrapGen::w_avol(int f, unsigned char * s) { gui2.setwin(w_oid(), 'w');
-	BVFOR_JM(f) gui2.wupd_i('Y', s[j], j+30); }
+	BVFOR_JM(f) gui2.wupd_i2('Y', s[j], j+30); }
 
 int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
 	case 3: w_avol(63, WR_AVCONF); return 0;

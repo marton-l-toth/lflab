@@ -409,7 +409,7 @@ void GraphBoxGen::box_window() {
 	gui2.hexn(nb+2, 3); gui2.c1('_'); gui2.hexn(ne, 4);
 	for (int i=!m_n_in-1; i<=nb; i++) draw_node(i);
 	gui2.wupd_0('g', "z");
-	gui2.wupd_i('i', m_n_in); gui2.wupd_i('o', m_n_out); gui2.wupd_i('f', m_n_fb);
+	gui2.wupd_i2('i', m_n_in); gui2.wupd_i2('o', m_n_out); gui2.wupd_i2('f', m_n_fb);
 	to_dot(sq, ne);
 	m_sel[0] = m_sel[1] = m_sel[2] = -1;
 }

@@ -141,7 +141,7 @@ void GuiStub::clip_box(ClipNode * cl, int i, int j, int sel) {
 }
 
 void GuiStub::clip_flg(int id, int fid, int v01) {
-	setwin(16*id+3,'K'); wupd_i(fid, v01); }
+	setwin(16*id+3,'K'); wupd_i1(fid, v01); }
 
 void GuiStub::node_name(int i, ANode * nd) {
 	ADirNode * dir = dynamic_cast<ADirNode*>(nd->up()); 
