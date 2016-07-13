@@ -10,7 +10,8 @@
 #include "cfgtab.inc"
 
 void gui_closewin(int x) { gui2.closewin(x); }
-void gui_errq_add(int x, const char *s) { gui2.errq_add(x, s); }
+void gui_errq_add (int x, 	 const char *s) { gui2.errq_add (x,    s); }
+void gui_errq_add2(int x, int y, const char *s) { gui2.errq_add2(x, y, s); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
 	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }

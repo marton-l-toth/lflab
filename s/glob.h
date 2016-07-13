@@ -56,7 +56,7 @@ void ini_err(int ec);
 void log(const char * fmt, ...);
 void log_n(const char * fmt, ...);
 
-void gui_errq_add(int ec, const char * s = 0), gui_closewin(int oid),
-     gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0);
+void gui_errq_add(int ec, const char * s = 0), gui_errq_add2(int e1, int e2, const char*s = 0),
+     gui_closewin(int oid), gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0);
 int  gui_acv_op(int j, int opw = -1);
 #endif // __qwe_glob_h__
