@@ -675,8 +675,8 @@ to an output (conn. sel.input & sel.output with "--->" button).
 At a time you can have one selected input (blue), a selected
 output (red) and a selected box (purple).
 Top toolbar: number of inputs, output, feedback (see below),
-reserved (later, there will be a 'replace' mode), box select,
-==> 1.tree -- see how "[" "*" "]" menubuttons work
+replace mode (when lit), box select (insert/replace selected),
+==> 1.tree -- see how "[" "sl" "]" menubuttons work
 connect, set value, remove ("X") and graph menu ("++"):
 - [shuffle] (reorder boxes, not always possible)
 - rgb:sel sets graph FG/BG colors to selected box

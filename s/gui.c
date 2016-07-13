@@ -4036,7 +4036,7 @@ static void graph_skel (struct _topwin * tw, char * arg) {
 	const char *s = arg, *str = 
 	"[" TW_TOPH
 	"({8i#in$2X<}{8o#out$2X>}{8f#fb$2X@}"
-	"{Maadd...$Xiz$|_?0}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
+	"{Yrrplc$Xr}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
 	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Ms++$X|g0})"
 	"3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
