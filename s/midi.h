@@ -6,4 +6,7 @@ extern int midi_fd[32];
 void midi_input(int i);
 int midi_cmd(const char *s);
 
+inline const unsigned int * mi_getblk(int ldev, int ch) {
+	extern unsigned int**mi_root[32]; extern char mi_tr_l2p[32]; return mi_root[(int)mi_tr_l2p[ldev]][ch];}
+
 #endif // __qwe_midi_h__
