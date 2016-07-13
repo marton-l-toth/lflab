@@ -1622,8 +1622,7 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	else if (coward(fn)) { return EEE_COWARD; }
 	else if (is_asv_name(fn)) { return EEE_OVWASV; }
 	else if (!dir->id()) { snf = 1; }
-	if (backup(fn, n_bk)<0) gui2.errq_add(EEE_ERRNO), gui2.errq_add(EEE_BACKUP),
-			        log("WARNING: backup failed: %s", strerror(errno));
+	if (backup(fn, n_bk)<0) gui2.errq_add2(EEE_ERRNO, EEE_BACKUP, fn);
 	Clock clk; clk.reset();
 	log("saving \"%s\" to \"%s\"...", dir->path255(), fn);
 	if (ANode::m0_lock) { if (flg&NOF_FORCE) ANode::sv_end(); else return NDE_LOCK; }
@@ -1643,7 +1642,7 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	ec = ANode::sv_write(-1);
 	ANode::sv_end(); ANode::m0_sv.out = 0; 
 	log("...save (%s): %s (%d)", fn, ec<0 ? err_str(ec) : "done", ec<0?ec:clk.get());
-	if (ec<0) { if (asvf) gui2.errq_add(ec), gui2.errq_add(EEE_ASVFAIL); }
+	if (ec<0) { if (asvf) gui2.errq_add2(ec, EEE_ASVFAIL, "autosave"); }
 	else if (snf) strncpy(save_file_name, fn, 1023), glob_flg &= ~GLF_RECOVER, gui2.savename();
 	return ec;
 }
