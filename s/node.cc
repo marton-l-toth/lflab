@@ -1402,7 +1402,7 @@ int Node::obj_help(int cl) {
 		case 't': s = "track"; break;
 		case 'i': s = "iterated box"; break;
 		case 'w'+256: case 's'+256: s = "wrap/play"; break;
-		case '_': return EEE_NOEFF;
+		case '_': s = "primitive box"; break;
 		default: return NDE_WTF;
 	}
 	nd = nd->sn(&s); if (!nd) return NDE_WTF;

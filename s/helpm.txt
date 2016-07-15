@@ -664,6 +664,18 @@ Line groups: (open/close with "<>"/"><" button on the right)
 ==> 3.source/filter -- (D)
 ==> 3.scale lines -- (D)
 ==> 3.target -- (S)
+{{{1.primitive box}}}
+Primitive boxes has no configurable properties, therefore their
+only GUI window is a description. They cannot be copied, moved
+or deleted. From the '+' menu (top right), the "info1" command
+can be useful, because you will get a "used by" list (on the
+console) which makes finding examples easier.
+---
+You can find primitive boxes in the ".!b" subtree.
+---
+If you want to implement primitive boxes yourself, please see
+s/c/zB.cc for some examples with explanation. These boxes will
+be placed in the ".!c" (contrib) subtree.
 {{{1.graph-box}}}
 A graph box is a compound box made from other boxes by
 connecting their inputs/outputs. Every input (*) is either set

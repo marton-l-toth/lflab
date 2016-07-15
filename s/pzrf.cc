@@ -452,11 +452,11 @@ int ChebPoleLs::calc(int inflg, double** inb, double** outb, int n) {
 }
 
 //? {{{!._arcF}}}
-//? {Harmonic arc(s of poles&zeroes) filter
-//? {in - filter input
-//? {fq1 - base frequency
-//? {[#p] - list of pole count for each frequency (fq1,...)
-//? {[#z] - list of zero count for each frequency (0,...)
+//? Harmonic arc(s of poles&zeroes) filter
+//? in - filter input
+//? fq1 - base frequency
+//? [#p] - list of pole count for each frequency (fq1,...)
+//? [#z] - list of zero count for each frequency (0,...)
 //? pl0, pl1 - pole angles for low frq (from-to)
 //? ph1, ph1 - pole angles for high frq
 //? zl0, zl1, zh0, zh1 - same as above, for zeroes
