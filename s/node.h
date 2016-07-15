@@ -244,6 +244,7 @@ class ANode {
         static SOB_p<TY> store[N]; \
         if ((unsigned int)i >= N##u) log("BUG: %s_default(%d) called (N:%d, ->0)", #TY, i, N), i=0; \
         TY * p = store[i].ro(); if (!p) (p=store[i].rw_2(1048576))->ini_default(i);   return p; }
+#define SOB_CP_U8R(P) (m_u8_refcnt |= ((P)->m_u8_refcnt & 0xff000000))
 
 class SOB {
         public:
