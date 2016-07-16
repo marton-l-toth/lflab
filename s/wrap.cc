@@ -289,8 +289,12 @@ class SWrapMSL : public SOB {
 		int cmd(const char *s);
 		void upd_mul(int j) { int k=a6z6d5c4k8[j]; mul[j] = 16513 * (((k>>17)&63) - (k>>23)); }
 		int ln(const char*s);
+		void w(int oid, int op);
+		void w_bv(int oid, int op);
+		void w_line(int j, int flg);
 
-		int a6z6d5c4k8[6], mul[6];
+		unsigned int a6z6d5c4k8[6];
+		int mul[6];
 };
 
 class SWrapSOB : public SOB {
@@ -1049,7 +1053,7 @@ int SWrapMSL::save2(SvArg * sv) {
 		if ((k=a6z6d5c4k8[j]) != (0670<<17)) memcpy(q,hd,4), q[4]=34+8*(bv&1), q[5]=48+(k>>23),
 			q[6]=48+((k>>17)&63), q[7]=i_to_b32((k>>12)&31), q[8]=',', q[9]=hexc1((k>>8)&15),
 			q[10]=hexc1((k>>4)&15), q[11]=hexc1(k&15), q[12]=10, q+=13;
-		else if (bv&1) memcpy(q,hd,4), q[4]='+', q[5]=10, q+=6;			}
+		else if (bv&1) memcpy(q,hd,4), q[4]='1', q[5]=10, q+=6;			}
 	*q = 0; log("buf[%d] = {{{%s}}}", q-buf, buf);
 	return sv->st2=-1, sv->out->sn(buf, q-buf);
 }
@@ -1060,23 +1064,44 @@ int SWrapMSL::ln(const char *s) {
 	return (a<<23) + (z<<17) + (d<<12) + atoi_h(s+4); }
 
 int SWrapMSL::cmd(const char *s) {
-	int k, rv = WRF_MSL_NZ &- !!bv(), j = *(s++) - 49, *q = a6z6d5c4k8 + j; 
+	static const int i5=0x1f0501, i6=0x3f0801, i8=0x400801;
+	int k, j = *(s++) - 49;
+	unsigned int *q = a6z6d5c4k8 + j; 
 	if ((unsigned int)j > 5u) return BXE_PARSE;
 	switch(*s) { case '*': if ((k=ln(s+1))<0) return k; else *q = k, upd_mul(j);
-		     case '+': m_u8_refcnt |=  (0x1000000u<<j); return WRF_MSL_NZ | 95;
+		     case '1': m_u8_refcnt |=  (0x1000000u<<j); return j | WRF_MSL_NZ | 0x9f00;
 		     case '"': if ((k=ln(s+1))<0) return k; else *q = k, upd_mul(j);
-		     case '-': m_u8_refcnt &= ~(0x1000000u<<j); return (bv() ? WRF_MSL_NZ : 0) | 64;
-		     case 'z': return *q = (*q&0x7f81ffff) | ((hex2(s+1)&63)<<17), upd_mul(j), rv|16;
-		     case 'a': return *q = (*q&0x607fffff) | ((hex2(s+1)&63)<<23), upd_mul(j), rv|8;
-		     case 'd': return *q = (*q&0x7ffe0fff) | ((b32_to_i(s[1])&31)<<12), rv|4;
-		     case 'c': return *q = (*q&0x7ffff0ff) | (hxd2i(s[1])<<8), rv|2;
-		     case 'k': return *q = (*q&0x7fffff00) | (hex2(s+1)), rv|1;
+		     case '0': m_u8_refcnt &= ~(0x1000000u<<j); return (WRF_MSL_NZ &- !!bv()) | 0x8000;
+		     case 'z': return intv_cmd_b(q, 17, 6, s+1, i6) ? (upd_mul(j), j|0x1000) : 0;
+		     case 'a': return intv_cmd_b(q, 23, 6, s+1, i6) ? (upd_mul(j), j| 0x800) : 0;
+		     case 'd': return intv_cmd_b(q, 12, 5, s+1, i5) ? (		   j| 0x400) : 0;
+		     case 'c': return intv_cmd_b(q,  8, 4, s+1, i5) ? (		   j| 0x200) : 0;
+		     case 'k': return intv_cmd_b(q,  0, 8, s+1, i8) ? (		   j| 0x100) : 0;
 		     default: return BXE_CENUM; 
 	}}
 
 char * SWrapMSL::xys6_2(char *q, const char * dim) {  BVFOR_JM(bv()) {
 	int k = a6z6d5c4k8[j], x = mi_getblk((k>>12)&31, (k>>8)&15)[k&255] & 127, v = (x*mul[j]+(1<<20))>>21;
 	v+=(k>>23)-6; q[j+2] = ((unsigned int)v<(unsigned int)dim[j]) ? v : (dim[j]-1)&~(v>>4) ; }  return q;}
+
+void SWrapMSL::w_bv(int oid, int op) {
+	int b = bv(); gui2.setwin(oid, 'w'); gui2.t_sn("#",1); gui2.hexn(b,2);
+	if (op) gui2.wupd_c0('S', '.'), gui2.c1('*'), gui2.hexn(2*b+1, 2);
+}
+
+void SWrapMSL::w_line(int j, int flg) {
+	int ix = j*8+8, k = a6z6d5c4k8[j];
+	if (flg&4)  gui2.wupd_i2('S', (k>>12)&31,     ix+1);
+	if (flg&2)  gui2.wupd_i1('S', (k>>8)&15,      ix+2);
+	if (flg&1)  gui2.wupd_i2('S', k&255,	      ix+3);
+	if (flg&8)  gui2.wupd_si('S', ((k>>23)&63)-6, ix+4);
+	if (flg&16) gui2.wupd_si('S', ((k>>17)&63)-6, ix+5);
+}
+
+void SWrapMSL::w(int oid, int op) {
+	w_bv(oid, op); if (!op) return;
+	BVFOR_JM(bv()) w_line(j, -1);
+}
 
 SWrapSOB::SWrapSOB(const SWrapSOB * that, int uarg) : SOB(uarg) {
 	if (DBGC) log("s/wrsob copy: %p -> %p", that, this);
@@ -1748,8 +1773,8 @@ int SWrapGen::set_trg(AWrapGen* aw) {
 	return (ec<0) ? ec : (wnfl() ? (w_trg(),0) : 0);
 }
 
-int SWrapGen::sl_bv() { SWrapSOB * ssob = m_ssob.ro();    int y = m_core.ro()->grdim[1];
-			return slbv_2(ssob->m_tab.ro()->ibv((m_bflg>>2)&255) & ~ssob->m_msl.ro()->bv(), y); }
+int SWrapGen::sl_bv() { SWrapSOB * ssob = m_ssob.ro();  int y = m_core.ro()->grdim[1], f0 = (m_bflg>>2) & 255;
+			return slbv_2(ssob->m_tab.ro()->ibv(f0) & ~(4*ssob->m_msl.ro()->bv()), y); }
 
 int SWrapGen::sob_from(int ix, BoxGen * bx0) {
 	int cl = bx0->node()->cl_id();
@@ -1811,18 +1836,18 @@ int SWrapGen::save2(SvArg * sv) {
 }
 
 int SWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
-	if (!bxw_rawptr) return NDE_NOWIN; if ((unsigned int)ix > 0u) return ix<0 ? BXE_RANGE : BXE_WLGDONE;
+	if (!bxw_rawptr) return NDE_NOWIN; if ((unsigned int)ix > 1u) return ix<0 ? BXE_RANGE : BXE_WLGDONE;
 	int oid = w_oid(), gc = (0x605a5345>>8*ix) & 127,
 	    of = (flg & WRF_SETOC) ? ((flg&WRF_OC) ? (WR_WLG|=(1<<ix),1) : (WR_WLG&=~(1<<ix),0))
 		    		   : (WR_WLG >> ix) & 1;
-	// SWrapSOB * ssob = m_ssob.ro();
 	gui2.setwin(oid, 'w'); if (!of) gui2.wupd_0(gc, ".+1");
 	switch (ix) {
 		case 0:  if (of) jt_show(), gui2.t_sn("&",1), gui2.hexn(m_bflg>>2,2), w_jtab(m_bflg&1020);
 			 w_trg2(); break;
+		case 1:  m_ssob.ro()->m_msl.ro()->w(oid, of); break;
 		default: return BXE_WTF;
 	}
-	gui2.wupd(gc,4); gui2.sn("S<>$XW  S><$XW"+8*of, 6); gui2.c1(52 + ix - 4*of); return 0;
+	gui2.wupd(gc,7); gui2.sn("S<>$XW  S><$XW"+8*of, 6); gui2.c1(52 + ix - 4*of); return 0;
 }
 
 void SWrapGen::w_jtab(int flg) {
@@ -1896,10 +1921,13 @@ CH(tab){int x, j = s[1]-48, k = 0;
 	return 0;
 }
 
-CH(msl){int r = SOB_RWP(p,ssob)->msl_rw()->cmd(s+1); if (r<0) return r;
-	p->m_bflg &= ~WRF_MSL_NZ; p->m_bflg |= (r&WRF_MSL_NZ); 
-	if (r&64) p->w_slbv(2); // TODO: flg,vis ; 31->upd
-	return 0; 
+CH(msl){SWrapMSL * msl = SOB_RWP(p,ssob)->msl_rw();
+	int g9 = p->m_node->gui9(), r = msl->cmd(s+1); if (r<0) return r;
+	if (r&0x8000) { p->m_bflg &= ~WRF_MSL_NZ; p->m_bflg |= (r&WRF_MSL_NZ);
+			if (g9&8) p->w_slbv(2); 
+			if (g9&1) msl->w_bv(g9|11, p->wlg_vis(2)); }
+	if (g9&1 && r&0x3f00) gui2.setwin(g9|11, 'w'), msl->w_line(r&7, r>>8);
+	return 0;
 }
 
 BXCMD_DEF(SWrapGen) { {8192+'\\', 0}, AW_CTAB, 

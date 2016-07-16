@@ -156,7 +156,8 @@ static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_c
 static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
-static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_s, calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
+static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s,
+		       calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
 
 static tw_cl tw_cltab[] = { {'?',0,NULL,NULL}, 
 	{'.', TWF_UNDEAD|TWF_ABOVE, mwin_skel, NULL },
@@ -1398,7 +1399,8 @@ static void vbox_skel(struct _ww_t * ww, const char **pp) {
 	int ty = *((*pp)++); switch(ty) {
 		case 'w': ww->arg[3].p = &wrap_vbl_i; break;
 		case 'W': ww->arg[3].p = &wrap_vbl_t; break;
-		case 'S': ww->arg[3].p = &wrap_vbl_s; break;
+		case 'S': ww->arg[3].p = &wrap_vbl_S; break;
+		case 's': ww->arg[3].p = &wrap_vbl_s; break;
 		case 'c': ww->arg[3].p = &calc_vbl; break;
 		case 'g': ww->arg[3].p = &gconf_vbl; break;
 		case 'd': ww->arg[3].p = &doc_vbl; break;
@@ -1815,8 +1817,8 @@ static void dalbl_draw(ww_t * ww, cairo_t * cr2) {
 		case 'L': cairo_set_source_rgb (cr2, .2, .2, .2);
 			  fr = fg = fb = .9; break;
 		case 'Y': if (ww->arg[3].c[0]) 
-				  cairo_set_source_rgb (cr2, 0.0, 0.0, 1.0), fr=fg=1.0, fb=0.0;
-			  else    cairo_set_source_rgb (cr2, 0.0, 0.0, 0.33333), fr=fg=0.5, fb=0.0;
+				  cairo_set_source_rgb (cr2, 0.2, 0.2, 1.0), fr=fg=1.0, fb=0.0;
+			  else    cairo_set_source_rgb (cr2, 0.0, 0.0, 0.3), fr=fg=0.4, fb=0.0;
 			  break;
 		case 'M': cairo_set_source_rgb (cr2, .2, .2, .1), fr = fg = 1.0, fb = .5; break;
 		default:  LOG("dalbl_draw: invalid class 0x%x(%c)", ww->cl->ch, ww->cl->ch); return;
@@ -2303,19 +2305,29 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 	return rw;
 }
 
-GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
-	const char*h[2]={"({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B4<>$XW4})",
-			 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"},
-		ln0[]="({Y0s5$Xj_i}3{e19$Xj_v}0{84=$-3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})";
-	static char ln[88], _cnt = 0, _pos[47];
-	int i;  topwin * tw = ww->top;
-	if (ix<2) return parse_w_s(tw, h[ix]);
-	if (!_cnt) { memcpy(ln,ln0,85); for (i=0; ln[i]; i++) if (ln[i]=='_') _pos[_cnt++] = i; }
-	for (i=0; i<_cnt; i++) ln[_pos[i]] = 46 + ix;
-	GtkWidget * rw = parse_w_s(tw, ln);
+#define LN_TEMPL(HS,HN,S,J0) \
+	static const char lt_l0[]=S; static const int lt_s = sizeof(lt_l0); \
+	static char lt_ln[sizeof(lt_l0)], _cnt = 0, _pos[31]; \
+	int i;  topwin * tw = ww->top;   if (ix<HN) return parse_w_s(tw, HS[ix]); \
+	if (!_cnt) { memcpy(lt_ln,lt_l0,lt_s); for(i=0;i<lt_s;i++) if(lt_ln[i]=='_') _pos[(int)(_cnt++)]=i;}\
+	for (i=0; i<_cnt; i++) lt_ln[(int)_pos[i]] = hexc1(ix+(J0-HN)); \
+	GtkWidget * rw = parse_w_s(tw, lt_ln) 
+
+GtkWidget * wrap_vbl_S (struct _ww_t * ww, int ix) {
+	static const char * h[2] = {
+		 "({M0[$X>|_03}{M1T$X>|_013}{M2]$X>|_023}3{C3280$1$kkkAAA(...trg...)}0{B7<>$XW4})",
+		 "(3{Y0x$Xv0}{Y1y$Xv1}{Y2s1$Xv2}{Y3s2$Xv3}{Y4s3$Xv4}{Y5s4$Xv5}{Y6s5$Xv6}{Y7s6$Xv7})"};
+	LN_TEMPL(h,2,"({Y0s5$Xj_i}3{e19$Xj_v}0{84=$-3Xj_c}{M5$Xj_x|s0}3{e28$Xj_a}0{M6$Xj_y|s0}3{e38$Xj_b})",0);
 	int i0 = VB_WBASE(ww) + 8*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0)); 
 	if (ix<4) q[0] = 'v'+ix, q[1] = 0; else q[0]='s', q[1]=45+ix, q[2]=0;
+	return rw;
+}
+
+GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
+	static const char * h[1] = {
+		"({L0sl/MIDI}3{Y11$X!1}{Y22$X!2}{Y33$X!3}{Y44$X!4}{Y55$X!5}{Y66$X!6}0{B7<>$XW5})"};
+	LN_TEMPL(h,1,"({L0s_}3{81dev$2X!_d}{82ch$2X!_c}{83ky$3X!_k}{84A$2X!_a}{85Z$2X!_z})", 1);
 	return rw;
 }
 
@@ -2332,6 +2344,7 @@ static void swrap_cmd (struct _topwin * tw, char * arg) {
 	ww_t *vb = widg_lu1_pc(tw, 'E');
 	int i, wi = VB_WBASE(vb);
 	switch(*arg) {
+		case '#': upd_flgvec(tw, "S01", 6, -1, hex2(arg+1)); return;
 		case '&': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return;
 		case '!': i = 3; BVFOR_JMC(hex2(arg+1))
 				  entry_set(widg_qp(tw, wi+8*j+17), hxdoub_str(NULL, arg+i, 15)), i+=16;
@@ -2369,7 +2382,7 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:1}{:ES:80}"};
+				     "{:YW5:1}{:ES:80}{:Ss780}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
