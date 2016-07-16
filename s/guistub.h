@@ -73,6 +73,8 @@ class GuiStub {
 		void wupd_0(int wwt, const char *s, int wwix = -1) { wupd(wwt,wwix); sz(s); }
 		void wupd_c0(int wwt, int c, int wwix = -1) { wupd(wwt,wwix); c1(c); }
 		void wupd_i(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c1('x'); if (x&~0xfffff) hexn(x,8); else hex5(x); }
+		void wupd_si(int wwt, int x, int wwix = -1) { if (x<0) wupd_i(wwt, -x, wwix), c1('-');
+							      else     wupd_i(wwt,  x, wwix); }
 		void wupd_i1(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('x', hexc1(x)); }
 		void wupd_c48(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('c', x+48); }
 		void wupd_ls(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('+', x+48); }

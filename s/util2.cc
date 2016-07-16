@@ -56,17 +56,16 @@ int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4)
 int intv_cmd_cfg(cfg_ent       *q, const char * arg, 		       int mul4)  {
    return icmd_t<int>(        &q->i,	        arg,    q->i_m,  q->i_M,   mul4); }
 
-/////////////////////////////// voltab compression /////////////////////////////////////////////////
+int intv_cmd_b(unsigned int *bv, int b0, int nb, const char * arg, int mul4) {
+	int msk = (1<<nb)-1, v = (*bv>>b0) & msk, v0 = v;
+	return intv_cmd(&v, arg, 0, msk, mul4) && (*bv ^= (unsigned int)(v0^v)<<b0, 1); 
+}
 
-static int powtab6[] = {1, 6, 36, 216, 1296, 7776, 46656, 279936, 1679616, 10077696, 60466176, 362797056};
+/////////////////////////////// voltab compression /////////////////////////////////////////////////
 
 // sh0: 0 10sx 110sxx 1110sxxxx 11110sx6 11111sx15
 // sh1: 00 01sx 10sxxx 110sx6 111sx15
 // sh2: 00 01sxx 10sxxxxx 110sx9 111sx15
-static int costtab0[] = { 0,1,  2,4,  6,6,   22,9,  86,12,  33333,21 };
-static int costtab1[] = { 0,2,  2,4,  10,6,  74,10,  33333, 19 };
-static int costtab2[] = { 0,2,  4,5,  36,8,  548,13, 33333, 19 };
-static int * costtab_123[3] = { costtab0, costtab1, costtab2 };
 
 #define B91_SEL0(X,A,B,C,D,E,F) ( (X<=2) ? (X?B:A) : ((X<=22)?(X<=6?C:D): (X<=86?E:F)) )
 #define B91_SEL1(X,A,B,C,D,E) ( (X<=2) ? (X?B:A) : ((X<=10)?C:(X<= 74?D:E)) )
