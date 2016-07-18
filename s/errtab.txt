@@ -224,7 +224,17 @@ MDE_FRAG13   got MIDI arg 0/2
 MDE_FRAG23   got MIDI arg 1/2
 MDE_FRAGF0   midi: unterminated system (f0) message
 MDE_PARSE    midi: user command parse error
+MDE_LOOKUPZ  midi: no obj for event (BUG)
+MDE_LOOKUPT  midi: wrong type obj for event (BUG)
+MDE_GRABWHAT cannot grab keys on non-existent MIDI device
+MDE_RO	     midi: read-only mode (start with dflg&0x2000)
+MDE_VXCHG    cannot move virtual MIDI dev. (#31)
+MDE_UNDEFC   undefined MIDI control config line (BUG)
+MDE_UNDEFP   undefined MIDI play config line (BUG)
+MDE_UNDEFT   undefined MIDI play type (BUG)
+MDE_FULLP    midi/play control list full
 MDE_FATAL    removing MIDI device from list
+MDE_WTF      you just have found a bug (midi)
 S45_________ __________________________________________________________(BUG)__
 VTE_WTF      you just have found a bug (voltab)
 VTE_PARSE    voltab-cmd: parse error

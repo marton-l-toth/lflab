@@ -62,6 +62,7 @@ class CmdTab {
 		static int c_iofw(CmdBuf * p) { if(*p->m_c_a0=='f')fflush(stderr); return pt_iocmd(p->m_c_a0);}
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0 - 48;
 					       return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
+		static int c_midi(CmdBuf *p) { return midi_cmd(p->m_c_a0); }
 		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav, c_report,
 			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin, c_rpl;
 };
@@ -370,7 +371,6 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'M': return mx_debug(s+1);
 		case 'm': return nd_mem_debug();
 		case 'p': return pt_debug(), 0;
-		case '_': return midi_cmd(s+1);
 		case 's': return u_sleep((int)lround(1000.0*atof(s+1))), 0;
 		case 'G': switch(j=s[1], i=j?atoi_h(s+2):0, j) {
 				  case '-': i=~i; case '&': i &= glob_flg; break;
@@ -460,4 +460,4 @@ CmdTab::ent_t CmdTab::m0_tab[] = {
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx}, {'Q',c_rpl},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
 {'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {'R', c_report},
-{'w'|CF_TOK1,c_wav}, {'H'|CF_NODE, c_dsc}, {0,0} };
+{'w'|CF_TOK1,c_wav}, {'H'|CF_NODE, c_dsc}, {'m', c_midi}, {0,0} };

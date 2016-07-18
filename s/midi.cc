@@ -12,6 +12,7 @@
 #include "util.h"
 #include "errtab.inc"
 #include "cfgtab.inc"
+#include "wrap.h"
 
 #define DBGC (debug_flags&DFLG_MIDIEV)
 
@@ -37,22 +38,8 @@ inline static unsigned int * mi_ro(int dev, int ch, int j) { return mi_root[dev]
 inline static unsigned int * mi_rw(int dev, int ch, int j) {  unsigned int **pp=mi_root[dev];
 	return (pp[ch]==mi_dfltc ? (pp[ch]=(unsigned int*)nf_alloc(1024)) : pp[ch])+j; }
 
-static void mi_xchg(int i, int j){ int I=mi_tr_l2p[i], J=mi_tr_l2p[j];  mi_tr_l2p[i]=J; mi_tr_l2p[j]=I; 
-									mi_tr_p2l[I]=j; mi_tr_p2l[J]=i; }
-int midi_open(int ix, int id) {
-	char nmb[256]; int l = rawmidi_desc(nmb, id, 255)+1;
-	memcpy(mi_dsc[ix]=nf_alloc(l), nmb, l);
-	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
-	int fd = open(mi_devname, (debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY); 
-	if (fd<0) log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno));
-	else 	  log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd);
-	return fd;
-}
-
-int midi_cmd(const char *s) { // TODO
-	if (!s || !*s) return MDE_PARSE;
-	unsigned char buf[64];
-	int ec, ix = b32_to_i(*(s++)), n = 0;
+static int midi_wr(int ix, const char * s) {
+	unsigned char buf[64];  int ec, n=0;
 	for (int i=0; i<64; i++) {
 		while (*s==32) ++s;
 		if (!*s) break;
@@ -62,7 +49,8 @@ int midi_cmd(const char *s) { // TODO
 	if ((ec=write(midi_fd[ix], buf, n))<=0) return ec ? EEE_ERRNO : EEE_ZEROLEN;
 	return 0;
 }
-
+static void mi_xchg(int i, int j){ int I=mi_tr_l2p[i], J=mi_tr_l2p[j];  mi_tr_l2p[i]=J; mi_tr_l2p[j]=I; 
+									mi_tr_p2l[I]=j; mi_tr_p2l[J]=i; }
 static void mi_log(int i, const char *s, const unsigned char *p, int n) {
 	char buf[1024]; int bl = sprintf(buf, "midi: %02d (%02d,%s) -- %s %db:",
 					      mi_tr_p2l[i], i, mi_dsc[i], s, n);
@@ -78,10 +66,23 @@ static int midi_f0(int i, const unsigned char *p, int r) {
 	mi_log(i, "unterm.sys.", p, r); return MDE_FRAGF0;
 found:	mi_log(i, "system", p, ++j); return j; }
 
-static void midi_kc(int i, int ch, int kc, int v) {
- 	unsigned int *p = mi_rw(i, ch, kc);
-	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, kc, v, *p);
-	*p = v; // TODO 
+static void midi_kc(int i, int ch, int k, int v) {
+ 	unsigned int *p0 = mi_rw(i, ch, 0), *p = p0+k, x = *p, x25 = x & ~127u;
+	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, k, v, *p);
+	if (!x25) return (void) (*p = v);  else *p = x25|v;
+	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
+	if (ec!=EEE_NOEFF) gui_errq_add(ec);
+	else if (DBGC) log("midi_ev: 0x%x -> 0x%x - no effect",x25,v);
+}
+
+int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg) {
+	if (DBGC) log_n("midi_grab: id=0x%x, ix=%d, d=%d ch=%d kc=%d [", id, ix, dev, ch, kc);
+	int dev2 = mi_tr_l2p[dev]; if (!(midi_bv&(1u<<dev2))) return MDE_GRABWHAT;
+	unsigned int m = (id<<7)|(ix<<27), *p = mi_rw(dev2, ch, 0);
+	if (DBGC) for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m, log_n(" %02x",kv[i]);
+	else      for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m;
+	if (DBGC) log(" ]");
+	return 0;
 }
 
 #define CHK1 if (r<2 || p[1]>127) return mi_err(i,0,MDE_FRAG12)
@@ -108,6 +109,30 @@ l1:		CHK1; mi_log(i, "unused", p, 2); p+=2; r-=2; continue;
 l2:		CHK2; mi_log(i, "unused", p, 3); p+=3; r-=3; continue;
 kc:		CHK2; midi_kc(i, x&15, p[1]+c, v); p+=3, r-=3; continue;
 f0:		if ((v = midi_f0(i,p,r))<0) return mi_err(i,0,v);  p+=v; r-=v; continue;
+	}}
+
+int midi_open(int ix, int id) {
+	char nmb[256]; int l = rawmidi_desc(nmb, id, 255)+1;
+	memcpy(mi_dsc[ix]=nf_alloc(l), nmb, l);
+	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
+	int fd = open(mi_devname, (debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY); 
+	if (fd<0) log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno));
+	else 	  log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd);
+	return fd;
+}
+
+
+int midi_cmd(const char *s) {
+	if (!s || !*s) return MDE_PARSE;
+	int j, ix = b32_to_i(*(s++));
+	if (ix<0) return MDE_PARSE; // TODO: global cmd
+	switch(*s) {
+		case 'W': return midi_wr(ix, s+1);
+		case 'X': if (ix==31) return MDE_VXCHG;
+			  j = b32_to_i(s[1]);
+			  if (j<0) { if ((s[1]-43)&~2) return MDE_PARSE; else j=44-s[1]; }
+			  return ((j&=31) == 31) ? MDE_VXCHG : (mi_xchg(ix, j), 0);
+		default:  return MDE_PARSE;
 	}}
 
 void midi_init() {

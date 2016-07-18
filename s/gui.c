@@ -156,8 +156,8 @@ static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_c
 static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
-static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s,
-		       calc_vbl, gconf_vbl, doc_vbl, err_vbl, clip_vbl;
+static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s, wrap_vbl_C, wrap_vbl_K,
+		       calc_vbl, gconf_vbl, doc_vbl, err_vbl;
 
 static tw_cl tw_cltab[] = { {'?',0,NULL,NULL}, 
 	{'.', TWF_UNDEAD|TWF_ABOVE, mwin_skel, NULL },
@@ -1401,11 +1401,12 @@ static void vbox_skel(struct _ww_t * ww, const char **pp) {
 		case 'W': ww->arg[3].p = &wrap_vbl_t; break;
 		case 'S': ww->arg[3].p = &wrap_vbl_S; break;
 		case 's': ww->arg[3].p = &wrap_vbl_s; break;
+		case 'C': ww->arg[3].p = &wrap_vbl_C; break;
+		case 'K': ww->arg[3].p = &wrap_vbl_K; break;
 		case 'c': ww->arg[3].p = &calc_vbl; break;
 		case 'g': ww->arg[3].p = &gconf_vbl; break;
 		case 'd': ww->arg[3].p = &doc_vbl; break;
 		case 'e': ww->arg[3].p = &err_vbl; break;
-		case 'K': ww->arg[3].p = &clip_vbl; break;
 		default: LOG("vbox: unknown subcl 0x%x(%c)",ty,ty); return;
 	}
 	VB_LMAX(ww) = *((*pp)++) - 48;
@@ -2331,6 +2332,25 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 	return rw;
 }
 
+GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
+	static const char * h[1] = {"3({L0control}{B1add$##}{B2grab$X*c}0{B7<>$XW6})"}; 
+	LN_TEMPL(h,1,"({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_a}{85p#$2X:_z}{86sel$2X:_w})", 0);
+	int i0 = VB_WBASE(ww) + 8*ix;
+	char * q = DALBL_TXT(widg_qp(tw, i0));
+	if (ix<11) q[1]=32, q[2]=ix+47; else q[1]=49, q[2]=ix+37; 
+	return rw;
+}
+
+GtkWidget * wrap_vbl_K (struct _ww_t * ww, int ix) {
+	static const char * h[1] = {"(3{L0play}{B1grab$X*p}0{B7<>$XW6})"}; 
+	LN_TEMPL(h,1,"({L000:W}3{81d$2X;_d}{82c$2X;_c}{83kw$3X;_k}{84kw$3X;_a}{85kw$3X;_z}"
+		      "{86x$2X;_1}{87X$2X;_2}{88y$2X;_3}{89Y$2X;_4})", 0);
+	int i0 = VB_WBASE(ww) + 10*ix;
+	char * q = DALBL_TXT(widg_qp(tw, i0));
+	if (ix<11) q[0]=32, q[1]=ix+47; else q[0]=49, q[1]=ix+37; 
+	return rw;
+}
+
 GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] = { 
 "({80x|$2X#d0}{M8$X#R0|W6}{81y|$2X#d1}{M9$X#R1|W5}{821|$2X#d2}"
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
@@ -2382,7 +2402,7 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:1}{:ES:80}{:Ss780}"};
+				     "{:YW5:1}{:ES:80}{:Ss780}{:CC=80}{:ZKA:0}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
@@ -4386,12 +4406,9 @@ static void clip_setflg(struct _topwin * tw, int flg) {
 		da_fullre(ww);
 	}}
 
-GtkWidget * clip_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, ix?"({L0sorry}{L1not yet}{C2,implemented})":"([])"); }
-
 static void clip_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{C.228$16$kkk000...}"
-		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{Ma+$|K0})"
-		"{KK}{:WK230}]";
+		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{Ma+$|K0}){KK}]";
 	ww_t * cl;
 	if (tw->state) {
 		cl = widg_lu1_pc(tw, 'K'); if (!cl) {
@@ -4402,7 +4419,6 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 		cl = widg_lu1_pc(tw, 'K');
 	}
 	const char *s = arg;
-	ww_t *ww = widg_lu1_pc(tw, 'W'); vbox_show_bv(ww, 1);
 	if (!s || !*s || (daclb_set(widg_lu1_pc(tw, '.'), &s, 1), !*s)) DACLIP_SEL(cl) = 0;
 	else if ((DACLIP_SEL(cl)=b32_to_i(*s), *++s) && (clip_setflg(tw, *s - 48), *++s)) daclip_cmd(cl, s);
 }
