@@ -18,7 +18,7 @@
 
 // .0078740157480315
 int rawmidi_desc(char *to, int id, int maxlen); //asnd.cc
-static unsigned int mi_dfltc[256];
+static unsigned int mi_dfltc[256], *mi_keyspd;
 static unsigned int*mi_dflti[16] = {mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,
 				     mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc,mi_dfltc};
 unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
@@ -94,9 +94,9 @@ void midi_input(int i) {
 	while (r) {
 		switch(x>>4) {
 			case 8: v=c=0; goto kc;
-			case 9: v=p[2]; c=0; goto kc;
+			case 9: *mi_keyspd = v = p[2]; c=0; goto kc;
 			case 10: case 14: goto l2;
-			case 11: v=p[2]; c=128;  goto kc;
+			case 11: v=p[2]; c=128; *mi_keyspd = 127; goto kc;
 			case 12: case 13: goto l1;
 			case 15: switch(x) { case 0xf0: goto f0;
 					 case 0xf1: case 0xf3: goto l1;
@@ -137,9 +137,10 @@ int midi_cmd(const char *s) {
 
 void midi_init() {
 	if (!CFG_DEVEL.i) return;
+	mi_i_ini(31); mi_keyspd = mi_rw(31, 0, 255);
 	memcpy(mi_devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32]; 
-	int n = find_dev(buf, 1, 32);
+	int n = find_dev(buf, 1, 31);
 	for (int i=0; i<n; i++) if ((midi_fd[i]=midi_open(i,buf[i]))>=0) midi_bv|=1u<<i, mi_i_ini(i);
 }
 
