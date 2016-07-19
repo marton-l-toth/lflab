@@ -333,8 +333,8 @@ class SWrapMEP : public SOB {
 		int add_l();
 		int grab_l(SWrapGen *bx, int j, int flg);
 		int grab(SWrapGen *bx, int j0, int n, int flg = 0) { 
-			for (int ec, j=j0, j1 = min_i(j0+n, nl()); j<j1; j++)
-				if ((ec=grab_l(bx, j, flg))<0) return ec;    return 0; }
+			int ec=0; for (int j=j0, j1 = min_i(j0+n, nl()); j<j1; j++)
+				ec=min_i(ec, grab_l(bx, j, flg));      return ec; }
 		char ixtr[16];
 		unsigned int *p2[2]; // d5 c4 k8 x6 y6 t3 | k8 k8 X6 Y6 s4
 };

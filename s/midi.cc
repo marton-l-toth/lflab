@@ -25,7 +25,7 @@ unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti};
-static char *mi_dsc[32], mi_devname[24];
+static char *mi_dsc[32], mi_devname[24], keytrans[128];
 int midi_fd[32];
 unsigned int midi_bv;
 
@@ -77,7 +77,7 @@ static void midi_kc(int i, int ch, int k, int v) {
 
 int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg) {
 	if (DBGC) log_n("midi_grab: id=0x%x, ix=%d, d=%d ch=%d kc=%d [", id, ix, dev, ch, kc);
-	int dev2 = mi_tr_l2p[dev]; if (!(midi_bv&(1u<<dev2))) return MDE_GRABWHAT;
+	int dev2 = mi_tr_l2p[dev]; if (!((midi_bv|0x80000000)&(1u<<dev2))) return MDE_GRABWHAT;
 	unsigned int m = (id<<7)|(ix<<27), *p = mi_rw(dev2, ch, 0);
 	if (DBGC) for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m, log_n(" %02x",kv[i]);
 	else      for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m;
@@ -124,9 +124,10 @@ int midi_open(int ix, int id) {
 
 int midi_cmd(const char *s) {
 	if (!s || !*s) return MDE_PARSE;
-	int j, ix = b32_to_i(*(s++));
+	int j, c = *(s++), ix = b32_to_i(c);
 	if (ix<0) return MDE_PARSE; // TODO: global cmd
 	switch(*s) {
+		case 'K': return *mi_keyspd=127, j = hex2(s+1), midi_kc(31, 0, j&127, 127&(-(j>>7))), 0;
 		case 'W': return midi_wr(ix, s+1);
 		case 'X': if (ix==31) return MDE_VXCHG;
 			  j = b32_to_i(s[1]);
@@ -142,5 +143,6 @@ void midi_init() {
 	unsigned char buf[32]; 
 	int n = find_dev(buf, 1, 31);
 	for (int i=0; i<n; i++) if ((midi_fd[i]=midi_open(i,buf[i]))>=0) midi_bv|=1u<<i, mi_i_ini(i);
+	for (int i=0; i<128; i++) keytrans[i] = i;
 }
 

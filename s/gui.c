@@ -39,6 +39,7 @@
 #define WF_DTOR 256
 #define WF_KEYEV 512
 #define WF_XM1EV 1024
+#define WF_FOCEV 2048
 #define WF_EV_SHIFT 9
 
 #define OI_ID 255
@@ -67,6 +68,7 @@
 #define EVMASK_DEF (GDK_BUTTON_PRESS_MASK | GDK_EXPOSURE_MASK)
 #define EVMASK_KEY (GDK_KEY_PRESS_MASK|GDK_KEY_RELEASE_MASK)
 #define EVMASK_XM1 (GDK_BUTTON_RELEASE_MASK|GDK_BUTTON1_MOTION_MASK)
+#define EVMASK_FOC (GDK_FOCUS_CHANGE_MASK)
 
 struct _topwin;
 struct _ww_t;
@@ -155,7 +157,7 @@ static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_c
                     daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd, dakcf_cmd;
 static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
-		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk;
+		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk, dlvmi_clk;
 static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s, wrap_vbl_C, wrap_vbl_K,
 		       calc_vbl, gconf_vbl, doc_vbl, err_vbl;
 
@@ -193,6 +195,7 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'L', dalbl_skel, NULL, dalbl_cmd, debug_clk, WF_RESIZE },
 	{'E', dalbl_skel, NULL, dalbl_cmd, debug_clk, WF_RESIZE },
 	{'B', dalbl_skel, NULL, dalbl_cmd, dlbtn_clk, WF_RESIZE },
+	{'V', dalbl_skel, NULL, dalbl_cmd, dlvmi_clk, WF_RESIZE|WF_KEYEV|WF_FOCEV },
 	{'C', daclb_skel, NULL, daclb_cmd, daclb_clk, WF_RESIZE },
 	{'P', dapz_skel,  NULL, dapz_cmd, debug_clk, WF_BIGDA3 },
 	{'1', dawr1_skel, NULL, dawr1_cmd, dawr1_clk, WF_RESIZE },
@@ -1531,23 +1534,6 @@ static gboolean da_key(GtkWidget *w, GdkEventKey * ev, gpointer p) {
 	else if (!(*pkf & kmsk)) *pkf |= kmsk,  (ww->cl->clk)(ww, -1, kc, ev->keyval, NULL);
 	return TRUE;
 }
-				
-static void da_skel(struct _ww_t * ww, int wid, int heig) {
-	static const int evmask[4] = { EVMASK_DEF, EVMASK_DEF|EVMASK_KEY, EVMASK_DEF|EVMASK_XM1, 
-					EVMASK_DEF|EVMASK_KEY|EVMASK_XM1 };
-	gtk_widget_set_size_request(ww->w = gtk_drawing_area_new(), wid, heig);
-	ww->arg[0].p = NULL;
-	g_signal_connect (ww->w, "configure-event", G_CALLBACK (da_conf), (gpointer)ww);
-	g_signal_connect (ww->w, DA_DREV, G_CALLBACK (da_draw), (gpointer)ww);
-	int flg = ww->cl->flg; if (!flg) return; 
-	gtk_widget_add_events(ww->w, evmask[(flg>>WF_EV_SHIFT)&3]);
-	g_signal_connect (ww->w, "button-press-event", G_CALLBACK(da_click), (gpointer)ww);
-	if (flg&WF_KEYEV) g_signal_connect (ww->w, "key-press-event",   G_CALLBACK(da_key), (gpointer)ww),
-			  g_signal_connect (ww->w, "key-release-event", G_CALLBACK(da_key), (gpointer)ww),
-			  gtk_widget_set_can_focus(ww->w, TRUE),
-			  gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w);
-
-}
 
 static void da_fullre(struct _ww_t * ww) {
 	if (!ww->w) return;
@@ -1556,6 +1542,28 @@ static void da_fullre(struct _ww_t * ww) {
 	if (DA_H(ww)<=0 || DA_W(ww)<=0) return;
 	gdk_window_invalidate_rect(gtk_widget_get_window(ww->w), &rct, 0);
 }
+
+static void dlvmi_f1(GtkWidget*w,GdkEvent*ev,gpointer p){ ww_t*ww=(ww_t*)p; ww->arg[3].c[0]=1; da_fullre(ww);}
+static void dlvmi_f0(GtkWidget*w,GdkEvent*ev,gpointer p){ ww_t*ww=(ww_t*)p; ww->arg[3].c[0]=0; da_fullre(ww);}
+
+static void da_skel(struct _ww_t * ww, int wid, int heig) {
+	static const int evmask[8] = { EVMASK_DEF, EVMASK_DEF|EVMASK_KEY, EVMASK_DEF|EVMASK_XM1, 
+		EVMASK_DEF|EVMASK_KEY|EVMASK_XM1, 0, EVMASK_DEF|EVMASK_KEY|EVMASK_FOC,0,0 };
+	gtk_widget_set_size_request(ww->w = gtk_drawing_area_new(), wid, heig);
+	ww->arg[0].p = NULL;
+	g_signal_connect (ww->w, "configure-event", G_CALLBACK (da_conf), (gpointer)ww);
+	g_signal_connect (ww->w, DA_DREV, G_CALLBACK (da_draw), (gpointer)ww);
+	int flg = ww->cl->flg; if (!flg) return; 
+//	if (ww->cl->ch=='V') LOG("skel(V) evm: 0x%x, 0x%x", (flg>>WF_EV_SHIFT)&7, evmask[(flg>>WF_EV_SHIFT)&7]);
+	gtk_widget_add_events(ww->w, evmask[(flg>>WF_EV_SHIFT)&7]);
+	g_signal_connect (ww->w, "button-press-event", G_CALLBACK(da_click), (gpointer)ww);
+	if (flg&WF_KEYEV) { g_signal_connect (ww->w, "key-press-event",   G_CALLBACK(da_key), (gpointer)ww);
+			    g_signal_connect (ww->w, "key-release-event", G_CALLBACK(da_key), (gpointer)ww);
+			    gtk_widget_set_can_focus(ww->w, TRUE);
+			    if(!(flg&WF_FOCEV))return (void)gtk_window_set_focus(GTK_WINDOW(ww->top->w),ww->w);
+			    g_signal_connect (ww->w, "focus-in-event",  G_CALLBACK(dlvmi_f1), (gpointer)ww);
+			    g_signal_connect (ww->w, "focus-out-event", G_CALLBACK(dlvmi_f0), (gpointer)ww);
+}}
 
 static void fullsurf_invd(ww_t * ww, int x0, int y0, int x1, int y1) {
 	int xy00 = (*ww->cl->get)(NULL, ww, 'B');
@@ -1815,6 +1823,8 @@ static void dalbl_draw(ww_t * ww, cairo_t * cr2) {
 				  cairo_set_source_rgb(cr2, .2, .1, .1), fr=1.0, fg=fb=.5; 
 			  else    cairo_set_source_rgb(cr2, .1, .2, .2), fr=.5, fg=fb=1.0;
 			  break;
+		case 'V': if (ww->arg[3].c[0]) {
+				  cairo_set_source_rgb (cr2, 1.0, 1.0, 0.0), fr=fg=fb=0.0; break; }
 		case 'L': cairo_set_source_rgb (cr2, .2, .2, .2);
 			  fr = fg = fb = .9; break;
 		case 'Y': if (ww->arg[3].c[0]) 
@@ -1905,6 +1915,12 @@ static void dlyn_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton *
 
 static void dlmenu_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
         if ((b9|2)==3) popup2(ww, DLM_MT(ww), DLM_MSK(ww), b9, ev); }
+
+static void dlvmi_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
+	if (b9>0) return (void) gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w);
+	char buf[8]; memcpy(buf, "~mVK", 4); buf[4]=hexc1(((cx>>4)&3)+8*(b9&1)), buf[5]=hexc1(cx&15);
+	buf[6]=10; write(1,buf,7);
+	LOG("click: key %d 0x%x 0x%x", b9, cx, cy); }
 
 static void dalbl_skel(struct _ww_t * ww, const char **pp) {
         int ch = ww->cl->ch, h2 = 0, wmul = 5, mt = 0, mm = 0;
@@ -4427,7 +4443,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 
 static void mwin_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
-	"(3{B_unplot$_g}{B_?$$?})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{LV v??.??}])]";
+	"(3{B_unplot$_g}{B_?$$?})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{VV v??.??}])]";
         tw->arg[0].p = parse_w(tw, &str);
 	memcpy(tw->title, "lf\0", 4);
 }
