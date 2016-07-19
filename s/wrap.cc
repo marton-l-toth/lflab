@@ -305,7 +305,7 @@ class SWrapMEC : public SOB {
 		SWrapMEC(const SWrapMEC * that, int arg) : SOB(arg) {
 			m_u32 = that->m_u32; memcpy(dat, that->dat, 48); }
 		void ini_default(int k) {}
-		int save2(SvArg * sv) { return 1; } // TODO
+		int save2(SvArg * sv) { return sv->st2=-1, 1; } // TODO
 		int cmd(const char *s) { return 0; } // TODO
 		int ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned int * blk) {
 			return BXE_SORRY; }
@@ -320,11 +320,12 @@ class SWrapMEP : public SOB {
 		SWrapMEP(const SWrapMEP * that, int arg) : SOB(arg) {
 			memcpy(ixtr,that->ixtr,48); p2[0]=(unsigned int*)ANode::cp64(that->p2[0]); 
 			m_u32 = that->m_u32;	    p2[1]=(unsigned int*)ANode::cp64(that->p2[1]); }
+		static const char k8[6], k6[4];
 		static int ty_i2c(int i) { return "tTk?????"[i&7]; }
 		static int ty_c2i(int i);
 		int parse_l(int j, const char* s);
 		void ini_default(int k) {}
-		int save2(SvArg * sv) { return 1; } // TODO
+		int save2(SvArg * sv);
 		int cmd(const char *s);
 		int ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned int * blk);
 		inline unsigned int nl() const { return m_u8_refcnt >> 24; }
@@ -1100,13 +1101,13 @@ void SWrapTab::w1(int j, int k) {
 }
 
 int SWrapMSL::save2(SvArg * sv) {
-	char buf[80], *q=buf, hd[4]; memcpy(hd,"X$!1",4); int bv = m_u8_refcnt>>24;
+	char buf[80], *q=buf, hd[4]; memcpy(hd,"X$!1",4); int bv = this->bv();
 	for (int k,j=0; j<6; j++, hd[3]++, bv>>=1) {
 		if ((k=a6z6d5c4k8[j]) != (0670<<17)) memcpy(q,hd,4), q[4]=34+8*(bv&1), q[5]=48+(k>>23),
 			q[6]=48+((k>>17)&63), q[7]=i_to_b32((k>>12)&31), q[8]=',', q[9]=hexc1((k>>8)&15),
 			q[10]=hexc1((k>>4)&15), q[11]=hexc1(k&15), q[12]=10, q+=13;
 		else if (bv&1) memcpy(q,hd,4), q[4]='1', q[5]=10, q+=6;			}
-	*q = 0; log("buf[%d] = {{{%s}}}", q-buf, buf);
+	if (DBGC) *q = 0, log("buf[%d] = {{{%s}}}", q-buf, buf);
 	return sv->st2=-1, sv->out->sn(buf, q-buf);
 }
 
@@ -1153,6 +1154,19 @@ void SWrapMSL::w_line(int j, int flg) {
 void SWrapMSL::w(int oid, int op) {
 	w_bv(oid, op); if (!op) return;
 	BVFOR_JM(bv()) w_line(j, -1);
+}
+
+const char SWrapMEP::k8[6]={19,15,60,56,52,48}, SWrapMEP::k6[4]={9,3,42,36};
+
+int SWrapMEP::save2(SvArg * sv) {
+	char buf[384], *q=buf, hd[4]; memcpy(hd,"X$;+",4);
+	for (int i=0, n = nl(); i<n; i++) {
+		unsigned int *p = p_l(i), x=p[0];
+		memcpy(q,hd,4); q[4]=ty_i2c(x); q[5]=i_to_b32(x>>27); q[6]=hexc1((x>>23)&15); q[7]=','; q+=8;
+		for (int k,j=0; j<6; j++) k=k8[j], *(q++) = hexc1((p[k>>5]>>(k&31))&15);   *(q++) = ',';
+		for (int k,j=0; j<4; j++) k=k6[j], *(q++) = 48 + ((p[k>>5]>>(k&31))&63);   *(q++) = 10;    }
+	if (DBGC) *q = 0, log("buf[%d] = {{{%s}}}", q-buf, buf);
+	return sv->st2=-1, sv->out->sn(buf, q-buf);
 }
 
 int SWrapMEP::ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned int * blk) {
@@ -1925,6 +1939,8 @@ int SWrapGen::sob_from(int ix, BoxGen * bx0) {
 		case 2: sob->m_tab.from(sob2->m_tab); return 0;
 		case 3: sob->m_con.from(sob2->m_con); return 0;
 		case 4: sob->m_msl.from(sob2->m_msl); mslf_upd(); return 0;
+		case 5: sob->m_mec.from(sob2->m_mec); return 0;
+		case 6: sob->m_mep.from(sob2->m_mep); return 0;
 		default: return BXE_IDX;
 	}}
 
@@ -1961,7 +1977,9 @@ int SWrapGen::save_sob(SvArg *p) { switch(p->st) {
 	case 18: return m_ssob.ro()->m_tab.save(p);
 	case 19: return m_ssob.ro()->m_con.save(p);
 	case 20: return m_ssob.ro()->m_msl.save(p);
-	case 21: case 22: case 23: case 24: p->st = 3; return 1;
+	case 21: return m_ssob.ro()->m_mec.save(p);
+	case 22: return m_ssob.ro()->m_mep.save(p);
+	case 23: case 24: p->st = 3; return 1;
 	default: log("swr: invalid SOB state %d, skipping", p->st); return p->st2=-1, 1;
 }}
 
