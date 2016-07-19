@@ -210,8 +210,9 @@ void GuiStub::mcfg_win(int flg) {
 
 void GuiStub::savename() { 
 	char buf[64]; const char *p, *sb, *rgb = (glob_flg&GLF_EMPTY)?"%%%FFF":0, *sp = save_file_name;
-	int rf = glob_flg & GLF_RECOVER;
-	if (*sp) { if (!rgb) rgb="%%%%^^"; for (p=sb=sp; *p; p++) if (*p=='/') sb=p+1; if (rf) sb="BUG!"; }
+	int rf = glob_flg & GLF_RECOVER, sf = glob_flg & GLF_SAVED;
+	if (*sp) { if (!rgb) rgb="zz%%^^\0 %%%%^^"+8*!!sf;
+		   for (p=sb=sp; *p; p++) if (*p=='/') sb=p+1; if (rf) sb="BUG!"; }
 	else if (rf) { memcpy(buf,"(recover:0)",12); buf[9]=sp[2]; if (!rgb) rgb="zzz%%h"; sb=sp=buf; }
 	else { sp = sb = rgb ? "(empty)" : (rgb = "zz%z%%", "(unnamed)"); }
 	setwin( 7,'.'); wupd_c0('N','t'); sn(rgb, 6); sz(sb); 

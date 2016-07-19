@@ -1,12 +1,13 @@
 #ifndef __qwe_glob_h__
 #define __qwe_glob_h__
 
+#define GLF_SAVED     0x20000
 #define GLF_HITHERE   0x40000
 #define GLF_AVOLSHR   0x80000
 #define GLF_LIBMODE   0x100000
 #define GLF_EMPTY     0x200000
 #define GLF_RECOVER   0x400000
-#define GLF_FSTATE    (GLF_EMPTY|GLF_RECOVER)
+#define GLF_FSTATE    (GLF_EMPTY|GLF_RECOVER|GLF_SAVED)
 #define GLF_RECORD    0x1000000
 #define GLF_FINAL_ASV 0x2000000
 #define GLF_SILENCE   0x4000000

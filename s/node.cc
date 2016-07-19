@@ -572,7 +572,7 @@ void nd0_init() { ANode::st_init(); }
 ///////// abs. dir ///////////////////////////////////////////////////////////
 
 int ADirNode::perm_d(int msk) {
-	msk &= DF_ALL;
+	msk &= DF_ALL; glob_flg &= ~GLF_SAVED;
 	int m2=0, prm=0;
 	for (ADirNode * p = this; m2!=msk; p=dynamic_cast<ADirNode*>(p->m_up))
 		prm |= (p->m_pm_val&~m2), m2 |= (msk&p->m_pm_msk);
@@ -1642,8 +1642,9 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 	ec = ANode::sv_write(-1);
 	ANode::sv_end(); ANode::m0_sv.out = 0; 
 	log("...save (%s): %s (%d)", fn, ec<0 ? err_str(ec) : "done", ec<0?ec:clk.get());
-	if (ec<0) { if (asvf) gui2.errq_add2(ec, EEE_ASVFAIL, "autosave"); }
-	else if (snf) strncpy(save_file_name, fn, 1023), glob_flg &= ~GLF_RECOVER, gui2.savename();
+	if (ec<0) { if (asvf) gui2.errq_add2(ec, EEE_ASVFAIL, "autosave"); return ec; }
+	if (!dir->id()) glob_flg |= GLF_SAVED;
+	if (snf) strncpy(save_file_name, fn, 1023), glob_flg &= ~GLF_RECOVER, gui2.savename();
 	return ec;
 }
 
