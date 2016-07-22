@@ -28,9 +28,22 @@ unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_
 static char *mi_dsc[32], mi_devname[24], keytrans[128];
 int midi_fd[32];
 unsigned int midi_bv;
-
+static const char ktrr_02_27[26] = {15,2,16,3,17,4,18,19,6,20,7,21,8,22,23,10,24,11,25,26,13,27,14,5,9,12},
+	     	  ktrr_31_54[24] = {44,31,45,32,46,47,34,48,35,49,36,50,51,38,52,39,53,54,40,33,37,41,42,43};
+static int ktr_flg;
 char mi_tr_l2p[32]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31},
      mi_tr_p2l[32]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+
+static int set_kflg(int f) {
+	int d = (ktr_flg ^ f);
+	if(d&1) { if(f&1) keytrans[69]=87, keytrans[70]=88, keytrans[87]=69, keytrans[88]=70;
+		  else	  keytrans[69]=69, keytrans[70]=70, keytrans[87]=87, keytrans[88]=88; }
+	if(d&2) { if(f&2) for(int i=0; i<26; i++) keytrans[(int)ktrr_02_27[i]]  = i+2;
+		  else    for(int i=0; i<26; i++) keytrans[i+2]			= i+2; }
+	if(d&4) { if(f&4) for(int i=0; i<24; i++) keytrans[(int)ktrr_31_54[i]]  = i+31;
+		  else    for(int i=0; i<24; i++) keytrans[i+31]		= i+31; }
+	return ktr_flg = f, 0;
+}
 
 static void mi_i_ini(int dev) { memcpy( mi_root[dev] = (unsigned int**)nf_alloc(16*sizeof(int*)),
 					mi_dflti, 16*sizeof(int*)); }
@@ -71,7 +84,8 @@ static void midi_kc(int i, int ch, int k, int v) {
 	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, k, v, *p);
 	if (!x25) return (void) (*p = v);  else *p = x25|v;
 	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
-	if (ec!=EEE_NOEFF) gui_errq_add(ec);
+	// if (ec==MDE_KEEPV) return (void) (*p = x);
+	if (ec!=EEE_NOEFF) gui_errq_add(ec,"midi/swr");
 	else if (DBGC) log("midi_ev: 0x%x -> 0x%x - no effect",x25,v);
 }
 
@@ -125,9 +139,11 @@ int midi_open(int ix, int id) {
 int midi_cmd(const char *s) {
 	if (!s || !*s) return MDE_PARSE;
 	int j, c = *(s++), ix = b32_to_i(c);
-	if (ix<0) return MDE_PARSE; // TODO: global cmd
+	if (ix<0) { switch(c) {
+		case '@': return set_kflg(atoi_h(s));
+		default: return MDE_PARSE; }}
 	switch(*s) {
-		case 'K': return *mi_keyspd=127, j = hex2(s+1), midi_kc(31, 0, j&127, 127&(-(j>>7))), 0;
+		case 'K': return *mi_keyspd=127, j=hex2(s+1), midi_kc(31,0, keytrans[j&127], 127&(-(j>>7))), 0;
 		case 'W': return midi_wr(ix, s+1);
 		case 'X': if (ix==31) return MDE_VXCHG;
 			  j = b32_to_i(s[1]);
@@ -143,6 +159,6 @@ void midi_init() {
 	unsigned char buf[32]; 
 	int n = find_dev(buf, 1, 31);
 	for (int i=0; i<n; i++) if ((midi_fd[i]=midi_open(i,buf[i]))>=0) midi_bv|=1u<<i, mi_i_ini(i);
-	for (int i=0; i<128; i++) keytrans[i] = i;
+	for (int i=0; i<128; i++) keytrans[i] = i;   set_kflg(CFG_MIDI_KTR.i);
 }
 

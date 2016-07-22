@@ -27,6 +27,7 @@ DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your
 QTST_ADIF   |i|24         |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 
 QTST_RDIF   |i|20         |10  |52   |qtstr |quicktest/samp: -log2 of max rel diff
 DEBUG_FLG   |i|0          |0   |DFLGZ|dflg  |init. debug_flg (decimal, type 'd?' in console)
+MIDI_KTR    |i|7	  |0   |7    |ktr   |keyboard (virt.midi) trans: 1:f11,f12 2:q2w3... 4-zsxd...
 _1_NOEX     |i|0          |0   |1    |n     |skip default example tree (!e)
 _H1         |i|0          |0   |1    |h     |show help
 _H2         |i|0          |0   |1    |?     |show help
