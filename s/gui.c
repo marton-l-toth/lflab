@@ -59,6 +59,7 @@
 #define DF_REC  2048
 #define DF_CHOO 4096
 #define DF_WLUVB 8192
+#define DF_KEYC 16384
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]))
@@ -225,7 +226,8 @@ static int conf_portwid;
 static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf 40:track\n"
-			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo 2000:vblu";
+			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo 2000:vblu\n"
+			     "4000:keycode";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -1110,6 +1112,11 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 	       "3:77:33:84:66:48:35:5", "p182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
 {0,  13,7,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  3:4", "pqrstuvwxyz{:" /*"}"*/ },
 {'s',10,1,4,1, "+0* +1* +x* +y* +s1*+s2*+s3*+s4*+s5*+s6*", "0123456789"},
+{0,  11,0,5,2, "kyseqtpad+tpad1dup  up1  down1up5  down5>top >bttmdel  ", "tktttT+ m-m+m<m>m0mv- "},
+{0,  17,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 ",
+		  "*0123456789abcdefghijkl"},
+{0,   7,0,5,15,"[Q2W]kZSXDkF1F2kkpd0tpad+tpad1empty","kv0,041714,66I6kv0,1f2f11,66F6kv0,3b460c,66I6"
+		  "k00,243208,66H6t00,818290,6OO6T00,818290,6OO6k00,000000,0000"},
 {'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
 		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
 		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
@@ -1528,6 +1535,8 @@ static gboolean da_key(GtkWidget *w, GdkEventKey * ev, gpointer p) {
 	static unsigned int glob_keyflg[4];
 	ww_t * ww = (ww_t*)p;
 	int kpf = (ev->type==GDK_KEY_PRESS), kc = ev->hardware_keycode & 127;
+	if ((kpf<<14) & dflg) LOG("da_key: hwc=%d, kv=0x%x(%s)", ev->hardware_keycode-8, ev->keyval,
+								   gdk_keyval_name(ev->keyval));
 	unsigned int kmsk = 1u<<(kc&31), *pkf = glob_keyflg + (kc>>5);
 	if (!kpf) (ev->type!=GDK_KEY_RELEASE) ? LOG("da_key: unknown type 0x%x", ev->type)
 		     : (*pkf &= ~kmsk, (ww->cl->clk)(ww, -2, kc, ev->keyval, NULL));
@@ -1917,10 +1926,9 @@ static void dlmenu_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton
         if ((b9|2)==3) popup2(ww, DLM_MT(ww), DLM_MSK(ww), b9, ev); }
 
 static void dlvmi_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	if (b9>0) return (void) gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w);
-	char buf[8]; memcpy(buf, "~mVK", 4); buf[4]=hexc1(((cx>>4)&3)+8*(b9&1)), buf[5]=hexc1(cx&15);
-	buf[6]=10; write(1,buf,7);
-	LOG("click: key %d 0x%x 0x%x", b9, cx, cy); }
+	if (b9>0) return (void) gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w); cx-=8;
+	char buf[8]; memcpy(buf, "~mVK", 4); buf[4]=hexc1(((cx>>4)&7)+8*(b9&1)), buf[5]=hexc1(cx&15);
+	buf[6]=10; write(1,buf,7); }
 
 static void dalbl_skel(struct _ww_t * ww, const char **pp) {
         int ch = ww->cl->ch, h2 = 0, wmul = 5, mt = 0, mm = 0;
@@ -2325,9 +2333,9 @@ GtkWidget * wrap_vbl_i (struct _ww_t * ww, int ix) {
 #define LN_TEMPL(HS,HN,S,J0) \
 	static const char lt_l0[]=S; static const int lt_s = sizeof(lt_l0); \
 	static char lt_ln[sizeof(lt_l0)], _cnt = 0, _pos[31]; \
-	int i;  topwin * tw = ww->top;   if (ix<HN) return parse_w_s(tw, HS[ix]); \
+	int i, c;  topwin * tw = ww->top;   if (ix<HN) return parse_w_s(tw, HS[ix]); \
 	if (!_cnt) { memcpy(lt_ln,lt_l0,lt_s); for(i=0;i<lt_s;i++) if(lt_ln[i]=='_') _pos[(int)(_cnt++)]=i;}\
-	for (i=0; i<_cnt; i++) lt_ln[(int)_pos[i]] = hexc1(ix+(J0-HN)); \
+	for (i=0,c=i_to_b32(ix+(J0-HN)); i<_cnt; i++) lt_ln[(int)_pos[i]] = c; \
 	GtkWidget * rw = parse_w_s(tw, lt_ln) 
 
 GtkWidget * wrap_vbl_S (struct _ww_t * ww, int ix) {
@@ -2349,7 +2357,7 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
-	static const char * h[1] = {"3({L0control}{B1add$##}{B2grab$X*c}0{B7<>$XW6})"}; 
+	static const char * h[1] = {"3({L0ctrl:00}{B1add$##}{B2grab$X*c}0{B7<>$XW6})"}; 
 	LN_TEMPL(h,1,"({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_a}{85p#$2X:_z}{86sel$2X:_w})", 0);
 	int i0 = VB_WBASE(ww) + 8*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0));
@@ -2358,12 +2366,12 @@ GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_K (struct _ww_t * ww, int ix) {
-	static const char * h[1] = {"(3{L0play}{B1grab$X*p}0{B7<>$XW6})"}; 
-	LN_TEMPL(h,1,"({L000:W}3{81d$2X;_d}{82c$2X;_c}{83kw$3X;_k}{84kw$3X;_a}{85kw$3X;_z}"
-		      "{86x$2X;_1}{87X$2X;_2}{88y$2X;_3}{89Y$2X;_4})", 0);
-	int i0 = VB_WBASE(ww) + 10*ix;
+	static const char *h[1] = {"(3{L0play:00}{M1add$X;+|s3}{M2grab$X*p|s2}{M3release$X/p|s2}0{B7<>$XW6})"}; 
+	LN_TEMPL(h,1,"({M000:W$X;_|s1}3{81d$2X;_d}{82c$2X;_c}{83kw$3X;_x}{84kw$3X;_y}{85kw$3X;_z}"
+		      "{86x$2X;_1}{87y$2X;_2}{88X$2X;_3}{89Y$2X;_4})", 0);
+	int x, i0 = VB_WBASE(ww) + 10*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0));
-	if (ix<11) q[0]=32, q[1]=ix+47; else q[0]=49, q[1]=ix+37; 
+	if (ix<11) q[0]=32, q[1]=ix+47; else x=(ix>19), q[0]=49+x, q[1]=ix+37-10*x; 
 	return rw;
 }
 
@@ -2418,7 +2426,7 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:1}{:ES:80}{:Ss780}{:CC=80}{:ZKA:0}"};
+				     "{:YW5:1}{:ES:80}{:Ss780}{:CC=80}{:ZKG:0}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
@@ -4903,7 +4911,7 @@ static void cmd1(char * str) {
 					 LOG("wid: %d", tx_len(k, s));
 					 return;
 				case '=': lsr_debug();
-				case 'f': if (s[1]=='?') LOG("dlfg: %d %s", dflg, dflg_s); 
+				case 'f': if (s[1]=='?') LOG("dlfg: 0x%x %s", dflg, dflg_s); 
 					  else dflg = atoi_h(s+1);	
 					  return;
 				default: LOG("unknown debug-cmd 0x%x(%c)",*s, *s); return;

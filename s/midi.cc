@@ -84,7 +84,7 @@ static void midi_kc(int i, int ch, int k, int v) {
 	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, k, v, *p);
 	if (!x25) return (void) (*p = v);  else *p = x25|v;
 	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
-	// if (ec==MDE_KEEPV) return (void) (*p = x);
+	if (ec==MDE_KEEPV) return (void) (*p = x);
 	if (ec!=EEE_NOEFF) gui_errq_add(ec,"midi/swr");
 	else if (DBGC) log("midi_ev: 0x%x -> 0x%x - no effect",x25,v);
 }
@@ -92,7 +92,7 @@ static void midi_kc(int i, int ch, int k, int v) {
 int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg) {
 	if (DBGC) log_n("midi_grab: id=0x%x, ix=%d, d=%d ch=%d kc=%d [", id, ix, dev, ch, kc);
 	int dev2 = mi_tr_l2p[dev]; if (!((midi_bv|0x80000000)&(1u<<dev2))) return MDE_GRABWHAT;
-	unsigned int m = (id<<7)|(ix<<27), *p = mi_rw(dev2, ch, 0);
+	unsigned int m = ((id<<7)|(ix<<27)) & ((flg&1)-1), *p = mi_rw(dev2, ch, 0);
 	if (DBGC) for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m, log_n(" %02x",kv[i]);
 	else      for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m;
 	if (DBGC) log(" ]");
