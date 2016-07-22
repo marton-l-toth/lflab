@@ -214,7 +214,7 @@ void GuiStub::savename() {
 	if (*sp) { if (!rgb) rgb="zz%%^^\0 %%%%^^"+8*!!sf;
 		   for (p=sb=sp; *p; p++) if (*p=='/') sb=p+1; if (rf) sb="BUG!"; }
 	else if (rf) { memcpy(buf,"(recover:0)",12); buf[9]=sp[2]; if (!rgb) rgb="zzz%%h"; sb=sp=buf; }
-	else { sp = sb = rgb ? "(empty)" : (rgb = "zz%z%%", "(unnamed)"); }
+	else { sp = sb = rgb ? "(empty)" : (rgb = "zz%z%%\0 %zzz%%"+8*!!sf, "(unnamed)"); }
 	setwin( 7,'.'); wupd_c0('N','t'); sn(rgb, 6); sz(sb); 
 	setwin(23,'/'); wupd_c0('1','t'); sn(rgb, 6); sz(sp);  mcfg_win(2);
 }
