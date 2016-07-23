@@ -223,6 +223,7 @@ MDE_FRAG12   got MIDI arg 0/1
 MDE_FRAG13   got MIDI arg 0/2
 MDE_FRAG23   got MIDI arg 1/2
 MDE_FRAGF0   midi: unterminated system (f0) message
+MDE_OFAIL    midi: input device open failed
 MDE_PARSE    midi: user command parse error
 MDE_LOOKUPZ  midi: no obj for event (BUG)
 MDE_LOOKUPT  midi: wrong type obj for event (BUG)
@@ -232,7 +233,8 @@ MDE_VXCHG    cannot move virtual MIDI dev. (#31)
 MDE_UNDEFC   undefined MIDI control config line (BUG)
 MDE_UNDEFP   undefined MIDI play config line (BUG)
 MDE_UNDEFT   undefined MIDI play type (BUG)
-MDE_FULLP    midi/play control list full
+MDE_FULLP    midi/play list full
+MDE_FULLC    midi/control list full
 MDE_MEPIX    invalid play/line number (probably a BUG)
 MDE_KEEPV    midi/keepv: msg supposed to be invisible, BUG
 MDE_FATAL    removing MIDI device from list

@@ -126,13 +126,16 @@ f0:		if ((v = midi_f0(i,p,r))<0) return mi_err(i,0,v);  p+=v; r-=v; continue;
 	}}
 
 int midi_open(int ix, int id) {
-	char nmb[256]; int l = rawmidi_desc(nmb, id, 255)+1;
-	memcpy(mi_dsc[ix]=nf_alloc(l), nmb, l);
+	char nmb[256]; int l = 1; nmb[0] = 63; nmb[1] = 0;
 	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
-	int fd = open(mi_devname, (debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY); 
-	if (fd<0) log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno));
-	else 	  log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd);
-	return fd;
+	int fd = open(mi_devname, ((debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)|O_NONBLOCK);
+	if (fd<0) goto err; else close(fd);
+	l = rawmidi_desc(nmb, id, 255)+1;  memcpy(mi_dsc[ix]=nf_alloc(l), nmb, l);
+	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
+	if ((fd = open(mi_devname, (debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)) < 0) goto err;
+	log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd); return fd;
+err:	gui_errq_add(EEE_ERRNO); gui_errq_add(MDE_OFAIL);
+	log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno)); return -1;
 }
 
 
@@ -153,7 +156,6 @@ int midi_cmd(const char *s) {
 	}}
 
 void midi_init() {
-	if (!CFG_DEVEL.i) return;
 	mi_i_ini(31); mi_keyspd = mi_rw(31, 0, 255);
 	memcpy(mi_devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32]; 

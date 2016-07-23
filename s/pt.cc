@@ -13,9 +13,9 @@
 
 #ifdef __SSE2__
 #include <xmmintrin.h>
-#define FPU_INI _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON); pt_hello="sse2:Y"
+#define FPU_INI _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON); memcpy(pt_he_buf,"sse2:Y",6);
 #else
-#define FPU_INI pt_hello="sse2:n"
+#define FPU_INI memcpy(pt_he_buf,"sse2:n",6);
 #endif
 
 static int osb_hash(const char *s) { // od|sed|bc
@@ -23,9 +23,10 @@ static int osb_hash(const char *s) { // od|sed|bc
 #define QWE_DEFINE_CFGTAB
 #include "cfgtab.inc"
 
+static char pt_he_buf[40];
 volatile int pt_chld_flg = 0;
-int pt_nullfd = -1,    pt_qenv_l[32];
-const char *pt_hello, *pt_qenv_v[32];
+int pt_nullfd = -1, pt_qenv_l[32];
+const char *pt_hello = pt_he_buf, *pt_qenv_v[32];
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
 
@@ -113,7 +114,8 @@ static void qe_ini() {
 	if (!(pt_gid=getegid(), pt_uid=geteuid())) qfail("it is a bad idea to run lflab as root");
 	if ((QENV('h')=getenv("HOME"))) qe_len1('h'); else qe_set2('h', "/tmp", 4);
 	if (set_tmp("/run/shm",8) && set_tmp("/dev/shm",8) && set_tmp("/tmp",4)) qfail("no tmpdir found");
-	qe_set2('w', wdir, sprintf(wdir, "%s/lf.%d", QENV('t'), pt_pid=getpid()));
+	sprintf(pt_he_buf+6, ",%d", pt_pid = getpid());
+	qe_set2('w', wdir, sprintf(wdir, "%s/lf.%s", QENV('t'), pt_he_buf+7));
 
 	char pkgs[1024]; int pkl = readlink(self, pkgs, 1023);
 	if ((unsigned int)pkl>999u) qfail("%s: %s", self, pkl<0 ? strerror(errno) : "linktrg too long");
