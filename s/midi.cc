@@ -26,13 +26,16 @@ unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti};
 static char *mi_dsc[32], mi_devname[24], keytrans[128];
+char mi_tr_l2p[32], mi_tr_p2l[32];
 int midi_fd[32];
 unsigned int midi_bv;
 static const char ktrr_02_27[26] = {15,2,16,3,17,4,18,19,6,20,7,21,8,22,23,10,24,11,25,26,13,27,14,5,9,12},
 	     	  ktrr_31_54[24] = {44,31,45,32,46,47,34,48,35,49,36,50,51,38,52,39,53,54,40,33,37,41,42,43};
 static int ktr_flg;
-char mi_tr_l2p[32]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31},
-     mi_tr_p2l[32]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+
+static int devnm_cmp(const void *p, const void *q) { 
+	return strcmp(mi_dsc[(int)mi_tr_l2p[(int)*(const char*)p]],
+		      mi_dsc[(int)mi_tr_l2p[(int)*(const char*)q]]); }
 
 static int set_kflg(int f) {
 	int d = (ktr_flg ^ f);
@@ -81,7 +84,7 @@ found:	mi_log(i, "system", p, ++j); return j; }
 
 static void midi_kc(int i, int ch, int k, int v) {
  	unsigned int *p0 = mi_rw(i, ch, 0), *p = p0+k, x = *p, x25 = x & ~127u;
-	if (DBGC) log("midi_kc: i=%d ch=%d kc=%d v=%d oldv=%d", i, ch, k, v, *p);
+	if (DBGC) log("midi_kc: i=(p%d l%d) ch=%d kc=%d v=%d oldv=%d", i, mi_tr_p2l[i], ch, k, v, *p);
 	if (!x25) return (void) (*p = v);  else *p = x25|v;
 	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
 	if (ec==MDE_KEEPV) return (void) (*p = x);
@@ -156,11 +159,14 @@ int midi_cmd(const char *s) {
 	}}
 
 void midi_init() {
+	for (int i=0; i<32; i++) mi_tr_l2p[i] = i;   memcpy(mi_tr_p2l, mi_tr_l2p, 32);
 	mi_i_ini(31); mi_keyspd = mi_rw(31, 0, 255);
 	memcpy(mi_devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32]; 
-	int n = find_dev(buf, 1, 31);
-	for (int i=0; i<n; i++) if ((midi_fd[i]=midi_open(i,buf[i]))>=0) midi_bv|=1u<<i, mi_i_ini(i);
+	int n = 0, n0 = find_dev(buf, 1, 31);
+	for (int i=0; i<n0; i++) if ((midi_fd[n]=midi_open(n,buf[i]))>=0) midi_bv|=1u<<n, mi_i_ini(n), n++;
+	if (n>1) qsort(mi_tr_l2p, n, 1, &devnm_cmp);
+	for (int i=0; i<n; i++) mi_tr_p2l[(int)mi_tr_l2p[i]] = i;
 	for (int i=0; i<128; i++) keytrans[i] = i;   set_kflg(CFG_MIDI_KTR.i);
 }
 
