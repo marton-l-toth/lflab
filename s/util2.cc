@@ -56,9 +56,9 @@ int intv_cmd_uc (unsigned char *p, const char * arg, int min, int max, int mul4)
 int intv_cmd_cfg(cfg_ent       *q, const char * arg, 		       int mul4)  {
    return icmd_t<int>(        &q->i,	        arg,    q->i_m,  q->i_M,   mul4); }
 
-int intv_cmd_b(unsigned int *bv, int b0, int nb, const char * arg, int mul4) {
+int intv_cmd_b(unsigned int *bv, int b0, int nb, const char * arg, int mul4, int min, int max) {
 	int msk = (1<<nb)-1, v = (*bv>>b0) & msk, v0 = v;
-	return intv_cmd(&v, arg, 0, msk, mul4) && (*bv ^= (unsigned int)(v0^v)<<b0, 1); 
+	return intv_cmd(&v, arg, min, max?max:msk, mul4) && (*bv ^= (unsigned int)(v0^v)<<b0, 1); 
 }
 
 /////////////////////////////// voltab compression /////////////////////////////////////////////////

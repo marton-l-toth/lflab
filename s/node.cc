@@ -925,6 +925,12 @@ int ClipNode::sel(int i) {
 	return i;
 }
 
+BoxGen * ClipNode::find_bx(BoxGen * cb, int stp, int msk) {
+	int j0 = (cb->node()->m_u24.c.i), j0h = j0 & ~msk, j = j0;
+	while ((j = ((j+stp)&msk)|j0h) != j0) if (m_map&(1u<<j)) return ent_j(j)->box();
+	return cb;
+}
+
 int ClipNode::keyop_j(int j, int ky, int op, const char *s, int nof) {
 	return (m_map&(1u<<j)) ? wrap_key_op(ent_j(j)->box(), ky, op, s, nof) : EEE_NOEFF; }
 

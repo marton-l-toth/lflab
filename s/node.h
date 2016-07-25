@@ -526,6 +526,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		ABoxNode * ent_sel() { return ent_jv(m_sel); }
 		BoxGen * bx_j(int j) { return (m_map&(1u<<j)) ? ent_j(j)->box() : 0; }
 		BoxGen * bx_sel() { return bx_j(m_sel); }
+		BoxGen * find_bx(BoxGen * cb, int stp, int msk);
 		int keyop_j(int j, int ky, int op, const char *s, int nof);
 		int keyop_f(int ky, int op, const char *s, int nof);
 		int cmd(CmdBuf * cb);
