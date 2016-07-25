@@ -235,8 +235,9 @@ MDE_UNDEFP   undefined MIDI play config line (BUG)
 MDE_UNDEFT   undefined MIDI play type (BUG)
 MDE_FULLP    midi/play list full
 MDE_FULLC    midi/control list full
-MDE_MEPIX    invalid play/line number (probably a BUG)
 MDE_KEEPV    midi/keepv: msg supposed to be invisible, BUG
+MDE_TRGZ     midi/ctrl: no current target
+MDE_TRGNC    midi/ctrl: current target not in a clipboard
 MDE_FATAL    removing MIDI device from list
 MDE_WTF      you just have found a bug (midi)
 S45_________ __________________________________________________________(BUG)__

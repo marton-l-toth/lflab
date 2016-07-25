@@ -2365,7 +2365,8 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
-	static const char * h[1] = {"3({L0ctrl:00}{B1add$X:+v000,O00}{B2grab$X*c}0{B7<>$XW6})"}; 
+	static const char * h[1] = 
+		{"3({L0ctrl:00}{B1add$X:+Ov/00000}{M2grab$X*c|s2}{M3release$X/c|s2}0{B7<>$XW6})"}; 
 	LN_TEMPL(h, 1, "({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_z}{85p#$2X:_n}{86!0sel$2X:_t}"
 			"{B72x$X:_+}{B8X$X:_-})", 0);
 	int i0 = VB_WBASE(ww) + 9*ix;
@@ -2395,8 +2396,13 @@ return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
 
 static void swrap_cmd (struct _topwin * tw, char * arg) {
 	ww_t *vb = widg_lu1_pc(tw, 'E');
-	int i, wi = VB_WBASE(vb);
+	int i, j, wi = VB_WBASE(vb);
 	switch(*arg) {
+		case '(': case ')':
+			  wi = VB_WBASE(widg_lu1_pc(tw, "CZ"[*arg&1])); j = *arg&1; i = atoi_h(arg+1); LOG("swr(%s)",arg);
+			  d59(DALBL_TXT(widg_qp(tw, wi))+5, j?i:bitcnt(i)); da_fullre(widg_qp(tw, wi));
+			  DLM_MSK(widg_qp(tw,wi+2)) = DLM_MSK(widg_qp(tw,wi+3)) = ~(j ? (2<<i)-1 : 2*i+1);
+			  return;
 		case '#': upd_flgvec(tw, "S01", 6, -1, hex2(arg+1)); return;
 		case '&': upd_flgvec(tw, "E08", 8, -1, hex2(arg+1)); return;
 		case '!': i = 3; BVFOR_JMC(hex2(arg+1))
