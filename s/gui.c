@@ -1113,8 +1113,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  13,7,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  3:4", "pqrstuvwxyz{:" /*"}"*/ },
 {'s',10,1,4,1, "+0* +1* +x* +y* +s1*+s2*+s3*+s4*+s5*+s6*", "0123456789"},
 {0,  11,0,5,2, "kyseqtpad+tpad1dup  up1  down1up5  down5>top >bttmdel  ", "tktttT+ m-m+m<m>m0mv- "},
-{0,  17,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 ",
-		  "*0123456789abcdefghijkl"},
+{0,  22,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 ","*0123456789abcdefghijk"},
 {0,   7,0,5,15,"[Q2W]kZSXDkF1F2kkpd0tpad+tpad1empty","kv0,041714,66I6kv0,1f2f11,66F6kv0,3b460c,66I6"
 		  "k00,243208,66H6t00,818290,6OO6T00,818290,6OO6k00,000000,0000"},
 {'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
@@ -1127,8 +1126,8 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {'#',7, 0,8,4, "[focus] config  help    redraw  wav/flac+autoupd-autoupd", "$>* W$  N?? M9  XAW XAU1XAU0"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
-{'+',7, 0, 7,2, "help   descr. info1  info2  info4  info*  GUI cfgdelete ", "N?MtI1I2I4I7EWNd"},
-{0,  5, 0, 6,3, "->box edit/Tedit/Xfrom@lfrom@r","W$ EE ED ## ##"},
+{'+',8, 0, 7,2, "help   descr. info1  info2  info4  info*  GUI cfgdelete ", "N?MtI1I2I4I7EWNd"},
+{0,  5, 0, 6,3, "->box edit/Tedit/Xfrom@lfrom@r","W$ EE ED ## ## "},
 {'T',11, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)  rvrs.cut",
 		  "txcv96CMNSr"},
 TDIV_MENU_LN
@@ -1139,10 +1138,10 @@ TDIV_MENU_LN
 {'K', 10,0,5,6, "help info del/snew dnew s-----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  Cs%K  ##    "
 								      "KZ    Nd    ######$.X*$A"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
-{'S', 1, 0,1,1, "??", "##" },
+//{'S', 1, 0,1,1, "??", "##" },
 {0,   3, 1,5,1, "availdelayretBS", "012"},
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
-{'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu", "012345678"},
+{'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
 {'P', 6, 8,7,1, "[avg]  avg    left   right  A:L,R  *:L,R  ", "001234"},
 {0,   7, 8,7,1, "[avg]  avg    left   right  avg/Z  lft/Z  rgt/Z  ", "0012456"},
@@ -1192,6 +1191,7 @@ static int str_unpack(char *to, const char * s, int ni, int l) {
 		for (--j; j>0 && p[j]==32; j--) p[j] = 0;
 		p += (k+1); s += k;
 	}
+	if (s && *s && (ni|l)) LOG("BUG: str_unpack(ni=%d,l=%d): left \"%s\" packed %d", ni, l, s, p-to);
 	return p - to;
 }
 
@@ -2117,21 +2117,29 @@ static void dacnt_set_x(ww_t * ww, int x, int flg) { // 255:lim 256:da_fullre 51
 static const char * fmts[] = {"%d","%01d","%02d","%03d","%04d","%05d","%06d","%07d",
                               "%X","%01X","%02X","%03X","%04X","%05X","%06X","%07X"};
 
+static int cnt_neg(char *to, int j, int v) {
+	static const char *ls[] = {"27--nxpvupdnltrt"};
+	if ((unsigned int)j >= (unsigned int)(sizeof(ls)/sizeof(char*))) return to[0]=to[1]='?', 2;
+	char *s = ls[j];  int w=s[0]-48, n=s[1]-48;   if ((v=~v&255)>=n)  return to[0]=      '?', 1;
+	return memcpy(to, s+2+w*v, w), w;
+}
+
 static void dacnt_draw(ww_t * ww, cairo_t * cr2) {
 	cairo_set_source_rgb (cr2, .1, .2, .1);
 	cairo_paint (cr2);
-	char buf[16]; buf[0] = 0;
+	char *lbl = DACNT_LBL(ww), buf[16]; buf[0] = 0;
 	int zpad = DACNT_ARG(ww) & 15;
 	int lwid = (DACNT_ARG(ww)>>4) & 255;
 	int vmode = (DACNT_ARG(ww) >> 12) & 15;
-	int nflg = -(~(vmode>>3) | (vmode&1));
+	int nflg = -(~(vmode>>3) | (vmode&1)), lsflg = (lbl[0]=='!');
 	int val = DACNT_X(ww);
 	if (vmode&4) {
 		if (val==0)   buf[0]='0', buf[1] = 0;
 		else if (val==100) buf[0]='1', buf[1] = 0;
 		else buf[0]='.', buf[1]=48+val/10, buf[2]=48+val%10, buf[3] = 0;
 	} else if (nflg) {
-		int k = sprintf(buf, fmts[zpad], val);
+		int k = (lsflg && val<0) ? cnt_neg(buf, lbl[1]-48, val)
+		 			 : sprintf(buf, fmts[zpad], val);
 		if (DACNT_DOTC(ww)==1) buf[k]=buf[k-1], buf[k-1]='.', buf[k+1]=0;
 		else if (DACNT_DOTC(ww)) buf[k]=buf[k-1], buf[k-1]=buf[k-2], buf[k-2]='.', buf[k+1]=0;
 		else buf[k]=0;
@@ -2158,7 +2166,7 @@ static void dacnt_draw(ww_t * ww, cairo_t * cr2) {
 	cairo_set_source_rgb (cr2, .8, .8, .8);
 	cairo_set_font_size(cr2, (double)conf_lbfs_s);
 	cairo_move_to(cr2, (double)xl, (double)(yl+FONT_OFFS(conf_lbfs_s)));
-	cairo_show_text(cr2, DACNT_LBL(ww));
+	cairo_show_text(cr2, DACNT_LBL(ww)+2*lsflg);
 	cairo_set_source_rgb (cr2, .0, 1.0, .0);
 	if (nflg) {
 		cairo_set_font_size(cr2, (double)nfs);
@@ -2357,17 +2365,18 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 }
 
 GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
-	static const char * h[1] = {"3({L0ctrl:00}{B1add$##}{B2grab$X*c}0{B7<>$XW6})"}; 
-	LN_TEMPL(h,1,"({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_a}{85p#$2X:_z}{86sel$2X:_w})", 0);
-	int i0 = VB_WBASE(ww) + 8*ix;
+	static const char * h[1] = {"3({L0ctrl:00}{B1add$X:+v000,O00}{B2grab$X*c}0{B7<>$XW6})"}; 
+	LN_TEMPL(h, 1, "({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_z}{85p#$2X:_n}{86!0sel$2X:_t}"
+			"{B72x$X:_+}{B8X$X:_-})", 0);
+	int i0 = VB_WBASE(ww) + 9*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0));
-	if (ix<11) q[1]=32, q[2]=ix+47; else q[1]=49, q[2]=ix+37; 
+	if (ix<11) q[1]=48, q[2]=ix+47; else q[1]=49, q[2]=ix+37; 
 	return rw;
 }
 
 GtkWidget * wrap_vbl_K (struct _ww_t * ww, int ix) {
 	static const char *h[1] = {"(3{L0play:00}{M1add$X;+|s3}{M2grab$X*p|s2}{M3release$X/p|s2}0{B7<>$XW6})"}; 
-	LN_TEMPL(h,1,"({M000:W$X;_|s1}3{81d$2X;_d}{82c$2X;_c}{83kw$3X;_x}{84kw$3X;_y}{85kw$3X;_z}"
+	LN_TEMPL(h,1,"({M000:W$X;_|s1}3{81d$2X;_d}{82c$2X;_c}{83k5$3X;_x}{84k5$3X;_y}{85kn$3X;_z}"
 		      "{86x$2X;_1}{87y$2X;_2}{88X$2X;_3}{89Y$2X;_4})", 0);
 	int x, i0 = VB_WBASE(ww) + 10*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0));
@@ -2426,7 +2435,7 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
 static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:1}{:ES:80}{:Ss780}{:CC=80}{:ZKG:0}"};
+				     "{:YW5:1}{:ES:80}{:Ss780}{:CC<90}{:ZKF:0}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],
