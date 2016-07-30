@@ -37,7 +37,6 @@ read the following general help texts:
 ==> 2.box -- basic building blocks of sounds
 ==> 2.!b and !e -- overview of builtins and examples
 ==> 1.auconv -- how to write to wav/flac
-==> 1.config -- some settings you might change
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
 {{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
@@ -410,8 +409,8 @@ kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restart gnuplot (close all gnuplot windows)
 LR - display tree window (on top)
 ++ - main menu (here you can open the console, show the
-pole-zero diagram for the last filter, configure audio, write
-timing log, and exit)
+pole-zero diagram for the last filter, open various config
+windows, write logs, and exit)
 CPU meter: green-OK, yellow-high load, red-danger grey-muted
 CPU meter should run about 1 dashed line / sec, depending
 on the speed setting.
@@ -486,7 +485,14 @@ You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
 ==> 1.config
-{{{1.config}}}
+{{{1.misc cfg}}}
+In this window you can configure various parameters, all of
+which are integers (left-click:increment right-click:decrement
+shift-cl./ctrl-cl:incr/decr. more)
+---
+There is only one config file, so "saveCfg" saves all other
+config parameters (audio, path, midi) as well.
+{{{1.path cfg}}}
 This help text describes the main config window (available from
 the "++" menu in the main window). For a list of command line
 options, start the program with "lflab -h".

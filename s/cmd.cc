@@ -210,6 +210,33 @@ int CmdBuf::rpl_cp(char *to, const char *s, CmdBuf::conv_fun f) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void log_load(int n) { for (int i=0; i<n; i++) log("log load test ------------------------- #%d", i); }
+
+static int ocfg_iv(int j, const char *s) {
+	if ((unsigned int)(j-1) >= (unsigned int)(sizeof(cfg_tab)/sizeof(cfg_ent)-1)) return GCE_UCFG;
+	cfg_ent * q = cfg_tab + j;
+	if (!(intv_cmd_cfg(q, s, -1))) return 0;
+	if (q==&CFG_TLOG_BACKUP || q==&CFG_TLOG_AUTO) gui2.set_tlog();
+	gui2.setwin(0x37,'k'); gui2.ocfg_l(j+48); return 0;
+}
+
+static int fcfg_dir(cfg_ent * q, char *s, int dq) {
+	int l = strlen(s+1); if (l>254) return EEE_LONGSTR;
+	cfg_setstr(q, s+1); 
+	gui2.setwin(0x57, 'F'); gui2.fcfg_ud(*s, q, QENV(dq), QENVL(dq));
+	gui2.c4(9, 'f', *s, 'Z'); return 0;
+}
+
+static int fcfg_exe(char *s) {
+	int k = s[1]-48; if ((unsigned int)k >= (unsigned int)N_XAPP) return GCE_UCFG;
+	int ec = cfg_setstr(&CFG_XTERM+k, s+2), l = (&CFG_XTERM+k)->i;
+	s[l+2] = 10; pt_iocmd_sn(s, l+3); s[l+2] = 0;
+	if ((*s&32) && (ec>=0)) gui2.setwin(0x57, 'F'), gui2.fcfg_ex(k);
+	return ec;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 int CmdTab::c_cont(CmdBuf * p) {
 	if (!p->m_cont) return GCE_NOCONT;
 	int ec = p->m_cont->line(p->m_c_a0); 
@@ -313,34 +340,21 @@ int CmdTab::c_stat(CmdBuf * p) {
 	return 0;
 }
 
-static void log_load(int n) { for (int i=0; i<n; i++) log("log load test ------------------------- #%d", i); }
-
 int CmdTab::c_cfg(CmdBuf * p) {
-	char *s = p->m_c_a0; int fd = 0, f = 0; switch(*(s++)) {
+	char *s = p->m_c_a0; switch(*s) {
+		case '@': return ocfg_iv(s[1]-48, s+2);
 		case '>': return cfg_write(1);
-		case 's': CFG_SV_EXEC.i   = *s&1; f =     4; break;
-		case 't': CFG_TLOG_AUTO.i = *s&1; f =    16; gui2.set_tlog(); break;
-		case 'K': CFG_AO_ACTION.i = *s&3; f =  1024; break;
-		case 'd': CFG_DEVEL.i     = *s&1; f =  8192; break;
-		case 'C': CFG_AUTOCON.i   = *s&1; f = 32768; break;
-		case 'a': intv_cmd_cfg(&CFG_ASV_MIN,     s, -4); f =   8; break;
-		case 'S': intv_cmd_cfg(&CFG_SV_BACKUP,   s, -4); f =  32; break;
-		case 'A': intv_cmd_cfg(&CFG_ASV_BACKUP,  s, -4); f =  64; break;
-		case 'T': intv_cmd_cfg(&CFG_TLOG_BACKUP, s, -4); f = 128; gui2.set_tlog(); break;
-		case 'L': intv_cmd_cfg(&CFG_AO_TLIM,     s, -1); f =2048; break;
-		case 'k': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_AO_DIR,  s);fd=1; break;
-		case 'w': if((f=strlen(s))>254)return EEE_LONGSTR; cfg_setstr(&CFG_WAV_DIR, s);fd=2; break;
-		case 'W': f = -1; break;
-		case 'x': if ((f=strlen(s))>254) return EEE_LONGSTR;
-			  cfg_setstr(&CFG_XTERM, s); s[f] = 10; pt_iocmd_sn(s-1, f+2); return s[f] = 0;
+		case 'k': return fcfg_dir(&CFG_AO_DIR,  s, 't');
+		case 'w': return fcfg_dir(&CFG_WAV_DIR, s, 'h');
+		case 'x': case 'X': return fcfg_exe(s);
+		case 'V': return gui2.ocfg_draw(), 0;
+		case 'W': return gui2.fcfg_draw(), 0;
 		default:  return GCE_UCFG;
-	}
-	if (fd) f |= fd<<8, gui2.c4(9, 'f', s[-1], 'Z');
-	return gui2.mcfg_win(f), 0;
-}
+	}}
 
 int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
-		case 'g': glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
+		case 'g': pt_calc_xbv(); gui2.xapp_bv();
+			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
 		default: return GCE_UREPORT;
 	}}
 
@@ -359,7 +373,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'g': Gnuplot::sg() -> restart(); return 0;
 		case 'F': pzrf_show_last(); return 0;
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
-		case 'w': i = s[1]&1 ? snd0.hcp_start(20903400) : snd0.hcp_end();
+		case 'w': i = s[1]&1 ? snd0.hcp_start(209203*CFG_AO_RECLIM.i-818) : snd0.hcp_end();
 			  gui2.setwin(7,'.'); gui2.wupd_i1('W',!!snd0.hcp()); return i;
 		case 'c': return pt_con_op(s+1); 
 		case 'L': log_load(atoi(s+1)); return 0;

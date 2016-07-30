@@ -56,8 +56,8 @@ int GuiStub::start(int * pfd) {
 	pt_reg(PT_GUI, m_pid, &gui_dead);
 	m_gf0 = glob_flg;
 	set_fd(&m_inpipe, pfi, 0); set_fd(&m_tpipe, pft, 0);
-	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor); 
-	set_tlog(); savename(); vol(); flush();
+	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
+	set_tlog(); savename(); vol(); xapp_bv(); flush();
 	return 0;
 }
 
@@ -186,27 +186,20 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 void GuiStub::set_tlog() { c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
 void GuiStub::vol() { setwin(7,'.'); wupd_i2('v', snd0.vol() - 12); }
 
-void GuiStub::mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef) {
+void GuiStub::fcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef) {
 	wupd_c0(wch, 't');
 	if (pc->i) sn("%%%ttt", 6), sn(pc->s, pc->i); else sn("ppp666(", 7), sn(sdef, ldef), c1(')'); }
 
-void GuiStub::mcfg_win(int flg) {
-	if (flg&     1) cre(0x57, 'F'); else setwin(0x57, 'F');
-	if (flg&     2) wupd_s('7', ","), sz(*save_file_name?save_file_name:"(no name)");
-	if (flg&     4) wupd_i1('s', CFG_SV_EXEC.i);
-	if (flg&     8) wupd_i2('a', CFG_ASV_MIN.i);
-	if (flg&    16) wupd_i1('t', CFG_TLOG_AUTO.i);
-	if (flg&    32) wupd_i2('S', CFG_SV_BACKUP.i);
-	if (flg&    64) wupd_i2('A', CFG_ASV_BACKUP.i);
-	if (flg&   128) wupd_i2('T', CFG_TLOG_BACKUP.i);
-	if (flg&   256) mcfg_ud('k', &CFG_AO_DIR,  QENV('t'), QENVL('t'));
-	if (flg&   512) mcfg_ud('w', &CFG_WAV_DIR, QENV('h'), QENVL('h'));
-	if (flg&  1024) wupd_ls('K', CFG_AO_ACTION.i);
-	if (flg&  2048) wupd_i ('L', CFG_AO_TLIM.i);
-	if (flg&  8192) wupd_i1('d', CFG_DEVEL.i);
-	if (flg& 16384) wupd_s ('x', CFG_XTERM.s);
-	if (flg& 32768) wupd_i1('C', CFG_AUTOCON.i);
-}
+void GuiStub::fcfg_ex(int k) { wupd_s(k+48, (&CFG_XTERM+k)->s); }
+void GuiStub::ocfg_draw() { cre(0x37, 'k'); for (const char *s = CFG_IVSUM; *s; s++) ocfg_l(*s); }
+void GuiStub::ocfg_l(int c) { wupd_i(c, cfg_tab[c-48].i); }
+void GuiStub::xapp_bv() { for (int k,i=0; i<N_XAPP; i++) if ((k=pt_xapp_bv[i])) c3(9, 'x', 48+i), hex8(k); }
+
+void GuiStub::fcfg_draw() {
+	cre(0x57, 'F');
+	fcfg_ud('k', &CFG_AO_DIR,  QENV('t'), QENVL('t'));
+	fcfg_ud('w', &CFG_WAV_DIR, QENV('h'), QENVL('h'));
+	for (int i=0; i<N_XAPP; i++) wupd_s(48+i, (&CFG_XTERM+i)->s); }
 
 void GuiStub::savename() { 
 	char buf[64]; const char *p, *sb, *rgb = (glob_flg&GLF_EMPTY)?"%%%FFF":0, *sp = save_file_name;
@@ -216,5 +209,5 @@ void GuiStub::savename() {
 	else if (rf) { memcpy(buf,"(recover:0)",12); buf[9]=sp[2]; if (!rgb) rgb="zzz%%h"; sb=sp=buf; }
 	else { sp = sb = rgb ? "(empty)" : (rgb = "zz%z%%\0 %zzz%%"+8*!!sf, "(unnamed)"); }
 	setwin( 7,'.'); wupd_c0('N','t'); sn(rgb, 6); sz(sb); 
-	setwin(23,'/'); wupd_c0('1','t'); sn(rgb, 6); sz(sp);  mcfg_win(2);
+	setwin(23,'/'); wupd_c0('1','t'); sn(rgb, 6); sz(sp);
 }

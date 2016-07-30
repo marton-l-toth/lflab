@@ -18,6 +18,7 @@ typedef int (*pt_wfun)(int,int,int);
 extern volatile int pt_chld_flg;
 extern int pt_nullfd, 	      pt_qenv_l[32];
 extern const char *pt_hello, *pt_qenv_v[32];
+extern int pt_xapp_bv[];
 
 int cfg_write(int lg); 
 struct cfg_ent; 
@@ -34,6 +35,7 @@ int pt_con_op(const char * arg); // -1:start -2:stop -3:restart -4:killed /:prcl
 int pt_acv_op(int id, int op, const char *a1, const char *a2);
 int pt_kill_pa(int flg);
 int pt_show_lic();
+void pt_calc_xbv();
 void pt_debug();
 
 #endif // __qwe_pt_h__

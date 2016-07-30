@@ -99,8 +99,11 @@ class GuiStub {
 		void j_upd(int wwt, int st, int wwix = -1);
 		void errq_add(int ec, const char * s = 0);
 		void errq_add2(int e1, int e2, const char *s = 0) { errq_add(e1,s); errq_add(e2,s); }
-		void mcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef);
-		void mcfg_win(int flg);
+		void fcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef);
+		void fcfg_ex(int k);
+		void fcfg_draw();
+		void xapp_bv();
+		void ocfg_l(int c), ocfg_draw();
 		void savename();
 		void vol();
 		void set_tlog();

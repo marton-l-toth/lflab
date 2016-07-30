@@ -2,6 +2,7 @@
 #define __qwe_uc0_h__
 
 #define FIFO_LIST "ptuxmskACT"
+#define N_XAPP 3
 
 static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
@@ -15,6 +16,8 @@ static inline int atoi_h(const char *s) { int r = 0, x = 0;
 
 #ifndef QWE_UTILC_DEF
 extern volatile char vstring[16];
+extern char *xapp_env[N_XAPP], *xapp_dflt[N_XAPP];
+extern const char **xapp_ls[N_XAPP];
 void vstring_set(int i, int j);
 void d999(char *p, int v);
 int qh4(unsigned int x), qh4r(unsigned int x);
@@ -24,6 +27,14 @@ int launch(const char * exe, const char * iocfg, ...);
 #else
 
 volatile char vstring[16];
+char *xapp_env[N_XAPP] = { "LF_XTERM", "LF_X_ED_T", "LF_X_ED_X" };
+char *xapp_dflt[N_XAPP] = { "xterm", "nano", "xedit" };
+static const char *xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-terminal", "konsole", "lxterminal",
+	        		  "uxterm", "terminator", "rxvt", 0 },
+		  *ed_t_ls [] = { "nano", "vim", "vi", "emacs", 0 },
+		  *ed_x_ls [] = { "nedit", "xedit", "gvim", "gedit", "xemacs", 0 };
+const char **xapp_ls[N_XAPP] = {xterm_ls, ed_t_ls, ed_x_ls};
+
 void vstring_set(int i, int j) { char buf[16]; j = snprintf(buf, 15, "vvrrssnn%d.%d", i, j); 
 				for (i=0; i<j; i++) vstring[i] = buf[i]; }
 

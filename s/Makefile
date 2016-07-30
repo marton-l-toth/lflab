@@ -57,7 +57,7 @@ co/%.o: c/%.cc $(INCS) errtab.inc cfgtab.inc
 lf.bin: $(OBJS)  
 	$(CC) -g $(OBJS) -lasound -olf.bin
 
-lf.gui: gui.c uc0.h uc1.h errtab.inc
+lf.gui: gui.c uc0.h uc1.h errtab.inc cfgtab.inc
 	gcc -g -Wall -Wno-unused-function $(CFLAGS) gui.c $(GTKINC) $(GTKLIB) -olf.gui
 
 lf.bb:  bb.c uc0.h

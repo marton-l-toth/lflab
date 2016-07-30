@@ -25,7 +25,7 @@ static int osb_hash(const char *s) { // od|sed|bc
 
 static char pt_he_buf[40];
 volatile int pt_chld_flg = 0;
-int pt_nullfd = -1, pt_qenv_l[32];
+int pt_nullfd = -1, pt_qenv_l[32], pt_xapp_bv[N_XAPP];
 const char *pt_hello = pt_he_buf, *pt_qenv_v[32];
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
@@ -177,9 +177,6 @@ static void show_help(FILE *f) {
 		else	     { fprintf(f, " [%d|%d|%d..%d]\n", ce->i, ce->i_d, ce->i_m, mx); }
 }}
 
-static const char * xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-terminal", "konsole", "lxterminal",
-	"uxterm", "terminator", "rxvt", 0 };
-
 static void mklog() {
 	int lfd = creat(QENV('>'), 0644); if (lfd<0) qfail("creat(%s): %s", QENV('>'), strerror(errno));
 	struct tm * lt = localtime(&tv_zero.tv_sec);
@@ -224,10 +221,11 @@ static const char ** cfg1(int ac, char**av) {
 		if (i==ac-1) ee_add(-4); else cfg_setx(ce, av[i+1]), ++i;
 	}
 	debug_flags = CFG_DEBUG_FLG.i;
-	if (!*CFG_XTERM.s) cfg_setstr(&CFG_XTERM, pfind_ls(xterm_ls));
+	for (int k=0; k<N_XAPP; k++) { cfg_ent * ent = &CFG_XTERM+k;
+			               if (!*ent->s) cfg_setstr(ent, pfind_ls(xapp_ls[k]));
+				       setenv(xapp_env[k], ent->s, 1); }
 	if (dfi==2) cfg_write(0);
 	backup(QENV('>'), CFG_LOG_BACKUP.i); mklog();
-	setenv("LF_XTERM", CFG_XTERM.s, 1);
 	ac -= i; rv = (const char**) malloc((ac+3)*sizeof(char*));
 	if (CFG__1_NOEX.i) { if (ac) memcpy(rv, av+i, ac*sizeof(char*)); rv[ac]=0; return rv; }
 	rv[0] = QENV('e'); if (ac) memcpy(rv+1, av+i, ac*sizeof(char*)), rv[ac+1]=0;
@@ -368,6 +366,11 @@ int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('v'), (char*)0
 void pt_debug()   { return qe_dump(); }
 int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
 					EEE_ERRNO : 0; }
+
+void pt_calc_xbv() {
+	for (int i=0; i<N_XAPP; i++) {
+		const char **pp = xapp_ls[i];
+		for (int j=0; pp[j]; j++) if(pfind(pp[j])) pt_xapp_bv[i] |= (1<<j); }}
 
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static void ee_msg() {

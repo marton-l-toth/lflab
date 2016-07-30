@@ -15,6 +15,8 @@
 #include "uc1.h"
 #define QWE_DEFINE_ERRTAB
 #include "errtab.inc"
+#define QWE_LFGUI
+#include "cfgtab.inc"
 
 ///////////////// types/globals/decls ////////////////////////////////////////
 
@@ -147,17 +149,17 @@ typedef struct _ob_box {
 } ob_box;
 
 
-static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, mcfg_skel,
+static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, fcfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel,
-		     itb_skel, tkcf_skel;
-static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, tkcf_cmd;
-static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel, dakcf_skel,
+		     itb_skel, ocfg_skel;
+static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd;
+static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
 static ww_cmd_fun_t pv_cmd, entry_cmd, daclip_cmd, dalbl_cmd, daclb_cmd, dawr1_cmd, dacnt_cmd, dasep_cmd,
-                    daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd, dakcf_cmd;
+                    daprg_cmd, dagrid_cmd, dagraph_cmd, dapz_cmd, vbox_cmd, dabmp_cmd, datrk_cmd;
 static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
-static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk, dakcf_clk,
+static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk, dlvmi_clk;
 static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s, wrap_vbl_C, wrap_vbl_K,
 		       calc_vbl, gconf_vbl, doc_vbl, err_vbl;
@@ -178,9 +180,9 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'E', TWF_YSIZE , err_skel, err_cmd },
 	{'A', 0         , a20_skel, NULL },
 	{'S', 0         , acfg_skel, NULL },
-	{'F', 0         , mcfg_skel, NULL },
+	{'F', 0         , fcfg_skel, NULL },
 	{'J', 0         , in01_skel, NULL },
-	{'k', 0         , tkcf_skel, tkcf_cmd },
+	{'k', 0         , ocfg_skel, NULL },
 	{ 0 , 0, 0, NULL } };
 
 static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
@@ -203,7 +205,6 @@ static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
 	{'2', dabmp_skel, NULL, dabmp_cmd, dabmp_clk, WF_RESIZE },
 	{'_', dasep_skel, NULL, dasep_cmd, debug_clk, WF_RESIZE },
 	{'%', daprg_skel, NULL, daprg_cmd, daprg_clk, WF_RESIZE },
-	{'*', dakcf_skel, NULL, dakcf_cmd, dakcf_clk, WF_RESIZE|WF_BIGDA1|WF_KEYEV|WF_XM1EV},
 	{'#', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_KEYEV|WF_XM1EV},
 	{'+', dagrid_skel, NULL, dagrid_cmd, dagrid_clk, WF_RESIZE|WF_BIGDA1|WF_DTOR|WF_XM1EV},
 	{'t', datrk_skel,  NULL, datrk_cmd, datrk_clk, WF_RESIZE|WF_BIGDA2|WF_DTOR|WF_KEYEV|WF_XM1EV},
@@ -1116,10 +1117,11 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  22,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 ","*0123456789abcdefghijk"},
 {0,   7,0,5,15,"[Q2W]kZSXDkF1F2kkpd0tpad+tpad1empty","kv0,041714,66I6kv0,1f2f11,66F6kv0,3b460c,66I6"
 		  "k00,243208,66H6t00,818290,6OO6T00,818290,6OO6k00,000000,0000"},
-{'.',18,0,12,4, "filter disp.audio configmain config console     error list  ------------flush log   "
-		"write tlog  save config ------------exit(autosv)restart(asv)restart GUI ------------"
-		"exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
-		"_F  A0W cW  _c-1_E  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
+{'.',21,0,12,4, "filter disp.console     error list  ------------"
+		"audio configpath config midi config misc config ------------"
+		"flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
+		"------------exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
+		"_F  _c-1_E  ####A0W cW  mW  cV  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
 {'/',8, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  ","DCwsgict"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
@@ -1138,7 +1140,7 @@ TDIV_MENU_LN
 {'K', 10,0,5,6, "help info del/snew dnew s-----cleardel  -----WAV/s", "N?    I3    Kd    Cw%K  Cs%K  ##    "
 								      "KZ    Nd    ######$.X*$A"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
-//{'S', 1, 0,1,1, "??", "##" },
+{'S', 1, 0,1,1, "?", "#" },
 {0,   3, 1,5,1, "availdelayretBS", "012"},
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
@@ -1158,7 +1160,7 @@ static menu_t * cmenu_mt = NULL;
 static GtkWidget * cmenu_gw = NULL;
 static char cmenu_dcmd[1024], cmenu_dlbl[1024];
 static int cmenu_dic;
-static unsigned int cmenu_msk;
+static unsigned int cmenu_msk, xapp_bv[N_XAPP];
 
 void lsr_upd(int k, const char * s) {
 	noderef_t * np = lsr_nodes + 32 * k;
@@ -1305,6 +1307,10 @@ static void pcm_popup() {
 	for (i=0; i<n; i++) buf[7] = 48+(ls[i]>>4), buf[9] = 48+(ls[i]&15), add_dyn(buf  , buf  , -1);
 }
 
+static void exe_popup(int k) {
+	if ((unsigned int)k >= (unsigned int)N_XAPP) return LOG("exe_popup: k=%d", k);
+	const char **pp = xapp_ls[k]; BVFOR_JMC(xapp_bv[k]) add_dyn(pp[j], pp[j], -1);  }
+
 static void popup2(ww_t * ww, int tid, unsigned int msk, int btn, GdkEventButton * ev) {
 	menu_del();
 	if (tid<1 || tid>=n_menu_t) { LOG("popup2: invalid tid %d", tid); return; }
@@ -1322,6 +1328,7 @@ static void popup2(ww_t * ww, int tid, unsigned int msk, int btn, GdkEventButton
 		g_signal_connect(it2, "activate", G_CALLBACK(menu_act), cmenu_dcmd + i);
 	}} else { switch(msk&15) {
 		case 1: pcm_popup(); break;
+		case 2: exe_popup((int)(msk>>4u)); break;
 		case 3: lsr_popup((int)(msk>>4u)); break;
 		default: LOG("undef _menu %d", (int)(msk&15)); break;
 	}}
@@ -2737,55 +2744,6 @@ static void tgrid_skel (struct _topwin * tw, char * arg) { const char * str =
 	gtk_widget_show(GTK_WIDGET(tw->arg[3].p));
 	gtk_widget_show(GTK_WIDGET(tw->arg[4].p));
 	if (arg) tgrid_cmd(tw, arg);
-}
-
-///////////////// keycfg /////////////////////////////////////////////////////
-
-#define KCF_IX(x) ((x)->arg[2].c[0])
-#define KCF_X(x)  ((x)->arg[2].c[1])
-#define KCF_Y(x)  ((x)->arg[2].c[2])
-
-static void dakcf_draw(ww_t * ww, cairo_t * cr2) {
-        short * a4 = ww->arg[4].s;
-        int x0 = a4[0], x1 = a4[2],
-            y0 = a4[1], y1 = a4[3];
-	int i, x, y, ix = KCF_IX(ww), wid = KCF_X(ww), heig = KCF_Y(ww);
-	int h1 = conf_lbh, w1 = (5*h1+2)>>2, wtot = wid*w1, htot = heig*h1;
-	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE); cairo_set_line_width(cr2, 2.0);
-	cairo_set_source_rgb(cr2, .05*(ix&4), .1*(ix&2), .2*(ix&1)); cairo_paint(cr2);
-	cairo_set_source_rgb(cr2, .8, .8, .8);
-	for (i=0; i<=wid; i++) if (x = 1+i*w1, x>=x0-1 && x<=x1+1)
-		cairo_move_to(cr2, (double)x, 0.0), cairo_rel_line_to(cr2, 0.0, (double)(htot+2));
-	for (i=0; i<=heig;i++) if (y = 1+i*h1, y>=y0-1 && y<=y1+1)
-		cairo_move_to(cr2, 0.0, (double)y), cairo_rel_line_to(cr2, (double)(wtot+2), 0.0);
-	cairo_stroke(cr2);
-}
-
-static void dakcf_cmd(struct _ww_t * ww, const char * s) {
-	if (!s) return dakcf_draw(ww, (cairo_t*)ww->arg[0].p);
-	switch(*s) {
-		case 's': KCF_X(ww) = b32_to_i(s[1]), KCF_Y(ww) = b32_to_i(s[2]); da_fullre(ww); return;
-		default: return LOG("dakcf:unknown cmd 0x%x/%c", *s, *s);
-	}}
-
-static void dakcf_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	LOG("kcf click!!"); }
-
-static void dakcf_skel(struct _ww_t * ww, const char **pp) {
-	int i = (*pp)[0] - 48; if ((unsigned int)i > 7u) goto err; else KCF_IX(ww) = i;
-	int x = (*pp)[1] - 48; if ((unsigned int)i > 30u) goto err; else KCF_X(ww)  = x;
-	int y = (*pp)[2] - 48; if ((unsigned int)i > 30u) goto err; else KCF_Y(ww)  = y;
-	da_skel(ww, ((5*conf_lbh+2)>>2)*x+2, conf_lbh*y+2); *pp += 3;
-err:    LOG("dakcf_skel: wrong arg");
-}
-
-static void tkcf_cmd (struct _topwin * tw, char * arg) {
-	LOG("tkcf: no commands yet"); }
-
-static void tkcf_skel (struct _topwin * tw, char * arg) { 
-	const char * str = "[{*0044}]";
-	if (!tw->state) tw->arg[0].p = parse_w(tw, &str);
-  	if (arg) tkcf_cmd(tw, arg);
 }
 
 ///////////////// track //////////////////////////////////////////////////////
@@ -4258,26 +4216,32 @@ static void err_skel (struct _topwin * tw, char * arg) {
 	if (arg) err_cmd(tw, arg);
 }
 
-///////////////// main config ////////////////////////////////////////////////
+///////////////// misc/path config ///////////////////////////////////////////
 
-static void mcfg_skel (struct _topwin * tw, char * arg) {
-	static const char *d[7], *v[6] = {"HOME", "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR", "LF_TLOG"};
-	if (!d[0]) {
-		int i,l; char *s; for (i=0; i<6; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>";
-		l = strlen(d[1]); s = malloc(l+10); memcpy(s, d[1], l); memcpy(s+l, "/__asv.lf", 10); d[6]=s;
-	}
-	const char *ws="[(3[{C7,?}{C6,?}{C5,?}({L_term:}3{ex20$cx})]"
-			 "0[{Yssv.exec$cs}{8amin/asv$2ca}{Ytau.tlog$ct}{YCautocon$cC}]"
-	"[{8Ssv.bkup$2cS}{8Aas.bkup$2cA}{8Ttl.bkup$2cT}][3{B_?$$?}0{Yddev$cd}])"
-	"([{B_wav-dir$$!fwW}{B_atmpdir$$!fkW}{L_homedir}{L_userdir}{L_tmp.dir}{L_instdir}{L_workdir}]"
-	"3[(3[{Cw,/1234/6789/1234/6789/1234/6789/1234/6789/1234/6789}{Ck,?}]0[{MK$cK|k0}{8Llim$3cL}])"
-	"{C0,?}{C1,?}{C2,?}{C3,?}{C4,?}]){B>saveCfg$c>}]";
+static void ocfg_skel (struct _topwin * tw, char * arg) { 
+	const char * str = "[" CFG_IVTAB 
+		"(3{B~saveCfg$c>}{B_pathcfg$cW}{B_audio$A0W}{B_midi$mW}{B_?$W#4.misc cfg})]";
+	if (!tw->state) memcpy(tw->title, "cfg/etc", 8), tw->arg[0].p = parse_w(tw, &str);
+	else gtk_window_present(GTK_WINDOW(tw->w));
+}
+
+#define FCFL_D(C) "(0{B_mmmm567$$!f" #C "W}3{C" #C ",?})"
+#define FCFL_X(C) "(0{M_mmmm567$cx" #C "|_0" #C "2}3{e" #C "50$cX" #C "})"
+#define FCFL_I    "(0{L_mmmm567}3{C_,?})"
+
+static void fcfg_skel (struct _topwin * tw, char * arg) {
+	static const char col0[] = "wav-dir\0atmpdir\0xterm\0\0\0editorT\0editorX\0"
+		"homedir\0userdir\0tmp.dir\0instdir\0workdir";
+	static const char *d[5], *v[5] = {"HOME", "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR"};
+	if (!d[0]) { int i,l; char *s; for (i=0; i<5; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>"; }
+	const char *ws="[" FCFL_D(w) FCFL_D(k) FCFL_X(0) FCFL_X(1) FCFL_X(2)
+			   FCFL_I FCFL_I FCFL_I FCFL_I FCFL_I 
+			   "(3{B~saveCfg$c>}{B_misc$cV}{B_audio$A0W}{B_midi$mW}{B_?$W#4.path cfg})]";
 	if (!tw->state) { 
-		tw->arg[0].p = parse_w_s(tw, ws);
-		memcpy(tw->title, "config", 6);
-		int i; const char *s;
-		for (i=0; i<7; i++) s = d[i], daclb_set(widg_lu1_pc(tw, 48+i), &s, 3);
-	} else {  gtk_window_present(GTK_WINDOW    (tw->w)); }
+		tw->arg[0].p = parse_w_s(tw, ws); memcpy(tw->title, "pathcfg", 8);
+		int i; const char *s; for (i=0; i<5; i++) s = d[i], daclb_set(widg_qp(tw, 1017-2*i), &s, 3);
+		for (i=0; i<10; i++) memcpy(DALBL_TXT(widg_qp(tw, i<5?1023-i:1028-2*i)),col0+8*i, 8); }
+	else {  gtk_window_present(GTK_WINDOW    (tw->w)); }
 }
 
 ///////////////// audio config ///////////////////////////////////////////////
@@ -4935,6 +4899,9 @@ static void cmd1(char * str) {
 				  case ':': return menu_act_s(s+1);
 				  default:  return LOG("unknown menu-cmd 0x%x(%c)",*s,*s);
 			  }
+		case 'x': if ((unsigned int)(i = *s-48) >= (unsigned int)N_XAPP) LOG("x: i=%d",i);
+			  else xapp_bv[i] = atoi_h(s+1);
+			  return;
 		default:LOG("unknown cmd 0x%x",*str); return;
 	}
 }

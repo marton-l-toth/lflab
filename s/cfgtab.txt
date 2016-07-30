@@ -11,17 +11,20 @@ AU_KILL_PA  |i|0          |0   |3    |kpa   |pulseaudio: 0-don't kill 1-sig15 3-
 SV_EXEC     |i|0          |0   |1    |svexe |1:save files have exec perm and '#!/usr/bin/lflab' as 1.line
 SV_BACKUP   |i|5          |1   |31   |svbk  |# of backups for save file
 ASV_BACKUP  |i|5          |1   |31   |asbk  |# of backups for autosave
-ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosave (0: none)
+ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosaves (0: no autosave)
 TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit
 TLOG_BACKUP |i|2          |0   |31   |tkbk  |# of backups for tlog
 LOG_BACKUP  |i|3          |0   |31   |lbk   |# of backups for log
 AO_ACTION   |i|0          |0   |3    |aoact |default action for tmp audio (0:ask 1:keep 2:wav 3:flac)
-AO_TLIM     |i|60         |15  |900  |aolim |time limit for (auto mode) audio writing
+AO_TLIM     |i|60         |15  |900  |aolim |time limit (seconds) for (auto mode) audio writing
+AO_RECLIM   |i|100        |10  |1264 |aorl  |tmpfile size limit (MB) for live recording
 AO_DIR      |s|           |0   |255  |aodir |directory for tmp. audio output (default /run/shm or /tmp)
 WAV_DIR     |s|           |0   |255  |wvdir |directory for WAV / FLAC output (default is home dir.)
-TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
-XTERM       |s|           |0   |255  |xterm |terminal emulator (used for console & license display)
+XTERM       |s|           |0   |255  |xterm |terminal emulator (for console/license/text ed.)
+X_ED_T      |s|           |0   |255  |edt   |textmode editor (running in terminal)
+X_ED_X      |s|           |0   |255  |edx   |text editor with own X window
 AUTOCON     |i|1          |0   |1    |aucon |automatically open console for debug info
+TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
 GUI_TRKUP   |i|100        |10  |999  |trkup |track play (arrow) update interval (msec.)
 DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
 QTST_ADIF   |i|24         |15  |999  |qtsta |quicktest/samp: -log2 of max abs diff 

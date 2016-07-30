@@ -164,7 +164,7 @@ void ASnd::c_play() {
 	if (m_hcp) {
 		if (mxr==MXE_HCPFAIL || (m_hcp -= nf)<=0) ec = hcp_end(1);
 		else if (m_hcp<m_hcp_s0) ec = m_hcp / 44100, m_hcp_s0 = ec * 44100,
-					 d59(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
+					 d99(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
 					 gui2.setwin(7,'.'), gui2.wupd_s('W', m_hcp_lbl), ec = 0;
 	}
 	int ae = m_state ? snd_pcm_writei(m_hnd, buf, nf) : (glob_flg |= GLF_SILENCE, nf);

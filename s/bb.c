@@ -151,9 +151,9 @@ int c_main() { /* console */
 	fprintf(f, "_c/proc/%d/fd/1\n", getpid()); fclose(f); while(1) sleep(60);  }
 
 int e_main() { /* editor */
-	const char * cnm = tpipe_name('C'), *jt = getenv("LF_ED_TMPF"); FILE *f;
-	int x, r = fork(); switch(r) {
-		case 0: execlp("vim", "vim", jt+1, NULL); perror("exec"); exit(1);
+	const char * cnm = tpipe_name('C'), *jt = getenv("LF_ED_TMPF"), *ed = getenv(xapp_env[1]);
+	FILE *f; int x, r = fork(); switch(r) {
+		case 0: execlp(ed, ed, jt+1, NULL); perror("exec"); exit(1);
 		case 1: perror("fork"), exit(1);
 		default: waitpid(r,&x,0); exit((f=fopen(cnm, "a")) ? (fprintf(f,"-%c\n",*jt),fclose(f),0) 
 			 				           : (perror(cnm),1)); }}
@@ -163,8 +163,8 @@ int e_main() { /* editor */
 volatile int chld_flg = 0;
 static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1, wrkdir_l = 0,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0, dflg = 0;
-static char xterm_nbuf[256];
-static const char *xterm_name, *wrkdir, *lf_ed;
+static char xapp_nbuf[N_XAPP*256];
+static const char *xapp_name[N_XAPP], *wrkdir, *lf_ed;
 static unsigned int ino_bv = 0u;
 static int ino_epid[32], ino_oid[32], ino_fd = -1;
 static char ino_inm[80];
@@ -360,8 +360,8 @@ found:; char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
 	if (write(fd, txt, len)<0) goto err1; else close(fd);
 	ino_bv |= (1u<<j); ino_oid[j] = id; 
 	ino_epid[j] = edx ? (nm0[-1] = j+48, setenv("LF_ED_TMPF", nm0-1, 1),
-			     launch(xterm_name,"!)x1","-e",lf_ed, NULL), -1)
-			  : launch("xedit", "!(TT", nm0, NULL);
+			     launch(xapp_name[0],"!)x1","-e",lf_ed, NULL), -1)
+			  : launch(xapp_name[2], "!(TT", nm0, NULL);
 	return; // TODO: open ed
 err1:   return close(fd), LOG("ino_add:w: %s", strerror(errno));
 err2:	return LOG("ino_add:c/m: %s", strerror(errno));
@@ -402,7 +402,7 @@ static void ino_read() {
 /*** cmd **********************/
 static int start_con() {
 	static const char * sh = 0;
-	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xterm_name, "!)x1", "-e", sh, (char*)0)<0); }
+	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xapp_name[0], "!)x1", "-e", sh, (char*)0)<0); }
 
 static void con_started(char *s, int n) {
 	if (memcmp(s, "_c/proc/", 8)) return LOG("_: invalid path\"%s\"", s);
@@ -412,6 +412,14 @@ static void con_started(char *s, int n) {
 	con_stat = pid; log_sn(0, -2, 0); --s[n-1]; s[n]=10; write(1, s, n+1);
 }
 
+static void set_xapp(int k, int l, const char *s) {
+	LOG("hellogeecccci %d %d \"%s\"", k, l, s);
+	if ((unsigned int)k >= (unsigned int)N_XAPP) return LOG("set_xapp: k=%d", k);
+	if ((unsigned int)l >= 255u)		     return LOG("set_xapp: l=%d", l);
+	memcpy(xapp_nbuf+256*k, s, l); xapp_name[k] = xapp_nbuf+256*k;
+	setenv(xapp_env[k], s, 1);
+}
+
 static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'c': if (start_con()<0) LOG("start_con failed"); return;
 	case '_': return con_started(s, n);
@@ -419,8 +427,7 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'Z': return con_end();
 	case 'f': return log_sn(0, -1, 0);
 	case 'r': return (void) (rs_ts = time(NULL));
-	case 'x': return (n>255) ? LOG("x: str too long") 
-		  	         : (void) (memcpy(xterm_nbuf, s+1, n), xterm_name=xterm_nbuf);
+	case 'x': case 'X': return set_xapp(s[1]-48, n-1, s+2);
 	case 'h': return (n>7 && s[7]=='.') ? ino_add(atoi_h(s+2), s[1]&1,  s+8, n-8) : LOG("h: parse error");
 	case 'd': return (void) (dflg = atoi_h(s+1));
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
@@ -484,15 +491,14 @@ static void ch_bye() {
 #define FOR_IB for(i=0; i<N_IBUF; i++) if ((k=ib[i].fd)>=0)
 int i_main(int ac, char ** av) {
 	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN); signal(SIGCHLD, i_chld);
-	hello(); 
+	hello();   int i,k;
 	if (!(wrkdir=getenv("LF_TMPDIR")) || (wrkdir_l=strlen(wrkdir))>20) fail("workdir");
 	if (!(lf_ed=getenv("LF_ED"))) fail("ed-wrap");
 	ino_ini();
-	if (!(xterm_name = getenv("LF_XTERM"))) xterm_name = "xterm";
+	for (i=0; i<N_XAPP; i++) if (!(xapp_name[i] = getenv(xapp_env[i]))) xapp_name[i] = xapp_dflt[i];
 	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
 	killer_fd = (ac<3||*av[2]<48) ? 0 : qh4r(*(int*)av[2]);
 	der_alte = ac<4 ? getppid() : qh4r(*(int*)av[3]);
-	int i, k;
 	fd_set rset; struct timeval tv;
 	while(1) {
 		FD_ZERO(&rset); int maxfd = 0;
