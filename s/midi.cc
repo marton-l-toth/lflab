@@ -111,9 +111,9 @@ void midi_input(int i) {
 	while (r) {
 		switch(x>>4) {
 			case 8: v=c=0; goto kc;
-			case 9: *mi_keyspd = v = p[2]; c=0; goto kc;
+			case 9: goto kv;
 			case 10: case 14: goto l2;
-			case 11: v=p[2]; c=128; *mi_keyspd = 127; goto kc;
+			case 11: v=p[2]; c=128; goto kc;
 			case 12: case 13: goto l1;
 			case 15: switch(x) { case 0xf0: goto f0;
 					 case 0xf1: case 0xf3: goto l1;
@@ -125,6 +125,7 @@ l0:		mi_log(      i, "unused", p, 1); ++p;  --r;  continue;
 l1:		CHK1; mi_log(i, "unused", p, 2); p+=2; r-=2; continue;
 l2:		CHK2; mi_log(i, "unused", p, 3); p+=3; r-=3; continue;
 kc:		CHK2; midi_kc(i, x&15, p[1]+c, v); p+=3, r-=3; continue;
+kv:		CHK2; midi_kc(i, x&15, p[1], *mi_keyspd = p[2]); p+=3, r-=3; *mi_keyspd = 127; continue;
 f0:		if ((v = midi_f0(i,p,r))<0) return mi_err(i,0,v);  p+=v; r-=v; continue;
 	}}
 
@@ -147,9 +148,10 @@ int midi_cmd(const char *s) {
 	int j, c = *(s++), ix = b32_to_i(c);
 	if (ix<0) { switch(c) {
 		case '@': return set_kflg(atoi_h(s));
+		case 'W': return GCE_SORRY;
 		default: return MDE_PARSE; }}
 	switch(*s) {
-		case 'K': return *mi_keyspd=127, j=hex2(s+1), midi_kc(31,0, keytrans[j&127], 127&(-(j>>7))), 0;
+		case 'K': return j=hex2(s+1), midi_kc(31,0, keytrans[j&127], 127&(-(j>>7))), 0;
 		case 'W': return midi_wr(ix, s+1);
 		case 'X': if (ix==31) return MDE_VXCHG;
 			  j = b32_to_i(s[1]);
@@ -160,7 +162,7 @@ int midi_cmd(const char *s) {
 
 void midi_init() {
 	for (int i=0; i<32; i++) mi_tr_l2p[i] = i;   memcpy(mi_tr_p2l, mi_tr_l2p, 32);
-	mi_i_ini(31); mi_keyspd = mi_rw(31, 0, 255);
+	mi_i_ini(31); *(mi_keyspd = mi_rw(31, 0, 255)) = 127;
 	memcpy(mi_devname, "/dev/snd/midiCxDy", 18);
 	unsigned char buf[32]; 
 	int n = 0, n0 = find_dev(buf, 1, 31);

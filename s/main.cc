@@ -57,7 +57,7 @@ static void ini(const char ** ppf) {
 	if (glob_flg&GLF_HITHERE) {const char *s="getting started"; snd0.w(-1); hlp->sn(&s)->draw_window(11);}
 	if (CFG_DEVEL.i) pt_con_op("-1");
 	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
-	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1;
+	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1; glob_flg |= GLF_SAVED;
 }
 
 #define FOR_SLC for (int k,i=0; i<N_SLCMD; i++) if ((k=sl_cmd[i].fd()) >= 0)
