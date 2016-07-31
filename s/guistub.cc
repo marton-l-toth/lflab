@@ -8,10 +8,12 @@
 #include "pt.h"
 #include "asnd.h"
 #include "cfgtab.inc"
+#include "midi.h"
 
 void gui_closewin(int x) { gui2.closewin(x); }
 void gui_errq_add (int x, 	 const char *s) { gui2.errq_add (x,    s); }
 void gui_errq_add2(int x, int y, const char *s) { gui2.errq_add2(x, y, s); }
+void gui_midi(int flg) { gui2.midi(flg); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
 	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
@@ -185,6 +187,15 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 
 void GuiStub::set_tlog() { c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
 void GuiStub::vol() { setwin(7,'.'); wupd_i2('v', snd0.vol() - 12); }
+
+void GuiStub::midi(int flg) {
+	if (flg&0x40000000) cre(0x27, 'M'); else setwin(0x27, 'M');
+	if (flg&31) for (int i=(flg>>5)&31, i1=i+(flg&31); i<i1; i++)
+			t0(), c1(i_to_b32(i)), m_bufp += midi_w_ln(m_bufp, i);
+	if (flg&1024) t0(), c1('x'), m_bufp += midi_w_slg(m_bufp, 0);
+	if (flg&2048) t0(), c1('y'), m_bufp += midi_w_slg(m_bufp, 1);
+	if (flg&4096) t0(), c1('z'), hex4(midi_w_flg());
+}
 
 void GuiStub::fcfg_ud(int wch, cfg_ent * pc, const char *sdef, int ldef) {
 	wupd_c0(wch, 't');

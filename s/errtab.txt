@@ -228,6 +228,7 @@ MDE_PARSE    midi: user command parse error
 MDE_LOOKUPZ  midi: no obj for event (BUG)
 MDE_LOOKUPT  midi: wrong type obj for event (BUG)
 MDE_GRABWHAT cannot grab keys on non-existent MIDI device
+MDE_NODEV    cannot reopen -- no device
 MDE_RO	     midi: read-only mode (start with dflg&0x2000)
 MDE_VXCHG    cannot move virtual MIDI dev. (#31)
 MDE_UNDEFC   undefined MIDI control config line (BUG)

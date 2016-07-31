@@ -485,14 +485,18 @@ You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
 ==> 1.config
-{{{1.misc cfg}}}
+{{{1.midi config}}}
+TODO
+T O D O
+T  O  D  O
+{{{1.misc config}}}
 In this window you can configure various parameters, all of
 which are integers (left-click:increment right-click:decrement
 shift-cl./ctrl-cl:incr/decr. more)
 ---
 There is only one config file, so "saveCfg" saves all other
 config parameters (audio, path, midi) as well.
-{{{1.path cfg}}}
+{{{1.path config}}}
 This help text describes the main config window (available from
 the "++" menu in the main window). For a list of command line
 options, start the program with "lflab -h".

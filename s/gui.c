@@ -151,8 +151,8 @@ typedef struct _ob_box {
 
 static tw_skel_fun_t mwin_skel, t2win_skel, clip_skel, wrap_skel, tgrid_skel, graph_skel, acfg_skel, fcfg_skel,
 		     calc_skel, pz_skel, gconf_skel, doc_skel, ttrk_skel, err_skel, a20_skel, in01_skel,
-		     itb_skel, ocfg_skel;
-static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd;
+		     itb_skel, ocfg_skel, midi_skel;
+static tw_cmd_fun_t wrap_cmd, tgrid_cmd, gconf_cmd, doc_cmd, ttrk_cmd, err_cmd, midi_cmd;
 static ww_skel_fun_t pv_skel, button_skel, entry_skel, scale_skel, daclip_skel, dasep_skel,
                      dacnt_skel, dacntvs_skel, dalbl_skel, daclb_skel, dawr1_skel, daprg_skel,
                      dagrid_skel, dagraph_skel, dapz_skel, vbox_skel, dabmp_skel, datrk_skel;
@@ -162,7 +162,7 @@ static ww_get_fun_t pv_get, entry_get, dagraph_get, daclip_get;
 static ww_clk_fun_t debug_clk, daclip_clk, dlmenu_clk, dlyn_clk, dlbtn_clk, dacnt_clk, dacntvs_clk,
 		    daclb_clk, dawr1_clk, daprg_clk, dagrid_clk, dagraph_clk, dabmp_clk, datrk_clk, dlvmi_clk;
 static vbox_line_fun_t wrap_vbl_i, wrap_vbl_t, wrap_vbl_S, wrap_vbl_s, wrap_vbl_C, wrap_vbl_K,
-		       calc_vbl, gconf_vbl, doc_vbl, err_vbl;
+		       calc_vbl, gconf_vbl, doc_vbl, err_vbl, midi_vbl;
 
 static tw_cl tw_cltab[] = { {'?',0,NULL,NULL}, 
 	{'.', TWF_UNDEAD|TWF_ABOVE, mwin_skel, NULL },
@@ -183,6 +183,7 @@ static tw_cl tw_cltab[] = { {'?',0,NULL,NULL},
 	{'F', 0         , fcfg_skel, NULL },
 	{'J', 0         , in01_skel, NULL },
 	{'k', 0         , ocfg_skel, NULL },
+	{'M', 0         , midi_skel, midi_cmd },
 	{ 0 , 0, 0, NULL } };
 
 static ww_cl ww_cltab[] = { {'?', pv_skel, pv_get, pv_cmd, debug_clk, 0 },
@@ -735,7 +736,9 @@ static int cmd_esc(ww_t * ww, const char *s1, const char *s2) { switch(*s1) {
 		  switch(ww->top->cl->ch) {
 			  case '.': s2 = "main";   break;
 			  case '/': s2 = "tree";   break;
-			  case 'F': s2 = "config"; break;
+			  case 'F': s2 = "path config"; break;
+			  case 'k': s2 = "misc config"; break;
+			  case 'M': s2 = "midi config"; break;
 			  case 'E': s2 = "error list"; break;
 			  case 'S': s2 = "audio";  break;
 			  case 'A': s2 = "auconv"; break;
@@ -1424,6 +1427,7 @@ static void vbox_skel(struct _ww_t * ww, const char **pp) {
 		case 'g': ww->arg[3].p = &gconf_vbl; break;
 		case 'd': ww->arg[3].p = &doc_vbl; break;
 		case 'e': ww->arg[3].p = &err_vbl; break;
+		case 'm': ww->arg[3].p = &midi_vbl; break;
 		default: LOG("vbox: unknown subcl 0x%x(%c)",ty,ty); return;
 	}
 	VB_LMAX(ww) = *((*pp)++) - 48;
@@ -4216,11 +4220,67 @@ static void err_skel (struct _topwin * tw, char * arg) {
 	if (arg) err_cmd(tw, arg);
 }
 
+///////////////// midi config ////////////////////////////////////////////////
+
+GtkWidget * midi_vbl (struct _ww_t * ww, int ix) {
+	static const char ** zz = 0; GtkWidget * rw2;
+	if (ix==31) { rw2=parse_w_s(ww->top,
+		"({L099}{L1c8d8$##}3{C2200$$zzz%%zvirtual device >>}0{V3[focus]}{B4rls$mVz})"); }
+	else {LN_TEMPL(zz,0,"({L099}{B1c8d8$m_o}3{C2200,(none)}0{B3up$m_X-}{B4dn$m_X+}{B5rls$m_z})",0);rw2=rw;}
+	int x, i0 = VB_WBASE(ww) + 6*ix;  topwin * tw = ww->top;
+	d59(DALBL_TXT(widg_qp(tw, i0)), ix); memcpy(DALBL_TXT(widg_qp(tw, i0+1)),"----",4);
+	return rw2;
+}
+
+static void midi_slupd(topwin * tw, int j, const char *s) {
+	int i, z, c = 65 + 9*j, k = hex2(s); s += 2;
+	ww_t * q;
+	dacnt_set_x(widg_lu1_pc(tw, '8'+j), k, 256);
+	for (i=0; i<9; i++) q = widg_lu1_pc(tw,c+i), d999(DACNT_LBL(q), z=i?k+i-1:255-j),
+			    q->cmd[3]=hexc1(z>>4), q->cmd[4]=hexc1(z&15), dacnt_set_x(q, hex2(s+2*i), 768);
+}
+
+static void midi_lnupd(topwin * tw, int j, const char *s) {
+	if (j==31) return LOG("midi_lnupd: j=31");
+	char xbuf[128], sdbuf[4] = {'c','_','d','_'}, *xp = xbuf;
+	const char *sd = sdbuf, *sc, *sn;  int nlen;
+	switch(s[0]) {
+		case '-': sd = "----"; sc = "ppp666"; sn = "(none)"; nlen=6; break;
+		case '!': if (!(sdbuf[1]=s[0])||!(sdbuf[3]=s[1])) return LOG("midi_lnupd: parse error");
+			  sc = "zz%z%%"; sn = "ERROR!"; nlen=6; break;
+		default:  if (!(sdbuf[1]=s[0])||!(sdbuf[3]=s[1])) return LOG("midi_lnupd: parse error");
+			  sc = "%%%zz%"; sn = s+2; nlen = min_i(strlen(sn), 100); break;
+	}
+	int i0 = VB_WBASE(widg_lu1_pc(tw, 'v')) + 6*j;
+	ww_t * ww = widg_qp(tw, i0+1); memcpy(DALBL_TXT(ww), sd, 4); da_fullre(ww);
+	memcpy(xbuf, sc, 6); memcpy(xbuf+6, sn, nlen); xbuf[6+nlen] = 0;
+	daclb_set(widg_qp(tw, i0+2), &xp, 0);
+}
+
+static void midi_cmd (struct _topwin * tw, char *s) { int j,k; switch(*s) {
+	case 'x': return midi_slupd(tw, 0, s+1);
+	case 'y': return midi_slupd(tw, 1, s+1);
+	case 'z': for (j=0,k=atoi_h(s+1); j<4; j++,k>>=1) dabool_set(widg_lu1_pc(tw, 48+j), k&1);   return;
+	default:  return (j=b32_to_i(*s))>=0 ? midi_lnupd(tw, j, s+1) : LOG("midi_cmd: ? 0x%x(%s)",*s,s); }}
+
+#define VMSL(C) "{!" #C "999$17fmVSff}"
+#define VMSL3(A,B,C) VMSL(A) VMSL(B) VMSL(C)
+static void midi_skel (struct _topwin * tw, char * arg) {
+	const char * str = "(3{:vmP60}0{__8}[(3{Y3log$m>}{B_saveCfg$##}{B_rls*$mz}{B_?$$?})3("
+		VMSL3(B,C,D) VMSL3(E,F,G) VMSL3(H,I,A) 
+		")0({88^^$3mx}3{L_/}0{89vv$3my})3("
+		VMSL3(K,L,M) VMSL3(N,O,P) VMSL3(Q,R,J) 
+		")0(3{Y0F11-F12$m<0}{Y1q2w3er5$m<1}{Y2zsxdcvg$m<2})])";
+	if (!tw->state) memcpy(tw->title, "midicfg", 8), tw->arg[0].p = parse_w(tw, &str),
+			vbox_show_bv(widg_lu1_pc(tw, 'v'), -1u); 
+	else 		gtk_window_present(GTK_WINDOW(tw->w));
+}
+
 ///////////////// misc/path config ///////////////////////////////////////////
 
 static void ocfg_skel (struct _topwin * tw, char * arg) { 
 	const char * str = "[" CFG_IVTAB 
-		"(3{B~saveCfg$c>}{B_pathcfg$cW}{B_audio$A0W}{B_midi$mW}{B_?$W#4.misc cfg})]";
+		"(3{B~saveCfg$c>}{B_pathcfg$cW}{B_audio$A0W}{B_midi$mW}{B_?$$?})]";
 	if (!tw->state) memcpy(tw->title, "cfg/etc", 8), tw->arg[0].p = parse_w(tw, &str);
 	else gtk_window_present(GTK_WINDOW(tw->w));
 }
@@ -4236,7 +4296,7 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 	if (!d[0]) { int i,l; char *s; for (i=0; i<5; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>"; }
 	const char *ws="[" FCFL_D(w) FCFL_D(k) FCFL_X(0) FCFL_X(1) FCFL_X(2)
 			   FCFL_I FCFL_I FCFL_I FCFL_I FCFL_I 
-			   "(3{B~saveCfg$c>}{B_misc$cV}{B_audio$A0W}{B_midi$mW}{B_?$W#4.path cfg})]";
+			   "(3{B~saveCfg$c>}{B_misc$cV}{B_audio$A0W}{B_midi$mW}{B_?$$?})]";
 	if (!tw->state) { 
 		tw->arg[0].p = parse_w_s(tw, ws); memcpy(tw->title, "pathcfg", 8);
 		int i; const char *s; for (i=0; i<5; i++) s = d[i], daclb_set(widg_qp(tw, 1017-2*i), &s, 3);
@@ -4248,7 +4308,7 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1faA0r}{!ttry$114A0t}{!wt/w$1faA0w}"
-	"[{B_?$$?win.audio}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
+	"[{B_?$$?}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
 	"{Mc$A0c|S1}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "audio", 6);
 	else gtk_window_present(GTK_WINDOW(tw->w)); 
@@ -4603,7 +4663,7 @@ static void t2sel_upd(int lr, int nid, int ty, const char * rgb, const char * s)
 
 static void t2win_skel (struct _topwin * tw, char * arg) {
 	static int iflg = 0; if (!iflg) { mk_tree_2(tw); iflg = 1; }
-	const char * str = "[(3{C1,(here comes the filename)}0{M2+$|/1}{B_?$W.!b.?.win.tree})"
+	const char * str = "[(3{C1,(here comes the filename)}0{M2+$|/1}{B_?$$?})"
 	"{__2}3(3[3TL0Tl]0{__4}3[3TR0Tr])]";
 	memcpy(r_panel, l_panel, sizeof(l_panel));
 	int i; for (i=0; i<sizeof(l_panel)-1; i++) {
@@ -5029,7 +5089,7 @@ int main(int ac, char **av) {
 	obidtab_ini(&oi_etc, 0); // ot_etc[0].state = ot_etc[1].state = 0;
 	cltab_init(); txtm_init(); choo_init(); pf_buf[0] = '~';
 	gtk_init (&ac, &av);
-	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n'; 
+	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n';
 	const char * rcfn = getenv("LF_GTKRC"); if (!rcfn) rcfn = "lf.gtk.rc";
 	char rch[20];
 	int r, fd = open(rcfn, O_RDONLY);
