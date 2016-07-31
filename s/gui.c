@@ -222,7 +222,7 @@ static topwin ot_etc[256];
 static int expand_cmd_flg = 1;
 
 static int conf_lbh = 18, conf_lbfh = 15, conf_lbfs = 15, conf_lbfh_s = 12, conf_lbfs_s = 12;
-static int conf_nomwin = 0;
+static int conf_nomwin = 0, conf_slider_focus = 0;
 static int conf_portwid;
 
 static int tlog_c_onq = 0, tlog_c_bk = 0;
@@ -2288,6 +2288,7 @@ static void dacntvs_skel(struct _ww_t * ww, const char **pp) {
 	double step = 1.0 / (double) k;
 	//LOG("scale: ty:%c step=%g w:%d h:%d", 48+ty, step, wid, heig);
       	GtkWidget * scl = gtk_vscale_new_with_range(0.0, 1.0, step);
+	if (!conf_slider_focus) gtk_widget_set_can_focus(scl, FALSE);
 	gtk_range_set_inverted (GTK_RANGE(scl), TRUE);
 	gtk_scale_set_draw_value(GTK_SCALE(scl), FALSE);
   	g_signal_connect (scl, "value-changed", G_CALLBACK (scale_chg), (gpointer)ww);
@@ -5090,6 +5091,7 @@ int main(int ac, char **av) {
 	cltab_init(); txtm_init(); choo_init(); pf_buf[0] = '~';
 	gtk_init (&ac, &av);
 	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n';
+	conf_slider_focus = (s=getenv("LF_GUI_SLFOC")) && (*s&1);
 	const char * rcfn = getenv("LF_GTKRC"); if (!rcfn) rcfn = "lf.gtk.rc";
 	char rch[20];
 	int r, fd = open(rcfn, O_RDONLY);
