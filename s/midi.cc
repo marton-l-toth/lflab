@@ -26,7 +26,8 @@ unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,
 				mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti};
-static char *mi_dsc[32], mi_devname[24], keytrans[128];
+static char *mi_dsc[32], keytrans[128], mi_devname[24] = "/dev/snd/midiCxDy";
+
 char mi_tr_l2p[32], mi_tr_p2l[32], mi_dscl[32], midi_dvid[32];
 int midi_fd[32];
 unsigned int midi_bv, midi_err_bv;
@@ -34,9 +35,9 @@ static const char ktrr_02_27[26] = {15,2,16,3,17,4,18,19,6,20,7,21,8,22,23,10,24
 	     	  ktrr_31_54[24] = {44,31,45,32,46,47,34,48,35,49,36,50,51,38,52,39,53,54,40,33,37,41,42,43};
 static int midi_dispflg = 0, midi_vsl_ix[2] = {128, 136};
 
-static int devnm_cmp(const void *p, const void *q) { 
-	return strcmp(mi_dsc[(int)mi_tr_l2p[(int)*(const char*)p]],
-		      mi_dsc[(int)mi_tr_l2p[(int)*(const char*)q]]); }
+static int devnm_cmp(const void *p, const void *q) {
+	int i = *(const char*)p, j = *(const char*)q, sc = strcmp(mi_dsc[i], mi_dsc[j]);
+	return sc ? sc : midi_dvid[i] - midi_dvid[j]; }
 
 static int set_kflg(int f) {
 	int d = f<0 ? (f=CFG_MIDI_KTR.i, -1) : (CFG_MIDI_KTR.i^f); if (!d) return 0;
@@ -66,8 +67,8 @@ static int midi_wr(int ix, const char * s) {
 	if ((ec=write(midi_fd[ix], buf, n))<=0) return ec ? EEE_ERRNO : EEE_ZEROLEN;
 	return 0;
 }
-static void mi_xchg(int i, int j){ int I=mi_tr_l2p[i], J=mi_tr_l2p[j];  mi_tr_l2p[i]=J; mi_tr_l2p[j]=I; 
-									mi_tr_p2l[I]=j; mi_tr_p2l[J]=i; }
+static void mi_xchg(int i, int j){ int t, I=mi_tr_l2p[i], J=mi_tr_l2p[j]; mi_tr_l2p[i]=J; mi_tr_l2p[j]=I; 
+	char *q = CFG_MIDI_PRM.s; t=q[i],q[i]=q[j],q[j]=t; 		  mi_tr_p2l[I]=j; mi_tr_p2l[J]=i; }
 static void mi_log(int i, const char *s, const unsigned char *p, int n) {
 	char buf[1024]; int bl = sprintf(buf, "midi: %02d (%02d,%s) -- %s %db:",
 					      mi_tr_p2l[i], i, mi_dsc[i], s, n);
@@ -101,6 +102,45 @@ static void midi_rls_all(int ix) {
 
 static int midi_c_slg(int j, const char *s) {
 	if (intv_cmd(midi_vsl_ix+(j&=1),s,128,246,0x400801)) gui_midi(1024<<j);   return 0; }
+
+static int midi_open(int ix, int id) {
+	char nmb[256]; nmb[0] = 63; nmb[1] = 0;
+	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
+	int l, fd = open(mi_devname, ((debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)|O_NONBLOCK|O_CLOEXEC);
+	if (fd<0) goto err; else close(fd);
+	l = rawmidi_desc(nmb, id, 127) + 1; 
+	memcpy(mi_dscl[ix]<l ? (mi_dsc[ix]=nf_alloc(l)) : mi_dsc[ix], nmb, l); mi_dscl[ix] = l;
+	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
+	if ((fd = open(mi_devname, ((debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)|O_CLOEXEC)) < 0) goto err;
+	log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd); return fd;
+err:	gui_errq_add(EEE_ERRNO); gui_errq_add(MDE_OFAIL); midi_err_bv |= 1<<ix;
+	log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno)); return -1;
+}
+
+static int chk_perm(char *to, const char *s) {
+	unsigned int m, bv = 0u;
+	for (int j,i=0; i<32; i++) 
+		if ((j=b32_to_i(s[i]))<0 || (bv&(m=1u<<j))) return 0; else to[i] = j, bv |= m;
+	return !~bv;
+}
+
+static void midi_i_devls() {
+	static const char *idprm = "0123456789abcdefghijklmnopqrstuv";
+	unsigned char buf[32]; int n = 0, n0 = find_dev(buf, 1, 31);
+	for (int i=0; i<n0; i++) if ((midi_fd[n]=midi_open(n,buf[i]))>=0) 
+		midi_bv|=1u<<n, mi_i_ini(n), midi_dvid[n]=buf[i], n++;
+	if (n>1) qsort(mi_tr_l2p, n, 1, &devnm_cmp);
+	char po[32], pb[32], *q = CFG_MIDI_PRM.s;
+	int k = CFG_MIDI_PRM.i; if (k!=32) { if(k) goto err; else goto mk; }
+	if (!memcmp(q, idprm, 32)) goto inv;
+	if (!chk_perm(pb, q) || pb[31]!=31) goto err;
+	memcpy(po, mi_tr_l2p, 32); for (int i=0; i<32; i++) mi_tr_l2p[i] = po[(int)pb[i]];   goto inv;
+err:    log("midi: invalid MIDI_PERM[%d]=\"%s\"", CFG_MIDI_PRM.i, CFG_MIDI_PRM.s);
+mk:     memcpy(CFG_MIDI_PRM.s, idprm, 33); CFG_MIDI_PRM.i = 32;
+inv:	for (int i=0; i<31; i++) mi_tr_p2l[(int)mi_tr_l2p[i]] = i;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg) {
 	if (DBGC) log_n("midi_grab: id=0x%x, ix=%d, d=%d ch=%d kc=%d [", id, ix, dev, ch, kc);
@@ -139,20 +179,6 @@ kc:		CHK2; midi_kc(i, x&15, p[1]+c, v); p+=3, r-=3; continue;
 kv:		CHK2; c=*mi_keyspd; midi_kc(i, x&15, p[1], *mi_keyspd=p[2]); p+=3,r-=3; *mi_keyspd=c; continue;
 f0:		if ((v = midi_f0(i,p,r))<0) return mi_err(i,0,v);  p+=v; r-=v; continue;
 	}}
-
-int midi_open(int ix, int id) {
-	char nmb[256]; nmb[0] = 63; nmb[1] = 0;
-	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
-	int l, fd = open(mi_devname, ((debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)|O_NONBLOCK|O_CLOEXEC);
-	if (fd<0) goto err; else close(fd);
-	l = rawmidi_desc(nmb, id, 127) + 1; 
-	memcpy(mi_dscl[ix]<l ? (mi_dsc[ix]=nf_alloc(l)) : mi_dsc[ix], nmb, l); mi_dscl[ix] = l;
-	mi_devname[14] = 48+(id>>4); mi_devname[16] = 48+(id&15);
-	if ((fd = open(mi_devname, ((debug_flags&DFLG_RWMIDI) ? O_RDWR : O_RDONLY)|O_CLOEXEC)) < 0) goto err;
-	log("midi%x: %s(%s): opened(%d)", ix, mi_devname , nmb, fd); return fd;
-err:	gui_errq_add(EEE_ERRNO); gui_errq_add(MDE_OFAIL); midi_err_bv |= 1<<ix;
-	log("midi%x: %s(%s): %s", ix, mi_devname, nmb, strerror(errno)); return -1;
-}
 
 int midi_cmd(const char *s) {
 	if (!s || !*s) return MDE_PARSE;
@@ -201,14 +227,7 @@ int midi_w_slg(char *to, int j) {
 
 void midi_init() {
 	for (int i=0; i<32; i++) mi_tr_l2p[i] = i;   memcpy(mi_tr_p2l, mi_tr_l2p, 32);
-	mi_i_ini(31); *(mi_keyspd = mi_rw(31, 0, 255)) = 127;
-	memcpy(mi_devname, "/dev/snd/midiCxDy", 18);
-	unsigned char buf[32]; 
-	int n = 0, n0 = find_dev(buf, 1, 31);
-	for (int i=0; i<n0; i++) if ((midi_fd[n]=midi_open(n,buf[i]))>=0) 
-		midi_bv|=1u<<n, mi_i_ini(n), midi_dvid[n]=buf[i], n++;
-	if (n>1) qsort(mi_tr_l2p, n, 1, &devnm_cmp);
-	for (int i=0; i<n; i++) mi_tr_p2l[(int)mi_tr_l2p[i]] = i;
+	mi_i_ini(31); *(mi_keyspd = mi_rw(31, 0, 255)) = 127;  
+	midi_i_devls();
 	for (int i=0; i<128; i++) keytrans[i] = i;   set_kflg(-1);
 }
-
