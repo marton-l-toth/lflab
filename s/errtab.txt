@@ -204,6 +204,7 @@ BXE_ACYC     graph: no circle allowed (use feedback)
 BXE_NOAWIN   this box has no auxiliary window
 BXE_NOEWIN   this box has no extra window
 BXE_NOWDAT   box has no GUI state (BUG)
+BXE_ZOUT     this object cannot be used as a box
 BXE_ZIFILT   attempted to set box w/o inputs as filter
 BXE_RANGE    box parameter out of range
 BXE_UNDEFKEY key undefined (instr/grid)

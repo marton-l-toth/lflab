@@ -253,7 +253,7 @@ void GraphBoxGen::rcf_nin(int *p, int pos, int ix) {
 }
 
 int GraphBoxGen::add_box(int pos, BoxGen* bx) {
-	if (n_box()==0xfff0) return BXE_GFULL;
+	if (n_box()==0xfff0) return BXE_GFULL; if (!bx->n_out()) return BXE_ZOUT;
 	BoxGen * p2 = 0;
 	int ec = set_boxp(&p2, bx); if (ec<0) return ec;
 	unset_model();

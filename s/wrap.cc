@@ -1838,7 +1838,7 @@ int DWrapGen::xfd_chk(int ff, int tf) {
 	
 int DWrapGen::set_sf_2(int ff, BoxGen * bx) {
 	int ec, sh = 2 + (10 &- ff), ni, no, msk = ~(1023<<sh);
-	if (bx) ni = bx->n_in(), no = bx->n_out();
+	if (bx && !(ni = bx->n_in(), no = bx->n_out())) return BXE_ZOUT;
 	if (ff && bx && (!ni||no!=1)) return (bx==m_sfbx[1]) ? (set_boxp(m_sfbx+1,0), m_bflg&=msk, BXE_FILTRM) 
 						             : BXE_FILTNIO;
 	if ((ec = set_boxp(m_sfbx + ff, bx)) < 0) return ec;
