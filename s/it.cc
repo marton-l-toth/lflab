@@ -68,9 +68,9 @@ int ItBoxInst::ini(double **par) {
 	m_ppbx = (BoxInst**) malloc(n*sizeof(BoxInst*));
 	for (int i=0; i<n; i++) m_ppbx[i] = m_b1m->mk_box();
 	int sc = m_flg & 0x1e0; if (!sc) return n; else sc >>= 5;
-	double v0 = par[1][0], v1 = par[2][0];
+	double v0 = par[1][0], v1 = (m_flg&IBF_REL) ? v0*par[2][0] : par[2][0];
 	m_zvec = (double*)malloc(8*n);
-	Scale01 scl; scl.set_all(v0, (m_flg&IBF_REL)?v0*v1:v1, sc==1 ? (int)lround(par[3][0]) : sc-5);
+	Scale01 scl; scl.set_all(v0, v1, sc==1 ? (int)lround(par[3][0]) : sc-5);
 	if (n==1) return m_zvec[0] = scl.f(0.5), 1;
 	double stp = 1.0/((double)(n-1)), x = stp;
 	m_zvec[0] = v0; m_zvec[n-1] = v1;
