@@ -100,6 +100,7 @@ NDE_EXPNULL  new object expected (BUG)
 NDE_EXPWRAP  instrument/sound expected (no box)
 NDE_EXPWRAPD direct instrument expected
 NDE_EXPWRAPS shadow instrument expected
+NDE_EXPHLP   help object expected
 NDE_NOTLIM   time limit can only be set in trk/clip
 NDE_TRGLU    target lookup failed
 NDE_BOXCRE   create box failed

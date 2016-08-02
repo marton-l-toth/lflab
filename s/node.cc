@@ -272,8 +272,8 @@ AReader * ABoxNode::dsc_reader(int n) {
 
 BoxUI::BoxUI(const BoxUI * that, int uarg) : SOB(uarg) {
         memcpy(m_rgb, that->m_rgb, 6);
-        m_dv.from(that->m_dv); m_nm[0].from(that->m_nm[0]);
-                               m_nm[1].from(that->m_nm[1]); }
+        m_dv. from(that->m_dv ); m_nm[0].from(that->m_nm[0]);
+        m_dsc.from(that->m_dsc); m_nm[1].from(that->m_nm[1]); }
 
 int BoxUI::dump_dsc(char *to, int flg) {
 	BoxDesc * dsc = m_dsc.ro(); 
@@ -335,8 +335,8 @@ sthg ANode::m0_wi_b[256];
 
 SvArg ANode::m0_sv;
 ANode * ANode::m0_lr[2];
-ANode::nm_fun_t ANode::m0_nmfun[16]={&nm_0, &nm_A, &nm_b, &nm_C, &nm_T, &nm_0, &nm_0, &nm_W,
-				     &n2_0, &n2_A, &nm_b, &n2_C, &n2_T, &n2_0, &n2_0, &nm_W };
+ANode::nm_fun_t ANode::m0_nmfun[16]={&nm_0, &nm_A, &nm_b, &nm_C, &nm_T, &nm_0, &nm_V, &nm_W,
+				     &n2_0, &n2_A, &nm_b, &n2_C, &n2_T, &n2_0, &n2_V, &nm_W };
 ANode * ANode::m0_glob_awlist = 0;
 
 #define NMFUN(NM) int ANode::NM(char *to, const union ANode::u24_t * u)
@@ -345,6 +345,8 @@ NMFUN(n2_0) { to[0] = to[1] = '?'; return 2; }
 NMFUN(nm_A) { int l = u->d.n; memcpy(to, u->d.s, l); return l; }
 NMFUN(n2_A) { int l = u->d.n; const char * s = u->d.s; if(l>2 && (*s=='^'||*s=='='||*s=='~')) ++s,--l;
 	to[0] = s[0], to[1]=l>1?s[l-1]:' '; return 2; }
+NMFUN(nm_V) { *to = '?'; return 1; }
+NMFUN(n2_V) { *to = '+'; to[1] = '?'; return 2; }
 NMFUN(nm_C) { *to = i_to_b32(u->c.i); return 1; }
 NMFUN(n2_C) { *to = '+'; to[1] = i_to_b32(u->c.i); return 2; }
 NMFUN(nm_W) { *to = 'w'; to[1] = i_to_b32(u->c.i); return 2; }
@@ -836,11 +838,20 @@ void ClipNode::del2() {
 	f64((char*)m_eh);
 }
 
+ANode * ClipNode::sn(const char **pp) { 
+	int c = **pp, k = b32_to_i(c);
+	if (k<0) { switch(c) {  case '*': k = m_sel; break;
+				case '?': return m_extra ? (++*pp, lookup_n_q(m_extra)) : 0;
+				default : return 0; }}
+	return (m_map&(1u<<k)) ? (++*pp, ent_j(k)) : 0;
+}
+
 ANode * ClipNode::sn_list(ANode ** pwl) {
-	if (!pwl) return 0;
+	ANode * r = m_extra ? lookup_n_q(m_extra) : 0;
+	if (!pwl) return r;
 	ANode *q, *wl = *pwl;
 	BVFOR_JM(m_map) q = ent_j(j), q->m_next = wl, wl = q;
-	*pwl = wl; return 0;
+	*pwl = wl; return r;
 }
 
 int ClipNode::xchg(int i, int j) {
@@ -865,9 +876,16 @@ int ClipNode::xchg(int i, int j) {
 	return j;
 }
 
+int ClipNode::add_hlp(ANode * that) {
+	if (m_extra) 	      return NDE_NDUP;     if (that->cl_id()!='h') return NDE_EXPHLP;
+	if (that->m_up==this) return EEE_NOEFF;    if (this==m0_kcp[0])    return NDE_PERM;
+	RMTHAT; that->m_up = this; that->m_u24.c.ct='V'; m_extra = that->id(); return 0;
+}
+
 int ClipNode::add(ANode * that, const char * nm, int i, int j) {
-	int ix = (i&NOF_PARSE) ? (nm ? (b32_to_i(*nm)&31) : m_sel) 
-			       : ((i&NOF_NOIDX) ? m_sel : i&31);
+	int ix;
+	if(i&NOF_PARSE) { if(nm?((ix=b32_to_i(*nm))<0):(ix=m_sel,0)) return *nm==63 ? add_hlp(that):NDE_PARSE;}
+	else		{ if (~i&63) ix = (i&NOF_NOIDX) ? m_sel : i&31; else return add_hlp(that); }
 	if (that->m_up==this) return xchg(that->m_u24.c.i, ix);
 	unsigned int m1 = 1u << ix;
 	if (!that->is_wrap()) return NDE_EXPWRAP;
@@ -895,7 +913,7 @@ void ClipNode::show_newbox(ABoxNode * nd) { if (!nd->box()) return nd->winflg_or
 int ClipNode::rm(ANode * that) {
 	int i = that->m_u24.c.i;
 	unsigned int m1 = 1u << i; 
-	if (!(m_map&m1) || ent_j(i)!=that) return NDE_RMWHAT;
+	if (!(m_map&m1) || ent_j(i)!=that) return (m_extra==that->id()) ? (m_extra=0) : NDE_RMWHAT;
 	m_map &= ~m1; if (winflg(8)) gui2.clip_box(this, i);
 	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_rm(b, that);
 	return 0;
@@ -1104,11 +1122,13 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 	}
 	ANode * nd2a = cb->lookup(s+2); if (!nd2a) return BXE_ARGLU;
 	ABoxNode * nd2 = dynamic_cast<ABoxNode*>(nd2a); if (!nd2) return BXE_ARGNBX;
-	int k = s[1] & 3; 
+	int k = s[1] & 7; 
 	switch(k) {
 		case 0: m_ui.from(nd2->m_ui); break;
 		case 1: SOB_RW(ui)->m_dv.from(nd2->m_ui.ro()->m_dv); break;
 		case 2: case 3: SOB_RW(ui)->m_nm[k-2].from(nd2->m_ui.ro()->m_nm[k-2]); break;
+		case 4: SOB_RW(ui)->m_dsc.from(nd2->m_ui.ro()->m_dsc); break;
+		default: return NDE_WTF;
 	}
 	return 0; // TODO: refresh...
 }

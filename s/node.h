@@ -139,8 +139,8 @@ class ANode {
                 typedef int (*nm_fun_t)(char*,const union u24_t*), (nm_fun_dt)(char*,const union u24_t*);
                 static char * blk64();
                 static ANode * blkN();
-		static nm_fun_dt nm_0, nm_A, nm_C, nm_W, nm_b, nm_T,
-		                 n2_0, n2_A, n2_C,             n2_T;
+		static nm_fun_dt nm_0, nm_A, nm_b, nm_C, nm_V, nm_W, nm_T,
+		                 n2_0, n2_A,       n2_C, n2_V,       n2_T;
                 static void del(ANode* p) { p->del2(); fN(p); }
 
                 static void sv_start(AOBuf* out, ANode* r, int flg);
@@ -434,7 +434,8 @@ class ADirNode : public ANode {
 		ADirNode() : m_pm_msk(0), m_pm_val(0) {}
 		void ad_debug();
 		int perm_d(int flg);
-		unsigned char m_pm_msk, m_pm_val, m_siz;
+		unsigned char m_pm_msk, m_pm_val, m_siz, m_rsrv;
+		int m_extra;
 };
 
 class ABoxNode : public ANode {
@@ -516,9 +517,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		virtual int size() const { return bitcnt(m_map); }
 		virtual int cond_del() { return !m_map ? 0 : NDE_NONEMP; }
 		virtual int gui_list(char *to, int flg);
-		virtual int ccmd(CmdBuf * cb) { return cmd(cb); }
-		virtual ANode * sn(const char **pp) { int k = **pp=='*' ? m_sel : b32_to_i(**pp);
-			return k<0 || !(m_map&(1u<<k)) ? 0 : (++*pp, ent_j(k)); }
+		virtual ANode * sn(const char **pp);
 		virtual ANode * sn_list(ANode ** pwl);
 		virtual void debug(int flg);
 		ABoxNode * ent_j(int j) { return (ABoxNode*)(m0_pnb[(int)m_eh[j]] + 128*m_el[j]); }
@@ -532,7 +531,6 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		int cmd(CmdBuf * cb);
 		int add_wb(BoxGen * wb, int flg); //flg: 1:gui 2:sel 4:forcedup r: -1:full -2:!wb -3:nodup
 		void del_wb(int i, bool guiflg);
-		//void mov(int i, int j);
 		int xchg(int i, int j);
 		void draw();
 		int sel(int k);
@@ -542,11 +540,12 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		static ClipNode * m0_kcp[3];
 		static const char * wbname(BoxGen * wb, int ix); // p2static
                 ClipNode() : m_map(0), m_sel(0), m_flg(3) {
-			m_eh = (short*)a64(); m_u24.s[0] = 'C'; }
+			m_eh = (short*)a64(); m_u24.s[0] = 'C'; m_extra = 0; }
 		virtual void del2();
 		virtual int add(ANode * that, const char * nm, int i = NOF_PARSE, int j = -1);
 		virtual int rm(ANode * that);
 		virtual int draw_window_2(int x) { return (x&&(x-3)) ? NDE_IW4 : (draw(), 16*'K'+3); }
+		int add_hlp(ANode * that);
                 int wfind(BoxGen * bx);
 		int find_free(int i0);
 
