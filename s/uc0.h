@@ -27,8 +27,8 @@ int launch(const char * exe, const char * iocfg, ...);
 #else
 
 volatile char vstring[16];
-char *xapp_env[N_XAPP] = { "LF_XTERM", "LF_X_ED_T", "LF_X_ED_X" };
-char *xapp_dflt[N_XAPP] = { "xterm", "nano", "xedit" };
+const char *xapp_env[N_XAPP] = { "LF_XTERM", "LF_X_ED_T", "LF_X_ED_X" };
+const char *xapp_dflt[N_XAPP] = { "xterm", "nano", "xedit" };
 static const char *xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-terminal", "konsole", "lxterminal",
 	        		  "uxterm", "terminator", "rxvt", 0 },
 		  *ed_t_ls [] = { "nano", "vim", "vi", "emacs", 0 },
