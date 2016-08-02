@@ -1106,32 +1106,36 @@ void ABoxNode::nio_change() {
 	for (BoxEdge * p = m_et0; p; p=p->to_n) p->fr_bx->notify_nio(m_box); }
 
 int ABoxNode::ui_cmd(CmdBuf * cb) {
-	char * s = cb->a1();
-	if (*s == 'W') return draw_window(0x1c);
+	char *s = cb->a1(); if (*s=='W') return draw_window(0x1c);
 	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
-	if ((*s|1) == 'E') {
-		char buf[4096]; buf[0]='h'; buf[1]=*s; h5f(buf+2, m_id); buf[7]='.';
-		int l = 9+get_path_uf(buf+8,120); buf[l-1] = '$';
-		l += m_ui.ro()->dump_dsc(buf+l,0);
-		buf[l++] = 10; return pt_iocmd_sn(buf, l);
-	}
-	if (*s != 'O') {
-		int ec = SOB_RW(ui)->cmd(s); if (ec<0) return ec;
-		if ((ec&1) && winflg(4096)) m_ui.ro()->w_rgb(16*m_id+12);
-		return ec;
-	}
-	ANode * nd2a = cb->lookup(s+2); if (!nd2a) return BXE_ARGLU;
-	ABoxNode * nd2 = dynamic_cast<ABoxNode*>(nd2a); if (!nd2) return BXE_ARGNBX;
-	int k = s[1] & 7; 
-	switch(k) {
-		case 0: m_ui.from(nd2->m_ui); break;
-		case 1: SOB_RW(ui)->m_dv.from(nd2->m_ui.ro()->m_dv); break;
-		case 2: case 3: SOB_RW(ui)->m_nm[k-2].from(nd2->m_ui.ro()->m_nm[k-2]); break;
-		case 4: SOB_RW(ui)->m_dsc.from(nd2->m_ui.ro()->m_dsc); break;
-		default: return NDE_WTF;
-	}
-	return 0; // TODO: refresh...
-}
+	switch(*s) {
+		case 'D': case 'E': {
+			char buf[4096]; buf[0]='h'; buf[1]=*s; h5f(buf+2, m_id); buf[7]='.';
+			int l = 9+get_path_uf(buf+8,120); buf[l-1] = '$';
+			l += m_ui.ro()->dump_dsc(buf+l,0);
+			buf[l++] = 10; return pt_iocmd_sn(buf, l); }
+		case 'Q': {
+			ANode * from = m0_lr[s[1]&1];  const char * snnm="?";
+			if (from->cl_id()=='C' && !(from=from->sn(&snnm))) return NDE_NOSOBCP;
+			if (!from->is_box()) return BXE_ARGNBX;
+			BoxDesc * dsc = static_cast<ABoxNode*>(from)->m_ui.ro()->m_dsc.ro();
+			return dsc ? (SOB_RW(ui)->m_dsc.set(dsc), cond_docw(), 0) : NDE_NOSOBCP; }
+		case 'O': {
+			ANode * nd2a = cb->lookup(s+2); if (!nd2a) return BXE_ARGLU;
+			ABoxNode * nd2 = dynamic_cast<ABoxNode*>(nd2a); if (!nd2) return BXE_ARGNBX;
+			int k = s[1] & 7; 
+			switch(k) {
+				case 0: m_ui.from(nd2->m_ui); return 0;
+				case 1: SOB_RW(ui)->m_dv.from(nd2->m_ui.ro()->m_dv); return 0;
+				case 2:case 3: SOB_RW(ui)->m_nm[k-2].from(nd2->m_ui.ro()->m_nm[k-2]); return 0;
+				case 4: SOB_RW(ui)->m_dsc.from(nd2->m_ui.ro()->m_dsc); return 0;
+				default: return NDE_WTF;
+			}}
+		default:{
+			int ec = SOB_RW(ui)->cmd(s); 
+			if ((ec&0x80000001)==1 && winflg(4096)) m_ui.ro()->w_rgb(16*m_id+12);
+			return ec; 
+			}}}
 
 int ABoxNode::draw_window_2(int x) {
 	if (!m_box) return NDE_NULLBOX; else Node::shl_add(this);
@@ -1219,8 +1223,7 @@ int ABoxNode::cmd_H(CmdBuf * p) {
 			          	  if (l>63) memcpy(q,s,63),q[63]=0,e|=2; else memcpy(q,s,l+1); }
 		if (e) rv = NDE_DSC_Y-1+e;
 	}
-	int wf2 = 2*(m_u24.u[0]!='h'); if (m_winflg&(2048<<wf2)) draw_window(27+wf2);
-	return rv;
+	return cond_docw(), rv;
 }
 
 void ABoxNode::ab_debug(int flg) {

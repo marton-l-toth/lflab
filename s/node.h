@@ -489,6 +489,8 @@ class ABoxNode : public ANode {
 		int save_sob();
 		int save_cfg();
 		int perm_b(int msk) { ANode *p = m_up; while (!p->is_dir()) p = p->m_up; return p->perm(msk);}
+		void cond_docw() { int wf2 = 2*(m_u24.u[0]!='h'); if (m_winflg&(2048<<wf2)) draw_window(27+wf2); }
+
 		void qc_st8(int trg, int j);
 		void qc_rgb(int ty, const char * s);
 		void qc_dfv(int bv, double * dv);

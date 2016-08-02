@@ -1133,7 +1133,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',8, 0, 7,2, "help   descr. info1  info2  info4  info*  GUI cfgdelete ", "N?MtI1I2I4I7EWNd"},
-{0, 10, 0,6,3, "->box edit/Tedit/Xfrom@lfrom@rhelp  help  info1 info4 delete","W$ EE ED ## ## $? N? I1 I4 Nd "},
+{0, 10, 0,6,3, "->box edit/Tedit/Xfrom@lfrom@rhelp  help  info1 info4 delete","W$ EE ED EQ0EQ1$? N? I1 I4 Nd "},
 {'T',11, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)  rvrs.cut",
 		  "txcv96CMNSr"},
 TDIV_MENU_LN
