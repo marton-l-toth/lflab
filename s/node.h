@@ -440,7 +440,7 @@ class ADirNode : public ANode {
 class ABoxNode : public ANode {
 	public:
 		friend class Node;
-		friend sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc, setbox_it;
+		friend sbfun_t setbox_wrap, setbox_wrap_qcp, setbox_graph, setbox_calc, setbox_it, setbox_hlp;
 		friend ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no,
 				                                    const char * cl, const char * fmt, ...);
 		virtual int perm(int msk = DF_ALL) { return perm_b(msk); }

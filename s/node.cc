@@ -1199,7 +1199,7 @@ int ABoxNode::cmd_H(CmdBuf * p) {
 			          	  if (l>63) memcpy(q,s,63),q[63]=0,e|=2; else memcpy(q,s,l+1); }
 		if (e) rv = NDE_DSC_Y-1+e;
 	}
-	if (m_winflg&8192) draw_window(29);
+	int wf2 = 2*(m_u24.u[0]!='h'); if (m_winflg&(2048<<wf2)) draw_window(27+wf2);
 	return rv;
 }
 
@@ -1407,6 +1407,7 @@ int Node::obj_help(int cl) {
 		case 'c': s = "calc-box"; break;
 		case 't': s = "track"; break;
 		case 'i': s = "iterated box"; break;
+		case 'h': s = "text"; break;
 		case 'w'+256: case 's'+256: s = "wrap/play"; break;
 		case '_': s = "primitive box"; break;
 		default: return NDE_WTF;
@@ -1415,7 +1416,7 @@ int Node::obj_help(int cl) {
 	return nd->draw_window(16);
 }
 
-sbfun_t setbox_wrap, setbox_shwr, setbox_shtg, setbox_graph, setbox_calc, setbox_it;
+sbfun_t setbox_wrap, setbox_shwr, setbox_shtg, setbox_graph, setbox_calc, setbox_it, setbox_hlp;
 
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
@@ -1447,6 +1448,7 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 'g': sbf = setbox_graph; goto lb;
 		case 'c': sbf = setbox_calc;  goto lb;
 		case 'i': sbf = setbox_it;    goto lb;
+		case 'h': sbf = setbox_hlp;   goto lb;
 		case '_': sbf = sb_btin;      goto lb;
 		case 'S': sbf = setbox_shtg; ty='s';  goto lb;
 		case 't': nd = bnd = new (ANode::aN()) TBoxNode('t'); sbf = sb_trk;  goto ndok;

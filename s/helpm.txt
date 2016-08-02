@@ -485,6 +485,12 @@ You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
 ==> 1.config
+{{{1.text}}}
+- doc window for graph/calc/track boxes
+- text-only objects
+TODO
+T O D O
+T  O  D  O
 {{{1.midi config}}}
 TODO
 T O D O

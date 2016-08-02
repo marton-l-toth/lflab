@@ -4,6 +4,18 @@
 #include "guistub.h"
 #include "pt.h"
 
+class HelpBoxGen : public BoxGen {
+	public:
+		HelpBoxGen(ABoxNode * nd) : BoxGen(nd) {}
+		virtual ~HelpBoxGen() {}
+		virtual int n_in() const { return 0; }
+		virtual int n_out() const { return 0; }
+                virtual bool io_alias_perm() const { bug("hlp: io_alias_perm() called"); return 0; }
+                virtual void set_model() { bug("hlp: set_model() called"); }
+		virtual const char * cl_name() { return "help"; }
+		virtual void box_window() { return doc_window(11); }
+};
+
 BoxGen * box_bookmark[8];
 int box_mxc_notify(BoxGen *p, int ky, int flg) { return p->mxc_notify(ky, flg); }
 
@@ -34,8 +46,9 @@ void BoxModel::unref(BoxModel *p) {
      BoxGen::~BoxGen()    { unset_model(); }
 void BoxGen::spec_debug() { log("no class-specific debug info"); }
 void BoxGen::box_window() { log("BUG: undefined box_window() p:%p, #%x", m_node, m_node?m_node->id():-1); }
-void BoxGen::doc_window(int id4) { m_node->winflg_or(1<<id4); gui2.cre(w_oid(id4), 'D', "");
-	gui2.bn_dsc(m_node); gui2.own_title(); }
+void BoxGen::doc_window(int id4) { 
+	m_node->winflg_or(1<<id4); gui2.cre(w_oid(id4), 'D', ""); gui2.bn_dsc(m_node); gui2.own_title(); 
+	gui2.wupd_c0('+','M'); gui2.hex4(id4==13?0x3c0:(m_model?0x33f:0x21)); }
 
 int BoxGen::set_boxp(BoxGen ** pp, BoxGen * to) {
 	int ec = 0; if (to && (ec=Node::conn(m_node, to->node())) < 0) return ec;
@@ -55,3 +68,5 @@ void PrimBoxGen::box_window() { doc_window(11); if (this==box_bookmark[2]) pt_sh
 int  PrimBoxGen::n_in() const { return m_ni; }
 int  PrimBoxGen::n_out() const { return m_no&31; }
 bool PrimBoxGen::io_alias_perm() const { return !!(m_no&32); }
+
+int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); return 0; }

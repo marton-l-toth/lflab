@@ -742,6 +742,7 @@ static int cmd_esc(ww_t * ww, const char *s1, const char *s2) { switch(*s1) {
 			  case 'E': s2 = "error list"; break;
 			  case 'S': s2 = "audio";  break;
 			  case 'A': s2 = "auconv"; break;
+			  case 'D': s2 = "text"; break;
 			  default: return LOG("builtin help not found"), 0; }
 		  return CMD("W#2.win.%s", s2), 1;
 	default: return 0; 
@@ -1125,14 +1126,14 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 		"flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
 		"------------exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
 		"_F  _c-1_E  ####A0W cW  mW  cV  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
-{'/',8, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  ","DCwsgict"},
+{'/',9, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  text   ","DCwsgicth"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
 {'#',7, 0,8,4, "[focus] config  help    redraw  wav/flac+autoupd-autoupd", "$>* W$  N?? M9  XAW XAU1XAU0"},
 {0,  4, 1, 4, 1, "clikholdtggluniq", "0123"},
 {'_',0, 0, 0,0, "(none)","0"},
 {'+',8, 0, 7,2, "help   descr. info1  info2  info4  info*  GUI cfgdelete ", "N?MtI1I2I4I7EWNd"},
-{0,  5, 0, 6,3, "->box edit/Tedit/Xfrom@lfrom@r","W$ EE ED ## ## "},
+{0, 10, 0,6,3, "->box edit/Tedit/Xfrom@lfrom@rhelp  help  info1 info4 delete","W$ EE ED ## ## $? N? I1 I4 Nd "},
 {'T',11, 0, 8, 1, "[toggle]cut     copy    paste   [grid]  [config]copy selmove selnew(d)  new(s)  rvrs.cut",
 		  "txcv96CMNSr"},
 TDIV_MENU_LN
@@ -3566,9 +3567,8 @@ char * help_lu(const char * ky) {
 GtkWidget * doc_vbl (struct _ww_t * ww, int ix) { return parse_w_s(ww->top, "{C0448$0$%%%ccc}"); }
 
 static void doc_skel (struct _topwin * tw, char * arg) {
-	static const char * ws[2] = {"[(3{C_300$1$ttt666...}0{__}{M_+$|+0}){:DdS10}]",
-				     "[(3{C_300$1$ttt666...}0{__}{M_+$|+1}){:DdS10}]"};
-	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws[(tw->id&15)==13]);
+	const char *ws = "[(3{C_300$1$ttt666...}0{__}{M++$|+1}){:DdS10}]";
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws);
 	else gtk_window_present(GTK_WINDOW(tw->w)); 
    	if (arg) doc_cmd(tw, arg);
 }
