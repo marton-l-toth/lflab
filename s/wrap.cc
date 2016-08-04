@@ -503,6 +503,7 @@ class DWrapGen : public AWrapGen {
 
 class SWrapGen : public AWrapGen {
 	public:
+		friend int swrap_grab_c(BoxGen*,int);
 		static void st_init() { cmd_init(); }
 		SWrapGen(ABoxNode * nd);
 		SWrapGen(ABoxNode * nd, const SWrapGen * that);
@@ -2286,29 +2287,29 @@ BXCMD_DEF(SWrapGen) { {8192+'\\', 0}, AW_CTAB,
 
 ///////////// export /////////////////////////////////////////////////////////////
 
-#define WARG  (static_cast<AWrapGen*>(bx))
-#define WARGD (static_cast<DWrapGen*>(bx))
+#define WARG(X)  (static_cast<X##WrapGen*>(bx))
 int setbox_wrap(ABoxNode *nd, BoxGen* _) { return (new (ANode::a64()) DWrapGen(nd))->set_tl(), 3; }
 int setbox_shwr(ABoxNode *nd, BoxGen* _) { return (new (ANode::a64()) SWrapGen(nd))->set_tl(), 3; }
 int setbox_shtg(ABoxNode *nd, BoxGen * bx) { return (bx->node()->is_wrap()) ?
-	((new (ANode::a64()) SWrapGen(nd,WARG,0))->set_tl(), 3) : NDE_EXPWRAP; }
+	((new (ANode::a64()) SWrapGen(nd,WARG(A),0))->set_tl(), 3) : NDE_EXPWRAP; }
 int wrap_2mx_txdlv(BoxGen * bx, int trg, int xflg, int dly, int lim, double *v) { 
-	return WARG -> add2mx_txdlv(trg, xflg, dly, lim, v); }
+	return WARG(A) -> add2mx_txdlv(trg, xflg, dly, lim, v); }
 int wrap_nd_2mx(ABoxNode * bnd, int trg, double bpm, int dly) {
 	BoxGen * bx = bnd->box(); if (!bx) return 0;
 	int tf = bnd->etc()->i[0]; if(tf != INT_MAX) {
 		if (DBGC) log("nd2mx: tf0=%d, bpm=%g", tf, bpm); 
 		if(tf<0)return 0; else tf=(int)lround((double)tf*natural_bpm/bpm); }
-	if (DBGC) log("nd2mx: tf=%d", tf); return  WARG -> add2mx_txdlv(trg, 0, dly, tf, 0); }
-int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARGD -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
-AReader * wrap_avreader(BoxGen * bx, int cflg) { return WARGD -> avreader(cflg); } 
+	if (DBGC) log("nd2mx: tf=%d", tf); return  WARG(A) -> add2mx_txdlv(trg, 0, dly, tf, 0); }
+int wrap_qdiff(BoxGen * bx, BoxGen * b2) { return WARG(D) -> qdiff(static_cast<DWrapGen*>(b2)); } // TODO
+AReader * wrap_avreader(BoxGen * bx, int cflg) { return WARG(D) -> avreader(cflg); } 
 int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 	int v, n = 0; for (int i=0; i<4; i++) BVFOR_JM(bv[i])
 		to[n] = hexc1(2*i+(j>>4)), to[n+1] = hexc1(j&15), v = pk[i][j],
 		to[n+2] = 48+(v>>6), to[n+3] = 48+(v&63), n += 4;
 	return n; }
-int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof) { return WARG -> key_op(ky,op,s,nof); }
-void wrap_set_trec(BoxGen * bx, int j) { WARG->m_trec = j; }
+int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof) { return WARG(A) -> key_op(ky,op,s,nof); }
+void wrap_set_trec(BoxGen * bx, int j) { WARG(A)->m_trec = j; }
+int swrap_grab_c(BoxGen *bx, int f) { return WARG(S)->m_ssob.ro()->m_mec.ro()->grab(WARG(S), -1, f); }
 int wrap_midi_ev(unsigned int j5i20o7, int ky, int val, const unsigned int * blk) {
 	ABoxNode * nd = static_cast<ABoxNode*> (ANode::lookup_n_q(j5i20o7>>7));
 	if (nd->cl_id()!='s') return nd->cl_id() ? MDE_LOOKUPT : MDE_LOOKUPZ; // TODO : global ev?

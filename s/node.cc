@@ -961,7 +961,7 @@ int ClipNode::keyop_f(int ky, int op, const char *s, int nof) {
 int ClipNode::cmd(CmdBuf * cb) {
 	char * s = cb->tok();
 	int k, f = cb->cnof();
-	BoxGen * p;
+	BoxGen * p; ABoxNode * nd;
 	ClipNode ** q;
 	switch(*s) {
 		case 'W': draw(); return 0;
@@ -993,6 +993,8 @@ int ClipNode::cmd(CmdBuf * cb) {
 		case 'Z': if (!m_map) return EEE_NOEFF;
 			  BVFOR_JM(m_map) if ((k=Node::del(ent_j(j), f))<0) return k;
 			  if (winflg(8)) draw();    return 0;
+		case 'G': k=0;  BVFOR_JM(m_map) if ((nd=ent_j(j))->cl_id()=='s') 
+			  				k=min_i(k,swrap_grab_c(nd->box(), 0));  return k;
 		default:  return GCE_UCLIP;
 	}
 xcg:
