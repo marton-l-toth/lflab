@@ -1615,7 +1615,7 @@ int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
 	if (DBGC) log("plot_t: %.15g %.15g %d f:%d", t0, t1, n, flg);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f7 = flg&7;
         if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
-	double res[f7?2*len:len];
+	double *res = (double*)malloc(8*(f7?2*len:len)); // TODO: stop wasting memory
 	int k, r = batch_calc(res, f7?res+len:0, i0, len, 0);
 	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
 	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), flg = f7 = 0;
@@ -1640,7 +1640,9 @@ int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
 		for (int i=0; i<nst; i++) par[i].s(st+i*n, n, t0, t1),
 				          Gnuplot::sg()->setfun1(i, arrfun1, par+i, 0, spt+4*i);
 		return Gnuplot::sg()->plot1((1<<nst)-1, t0, t1, n), 0;
-	}}
+	}
+	free(res);
+}
 
 int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg) {
 	if (DBGC) log("plot_f: %.15g %.15g %.15g %.15g %d %d", t0, t1, f0, f1, n, flg);
