@@ -553,7 +553,6 @@ class SWrapGen : public AWrapGen {
 		AWrapGen * m_trg;
 };
 
-//	log("swrap:midi_ev: %d,%d %d->%d", ix, ky, ov, nv);
 SOB_INIFUN(WrapScVec, 2)
 SOB_INIFUN(WrapCore,  1)
 SOB_INIFUN(WrapSOB,   1)
@@ -1203,13 +1202,13 @@ int SWrapMEC::save2(SvArg * sv) {
 }
 
 int SWrapMEC::ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned int * blk) {
-	log("mec_ev: ix=%d", ix);
-	if (!(ov&127) <= !nv) return log("mec_ev: no eff"), 0;
+	if (DBGCM) log("mec_ev: ix=%d", ix);
+	if (!(ov&127) <= !nv) { if (DBGCM) log("mec_ev(%d): no eff", ix); return 0; }
 	unsigned int x = t6d5c4k8g8[ix];
 	int tg = (x>>25)&63, y = un253(x&255), ec = 0, ng = y&63;
-	log("mec_ev: x=0x%x, y=0%o, ng=%d", x, y, ng);
+	if (DBGCM) log("mec_ev: ix=%d x=0x%x, y=0%o, ng=%d", ix, x, y, ng);
 	if (tg!=31) ec = cb->set_trg_cbix(tg);
-	if (!ng) return ec; else if (ec<0) gui_errq_add(ec, "mec/ev/trg");
+	if (!ng) return ec; else if (ec<0 && (DBGCM || ec!=EEE_NOEFF)) gui_errq_add(ec, "mec/ev/trg");
 	return cb->grab_p(y>>6, ng);
 }
 
@@ -1244,8 +1243,8 @@ int SWrapMEC::set_p0pn(int j, int z, int n) {
 	return k0^=k1, t6d5c4k8g8[j]^=k0, k0; 
 }
 
-int SWrapMEC::grab_l(SWrapGen * bx, int j, int flg) { log("he1");
-	if (!(m_u32&(1u<<j))) return MDE_UNDEFC;  log("he2");
+int SWrapMEC::grab_l(SWrapGen * bx, int j, int flg) {
+	if (!(m_u32&(1u<<j))) return MDE_UNDEFC;
 	unsigned int x = t6d5c4k8g8[j];    unsigned char k = (x>>8) & 255;
 	return midi_grab(bx->node()->id(), j+21, (x>>20)&31, (x>>16)&15, 1, &k, flg); }
 

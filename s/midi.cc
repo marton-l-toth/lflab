@@ -14,6 +14,7 @@
 #include "errtab.inc"
 #include "cfgtab.inc"
 #include "wrap.h"
+#include "pt.h"
 
 #define DBGC (debug_flags&DFLG_MIDIEV)
 
@@ -86,7 +87,8 @@ found:	mi_log(i, "system", p, ++j); return j; }
 
 static void midi_kc(int i, int ch, int k, int v) {
  	unsigned int *p0 = mi_rw(i, ch, 0), *p = p0+k, x = *p, x25 = x & ~127u;
-	if (DBGC|midi_dispflg) log("midi: dev%02d(%02d) ch%02d ky%03d %03d=>%03d",mi_tr_p2l[i],i,ch,k,*p,v);
+	if (DBGC|midi_dispflg) log("midi: dev%02d(%02d) ch%02d ky%03d %03d=>%03d (#%05x,%02d)",
+			mi_tr_p2l[i], i, ch, k, *p&127, v, (*p>>7)&0xfffff, x25>>27);
 	if (!x25) return (void) (*p = v);  else *p = x25|v;
 	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
 	if (ec==MDE_KEEPV) return (void) (*p = x);
@@ -187,7 +189,7 @@ int midi_cmd(const char *s) {
 		case 'W': return gui_midi(0x4000fc1e), 0;
 		case '<': m = 1<<(*s&7); j = m &- (s[1]&1);
 			  return gui_midi(set_kflg((CFG_MIDI_KTR.i&~m)|j)), 0;
-		case '>': midi_dispflg = *s&1; gui_midi(4096); return 0;
+		case '>': if ((midi_dispflg = *s&1)) pt_con_op(0); gui_midi(4096); return 0;
  		case 'x': return midi_c_slg(0, s);
  		case 'y': return midi_c_slg(1, s);
 		case 'z': BVFOR_JM(midi_bv|(1u<<31)) midi_rls_all(j);  return 0;
