@@ -277,7 +277,7 @@ both autosaves and regular save files backups may be made.
 Backup copies have "--1", "--2", ... endings for both autosave
 and normal files. (e.g. when you save to "abc.lf", the previous
 save will be moved to "abc--1.lf", the one before "abc--2.lf")
-==> 1.config -- here you can set autosave and backup options
+==> 1.misc config -- here you can set autosave & backup options
 The "load" window has a button "see autosaves" for convenient
 recovering of autosaves. To make sure autosaves are not over-
 written while you try to recover them, autosave is turned off
@@ -379,7 +379,7 @@ breaks, you should save only when no sound is being played.
 (autosave, which can be configured in the main config (below),
 works this way automatically.)
 ==> 2.save files
-==> 1.config
+==> 1.misc config
 {{{5.save lib}}}
 Save lib: this is a standard GTK file save window.
 Here you can create libraries -- collections of boxes
@@ -398,10 +398,10 @@ file dialog is open -- lflab has no "modal" windows.)
 Directory select: this is a standard GTK dir. select/create w.,
 with an extra "default" button which -- as you might have
 guessed -- restores the default value for the given directory
-setting. Unless you save the config in the main config window
-(or the audio config window, currently there is only one lf.ini
+setting. Unless you save the config in the path config window
+(or any other config window, there is only one config (lf.ini)
 file), the setting will be effective only until you exit.
-==> 1.config
+==> 1.path config
 {{{1.main}}}
 This help text describes the main window (title "lf").
 ==> 0.getting started -- click here for general help
@@ -484,7 +484,7 @@ In most cases clock mode can be left unchanged ("retBS").
 You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
-==> 1.config
+==> 1.misc config
 {{{1.text}}}
 - doc window for graph/calc/track boxes
 - text-only objects
@@ -588,37 +588,51 @@ Planned features (please don't take these as promises :) )
 - import of external audio
 - improved track editor usability (block edit?)
 - default values for boxes
-- description for non-builtin boxes
 - plot/save/record to backgr. job (like autovol calc.)
 - more builtin boxes and example editable boxes
 - auto-tune for finite-element filters
 - support of various MIDI HW
 ==> 4.new devices
 {{{4.new devices}}}
-If you want support for your favourite MIDI input device,
-please do as follows:
-0. enable "dev" in main config to allow MIDI input, quit and
-restart lflab (will hang when another program is using one of
-your MIDI devices -- primarily this is why MIDI input is among 
-the "under development, at you own risk" features)
-1. open the console, type '?' and the (possibly precise) vendor
-and type of your MIDI input device (lines starting with '?'
-are echoed as "undefined command", and written to log)
-2. type a '?' character, followed by a short description of
-what are you going to do right now. (e.g. press and then
-release the first 5/last 5 keys, turn knobs, move sliders etc.)
-to avoid confusion, press enter before proceeding to 3. (again,
-you should see your text echoed back as "undefined command".)
-3. do as you have promised in 2. (with keys try hitting them
-with different speeds, with knobs/sliders please reach both
-endpoints, for touchpads all 4 corners etc.)
-You should see messages starting with "midi_c". When you don't,
-either the Linux kernel does not see your device, or you have
-forgotten "dev" (see 0.)
-4. unless you finished all keys/controls/pads/etc. go back to 2
-5. flush log (or exit), and send me the lf.log file (you can
-find it in the ".lflab" directory under your home directory)
+Currently supported:
+- MIDI keys (only press speed, no release speed or aftertouch)
+- MIDI controls (0...127)
+- touchpad for KORG nanoPAD2 (x:129(1) y:130(2) t01:144(16))
+Note: KORG and nanoPAD2 are (registered) trademarks of
+KORG, Inc., with which I am not affiliated.
+---
+If you have some other device (e.g. a touchpad that uses a
+different logic from that of nanoPAD2), please do as follows:
+(0) open MIDI config window and enable "log"
+==> 1.midi config -- "log" button is in the top line
+(1) type a '?' in the console and a short description of the
+device (vendor/type) -- lines beginning with '?' will be
+echoed as "undefined commands" and written to log
+(2) Describe (again, beginning with a '?') what you are going
+to do with the MIDI device (you should get back "undefined 
+command" again), and do it -- lines like this should appear:
+45602.387. midi: dev00(01) ch00 ky128 065=>067 (#00000,00)
+(3) Unless you think you did all the reasonable test cases for
+your device, go back to (2) and try something different.
+(4) Run "flush log" from the main menu. A file named "lf.log"
+should be there in the ".lflab" directory (under your home dir,
+see "userdir" in path config window (from main menu) for the
+exact path). This file should contain the MIDI messages as well
+as your comments. Send this file to:
 @@@
+{{{4.dev/chan/key}}}
+TODO
+{{{4.grab/release}}}
+You can bind control and play actions of many different shadow
+wraps to the same MIDI key/control. These bindings only become
+active when you "grab" the controls (and inactive when you
+"release" them or grab the same control with another object).
+Grab/release:
+- manually in wrap/config (left-cl.:all, right:menu)
+- "grabC" in clipb. menu grabs keys for all control actions
+- grab from control action (see below)
+- "release all" in MIDI config window
+==> 1.midi config -- also see for dev/chan/key
 {{{1.box-gui}}}
 Here you can configure the input/output labels and FG/BG colors
 for graph and calculator boxes. (iterated boxes "inherit" these
@@ -680,6 +694,9 @@ Line groups: (open/close with "<>"/"><" button on the right)
 ==> 3.source/filter -- (D)
 ==> 3.scale lines -- (D)
 ==> 3.target -- (S)
+==> 3.midi/sliders -- (S)
+==> 3.midi/control -- (S)
+==> 3.midi/play -- (S)
 {{{1.primitive box}}}
 Primitive boxes has no configurable properties, therefore their
 only GUI window is a description. They cannot be copied, moved
@@ -949,6 +966,76 @@ Menu-number pairs: you can set the target control to be the
 sum of (at most) 2 weighted source side controls.
 TODO: examples
 ==> 3.shadow cfg -- extra options
+{{{3.midi/sliders}}}
+Here you can assign sliders 1...6 with MIDI controls. MIDI
+input for each slider can be turned on/off with a y/n button in
+the first line, and the config details can be opened with the
+"<>" button. (When all 1..6 y/n buttons are "off" and you press
+"<>", nothing will happen.) The sliders seleted here will be
+removed from the play/grid window.
+---
+In each line, you can set device, channel, key ID:
+==> 1.midi config -- see description here
+Controller values (0...127) will be linearly mapped to A...Z.
+The result will be rounded to integer and limited to 0...<k>-1,
+where <k> is the resolution for the given slider.
+==> 3.grid config -- slider resolution can be set here
+Setting sliders to MIDI controls do not change the fact that
+the boxes from wraps are started with constant inputs -- if you
+want to change a running sound using a MIDI controller, you
+need to build a box using a MIDI primitive box like this one:
+==> .!b.in.vlm.vlm05
+There is one special controller (dev:31 chan:0 ky:255) which
+has a "normal" value (can be set it midi config window, see
+link above), but gets temporarily changed to key speed whenever
+a sound is started by a MIDI key-press event -- it is often
+useful to set volume (typically s6) to dev31/ch0/ky255.
+---
+MIDI control positions all have zero value at lflab start.
+They are only updated when changed. If a slider is assigned to
+a non-existent device/control, no error message will be shown
+but the value will stay zero. 
+{{{3.midi/control}}}
+Here you can bind control actions to MIDI key/controller input.
+Currently three kinds of control actions are supported: grab 
+play lines, grab all control lines, and set target.
+==> 4.grab/release -- how to (de)activate ctrl lines
+You can have at most 11 control actions defined for each shadow
+wrap. In the first line, the number of control actions is shown
+("ctrl:<n>"), you can add a new line and grab/release for one
+or all the lines. In each line, you can set dev/chan/keyID (see
+midi config win.), first play line to grab (p0), number of play
+lines to grab (p#) and target select (sel). You can duplicate
+(2x) or delete (X) a line. The leftmost (c00...c11) button is a
+yes/no button for enabling "grab all control lines".
+---
+"grab all" makes it possible to have only one unique MIDI key/
+control per shadow wrap (with "grab all" on), all other control
+lines can share MIDI keys/controls.
+---
+Target selection only works if the current target is on a
+clipboard. You can either set it to the <n>th element (0..31),
+go up/down/left/right/next/prev or skip target selection (--).
+{{{3.midi/play}}}
+Here you can bind play actions (more or less having the same
+effect as a click on the grid) to MIDI keys/controls. Since it
+is possible to bind actions of many different shadow wraps to
+the same keys/controls, these bindings have to be "grabbed":
+==> 3.midi/control -- see here how grab/release works
+You can have at most 21 play actions defined for each shadow
+wrap. In the first line, the number of play actions is shown
+("play:<n>"), you can add a new line (right-cl. for menu) and 
+grab/release for one or all the lines. In each line, you can
+set type, device/channel, keys and x/y range. There are two
+types of play action:
+- key sequence (k): <nk> keys from <k0> to <k1>, bound to grid
+squares <x>,<y> to <X>, <Y>.
+- touchpad (t/T) with <kx>,<ky> and <kt> as the control IDs,
+mapping the touchpad to the rectangle [x,y-X,Y] on the grid.
+The default control IDs are working for KORG(R) nanoPAD2; when
+you have a different touchpad with the same logic, it may work
+with different ctrl IDs, otherwise see:
+==> 4.new devices
 {{{3.grid config}}}
 "[#]" tab in the wrap config window
 Here you can set the number of columns(x) and rows(y) of the
@@ -967,7 +1054,7 @@ Here you can write the sound to a wav/flac file.
 "write" -- click this to write to file
 For details how audio file output works, see these help texts:
 ==> 1.auconv -- this will pops up, unless ...
-==> 1.config -- ... you set a default action here
+==> 1.misc config -- ... you set a default action here
 {{{3.general config}}}
 "cfg" tab in the wrap config window
 Here you can change the following settings for a wrap:
@@ -1009,7 +1096,8 @@ Audio files are first written to a 20-bit temporary file (.a20)
 This window provides a shortcut to convert the file to WAV or
 FLAC (if flac is installed), or delete it. The audio convert
 window only appears when the configured action is "ask".
-==> win.config -- here you can set default action & directories
+==> 1.path config -- set directories
+==> 1.misc config -- set default action
 ">>wav" and ">>flac" convert the whole file, and delete the a20
 file when successful (or when it is all zeroes). Alternatively
 you can keep the a20 file, delete it or convert a portion of it
