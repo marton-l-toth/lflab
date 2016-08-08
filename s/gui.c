@@ -2379,9 +2379,9 @@ GtkWidget * wrap_vbl_s (struct _ww_t * ww, int ix) {
 
 GtkWidget * wrap_vbl_C (struct _ww_t * ww, int ix) {
 	static const char * h[1] = 
-		{"3({L0ctrl:00}{B1add$X:+Ov/00000}{M2grab$X*c|s2}{M3release$X/c|s2}0{B7<>$XW6})"}; 
-	LN_TEMPL(h, 1, "({L0c00}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_z}{85p#$2X:_n}{86!0sel$2X:_t}"
-			"{B72x$X:_+}{B8X$X:_-})", 0);
+		{"3({L0ctrl:00}{B1add$X:+Ov.00000}{M2grab$X*c|s2}{M3release$X/c|s2}0{B7<>$XW6})"}; 
+	LN_TEMPL(h, 1, "({Y0c00$X:_g}3{81dev$2X:_d}{82ch$2X:_c}{83ky$3X:_k}{84p0$2X:_z}{85p#$2X:_n}"
+			"{86!0sel$2X:_t}{B72x$X:_+}{B8X$X:_-})", 0);
 	int i0 = VB_WBASE(ww) + 9*ix;
 	char * q = DALBL_TXT(widg_qp(tw, i0));
 	if (ix<11) q[1]=48, q[2]=ix+47; else q[1]=49, q[2]=ix+37; 

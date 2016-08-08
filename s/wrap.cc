@@ -313,9 +313,9 @@ class SWrapMEC : public SOB {
 		int set_p0pn(int j, int z, int n);
 		int cmd(const char *s);
 		inline int nl() const { return bitcnt(m_u32&2047); }
-		int grab_l(SWrapGen *bx, int j, int flg = 0);
-		int grab(SWrapGen *bx, int msk, int flg = 0) {
-			int ec=0; BVFOR_JM(m_u32&2047&msk) ec=min_i(ec,grab_l(bx, j, flg));  return ec; }
+		int grab_l(int nid, int j, int flg = 0);
+		int grab(int nid, int msk, int flg = 0) {
+			int ec=0; BVFOR_JM(m_u32&2047&msk) ec=min_i(ec,grab_l(nid, j, flg));  return ec; }
 		void w_line(int j, int flg);
 		void w_nl(int of) { int k = m_u32&2047; gui2.t_sz("("); gui2.hex4(k); 
 				    if (of) gui2.wupd_0('C', ".*"), gui2.hex4(1+2*k); }
@@ -351,10 +351,10 @@ class SWrapMEP : public SOB {
 		unsigned int * add_p(int i);
 		inline int add_l() { return add_p(nl) ? nl-1 : MDE_FULLP; }
 		int del_l(int j),  dup_l(int j),  mv_l(int j,int c);
-		int grab_l(SWrapGen *bx, int j, int flg);
-		int grab(SWrapGen *bx, int j0, int n, int flg = 0) { 
+		int grab_l(int nid, int j, int flg);
+		int grab(int nid, int j0, int n, int flg = 0) { 
 			int ec=0; for (int j=j0, j1 = min_i(j0+n, nl); j<j1; j++)
-				ec=min_i(ec, grab_l(bx, j, flg));      return ec; }
+				ec=min_i(ec, grab_l(nid, j, flg));      return ec; }
 		void w_line(int j, int flg);
 		void w_ls(int j0, int c, int f) { for (int j=j0,n=min_i(nl,j0+c); j<n; j++) w_line(j,f); }
 		void w_nl(int of) {gui2.t_sz(")"),gui2.hex4(nl); if (of) gui2.wupd_0('Z',".+"),gui2.c1(49+nl);}
@@ -527,7 +527,7 @@ class SWrapGen : public AWrapGen {
 			return (ix>20)  ? m_ssob.ro()->m_mec.ro()->ev(this, ix-21, ky, ov, nv, blk)
 					: m_ssob.ro()->m_mep.ro()->ev(this, ix   , ky, ov, nv, blk); }
 		inline const char * grdim() { return m_core.ro()->grdim; }
-		inline int grab_p(int j0, int n) { return m_ssob.ro()->m_mep.ro()->grab(this, j0, n, 0); }
+		inline int grab_p(int j0, int n) { return m_ssob.ro()->m_mep.ro()->grab(m_node->id(),j0,n,0); }
 		int set_trg_cbix(int j);
 	protected:
 		virtual int show_tab_2(sthg * bxw_rawptr, int i);
@@ -1195,7 +1195,7 @@ const char SWrapMEC::gtab[256] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 int SWrapMEC::save2(SvArg * sv) {
 	char buf[144], *q=buf; log("mec/save: flg=0x%x", m_u32&2047);
 	BVFOR_JM(m_u32&2047) {  unsigned int x = t6d5c4k8g8[j]; memcpy(q,"X$:+",4);
-				q[4] = 48 + ((x>>25)&63), q[5] = i_to_b32((x>>20)&31); q[6] = '/';
+				q[4] = 48 + (x>>26), q[5] = i_to_b32((x>>20)&31); q[6] = '.'+((x>>25)&1);
 				h5f(q+7, x&1048575); q[12] = 10; q += 13;  }
 	if (DBGC) *q = 0, log("buf[%d] = {{{%s}}}", q-buf, buf);
 	return sv->st2=-1, sv->out->sn(buf, q-buf);
@@ -1205,8 +1205,9 @@ int SWrapMEC::ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned i
 	if (DBGCM) log("mec_ev: ix=%d", ix);
 	if (!(ov&127) <= !nv) { if (DBGCM) log("mec_ev(%d): no eff", ix); return 0; }
 	unsigned int x = t6d5c4k8g8[ix];
-	int tg = (x>>25)&63, y = un253(x&255), ec = 0, ng = y&63;
+	int tg = x>>26, y = un253(x&255), ec = 0, ng = y&63;
 	if (DBGCM) log("mec_ev: ix=%d x=0x%x, y=0%o, ng=%d", ix, x, y, ng);
+	if (x&(1u<<25)) grab(cb->node()->id(), -1);
 	if (tg!=31) ec = cb->set_trg_cbix(tg);
 	if (!ng) return ec; else if (ec<0 && (DBGCM || ec!=EEE_NOEFF)) gui_errq_add(ec, "mec/ev/trg");
 	return cb->grab_p(y>>6, ng);
@@ -1214,10 +1215,11 @@ int SWrapMEC::ev(SWrapGen * cb, int ix, int ky, int ov, int nv, const unsigned i
 
 void SWrapMEC::w_line(int j, int flg) {
 	int ix = j*9+9;  unsigned int x = t6d5c4k8g8[j];
-	if (flg& 1) gui2.wupd_i2('C',  (x>>20)& 31,     ix+1);
-	if (flg& 2) gui2.wupd_i2('C',  (x>>16)& 15,     ix+2);
-	if (flg& 4) gui2.wupd_i2('C',  (x>> 8)&255,     ix+3);
-	if (flg& 8) gui2.wupd_si('C', ((x>>25)& 63)-32, ix+6);
+	if (flg& 1) gui2.wupd_i2('C', (x>>20)& 31, ix+1);
+	if (flg& 2) gui2.wupd_i2('C', (x>>16)& 15, ix+2);
+	if (flg& 4) gui2.wupd_i2('C', (x>> 8)&255, ix+3);
+	if (flg& 8) gui2.wupd_si('C', (x>>26)- 32, ix+6);
+	if (flg&32) gui2.wupd_i1('C', (x>>25)&1,   ix);
 	if (flg&16) x=un253(x&255), gui2.wupd_i2('C', x>>6, ix+4),
 				    gui2.wupd_i2('C', x&63, ix+5);
 }
@@ -1227,14 +1229,15 @@ int SWrapMEC::dup_l(int j) {
 	if	(j<10 && !(m_u32&(m=1u<<(j+1)))) m_u32 |= m, j2 = j+1;
 	else if (j>0  && !(m_u32&(m=1u<<(j-1)))) m_u32 |= m, j2 = j-1;
 	else if ((j2 = add_l()) < 0) return j2;
-	t6d5c4k8g8[j2] = t6d5c4k8g8[j]; return j2|0x11f0;
+	t6d5c4k8g8[j2] = t6d5c4k8g8[j]; return j2|0x13f0;
 }
 
 int SWrapMEC::parse_l(int j, const char *s) {
-	int trg = s[0]-48, dev = b32_to_i(s[1]), x = 32*trg+dev; 
-	if (((dev|trg) & ~63) || s[2]!='/') return MDE_PARSE;
-	for (int c,i=0; i<5; i++) if ((c=s[3+i])<48) return MDE_PARSE; else x = 16*x + hxd2i(c);
-	return t6d5c4k8g8[j] = x, j|0x11f0;
+	int trg = s[0]-48, dev = b32_to_i(s[1]), x = 64*trg+dev; 
+	if (((dev|trg) & ~63)) return MDE_PARSE;
+	int k = s[2]-'.'; if (k&~1) return MDE_PARSE; else s+=3, x += 32*k;
+	for (int c,i=0; i<5; i++) if ((c=s[i])<48) return MDE_PARSE; else x = 16*x + hxd2i(c);
+	return t6d5c4k8g8[j] = x, j|0x13f0;
 }
 
 int SWrapMEC::set_p0pn(int j, int z, int n) {
@@ -1243,10 +1246,10 @@ int SWrapMEC::set_p0pn(int j, int z, int n) {
 	return k0^=k1, t6d5c4k8g8[j]^=k0, k0; 
 }
 
-int SWrapMEC::grab_l(SWrapGen * bx, int j, int flg) {
+int SWrapMEC::grab_l(int nid, int j, int flg) {
 	if (!(m_u32&(1u<<j))) return MDE_UNDEFC;
 	unsigned int x = t6d5c4k8g8[j];    unsigned char k = (x>>8) & 255;
-	return midi_grab(bx->node()->id(), j+21, (x>>20)&31, (x>>16)&15, 1, &k, flg); }
+	return midi_grab(nid, j+21, (x>>20)&31, (x>>16)&15, 1, &k, flg); }
 
 int SWrapMEC::cmd(const char * s) {
 	IV568; int j,k;
@@ -1259,7 +1262,8 @@ int SWrapMEC::cmd(const char * s) {
 		case 'd': return intv_cmd_b(p, 20, 5, s+2, i5)	 ? (j| 16) : 0;
 		case 'c': return intv_cmd_b(p, 16, 4, s+2, i5)	 ? (j| 32) : 0;
 		case 'k': return intv_cmd_b(p,  8, 8, s+2, i8) 	 ? (j| 64) : 0;
-		case 't': return intv_cmd_b(p, 25, 6, s+2, i6,25)? (j|128) : 0;
+		case 't': return intv_cmd_b(p, 26, 6, s+2, i6,25)? (j|128) : 0;
+		case 'g': return intv_cmd_b(p, 25, 1, s+2, 1)    ? (j|512) : 0;
 		case 'z': return k=un253(*p&255)>>6, intv_cmd(&k,s+2,0,20,i5) && set_p0pn(j,k,-1) ?(j|256):0;
 		case 'n': return k=un253(*p&255)&31, intv_cmd(&k,s+2,0,21,i5) && set_p0pn(j,-1,k) ?(j|256):0;
 		default: return BXE_CENUM;
@@ -1371,7 +1375,7 @@ int SWrapMEP::parse_l(int j, const char *s) {
 	return j | 0x13ff040;
 }
 
-int SWrapMEP::grab_l(SWrapGen * bx, int j, int flg) {
+int SWrapMEP::grab_l(int nid, int j, int flg) {
 	if ((unsigned int)j >= (unsigned int)nl) return MDE_UNDEFP;
 	unsigned char buf[64];
 	unsigned int *p = p_l(j), x=p[0], y=p[1];
@@ -1384,7 +1388,7 @@ int SWrapMEP::grab_l(SWrapGen * bx, int j, int flg) {
 			break;
 		default:return MDE_UNDEFT;
 	}
-	return midi_grab(bx->node()->id(), ixtr[j], x>>27, (x>>23)&15, n, buf, flg);
+	return midi_grab(nid, ixtr[j], x>>27, (x>>23)&15, n, buf, flg);
 }
 
 int SWrapMEP::cmd(const char * s) {
@@ -2262,7 +2266,7 @@ CH(msl){SWrapMSL * msl = SOB_RWP(p,ssob)->msl_rw();
 CH(mec){SWrapMEC * mec = SOB_RWP(p,ssob)->mec_rw(); if (DBGCM) log("mec_cmd: %p \"%s\"",mec,s);
 	int ec = mec->cmd(s+1);
 	if (ec<=0 || !p->wnfl(2048)) return ec;
-	int wlf = p->wlg_vis(4)>>2, cf = (ec>>4)&31&-wlf;
+	int wlf = p->wlg_vis(4)>>2, cf = (ec>>4)&63&-wlf;
 	gui2.setwin(p->w_oid(), 'w'); if (ec&4096) mec->w_nl(wlf); if (cf) mec->w_line(ec&15, cf);
 	return 0;
 }
@@ -2275,9 +2279,9 @@ CH(mep){SWrapMEP * mep = SOB_RWP(p,ssob)->mep_rw(); if (DBGCM) log("mep_cmd: %p 
 	return 0;
 }
 
-CH(grb){int f = s[0]&1, c = s[1],  j = b32_to_i(s[2]);
-	switch(c){ case 'c': return p->m_ssob.ro()->m_mec.ro()->grab(p, j<0 ? -1 : 1<<j,  f);
-		   case 'p': return p->m_ssob.ro()->m_mep.ro()->grab(p, j<0?0:j, j<0?31:1, f);
+CH(grb){int f = s[0]&1, c = s[1],  j = b32_to_i(s[2]), nid = p->m_node->id();
+	switch(c){ case 'c': return p->m_ssob.ro()->m_mec.ro()->grab(nid, j<0 ? -1 : 1<<j,  f);
+		   case 'p': return p->m_ssob.ro()->m_mep.ro()->grab(nid, j<0?0:j, j<0?31:1, f);
 		   default: return BXE_CENUM; }}
  
 BXCMD_DEF(SWrapGen) { {8192+'\\', 0}, AW_CTAB, 
@@ -2308,7 +2312,7 @@ int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 	return n; }
 int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof) { return WARG(A) -> key_op(ky,op,s,nof); }
 void wrap_set_trec(BoxGen * bx, int j) { WARG(A)->m_trec = j; }
-int swrap_grab_c(BoxGen *bx, int f) { return WARG(S)->m_ssob.ro()->m_mec.ro()->grab(WARG(S), -1, f); }
+int swrap_grab_c(BoxGen *bx, int f) { return WARG(S)->m_ssob.ro()->m_mec.ro()->grab(bx->node()->id(), -1, f); }
 int wrap_midi_ev(unsigned int j5i20o7, int ky, int val, const unsigned int * blk) {
 	ABoxNode * nd = static_cast<ABoxNode*> (ANode::lookup_n_q(j5i20o7>>7));
 	if (nd->cl_id()!='s') return nd->cl_id() ? MDE_LOOKUPT : MDE_LOOKUPZ; // TODO : global ev?
