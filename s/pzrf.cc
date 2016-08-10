@@ -18,7 +18,8 @@ double RECF_PZItem::eval1(double re, double im) {
 }
 
 int RECF_PZItem::eql(double wfq, double wid, double amp) {
-	int sg = (amp<0.0) && (amp=-amp, 1), r = approx_cmp(amp, 1.0); if (!r) return 0;
+	int r = approx_cmp(amp, 1.0); if (!r) return 0;
+	int sg = (amp<0.0) && (amp=-amp, 1);
 	double pa, za;    if (r<0) pa = wid, za = wid*amp; else za = wid, pa = wid/amp;
 	pr = -wfq*sin(pa); pi = wfq*cos(pa); c = 1.0;
 	zr =  wfq*sin(za); zi = wfq*cos(za); if (!sg) zr = -zr;   return 1;
@@ -188,11 +189,11 @@ QUICK_PZFILT(SBandF) { set_n(1); half_zero(m_ab, inb[0][0], inb[1][0]); return 0
 //? amp may be negative, which makes phase different
 //? amp=-1 -> (almost) no frq. amplitude change, only phase
 QUICK_PZFILT_1(EqlzF) {
-	double fq1 = inb[0][0];
-	int i = 0, np = m_arg; set_n(np);
-	RECF_PZItem * pzn = new RECF_PZItem[np];
-	while (i<np) if (pzn[i].eql(fq_warp(fq1*inb[3*i+1][0]), inb[3*i+2][0], inb[3*i+3][0])) i++; else np--;
-	rfpz_transform(m_ab, pzn, np); return 0;
+	double fq1 = inb[0][0]; 
+	int n = 0, n0 = m_arg;
+	RECF_PZItem * pzn = new RECF_PZItem[n0];
+	for (int i=0; i<n0; i++) n += pzn[n].eql(fq_warp(fq1*inb[3*i+1][0]), inb[3*i+2][0], inb[3*i+3][0]);
+	set_n(n); rfpz_transform(m_ab, pzn, n); return 0;
 }
 
 //? {{{!._eqLF}}}
