@@ -104,6 +104,11 @@ extern double fq_warp(double fq);
 FUN1_BOX(Ar1Abs, fabs(x))
 FUN1_BOX(Ar1Sqrt, sqrt(x))
 FUN1_BOX(Ar1Cbrt, cbrt(x))
+FUN1_BOX(Ar1Exp , exp(x))
+FUN1_BOX(Ar1_Exp, exp(-x))
+FUN1_BOX(Ar1RndF, floor(x))
+FUN1_BOX(Ar1RndC, ceil(x))
+FUN1_BOX(Ar1RndR, round(x))
 FUN1_BOX(Ar1FqWarp, fq_warp(x))
 
 class CalcBoxGen : public BoxGen {
@@ -228,9 +233,14 @@ void b_ar_init(ANode * rn) {
 	qmk_box(rn, "*", QMB_ARG0(Ar2BoxML), 0, 2, 1, "a2", "1o*", "x*y");
 	qmk_box(rn, "/", QMB_ARG0(Ar2BoxDV), 0, 2, 1, "a2", "1o*", "x/y");
 	ANode *f1 = qmk_dir(rn, "f1"), *mx = qmk_dir(rn, "mix");
-	qmk_box(f1, "abs", QMB_ARG0(Ar1Abs), 0, 1, 33, "a1", "1i*o*R1", "x", "f(x)");
-	qmk_box(f1, "sqrt", QMB_ARG0(Ar1Sqrt), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "cbrt", QMB_ARG0(Ar1Cbrt), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "abs",   QMB_ARG0(Ar1Abs ), 0, 1, 33, "a1", "1i*o*R1", "x", "f(x)");
+	qmk_box(f1, "sqrt",  QMB_ARG0(Ar1Sqrt), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "cbrt",  QMB_ARG0(Ar1Cbrt), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "exp",   QMB_ARG0(Ar1Exp ), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "exp-",  QMB_ARG0(Ar1_Exp), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "floor", QMB_ARG0(Ar1RndF), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "ceil",  QMB_ARG0(Ar1RndC), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "round", QMB_ARG0(Ar1RndR), 0, 1, 33, "a1", "1");
 	qmk_box(f1, "fq_warp", QMB_ARG0(Ar1FqWarp), 0, 1, 33, "a1", "1");
 	qmk_box(mx, "xmix", QMB_ARG0(CrossMix), 0, 3, 33, "xmx", "i*R*1", "x$y$t", "qqq%%q");
 	qmk_box(mx, "mix2", QMB_ARG1(SMix), 2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
