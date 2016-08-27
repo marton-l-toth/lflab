@@ -508,7 +508,7 @@ class SWrapGen : public AWrapGen {
 		SWrapGen(ABoxNode * nd);
 		SWrapGen(ABoxNode * nd, const SWrapGen * that);
 		SWrapGen(ABoxNode * nd, AWrapGen * fr, int flg);
-                virtual ~SWrapGen() {}
+                virtual ~SWrapGen();
 		virtual BoxGen * qcp3(ABoxNode * nd) { return new (ANode::a64()) SWrapGen(nd, this); }
 		virtual int save2(SvArg * sv); 
 		virtual int save_sob(SvArg *p);
@@ -2081,6 +2081,9 @@ SWrapGen::SWrapGen(ABoxNode * nd, const SWrapGen * p) : AWrapGen(nd, p) {
 SWrapGen::SWrapGen(ABoxNode * nd, AWrapGen * p, int flg) : AWrapGen(nd) {
 	m_bflg |= WRF_SHADOW|12; m_ssob.set(SWrapSOB_default(0)); m_trg = p; Node::conn(nd, p->node());
 	m_core.set(p->core_ro()); memcpy(m_xys6, p->m_xys6, 8); delayed_clip_upd(); }
+
+SWrapGen::~SWrapGen() { int nid = id(); m_ssob.ro()->m_mec.ro()->grab(nid, -1, 1);
+					m_ssob.ro()->m_mep.ro()->grab(nid, 0, 21, 1); }
 
 int SWrapGen::set_trg(AWrapGen* aw) {
 	if (aw==m_trg) return 0;

@@ -147,9 +147,11 @@ inv:	for (int i=0; i<31; i++) mi_tr_p2l[(int)mi_tr_l2p[i]] = i;
 int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg) {
 	if (DBGC) log_n("midi_grab: id=0x%x, ix=%d, d=%d ch=%d kc=%d [", id, ix, dev, ch, kc);
 	int dev2 = mi_tr_l2p[dev]; if (!((midi_bv|0x80000000)&(1u<<dev2))) return MDE_GRABWHAT;
-	unsigned int m = ((id<<7)|(ix<<27)) & ((flg&1)-1), *p = mi_rw(dev2, ch, 0);
-	if (DBGC) for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m, log_n(" %02x",kv[i]);
-	else      for (int j, i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127)|m;
+	unsigned int m = (id<<7)|(ix<<27), *p = mi_rw(dev2, ch, 0);
+	if(flg){if (DBGC){for (int j,i=0; i<kc; i++) if ((p[j=kv[i]]&~127u)==m) p[j]&=127u,log_n(" %02x",j); }
+		else 	 {for (int j,i=0; i<kc; i++) if ((p[j=kv[i]]&~127u)==m) p[j]&=127u; }}
+	else {  if (DBGC) for (int j,i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127u)|m, log_n(" %02x", j);
+		else      for (int j,i=0; i<kc; i++) j = kv[i], p[j] = (p[j]&127u)|m; }
 	if (DBGC) log(" ]");
 	return 0;
 }
