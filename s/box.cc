@@ -69,4 +69,4 @@ int  PrimBoxGen::n_in() const { return m_ni; }
 int  PrimBoxGen::n_out() const { return m_no&31; }
 bool PrimBoxGen::io_alias_perm() const { return !!(m_no&32); }
 
-int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); nd->m_u24.c.i=0; return 0; }
+int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); return 0; }
