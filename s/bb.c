@@ -413,7 +413,7 @@ static void con_started(char *s, int n) {
 }
 
 static void set_xapp(int k, int l, const char *s) {
-	LOG("hellogeecccci %d %d \"%s\"", k, l, s);
+	if (dflg&4) LOG("set_xapp(%d, %d, \"%s\")", k, l, s);
 	if ((unsigned int)k >= (unsigned int)N_XAPP) return LOG("set_xapp: k=%d", k);
 	if ((unsigned int)l >= 255u)		     return LOG("set_xapp: l=%d", l);
 	memcpy(xapp_nbuf+256*k, s, l); xapp_name[k] = xapp_nbuf+256*k;
