@@ -43,6 +43,7 @@
 #define WF_XM1EV 1024
 #define WF_FOCEV 2048
 #define WF_EV_SHIFT 9
+#define WF_SKIPREC (WF_BIGDA3|WF_SURF|WF_FOCEV)
 
 #define OI_ID 255
 #define OI_NEW 1024
@@ -1536,7 +1537,7 @@ static gboolean da_click(GtkWidget *w, GdkEventButton * ev, gpointer p) {
 	ww_t * ww = (ww_t*)p;
 	int btn = ev->button + 3*!!(ev->state&GDK_SHIFT_MASK) + 6*!!(ev->state&GDK_CONTROL_MASK),
 	    x = (int)lround(ev->x), y = (int)lround(ev->y);
-	if (dflg&DF_REC) { if (!(ww->cl->flg&(WF_BIGDA3|WF_SURF))) rec_vpf(ww, "c%c", 48+btn);
+	if (dflg&DF_REC) { if (!(ww->cl->flg&WF_SKIPREC)) rec_vpf(ww, "c%c", 48+btn);
 			   else if (ww->cl->ch=='K') rec_vpf(ww, "c%c,%x", 48+btn, (y<<12)|x); }
 	if (btn>9) return ww_debug(ww, btn);
 	(ww->cl->clk) (ww, btn, (int)lround(ev->x), (int)lround(ev->y), ev);
@@ -1938,8 +1939,9 @@ static void dlmenu_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton
         if ((b9|2)==3) popup2(ww, DLM_MT(ww), DLM_MSK(ww), b9, ev); }
 
 static void dlvmi_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	if (b9>0) return (void) gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w); cx-=8;
+	if (b9>0) return (void) gtk_window_set_focus(GTK_WINDOW(ww->top->w), ww->w); else cx-=8;
 	char buf[8]; memcpy(buf, "~mVK", 4); buf[4]=hexc1(((cx>>4)&7)+8*(b9&1)), buf[5]=hexc1(cx&15);
+	if (dflg&DF_REC) CMD("QR^%.5s", buf+1);
 	buf[6]=10; write(1,buf,7); }
 
 static void dalbl_skel(struct _ww_t * ww, const char **pp) {
