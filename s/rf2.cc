@@ -248,6 +248,40 @@ static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, 
 	yv[0] = CUT300(y); yv[1] = CUT300(v);
 }
 
+//? {{{!._qh1}}}
+//? quick & simple highpass filter
+//? in: filter input
+//? par: parameter (0<=par<=.5)
+//? a=1-par, b=1-2*par, out[j] = a*(in[j]-in[j-1]) + b*out[j-1]
+//? normalized: amp=1.0 at (sample_rate/2.0)
+class QHiFilt : public BoxInst {
+	public:
+		QHiFilt() : m_x1(0.0), m_y1(0.0), m_flg(4) {}
+		virtual int calc(int inflg, double** inb, double** outb, int n);
+	protected:
+		double m_x1, m_y1;
+		int m_flg;
+};
+
+#define QHC1(J) (z = pz[J], a = 1.0-z, b = a-z)
+#define QHC2(J) (x = q[J], y1 = to[J] = b*y1 + a*(x-x1), x1 = x)
+#define QHC0(J) (y1 = to[J] = b*y1)
+int QHiFilt::calc(int inflg, double** inb, double** outb, int n) {
+	if (!n) return 0; 
+	double x, z, a, b, x1 = m_x1, y1 = m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
+	switch((inflg|m_flg)&7) {
+		case 4: if (fabs(*pz)<1e-99) return BOX_CP0; else m_flg &= ~4;
+		case 0: QHC1(0); QHC2(0); x1 = *q; for (int i=1; i<n; i++) QHC0(i); break;
+		case 5: if (fabs(*pz)<1e-99) return BOX_CP0; else m_flg &= ~4;
+		case 1: QHC1(0); for (int i=0; i<n; i++) QHC2(i);  break;
+		case 6: m_flg &= ~4;
+		case 2: QHC1(0); QHC2(0); x1 = *q; for (int i=1; i<n; i++) QHC1(i), QHC0(i); break;
+		case 7: m_flg &= ~4;
+		case 3: for (int i=0; i<n; i++) QHC1(i), QHC2(i); break;
+	}
+	m_x1 = x1; m_y1 = y1; return 1;
+}
+
 //? {{{!._qlh}}}
 //? quick & simple lowpass/highpass filter
 //? in: filter input
@@ -298,6 +332,10 @@ int QLHSeqFilt::calc(int inflg, double** inb, double** outb, int n) {
 	qlh_calc(q, p, edyv+2, edyv, n, flg+(inflg&1)); ++flg; edyv += 4;
 	for (int i=1; i<nf; i++, edyv += 4) qlh_calc(q, q, edyv+2, edyv, n, flg);
 	return 1;
+}
+
+void b_filt_v_init(ANode *rn) {
+	qmk_box(rn, "=qhi1", QMB_ARG0(QHiFilt), 0, 2, 33, "qh1", "i*r", "in$par", "uuu3%a");
 }
 
 void b_filt_misc_init(ANode * rn) {

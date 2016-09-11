@@ -1753,7 +1753,7 @@ q:	va_end(vl); return ret;
 
 typedef void (ndini_fun)(ANode*);
 ndini_fun b_ar_init, b_b0_init, b_help_init, b_in_init, b_map_init,
-	  b_filt_pz_init, b_filt_echo_init, b_filt_fe_init, b_filt_misc_init;
+	  b_filt_pz_init, b_filt_echo_init, b_filt_fe_init, b_filt_misc_init, b_filt_v_init;
 #define B_INI(nm) b_##nm##_init(qmk_dir(_b, #nm))
 #define B_INI1(up,nm) b_##up##_##nm##_init(_b_##up)
 #define B_INI2(up,nm) b_##up##_##nm##_init(qmk_dir(_b_##up, #nm))
@@ -1776,7 +1776,7 @@ void Node::init() {
 	      *_b_filt = qmk_dir(_b, "filt");
 	b_help_init(_b_help);
 	B_INI(ar); B_INI(in); B_INI(map); b_b0_init(_b); b_filt_misc_init(_b_filt);
-	B_INI1(filt, pz); B_INI1(filt, fe); B_INI2(filt, echo);
+	B_INI1(filt, pz); B_INI1(filt, fe); B_INI2(filt, echo); B_INI2(filt, v);
 	contrib_init(_c = qmk_dir(r00t, "!c"));
 	ClipNode **kcp = ClipNode::m0_kcp; kcp[0] = kcp[1] = kcp[2] = qmk_clip(_b, "[]");
 	_b->set_perm(DF_ALL, DF_HROOT); _b_help->set_perm(DF_HROOT, DF_HROOT);
