@@ -251,7 +251,7 @@ static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, 
 //? {{{!._qh1}}}
 //? quick & simple highpass filter
 //? in: filter input
-//? par: parameter (0<=par<=.5)
+//? par: parameter (0<=par<=.5), can be non-constant
 //? a=1-par, b=1-2*par, out[j] = a*(in[j]-in[j-1]) + b*out[j-1]
 //? normalized: amp=1.0 at (sample_rate/2.0)
 class QHiFilt : public BoxInst {
@@ -260,7 +260,7 @@ class QHiFilt : public BoxInst {
 		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
 		double m_x1, m_y1;
-		int m_flg;
+		int m_flg; // 4:cp
 };
 
 #define QHC1(J) (z = pz[J], a = 1.0-z, b = a-z)
@@ -280,6 +280,52 @@ int QHiFilt::calc(int inflg, double** inb, double** outb, int n) {
 		case 3: for (int i=0; i<n; i++) QHC1(i), QHC2(i); break;
 	}
 	m_x1 = x1; m_y1 = y1; return 1;
+}
+
+//? {{{!._q1p}}}
+//? Single-pole filter: q1p* / q1p+ / q1p-
+//? <in>: filter input
+//? a: parameter, -1<=a<=1 (can be non-constant)
+//? diff.eq.: out[j] = b*in[j] + a*out[j-1]
+//? ---
+//? q1p*: b=1-abs(a) (amp=1.0 @ max)
+//? q1p+: b=1-a (amp=1.0 @ DC (0Hz))
+//? q1p-: b=1+a (amp=1.0 @ samp.rate/2 (22050Hz))
+class Q1pFilt : public BoxInst {
+	public:
+		Q1pFilt(int md) : m_y1(0.0), m_flg(16+4*md) {}
+		virtual int calc(int inflg, double** inb, double** outb, int n);
+	protected:
+		double m_y1;
+		int m_flg; // 12:md 16:cp
+};
+
+#define Q1PF(L) if (fabs(*pz)<1e-99) goto cp##L; else m_flg &= ~16
+#define Q1P0(B) x=*q; for (int i=0; i<n; i++) a=pz[i],b=(B),y1=to[i]=a*y1+b* x  ; goto bye
+#define Q1P1(B)       for (int i=0; i<n; i++) a=pz[i],b=(B),y1=to[i]=a*y1+b*q[i]; goto bye
+int Q1pFilt::calc(int inflg, double** inb, double** outb, int n) {
+	if (!n) return 0; 
+	double x, a, b, y1 = m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
+	switch((inflg|m_flg)&31) {
+		case 16: Q1PF(0);    case  0: a = *pz; b = 1.0-fabs(a); goto cc0;
+		case 17: Q1PF(1);    case  1: a = *pz; b = 1.0-fabs(a); goto cc1;
+		case 20: Q1PF(0);    case  4: a = *pz; b = 1.0-   a   ; goto cc0;
+		case 21: Q1PF(1);    case  5: a = *pz; b = 1.0-   a   ; goto cc1;
+		case 24: Q1PF(0);    case  8: a = *pz; b = 1.0+   a   ; goto cc0;
+		case 25: Q1PF(1);    case  9: a = *pz; b = 1.0+   a   ; goto cc1;
+		case 18: m_flg&=~16; case  2: Q1P0(1.0-fabs(a));
+		case 19: m_flg&=~16; case  3: Q1P1(1.0-fabs(a));
+		case 22: m_flg&=~16; case  6: Q1P0(1.0-   a   );
+		case 23: m_flg&=~16; case  7: Q1P1(1.0-   a   );
+		case 26: m_flg&=~16; case 10: Q1P0(1.0+   a   );
+		case 27: m_flg&=~16; case 11: Q1P1(1.0+   a   );
+		default: return RTE_BUG;
+	}
+cp0:	*to = *q; return 0;
+cp1:	if (to!=q) memcpy(to, q, 8*n);   return 1;
+cc0:	x=*q; for (int i=0; i<n; i++) to[i] = y1 = a*y1+b* x  ;  goto bye;
+cc1:	      for (int i=0; i<n; i++) to[i] = y1 = a*y1+b*q[i];  goto bye;
+bye:	m_y1 = y1; return 1;
 }
 
 //? {{{!._qlh}}}
@@ -336,6 +382,9 @@ int QLHSeqFilt::calc(int inflg, double** inb, double** outb, int n) {
 
 void b_filt_v_init(ANode *rn) {
 	qmk_box(rn, "=qhi1", QMB_ARG0(QHiFilt), 0, 2, 33, "qh1", "i*r", "in$par", "uuu3%a");
+	qmk_box(rn, "=q1p*", QMB_ARG1(Q1pFilt), 0, 2, 33, "q1p", "i*R*1", "in$a", "uuu3%a");
+	qmk_box(rn, "=q1p+", QMB_ARG1(Q1pFilt), 1, 2, 33, "q1p", "1");
+	qmk_box(rn, "=q1p-", QMB_ARG1(Q1pFilt), 2, 2, 33, "q1p", "1");
 }
 
 void b_filt_misc_init(ANode * rn) {
