@@ -38,6 +38,25 @@ STATELESS_BOX_0(Ar2BoxDV) { double *o = outb[0]; switch(inflg&3) {
 					      for (int i=0;i<n;i++) o[i] = x/q[i]; return 1; }
 	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]/q[i]; return 1; }}}
 
+//? {{{!._asp}}}
+//? split input to integer + fraction parts (stateless box)
+//? x: input
+//? mf: minimum frac (0 for "normal" int+frac, -.5 for round)
+//? ---
+//? xi: integer part
+//? xf: fraction part
+//? xi is an integer, x = xi + xf, mf <= xf < mf+1
+STATELESS_BOX_0(ArSplitBox) {
+	double x, y, mf, *px = *inb, *pmf = inb[1], *toi = *outb, *tof = outb[1];
+	switch(inflg & 3) {
+		case 0: x=*px, mf=*pmf, *toi=y=floor(x-mf), *tof=(x-y); return 0;
+		case 1: if (fabs(mf=*pmf)<1e-99) 
+				for(int i=0; i<n; i++) toi[i]=y=floor( x=px[i]),	 tof[i]=x-y;
+			else	for(int i=0; i<n; i++) toi[i]=y=floor((x=px[i])-mf),	 tof[i]=x-y; return 3;
+		case 2: x=*px;  for(int i=0; i<n; i++) toi[i]=y=floor(x-pmf[i]),	 tof[i]=x-y; return 3;
+		case 3: 	for(int i=0; i<n; i++) toi[i]=y=floor((x=px[i])-pmf[i]), tof[i]=x-y; return 3;
+	}} // no it doesn't
+
 //? {{{!._xmx}}}
 //? cross-mixer, output is (1-t)*x + t*y
 #define XMX_L1(X,Y,J) x=(X); y=(Y); p = inb[J]; for (int i=0; i<n; i++) to[i] = x + y*p[i]; return 1
@@ -232,6 +251,7 @@ void b_ar_init(ANode * rn) {
 	qmk_box(rn, "-", QMB_ARG0(Ar2BoxSB), 0, 2, 1, "a2", "1o*", "x-y");
 	qmk_box(rn, "*", QMB_ARG0(Ar2BoxML), 0, 2, 1, "a2", "1o*", "x*y");
 	qmk_box(rn, "/", QMB_ARG0(Ar2BoxDV), 0, 2, 1, "a2", "1o*", "x/y");
+	qmk_box(rn, "split", QMB_ARG0(ArSplitBox), 0, 2, 34, "asp", "1i*o*", "x$mf", "xi$xf");
 	ANode *f1 = qmk_dir(rn, "f1"), *mx = qmk_dir(rn, "mix");
 	qmk_box(f1, "abs",   QMB_ARG0(Ar1Abs ), 0, 1, 33, "a1", "1i*o*R1", "x", "f(x)");
 	qmk_box(f1, "sqrt",  QMB_ARG0(Ar1Sqrt), 0, 1, 33, "a1", "1");
