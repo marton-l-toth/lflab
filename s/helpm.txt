@@ -37,6 +37,7 @@ read the following general help texts:
 ==> 2.box -- basic building blocks of sounds
 ==> 2.!b and !e -- overview of builtins and examples
 ==> 1.auconv -- how to write to wav/flac
+==> 4.overview -- how to use MIDI input
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
 {{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
@@ -185,12 +186,13 @@ For each control, you have the following options:
 ---
 You may also set a (weighted) sum of two controls. The most
 simple usage is swapping two controls (e.g. y<->s1) without
-having to recalculate the autovol table. Shadow wraps also make
-it easy to define a set of keys (*) once, and use it for many
-different instruments. 
-(*) currently only (PC) keyboard is supported -- for later
-versions, MIDI HW support is also planned.
-==> 1.wrap/config -- wrap config GUI
+having to recalculate the autovol table. The two main functions
+of shadow wraps are MIDI input config, and track editing.
+==> 1.wrap/config -- config window (incl. MIDI)
+==> 4.overview
+Having configured a set of MIDI keys/controls once, you can
+easily use them for different sounds: just make a copy and
+change the target (and possibly the single "grab" control.)
 Shadow wraps make track editing much easier: in the following
 examples, the tracks differ in only one wrap (the muted
 "reference wrap" in line 04):
@@ -424,6 +426,10 @@ In mute mode the audio device is closed, so other programs
 can use it (but close them before "unmuting"), sounds/boxes
 are not stopped, recording (if on) continues.
 ==> 1.audio
+At the bottom of the main window, the "version" label can also
+be clicked and have keyboard focus (black on yellow when it has
+focus) -- key press/release events are routed to:
+==> 4.virtual device
 Note: main window is configured to be "always on top" whenever
 the window manager permits it. This has a side effect: when you
 open a small window (e.g. wrap/play and input windows), it may 
@@ -486,11 +492,10 @@ You can restart the audio from this window, applying settings.
 There is only one config file, so "save" is the same as in:
 ==> 1.misc config
 {{{1.text}}}
-- doc window for graph/calc/track boxes
-- text-only objects
-TODO
-T O D O
-T  O  D  O
+You can add small text windows (like this one) to document your
+boxes, and also create text-only objects in the object tree
+(including "unnamed" text objects for clipboards).
+---
 {{{1.midi config}}}
 TODO
 T O D O
@@ -593,6 +598,54 @@ Planned features (please don't take these as promises :) )
 - auto-tune for finite-element filters
 - support of various MIDI HW
 ==> 4.new devices
+{{{4.overview}}}
+With lflab you can use at most 31 MIDI input devices, and one
+"virtual" MIDI device (GUI sliders & PC keyboard.)
+==> 4.virtual device
+==> 1.midi config -- configure/reorder devices
+Keys/sliders/buttons/knobs on MIDI devices can be referred as
+device ID, channel ID, and key/control ID:
+==> 4.dev/chan/key
+Keys/controls have a current value (zero when lflab starts,
+updated only when changed), for keys it is the press speed when
+pressed, zero when released. Values can be used as follows:
+==> .!b.in.vlm.vlm05 -- input boxes like this one, or
+==> 3.midi/sliders -- mapping MIDI controls to sliders
+==> 2.shadow wrap -- in these objects.
+For the above usage, any number of boxes/wrap objects can refer
+to the same controller.
+---
+You can also assign control/play actions to MIDI keys/controls.
+(For non-key controls (buttons/knobs/sliders), "press" is value
+change from zero to nonzero, and "release" is value change from
+nonzero to zero.) Unlike for value-based usage above, a single
+key/control can only have one associated action at a time:
+==> 4.grab/release -- see details here
+You can assign control/play events for individual keys/controls
+(for play events also sequence of keys or touchpad, see below)
+==> 3.midi/control -- grab, select target
+==> 3.midi/play -- same effect as click/release on grid
+For touchpads, currently the KORG nanoPAD2 is supported (and
+possibly others with the same logic: two controls for x/y and
+one 0/1 control for press/release). If you want support for a
+different touchpad, please see:
+==> 4.new devices
+{{{4.virtual device}}}
+MIDI device with device ID 31 is a virtual device, with GUI
+sliders as controls, and PC keyboard for (constant speed) keys.
+==> 1.midi config -- sliders + key order
+Control #255 (channel 0) has special behaviour: when a key on a
+MIDI keyboard is pressed, this control value is temporarily
+changed to key press speed -- this can be useful here:
+==> 3.midi/sliders -- 31/0/255 is key speed
+For keys on PC keyboard, the key ID is the raw keycode with the
+following changes (can be turned on/off in MIDI config window):
+- swap Caps/Num Lock with F11/F12
+- use q,2,w,3,e... as piano-style keyboard
+- use z,s,x,d,c... as piano-style keyboard
+The slider values can be set in the MIDI config window.
+In the current version there is only one virtual MIDI device,
+with a single channel. (this might change in future versions.)
 {{{4.new devices}}}
 Currently supported:
 - MIDI keys (only press speed, no release speed or aftertouch)
@@ -621,7 +674,28 @@ exact path). This file should contain the MIDI messages as well
 as your comments. Send this file to:
 @@@
 {{{4.dev/chan/key}}}
-TODO
+All MIDI keys and controllers (sliders/knobs/buttons etc.) are
+identified by 3 numbers: device (0...31), channel (0...15), and
+key ID (0...127 for keys and 128...255 for controls).
+==> 1.midi config -- device list & settings
+You can 
+For hardware MIDI devices numbering starts from 0, by default
+they are alphabetically sorted by ID string. The devices can be
+rearranged in the MIDI config window.
+---
+The virtual MIDI input device (dev 31) is for simulating MIDI 
+events using GUI sliders and keys on the PC keyboard. It also
+has a special control (chan.0, key 255) which is set to the key
+press speed whenever a sound is started by MIDI key press. This
+device cannot be moved and only has channel 0 -- PC keys have
+key IDs 0...127 and GUI sliders have 128...255. Key config and
+slider values can be set in midi config window (link above).
+---
+Currently the only "special" input (that is not a single key or
+control) is the touchpad for KORG nanoPAD2 (and possibly other
+touchpads using the same logic) -- it is shownn as 3 controls
+(x,y and a "binary" control for touch/no touch).
+==> 4.new devices -- feature-request how-to
 {{{4.grab/release}}}
 You can bind control and play actions of many different shadow
 wraps to the same MIDI key/control. These bindings only become
@@ -632,7 +706,13 @@ Grab/release:
 - "grabC" in clipb. menu grabs keys for all control actions
 - grab from control action (see below)
 - "release all" in MIDI config window
-==> 1.midi config -- also see for dev/chan/key
+---
+Using control actions, you can grab specific MIDI keys/controls
+for selected play actions and/or all control actions. Thus, it
+is enough to have a single MIDI key/control to select the wrap
+obj., and all other control/play keys can be "shared" by many
+objects. 
+TODO: examples
 {{{1.box-gui}}}
 Here you can configure the input/output labels and FG/BG colors
 for graph and calculator boxes. (iterated boxes "inherit" these
