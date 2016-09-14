@@ -284,7 +284,7 @@ int QHiFilt::calc(int inflg, double** inb, double** outb, int n) {
 
 //? {{{!._q1p}}}
 //? Single-pole filter: q1p* / q1p+ / q1p-
-//? <in>: filter input
+//? in: filter input
 //? a: parameter, -1<=a<=1 (can be non-constant)
 //? diff.eq.: out[j] = b*in[j] + a*out[j-1]
 //? ---
@@ -326,6 +326,28 @@ cp1:	if (to!=q) memcpy(to, q, 8*n);   return 1;
 cc0:	x=*q; for (int i=0; i<n; i++) to[i] = y1 = a*y1+b* x  ;  goto bye;
 cc1:	      for (int i=0; i<n; i++) to[i] = y1 = a*y1+b*q[i];  goto bye;
 bye:	m_y1 = y1; return 1;
+}
+
+//? {{{!._ffoa}}}
+//? first order allpass - constant fractional delay
+//? in: filter input
+//? dly: delay (in samples, recommended: 0.1 ... 1.1)
+class FOAFilt : public BoxInst {
+	public:
+		FOAFilt() : m_flg(0) {}
+		virtual int calc(int inflg, double** inb, double** outb, int n);
+	protected:
+		double m_x1, m_y1, m_z;
+		int m_flg;
+};
+
+int FOAFilt::calc(int inflg, double** inb, double** outb, int n) {
+	if (!n) return 0;
+	double x, z = m_flg ? m_z : (m_flg=1, m_x1=m_y1=0.0, x=inb[1][0], m_z=(1.0-x)/(1.0+x));
+	double x1 = m_x1, y1 = m_y1, *q = inb[0], *to = outb[0];
+	if (inflg&1) { for (int i=0; i<n; i++) x=q[i], to[i]=y1=z*(x-y1)+x1, x1=x; }
+	else { x=*q; to[0]=y1=z*(x-y1)+x1; x1=x; for (int i=1; i<n; i++) to[i]=y1=z*(x-y1)+x1; }
+	m_x1 = x1; m_y1 = y1; return 1;
 }
 
 //? {{{!._qlh}}}
@@ -393,6 +415,7 @@ void b_filt_misc_init(ANode * rn) {
 	qmk_box(rn, "=qlow",  QMB_ARG1(QLoHiFilt), 0, 3, 33, "qlh", "i*R*1", "in$fq$amp", "uuu3%a");
 	qmk_box(rn, "=qhigh", QMB_ARG1(QLoHiFilt), 2, 3, 33, "qlh", "1");
 	qmk_box(rn, "=qlh*", QMB_ARG0(QLHSeqFilt), 0, 6, 33, "qlh*", "1i*", "in$fq0$fq1$n$scl$amp");
+	qmk_box(rn, "=f/dly", QMB_ARG0(FOAFilt), 0, 2, 33, "ffoa", "1i*", "in$dly");
 }
 
 void b_filt_echo_init(ANode * rn) {
