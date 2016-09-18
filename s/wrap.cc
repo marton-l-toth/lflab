@@ -1193,7 +1193,7 @@ const char SWrapMEC::gtab[256] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	18,18,18,18,  19,19,19,  20,20,   21,  99,99,99 };
 
 int SWrapMEC::save2(SvArg * sv) {
-	char buf[144], *q=buf; log("mec/save: flg=0x%x", m_u32&2047);
+	char buf[144], *q=buf; if (DBGC) log("mec/save: flg=0x%x", m_u32&2047);
 	BVFOR_JM(m_u32&2047) {  unsigned int x = t6d5c4k8g8[j]; memcpy(q,"X$:+",4);
 				q[4] = 48 + (x>>26), q[5] = i_to_b32((x>>20)&31); q[6] = '.'+((x>>25)&1);
 				h5f(q+7, x&1048575); q[12] = 10; q += 13;  }
