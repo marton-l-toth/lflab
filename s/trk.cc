@@ -108,6 +108,7 @@ class TrackGen : public BoxGen {
 		int m_bp10m, m_mxctl;
 		unsigned char m_gwfr[4], m_div[256];
 		int m_gnaf, m_gnav[8];
+		int m_pl_op, m_pl_pos;
 };
 
 int BKMK128::find(int i) {
@@ -267,7 +268,7 @@ int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
 /////////////////////////////////////
 
 TrackGen::TrackGen(ABoxNode *nd, ANode *g0, ANode *g1) : BoxGen(nd), m_m(nd,g0,g1), m_drq_g(0), 
-	m_bp10m(600), m_mxctl(0), m_gnaf(0) {
+	m_bp10m(600), m_mxctl(0), m_gnaf(0), m_pl_op(1), m_pl_pos(0) {
 	m_model = &m_m; memcpy(m_gwfr, TRK_DEF_GWFR, 4); m_div[0] = 3; memset(m_div+1, 0, 255); }
 
 int TrackGen::gui_h4(int * to) {
@@ -339,6 +340,7 @@ int TrackGen::del_n_sel(int d, int nof) {
 int TrackGen::play(int op, int pos) {
 	if (!m_mxctl) { if (!op) return EEE_NOEFF; }
 	else { mx_c_stop(m_mxctl,1,2); if (m_mxctl) return TKE_WTF; if (!op) return 0; }
+	if (pos<0) op = m_pl_op, pos = m_pl_pos; else m_pl_op = op, m_pl_pos = pos;
 	m_mxctl = mx_mkctl(this);
 	double v[12]; v[0] = v[1] = 1.0; v[2] = v[5] = 0.0; v[3] = 10.0; v[4] = 1e-5;
 	v[6] = 0.1 * (double)m_bp10m; v[9] = (op&1) ? 0.0 : 9999.0;
@@ -432,7 +434,7 @@ int TrackGen::save2(SvArg * sv) {
 CH(cx0){BXW_GETP(p); return p->cx_cmd(bxw_rawptr, cb, s[1], TR_SEL_ID, TR_SEL_XY[0], TR_SEL_XY[1]); }
 CH(upp){BXW_GETP(p); TR_UPP = atoi_h(s+1); return 0; }
 CH(gcf){return trk_g_parse(s+1, p->m_div, p->m_gwfr), 0; }
-CH(pl) {return s[1]>47 ? p->play(s[1]-48, atoi_h(s+2)) : BXE_PARSE; }
+CH(pl) {return s[1]>47 ? p->play(s[1]-48, s[2]>47 ? atoi_h(s+2) : -1) : BXE_PARSE; }
 CH(qk) {BXW_GETP(p); return p->grab_gsel(bxw_rawptr), ClipNode::kcp(2)->keyop_f(atoi_h(s+1),5,0,cb->cnof()); }
 
 CH(cky){switch(s[1]) {
