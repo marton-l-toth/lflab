@@ -1,2 +1,4 @@
 .*.swp
 *--[0-9a-x].lf
+a.out
+core
