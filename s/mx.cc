@@ -361,6 +361,7 @@ void MxItem::b_ccut() {
 	if (q->m_ty != 'c') return log("BUG: b_ccut: invalid pv id:%d ty:0x%x", pvi, q->m_ty);
 	if (nxi) return (void)(q->u.c.bx[q->c_find(u.b.ctk, 4)] = nxi, mx_ptr(nxi)->u.b.ctp = pvi);
 	int k = u.b.ctk, f = 4 + 64*!q->c_find(k, 6);
+	if (q->u.c.uk==k) q->u.c.uk = 0;
 	BoxGen *bx = q->u.c.bref; 
 	if (f&64) mx_free(q); if (bx) box_mxc_notify(bx, k, f);
 }
