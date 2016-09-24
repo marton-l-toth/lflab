@@ -5,6 +5,12 @@
 #include "glob.h"
 #include "wrap.h"
 
+#ifdef SANCHK_MX
+#define C_SANE c_sane()
+#else
+#define C_SANE ((void)0)
+#endif
+
 class BoxGen; 
 int box_mxc_notify(BoxGen *p, int ky, int flg), trk_cut_time(BoxGen *p, int t);
 typedef void (*tfunini_t) (double *, int, int);
@@ -526,15 +532,14 @@ found:  return (f&2) ? (c_cut1j(md), u.c.nb) : md;
 }
 
 int MxItem::c_ins(MxItem * that, int k) {
-	c_sane();
-	int i, j, uf = k & 65536;
+	C_SANE; int i, j, uf = k & 65536;
 	uf && (i=u.c.uk, u.c.uk = (k&=65535), i) && (j = c_find(i, 4), c_stop_j(j, 1)) &&
 		(c_cut1j(j), u.c.bref) && box_mxc_notify(u.c.bref, i, 4);
 	if ((j = c_find(that->u.b.ctk = k, 1)) < 0) return j;
 	that->u.b.ctp = m_id;
 	if (j&256) that->u.b.ctn = 0, u.c.bx[j&255] = that->m_id;
 	else	   i = that->u.b.ctn = u.c.bx[j], mx_ptr(i)->u.b.ctp = u.c.bx[j] = that->m_id;
-	return c_sane(), u.c.bref ? box_mxc_notify(u.c.bref, k, 2 + (uf>>13)) : 0;
+	return C_SANE, u.c.bref ? box_mxc_notify(u.c.bref, k, 2 + (uf>>13)) : 0;
 }
 
 int MxItem::c_stop_j(int j, int f) {
