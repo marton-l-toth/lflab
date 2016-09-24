@@ -1277,12 +1277,12 @@ void TBoxNode::do_ins(ANode * q, int i, int j, ANode *nx) {
 	if (!nx || !(pv=(tn=&nx->m_u24.t)->pv)) return bug("trk/do_ins: nx=%p, pv=%p", nx, pv);
 	ti = &q->m_u24.t; pv->m_next = tn->pv = q; 
 	ti->pv = pv; ti->ct = 't'; ti->i = (short)i; ti->j = j; q->m_up = this; q->m_next = nx; 
-	chk_ord(pv, q, "ins1"); chk_ord(q, nx, "ins2");
+	TRK_CO2(pv, q, "ins1"); TRK_CO2(q, nx, "ins2");
 }
 
 void TBoxNode::do_cut(ANode * q) {
 	ANode *nx = q->next(), *pv = q->cth()->pv; if (!nx || !pv) bug("trk/do_cut: nx=%p, pv=%p", nx, pv);
-	pv->m_next = nx; nx->m_u24.t.pv = pv; chk_ord(pv, nx, "cut"); }
+	pv->m_next = nx; nx->m_u24.t.pv = pv; TRK_CO2(pv, nx, "cut"); }
 
 int TBoxNode::rm(ANode * that) {
 	if (that->m_up != this) return NDE_RMWHAT;
@@ -1310,10 +1310,10 @@ iok:    ;}
 	if (nx==that || pv==that) { if (debug_flags&DFLG_TRK) log("trkadd/lmv");
 				    trk_bkm_rm (m_box, that);
 			  	    if (wf)trk_cond_pm(m_box, that, '-');
-				    that->m_u24.t.i = i; that->m_u24.t.j = j;	
-				    chk_ord(that->cth()->pv,that,"lmv1"); chk_ord(that,that->next(),"lmv2"); }
+				    that->m_u24.t.i = i; that->m_u24.t.j = j; TRK_CO1(that, "lmv"); }
 	else { if  (debug_flags&DFLG_TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
-	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+'); return 0;
+	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+');
+	TRK_CO1(that, "add"); return 0;
 }
 
 void TBoxNode::ins_guard(ANode * that, int j, ANode * nx) {
@@ -1321,17 +1321,18 @@ void TBoxNode::ins_guard(ANode * that, int j, ANode * nx) {
 	const trk_24 * th = that->cth(); 
 	if (th->ty!=33 || (th->i&~15)) bug("ins_guard: c=0x%x, i=0x%x", th->ty, th->i);
 	nx = find_ijf(th->i, j, 1, nx);
-	if (nx==that || nx->cth()->pv==that) return (void) (that->m_u24.t.j = j);
+	if (nx==that || nx->cth()->pv==that) { that->m_u24.t.j = j; TRK_CO1(that,"glm"); return; }
 	if (that->m_next) do_cut(that); 
 	do_ins(that, th->i, j, nx);
 }
 
 void TBoxNode::chk_ord(ANode * p, ANode *q, const char * dsc) {
 	const trk_24 *a = p->cth(), *b = q->cth();
+	if (!a->ty || !b->ty) bug("chk_ord/%s: %p,%p ty:%02x/%02x", dsc, p,q,a->ty,b->ty);
 	if (p->m_up!=this || q->m_up!=this) 
 		bug("chk_ord/%s: upnodes %p,%p / exp. %p", dsc, p->m_up, q->m_up, this);
 	if (p->m_next!=q || b->pv != p) 
-		bug("chk_ord: link error (p=%p,p->nx=%p,q=%p,q->pv=%p)", p, p->m_next, q, q->cth()->pv);
+		bug("chk_ord/%s: link err (p=%p,nx=%p,q=%p,q->pv=%p)", dsc, p, p->m_next, q, q->cth()->pv);
 	int di = b->i - a->i, dj = b->j - a->j;
 	if (dj<0) goto obug; if (dj>0) return;
 	if (di<0) goto obug; if (di>0 || b->i<16) return;
@@ -1347,12 +1348,12 @@ void TBoxNode::debug(int flg) {
 
 void   tgn_del (ANode *tn, ANode *gn) { if (!gn) return;
 	if (gn->up()!=tn || gn->cl_id()!=33) bug("tgn_del"); 
-	if(gn->next())static_cast<TBoxNode*>(tn)->do_cut(gn); ANode::fN(gn);}
+	if(gn->next())static_cast<TBoxNode*>(tn)->do_cut(gn); else bug("tgn_del/!n"); ANode::fN(gn);}
 
 void   tgn_move(ANode *tn, ANode *gn, int j, ANode*nx) { if (gn->up()!=tn || gn->cl_id()!=33) bug("tgn_move");
 	static_cast<TBoxNode*>(tn)->ins_guard(gn, j, nx); }
 
-ANode* tgn_new (ANode *tn, int i, int j, ANode *nx) {
+ANode* tgn_new (ANode *tn, int i, int j, ANode *nx) { TRK_SANE2(tn->box0(), 6);
 	ANode * r = new (ANode::aN()) TGuardNode(tn, i); 
 	static_cast<TBoxNode*>(tn)->ins_guard(r, j, nx); return r; }
 
