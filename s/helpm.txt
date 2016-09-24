@@ -13,7 +13,10 @@ The text of the license should be opened in a separate window.
 In case it isn't see COPYING in the install directory or at
 http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 ---
-Thanks to all g++,gdb,gtk,graphviz,gnuplot... developers, and
+Thanks to:
+all g++,gdb,gtk,graphviz,gnuplot... developers,
+Julius O. Smith III (https://ccrma.stanford.edu/~jos/) for his
+online books about filters & audio signal processing,
 Steven W. Smith for his free DSP book (dspguide.com) 
 ==> 0.getting started
 {{{0.getting started}}}
@@ -496,10 +499,39 @@ You can add small text windows (like this one) to document your
 boxes, and also create text-only objects in the object tree
 (including "unnamed" text objects for clipboards).
 ---
+For both text only objects and text windows for graphs, tracks
+and clipboards, you can edit the text with an external editor.
+==> 1.path config -- you can change the editors here
+The text window should be updated when you save the file in the
+editor (if it doesn't, try another editor & report a bug).
 {{{1.midi config}}}
-TODO
-T O D O
-T  O  D  O
+This help text describes the config window (from main menu)
+==> 4.overview -- general description for MIDI inputs
+On the left you can see the list of MIDI input devices found at
+start (if you connect new devices, you have to restart lflab
+for them to be visible, sorry). You can rearrange the devices
+with the "up" and "down" buttons, release all event bindings
+with the "rls" button, and reopen the device by the "c*d*"
+button (useful after a temporary disconnect).
+==> 4.virtual device
+The virtual device has a "focus" button: when clicked it will
+have keyboard focus (indicated by black-on-yellow colour), and
+redirect PC keyboard keypress/release events to the virtual
+device; in most cases the "version" button (at the bottom of
+main window) is more useful, since then you don't have to keep
+this config window open to use PC keys as MIDI keys.
+---
+On the right, with "log" you can toggle logging of MIDI events,
+which is useful for getting device/channel/key numbers for MIDI
+keys/controls, save config (there is only one config file, so
+audio/path/misc config is also saved), and release all event
+bindings (for all devices). The bottom 3 toggle buttons reorder
+the PC keys for the virtual device (see link above).
+In the middle you can set 8-8 of the sliders (virtual MIDI
+controls); ctrl. #254 & 255 are always displayed: #255 gets
+overwritten with MIDI key press speed (only for real MIDI keys,
+since the PC keyboard does not report speed) for the duration of
+the event handling), and #254 is reserved for future use.
 {{{1.misc config}}}
 In this window you can configure various parameters, all of
 which are integers (left-click:increment right-click:decrement
@@ -594,9 +626,8 @@ Planned features (please don't take these as promises :) )
 - improved track editor usability (block edit?)
 - default values for boxes
 - plot/save/record to backgr. job (like autovol calc.)
+- new time-varying filters
 - more builtin boxes and example editable boxes
-- auto-tune for finite-element filters
-- support of various MIDI HW
 ==> 4.new devices
 {{{4.overview}}}
 With lflab you can use at most 31 MIDI input devices, and one
