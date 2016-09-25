@@ -326,9 +326,9 @@ class MiniDir {
 class BoxDesc : public SOB {
         public:
                 SOBDEF_64(BoxDesc);
-                BoxDesc(int arg) : SOB(arg) {}
-                BoxDesc(const BoxDesc * that, int arg) : SOB(arg) {
-			int i,n=that->n; set_n(n); for(i=0;i<n;i++) memcpy(ln(i),that->ln(i),64); }
+                BoxDesc(int arg) : SOB(arg), n(0) {}
+                BoxDesc(const BoxDesc * that, int arg) : SOB(arg), n(0) {
+			set_n(that->n); for(int i=0;i<n;i++) memcpy(ln(i),that->ln(i),64); }
                 ~BoxDesc() {}
 		int save2(SvArg * sv);
 		char * ln(int i) const { return pp[i>>3][i&7]; }
