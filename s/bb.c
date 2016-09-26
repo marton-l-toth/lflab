@@ -154,9 +154,10 @@ int e_main() { /* editor */
 	const char * cnm = tpipe_name('C'), *jt = getenv("LF_ED_TMPF"), *ed = getenv(xapp_env[1]);
 	FILE *f; int x, r = fork(); switch(r) {
 		case 0: execlp(ed, ed, jt+1, NULL); perror("exec"); exit(1);
-		case 1: perror("fork"), exit(1);
-		default: waitpid(r,&x,0); exit((f=fopen(cnm, "a")) ? (fprintf(f,"-%c\n",*jt),fclose(f),0) 
-			 				           : (perror(cnm),1)); }}
+		case -1: perror("fork"), exit(1);
+		default: signal(SIGHUP, SIG_IGN); waitpid(r,&x,0); 
+			 exit((f=fopen(cnm, "a")) ? (fprintf(f,"-%c\n",*jt),fclose(f),0) 
+			 			  : (perror(cnm),1)); }}
 
 /**************** log i/o ****************************************************/
 
