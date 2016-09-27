@@ -1660,11 +1660,11 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
 	int r = batch_calc(buf, f3?buf+siz:0, i0, len, 0);
 	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
 	if (f3&r&2) re=buf+siz, im=buf; else re=buf, im=buf+siz;
-	memset(im, 0, 8*siz); if (len<siz) memset(re+len, 0, 8*(siz-len));
-	double *res = fft(re, im, bits, false), *res2 = res + siz;  free(buf);
+	if (len<siz) memset(re+len, 0, 8*(siz-len));
+	fft(re, im, bits, 0);
 	int fmx = -1; double fmv = -1.0;
         for (int i=0; i<=siz/2; i++)
-                if ((res[i] = sqrt(res[i]*res[i] + res2[i]*res2[i]))>fmv) fmv = res[i], fmx = i;
+                if ((re[i] = sqrt(re[i]*re[i] + im[i]*im[i]))>fmv) fmv = re[i], fmx = i;
 	log("plot_f: (max@Hz) %s%.9g", DEBUG_UTXT(15), (double)fmx / (double)siz * (double)sample_rate);
         int ix0 = (int)round(f0 * sample_length * (double)(siz));
         int ix1 = (int)round(f1 * sample_length * (double)(siz));
@@ -1674,9 +1674,9 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
 	if (n<2 || n0<2) return log("plot_f: n=%d, n0=%d", n, n0), BXE_RANGE;
         bool statflg = (n < n0);
         double stat[ (statflg ? 3 : 2) * n ];
-        samp_stat(res+ix0, n0, n, false, 0.0, 0, 0, stat);
+        samp_stat(re+ix0, n0, n, false, 0.0, 0, 0, stat);
 	qstat.store(stat, n);
-        samp_stat(res+ix0, n0, n, true, 55.0, 0, statflg ? stat+2*n : 0, stat+n);
+        samp_stat(re+ix0, n0, n, true, 55.0, 0, statflg ? stat+2*n : 0, stat+n);
         PlotPar_arr p_avg(stat, n, f0, f1);
         PlotPar_arr p_lavg(stat+n, n, f0, f1);
         PlotPar_arr p_lmax(stat+2*n, n, f0, f1);
@@ -1685,7 +1685,7 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
         if (statflg) Gnuplot::sg()->setfun1(2, arrfun1, &p_lmax, 1, "lmax");
         Gnuplot::sg()->plot1(statflg ? 7 : 3, f0, f1, n);
 
-        delete[] (res); return 0;
+        free(buf); return 0;
 }
 
 #define CH(X) BXCMD_H(AWrapGen, X)

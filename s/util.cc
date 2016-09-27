@@ -467,10 +467,12 @@ static void fft2(double * re, double * im, int n, bool reverse) {
                         }
                         tr = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tr; }}}
 
-double* fft(double * re, double * im, int bits, bool reverse) {
-	int n = 1<<bits;   double *vr = new double[2*n], *vi = vr + n;
-        for (int k, i=0; i<n; i++) k = bit_rev(i,bits), vr[k] = re[i], vi[k] = im[i];
-        fft2(vr,vi,n,reverse); return vr; 
+void fft(double * re, double * im, int bits, int flg) {
+	int i, k, n = 1<<bits;    double t;
+	if (flg&2) { 		 for (i=0;i<n;i++) if ((k=bit_rev(i,bits))>i) t=re[k],re[k]=re[i],re[i]=t,
+							 		      t=im[k],im[k]=im[i],im[i]=t; }
+	else { memset(im,0,8*n); for (i=0;i<n;i++) if ((k=bit_rev(i,bits))>i) t=re[k],re[k]=re[i],re[i]=t; }
+        fft2(re,im,n,flg&1);
 }
 
 ///////// 20-bit audio out //////////////////////////////////////////////////
