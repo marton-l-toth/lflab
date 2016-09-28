@@ -33,6 +33,7 @@ QTST_RDIF   |i|20         |10  |52   |qtstr |quicktest/samp: -log2 of max rel di
 DEBUG_FLG   |i|0          |0   |DFLGZ|dflg  |init. debug_flg (decimal, type 'd?' in console)
 MIDI_KTR    |i|7	  |0   |7    |ktr   |keyboard (virt.midi) trans: 1:f11,f12 2:q2w3... 4-zsxd...
 MIDI_PRM    |s|           |0   |32   |miprm |midi input device permutation
+PLOT_XSIZ   |i|4	  |0   |6    |plotx |max. FFT-plot samples - 2^x * (1Msamp=23.777sec=16MB)
 _1_NOEX     |i|0          |0   |1    |n     |skip default example tree (.!e)
 _H1         |i|0          |0   |1    |h     |show help
 _H2         |i|0          |0   |1    |?     |show help

@@ -1652,9 +1652,9 @@ int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg)
 	if (DBGC) log("plot_f: %.15g %.15g %.15g %.15g %d %d", t0, t1, f0, f1, n, flg);
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f3 = flg&3;
         if (len<1) return log("plot_f: length = %d samples, sorry.", len), BXE_RANGE;
-        int siz = 64, bits = 6;
-        if (len>(1<<24)) { log("plot(F): len cut to %g", sample_length*(double)(1<<24));
-			   siz = len = (1<<24), bits = 24; }
+        int siz = 64, bits = 6, samp_bits = 20 + CFG_PLOT_XSIZ.i, samp_lim = 1<<samp_bits;
+        if (len>samp_lim) { log("plot(F): len cut to %g", sample_length*(samp_lim));
+			   siz = len = samp_lim, bits = samp_bits; }
 	else 		 { while (len>siz) siz+=siz,++bits;   if (!(flg&4)) len=siz; }
         double *buf = (double*)malloc(16*siz), *re, *im;
 	int r = batch_calc(buf, f3?buf+siz:0, i0, len, 0);
