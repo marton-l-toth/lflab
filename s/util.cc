@@ -18,6 +18,7 @@
 #include "uc0.h"
 #include "uc1.h"
 #include "util.h"
+#include "util2.h"
 #include "errtab.inc"
 #include "cfgtab.inc"
 #include "glob.h"
@@ -444,34 +445,76 @@ void samp_stat(const double *p, int n, int k, bool dB, double dBy, double *pmin,
                 for (int i=0; i<m; i++) {
                         double *q = pp[i]; for (int j=0; j<k; j++) if (q[j]<ymin) q[j]=ymin; }}}
 
-unsigned int bit_rev(unsigned int n, int bits) {
-        n = (n&0x55555555)<<1  | (n&0xaaaaaaaa)>>1;
-        n = (n&0x33333333)<<2  | (n&0xcccccccc)>>2;
-        n = (n&0x0f0f0f0f)<<4  | (n&0xf0f0f0f0)>>4;
-        n = (n&0x00ff00ff)<<8  | (n&0xff00ff00)>>8;
-        n = (n&0x0000ffff)<<16 | (n&0xffff0000)>>16;
-        n >>= 32-bits; return n;
-}
+inline unsigned int bit_rev(unsigned int n, int bits) {
+	return ( (unsigned int)bitrev8[n>>24] + ((unsigned int)bitrev8[(n>>16)&255]<<8) + 
+	        ((unsigned int)bitrev8[(n>>8)&255]<<16) + ((unsigned int)bitrev8[n&255]<<24) ) >> (32-bits); }
 
+#define REV_S_BITS 5
+#define REV_S_BLK (1<<REV_S_BITS)
+#define REV_XC1 (t=re[y],re[y]=re[x],re[x]=t)
+#define REV_XC2 (t=re[y],re[y]=re[x],re[x]=t,t=im[y],im[y]=im[x],im[x]=t)
+
+static void rev_small1(double *re, int bits) {
+	int x, y, n = 1<<bits;  double t; for (x=0; x<n; x++) if ((y=bit_rev(x, bits))>x) REV_XC1; }
+
+static void rev_small2(double *re, double *im, int bits) {
+	int x, y, n = 1<<bits;  double t; for (x=0; x<n; x++) if ((y=bit_rev(x, bits))>x) REV_XC2; }
+
+#define REV_BIG(NM,X) \
+static void rev_big##NM(double *re, double *im, int bits) { \
+	int lo, hi, mi, n = 1<<bits, lhbits = (bits+1-REV_S_BITS)>>1, mbits = bits - 2*lhbits, \
+	    x,y,nlo = 1<<lhbits, hstep = 1<<(lhbits+mbits); \
+	for (hi=0; hi<n; hi+=hstep) { for (lo=0; lo<nlo; lo++) { \
+		double t; int mi2, bs = hi+lo, rbs = bit_rev(bs, bits); \
+		if (bs<rbs) continue; \
+		if (bs==rbs) { for (mi=0; mi<hstep; mi+=nlo) if ((mi2=bit_rev(mi, bits))>mi) \
+								  x=bs+mi, y= bs+mi2, (X); } \
+		else { for (mi=0; mi<hstep; mi+=nlo) x=bs+mi, y=rbs+bit_rev(mi,bits), (X); }}}}
+REV_BIG(1, REV_XC1)
+REV_BIG(2, REV_XC2)
+
+static void bit_rev_blk(double *re, double *im, int bits) {
+	return (bits > REV_S_BITS) ? (im ? rev_big2  (re, im, bits) : rev_big1  (re, NULL, bits))
+				   : (im ? rev_small2(re, im, bits) : rev_small1(re, bits));  }
+
+#define ANG1_BITS 9
+#define ANG1_SIZ (1<<ANG1_BITS)
 static void fft2(double * re, double * im, int n, bool reverse) {
-        double oR, oi, o1r, o1i, fi, tr, ti;
-        int j, k, l, m;
-        for (m=2; m<=n; m*=2) {
-                fi = M_PI*2.0/m; if (reverse) fi = -fi;
-                o1r = cos(fi); o1i = sin(fi); oR = 1.0; oi = 0.0;
-                for (j=0; j<m/2; j++) {
-                        for (k=j; k<n; k+=m) {      l = k+m/2;
-                                tr = re[l]*oR - im[l]*oi; ti = im[l]*oR + re[l]*oi;
-                                re[k+m/2] = re[k] - tr;   im[k+m/2] = im[k] - ti;
-                                re[k] += tr;              im[k] += ti;
-                        }
-                        tr = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tr; }}}
+	Clock clk;   int m, m2, df = debug_flags & DFLG_PLOT2; if (df) clk.reset();
+	double oAr[ANG1_SIZ], oAi[ANG1_SIZ], circ = reverse ? (-2.0*M_PI) : (2.0*M_PI);
+        for (m=2,m2=1; m<=n; (void)(df&&(log("fft2: %d/%d, t=%d", m,n,clk.reset()),1)),m2=m,m*=2) {
+		int mm = m2-1;
+		double fi2, fi = circ / (double)m, o1i = sin(fi), o1r = cos(fi);
+		if (m2<=ANG1_SIZ) {
+			int j, k, k0, l;
+			double oR = 1.0, oi = 0.0;
+			for (j=0; j<m2; j++) { if (!(j&63)) fi2 = fi*(double)(j), oR = cos(fi2), oi = sin(fi2);
+					       oAr[j] = oR; oAi[j] = oi;
+					       double tR = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tR; }
+			for (j=0; j<n; j+=m) { for (k0=0; k0<m2; k0++) { k = k0 + j;
+				double rel = re[l=k+m2], iml = im[l],
+				       tr = rel*oAr[k0] - iml*oAi[k0], ti = iml*oAr[k0] + rel*oAi[k0];
+				re[l] = re[k]-tr; re[k]+=tr; im[l]=im[k]-ti; im[k]+=ti; }}}
+
+		else {
+			int j, k, k0, l; double oR = 1.0, oi = 0.0;
+			for (j=0; j<n; j+=m) { for (k0=0; k0<m2; k0+=ANG1_SIZ) {
+				int k1, jk0 = j+k0;
+				for (k1 = 0; k1<ANG1_SIZ; k1++) {
+					k = jk0 + k1; if (!(k&63)) fi2 = fi*(double)(k&mm), oR = cos(fi2), oi = sin(fi2);
+					double rel = re[l=k+m2], iml = im[l],
+					       tr = rel*oR - iml*oi, ti = iml*oR + rel*oi;
+					oAr[k1] = re[k]-tr; oAi[k1] = im[k]-ti; re[k]+=tr; im[k]+=ti; 
+					double tR = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tR; }
+				memcpy(re+jk0+m2, oAr, 8*ANG1_SIZ);
+				memcpy(im+jk0+m2, oAi, 8*ANG1_SIZ);
+			}}}}}
 
 void fft(double * re, double * im, int bits, int flg) {
-	int i, k, n = 1<<bits;    double t;
-	if (flg&2) { 		 for (i=0;i<n;i++) if ((k=bit_rev(i,bits))>i) t=re[k],re[k]=re[i],re[i]=t,
-							 		      t=im[k],im[k]=im[i],im[i]=t; }
-	else { memset(im,0,8*n); for (i=0;i<n;i++) if ((k=bit_rev(i,bits))>i) t=re[k],re[k]=re[i],re[i]=t; }
+	int n = 1<<bits, df = debug_flags & DFLG_PLOT2;
+	Clock clk; if (df) clk.reset();
+	if (flg&2) bit_rev_blk(re, im, bits); else memset(im,0,8*n), bit_rev_blk(re, NULL, bits);
+	if (df) log("fft/bitrev: %d", clk.get());
         fft2(re,im,n,flg&1);
 }
 
