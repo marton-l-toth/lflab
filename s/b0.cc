@@ -337,6 +337,56 @@ STATELESS_BOX_1(Sel2Box) { // TODO: io-ali
 	return (1<<igl)-1;
 }
 
+
+//? {{{!._sHsg}}}
+//? simple histogram calculator
+//? in : input
+//? t : period (in seconds)
+//? in every t-sized time interval, the output is the histogram
+//? (the histogram is updated every t seconds, so for the first
+//? t seconds the output is zero)
+//? interval -1...1 is divided to (t*sample_rate) equal intvals
+//? output is normalized (~= const 1.0 for equal distribution)
+class HistGInst : public BoxInst {
+	public:
+		HistGInst() : m_len(0) {}
+		virtual ~HistGInst() { if (m_len) free(m_oblk); }
+		virtual int calc(int inflg, double** inb, double** outb, int n);
+		inline void ou(double *to, double *q, int n) { memcpy(to, q+m_pos, 8*n); m_pos+=n; }
+		inline int ix(double x, int m) { 
+			int j = (int)lround((x+m_add)*m_mul);
+			return ((unsigned int)j < (unsigned int)m) ? j : (j<0 ? 0 : m-1); }
+		void upd_blk();
+	protected:
+		int m_len, m_half, m_pos, m_total, *m_pcnt;
+		double m_add, m_mul, *m_oblk;
+};
+
+void HistGInst::upd_blk() {
+	int m = m_len; if (m_pos!=m) bug("hist/updblk: %d != %d", m_pos, m); m_pos = 0;
+	double mul = (double)m / (double)(m_total+=m_len);
+	for (int i=0; i<m; i++) m_oblk[i] = mul * (double)m_pcnt[i];
+}
+
+int HistGInst::calc(int inflg, double** inb, double** outb, int n) {
+	int m, *q, xf = inflg&1;  double *ob, *to = outb[0], *p = inb[0];
+	if (!m_len) { if (!n) return 0;
+		      m = m_len = ivlim((int)lround(inb[1][0]*(double)sample_rate), 2, 441000);
+		      m_mul = .5 * (double)m, m_add = (double)(m-1) / (double)(m);
+		      m_pos = m_total = 0;
+		      char * buf = (char*)calloc((3*m+1)&~1, 4);
+		      ob = m_oblk = (double*)buf; q = m_pcnt = (int*)(buf+8*m); }
+	else 	   {  m = m_len; ob = m_oblk; q = m_pcnt; }
+	if(xf){ while(1){ int n1 = m - m_pos;
+			  if (n<n1) { for (int i=0; i<n; i++) ++q[ix(p[i],m)]; ou(to, ob, n); return 1; }
+			  for (int i=0; i<n1; i++) ++q[ix(p[i],m)];     ou(to, ob, n1); upd_blk();
+			  if (!(n-=n1)) return 1; else to += n1, p += n1; }}
+	else {  int * q1 = q + ix(*p,m);
+		while(1){ int n1 = m - m_pos;
+			  if (n<n1) return *q1+=n, ou(to,ob,n), 1;
+			  *q1 += n1; ou(to,ob,n1); upd_blk(); 
+			  if (!(n-=n1)) return 1; else to += n1; }}}
+
 static void sel_ini(ANode *rn) {
 	ANode * sd[7]; char nm[16]; nm[1] = 0;
 	for (int i=0; i<7; i++) *nm = 49+i, sd[i] = qmk_dir(rn, nm);
@@ -379,7 +429,7 @@ void b_map_init(ANode * rn) {
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
-	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug");
+	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
 	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_3", "*i*o*", "kkk%%%", "x", "x");
 	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
@@ -397,6 +447,7 @@ void b_b0_init(ANode * rn) {
 	qmk_box(im, "^1", QMB_ARG0(Impulse1), 0, 0, 33, "_1", "*", "z%%O%%"); 
 	qmk_box(im, "^triang", QMB_ARG0(TriangImp), 0, 2, 33, "_trI", "*i*", "zz%O%%", "up$dn");
 	qmk_box(im, "^gauss", QMB_ARG0(GaussImp), 0, 2, 33, "_gsI", "*i*", "%zzO%%", "wid$bits");
+	qmk_box(st, "histg", QMB_ARG0(HistGInst), 0, 2, 33, "sHsg", "*i*", "%%%kkk", "in$t");
 	char nm[16]; memcpy(nm, "debug01", 8); qmb_arg_t qa = QMB_ARG1(DebugBox);
 	qmk_box(db, nm, qa, 1, 1, 33, "dbg", "R*1", "zz%z%%");
 	for (int i=2; i<31; i++) nm[5] = 48+i/10, nm[6] = 48+i%10, qmk_box(db,nm,qa,i,i,i,"dbg","1");
