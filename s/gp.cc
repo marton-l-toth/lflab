@@ -91,7 +91,7 @@ void Gnuplot::plot1(int sel, double x0, double x1, int n, bool nwin)
 		for (int j=0; j<n; j++) {
 			double v = (*m_fun1[i]) (x , m_funarg[i]);
 			if (v==v)
-				cmd("%g %g", x, v );
+				cmd("%.15g %15g", x, v );
 			x += xstep;
 		}
 		cmd("e");
