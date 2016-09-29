@@ -44,7 +44,7 @@ int u_sleep(int x);
 bool save_to_file(const char * fname);
 void bye(int x);
 unsigned int bit_rev(unsigned int n, int bits);
-void fft(double * re, double * im, int bits, int flg); // 1:rev 2:im-nonz
+void fft(double * re_im, int bits, int flg); // 1:re_im+(1<<bits) -> re
 void shuffle(int * p, int n);
 int namelen(const char * s);
 inline void filld(double *p, double x, int n) { 
