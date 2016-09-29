@@ -362,7 +362,7 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 ret:	return (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
 }
 
-int pt_show_lic() { return launch(CFG_XTERM.s, "!)((", "-e", QENV('v'), (char*)0); }
+int pt_show_lic() { return launch(CFG_XTERM.s, "!())", "-e", QENV('v'), (char*)0); }
 void pt_debug()   { return qe_dump(); }
 int pt_kill_pa(int flg) { return (launch("killall","!(ss","-v",(flg&2)?"-9":"-15","pulseaudio", (char*)0)<0) ?
 					EEE_ERRNO : 0; }

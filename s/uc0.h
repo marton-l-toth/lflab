@@ -129,8 +129,8 @@ int launch(const char * exe, const char * iocfg, ...) {
                         continue; }
                 switch(k) {
                         case '.': continue;
-                        case ')': k = -1; md = O_RDONLY; goto fdchk;
-                        case '(': k = -1; md = O_WRONLY|O_APPEND; goto fdchk;
+                        case '(': k = -1; md = O_RDONLY; goto fdchk;
+                        case ')': k = -1; md = O_WRONLY|O_APPEND; goto fdchk;
                         case '<': k = fds[i]; md = O_RDONLY; goto fdchk;
                         case '>': k = fds[i]; md = O_WRONLY|O_APPEND; goto fdchk;
                         case '-': md = O_RDONLY; goto op;

@@ -361,7 +361,7 @@ found:; char *nm0 = ino_nm(0, id), *nm1 = ino_nm(1, id);
 	if (write(fd, txt, len)<0) goto err1; else close(fd);
 	ino_bv |= (1u<<j); ino_oid[j] = id; 
 	ino_epid[j] = edx ? (nm0[-1] = j+48, setenv("LF_ED_TMPF", nm0-1, 1),
-			     launch(xapp_name[0],"!)x1","-e",lf_ed, NULL), -1)
+			     launch(xapp_name[0],"!(x1","-e",lf_ed, NULL), -1)
 			  : launch(xapp_name[2], "!(TT", nm0, NULL);
 	return; // TODO: open ed
 err1:   return close(fd), LOG("ino_add:w: %s", strerror(errno));
@@ -403,7 +403,7 @@ static void ino_read() {
 /*** cmd **********************/
 static int start_con() {
 	static const char * sh = 0;
-	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xapp_name[0], "!)x1", "-e", sh, (char*)0)<0); }
+	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xapp_name[0], "!(x1", "-e", sh, (char*)0)<0); }
 
 static void con_started(char *s, int n) {
 	if (memcmp(s, "_c/proc/", 8)) return LOG("_: invalid path\"%s\"", s);
