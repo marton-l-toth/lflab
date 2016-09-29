@@ -6,4 +6,4 @@ if [[ "$1" != "-" ]]; then
 	/bin/sleep .5
 fi
 find /run/shm -type p -name A
-$HOME/lf.cmd.playback >>/run/shm/lf.*/A <$HOME/g/lflab/t/tc/t$2
+$HOME/lf.qp >>/run/shm/lf.*/A <$HOME/g/lflab/t/tc/t$2
