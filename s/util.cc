@@ -470,21 +470,26 @@ static void bit_rev_blk(double *re, int bits) { (bits>REV_S_BITS?rev_big1:rev_sm
 
 #define RE(J) ri[2*(J)]
 #define IM(J) ri[2*(J)+1]
-static void blk_add_im_0(double *ri, int bits) {
-	int i, j, k, n = 1<<bits;
-	for (i=(n-1)&~1023; i>0; i-=1024) for (j=0; j<1024; j++) k=i+j, RE(k) = ri[k], IM(k) = 0.0;
-	for (j=1023; j>=0; j--) RE(j) = ri[j], IM(j) = 0.0; }
 
-static void blk_add_im_1(double *ri, int bits) {
-	int j, n = 1<<bits; double *q = ri+n;
-	for (j=0; j<n; j++) RE(j) = q[j], IM(j)=0.0; }
+#define FFT_PASS12(P) double x00=P[j], x01=P[j+1], x02=P[j+2], x03=P[j+3], \
+ 	x0=x00+x01, x1=x00-x01, x2=x02+x03, x3=x02-x03; \
+	RE(j)   = x0+x2; IM(j)=0.0; RE(j+2) = x0-x2; IM(j+2) = 0.0;\
+	RE(j+1) = RE(j+3) = x1; IM(j+1) = x3; IM(j+3) = -x3
+
+static void fft_pass12_1(double *ri, int n) {
+	int j; double *q = ri + n; for (j=0; j<n; j+=4) { FFT_PASS12(q); }}
+
+static void fft_pass12_0(double *ri, int n) {
+	int i, j, k;
+	for (i=(n-1)&~4095; i>0; i-=4096) for (j=i,k=i+4096; j<k; j+=4) { FFT_PASS12(ri); }
+	for (j=4092; j>=0; j-=4) { FFT_PASS12(ri); }}
 
 #define ANG1_BITS 9
 #define ANG1_SIZ (1<<ANG1_BITS)
 static void fft2(double * ri, int n, bool reverse) {
 	Clock clk;   int m, m2, df = debug_flags & DFLG_PLOT2; if (df) clk.reset();
 	double oAr[2*ANG1_SIZ], *oAi=oAr+ANG1_SIZ, circ = reverse ? (-2.0*M_PI) : (2.0*M_PI);
-        for (m=2,m2=1; m<=n; (void)(df&&(log("fft2: %d/%d, t=%d", m,n,clk.reset()),1)),m2=m,m*=2) {
+        for (m=8,m2=4; m<=n; (void)(df&&(log("fft2: %d/%d, t=%d", m,n,clk.reset()),1)),m2=m,m*=2) {
 		int mm = m2-1;
 		double fi2, fi = circ / (double)m, o1i = sin(fi), o1r = cos(fi);
 		if (m2<=ANG1_SIZ) {
@@ -506,16 +511,15 @@ static void fft2(double * ri, int n, bool reverse) {
 					k = jk0 + k1; if (!(k&63)) fi2 = fi*(double)(k&mm), oR = cos(fi2), oi = sin(fi2);
 					double rel = RE(l=k+m2), iml = IM(l),
 					       tr = rel*oR - iml*oi, ti = iml*oR + rel*oi;
-					oAr[2*k1] = RE(k)-tr; oAr[2*k1+1] = IM(k)-ti; RE(k)+=tr; IM(k)+=ti; 
+					RE(l) = RE(k)-tr; RE(k)+=tr; IM(l)=IM(k)-ti; IM(k)+=ti;
 					double tR = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tR; }
-				memcpy(ri+2*(jk0+m2), oAr, 16*ANG1_SIZ);
 			}}}}}
 
 void fft(double * re_im, int bits, int flg) { // 1: high
 	int n = 1<<bits, df = debug_flags & DFLG_PLOT2, ofs = n &- (flg&1);
 	Clock clk; if (df) clk.reset();
 	bit_rev_blk(re_im+ofs, bits); if (df) log("fft/bitrev: %d", clk.reset());
-	(ofs?blk_add_im_1:blk_add_im_0)(re_im, bits); if (df) log("fft/add_im: %d", clk.reset());
+	(ofs?fft_pass12_1:fft_pass12_0)(re_im, n); if (df) log("fft/pass12: %d", clk.reset());
         fft2(re_im,n,0);
 }
 
