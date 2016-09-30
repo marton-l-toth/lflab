@@ -1,8 +1,3 @@
-#include "pt.h"
-#include "uc0.h"
-#include "util.h"
-#include "glob.h"
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
@@ -10,6 +5,11 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+
+#include "pt.h"
+#include "uc0.h"
+#include "util.h"
+#include "glob.h"
 
 #ifdef __SSE2__
 #include <xmmintrin.h>

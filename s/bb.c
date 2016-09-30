@@ -17,6 +17,7 @@
 #include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/inotify.h>
+#include <sys/mman.h>
 
 
 #define QWE_UTILC_DEF
@@ -647,7 +648,7 @@ static int ev4(char *to, int k) {
 	else if (k<2048) return sprintf(to, "%+d", k-1090), k-1090;
 	else if (k<4096) (k&=2047)<1000 ? sprintf(to, "j%d", k) 
 				        : (k/=100, sprintf(to, "j%ck%c",48+k/10,48+k%10));
-	else k&=4095, sprintf(to, "%d"+(k>999), k);
+	else k&=4095, sprintf(to, " %d"+(k>999), k);
 	return 0;
 }
 

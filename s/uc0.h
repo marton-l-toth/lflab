@@ -4,6 +4,11 @@
 #define FIFO_LIST "ptuxmskACT"
 #define N_XAPP 3
 
+static inline int    min_i(int    x, int    y) { return x<y ? x : y; }
+static inline double min_d(double x, double y) { return x<y ? x : y; }
+static inline int    max_i(int    x, int    y) { return x>y ? x : y; }
+static inline double max_d(double x, double y) { return x>y ? x : y; }
+static inline int ivlim(int x, int m, int M) { return x<m ? m : (x>M ? M : x); }
 static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
@@ -13,18 +18,19 @@ static inline int atoi_h(const char *s) { int r = 0, x = 0;
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 
 #define qh4rs(P) qh4r(*(const int*)(P))
+extern const unsigned char bitrev8[256];
 
 #ifndef QWE_UTILC_DEF
 extern volatile char vstring[16];
 extern char *xapp_env[N_XAPP], *xapp_dflt[N_XAPP];
 extern const char **xapp_ls[N_XAPP];
-extern const unsigned char bitrev8[256];
 void vstring_set(int i, int j);
 void d999(char *p, int v);
 int qh4(unsigned int x), qh4r(unsigned int x);
 void h5f(char *to, int x);
 const char * tpipe_name(int c);
 int launch(const char * exe, const char * iocfg, ...);
+void * map_wdir_shm(int c, size_t siz, int wrf);
 #else
 
 volatile char vstring[16];
@@ -35,7 +41,7 @@ static const char *xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-termina
 		  *ed_t_ls [] = { "nano", "vim", "vi", "emacs", 0 },
 		  *ed_x_ls [] = { "nedit", "xedit", "gvim", "gedit", "xemacs", 0 };
 const char **xapp_ls[N_XAPP] = {xterm_ls, ed_t_ls, ed_x_ls};
-extern const unsigned char bitrev8[256] = {
+const unsigned char bitrev8[256] = {
           0, 128,  64, 192,  32, 160,  96, 224,  16, 144,  80, 208,  48, 176, 112, 240,
           8, 136,  72, 200,  40, 168, 104, 232,  24, 152,  88, 216,  56, 184, 120, 248,
           4, 132,  68, 196,  36, 164, 100, 228,  20, 148,  84, 212,  52, 180, 116, 244,
@@ -94,6 +100,12 @@ const char * tpipe_name(int c) {
                 memcpy(path, s, ix); memcpy(path+ix, "/_\0", 4); ix++;
         }
         path[ix] = c; return path;
+}
+
+void * map_wdir_shm(int c, size_t siz, int wrf) {
+        static const int md[4] = { O_RDONLY, O_RDWR, PROT_READ, PROT_READ|PROT_WRITE };
+        const char * fnm = tpipe_name(c);   int fd = open(fnm, md[wrf&=1]);   void *r;
+        return (fd<0) ? MAP_FAILED : (r = mmap(NULL, siz, md[2+wrf], MAP_SHARED, fd, 0), close(fd), r);
 }
 
 // (iocfg-a*: (|)|. :none <|>:int* -|*|=|+->const char*) a1 a2 ... (char*)NULL 

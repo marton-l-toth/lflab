@@ -21,11 +21,6 @@ typedef struct _chtab {
 	int n;
 } chtab;
 
-static inline int    min_i(int    x, int    y) { return x<y ? x : y; }
-static inline double min_d(double x, double y) { return x<y ? x : y; }
-static inline int    max_i(int    x, int    y) { return x>y ? x : y; }
-static inline double max_d(double x, double y) { return x>y ? x : y; }
-static inline int ivlim(int x, int m, int M) { return x<m ? m : (x>M ? M : x); }
 static inline void clearbuf(double *p, int n) { double *p1=p+n; while(p<p1) *(p++) = 0.0; }
 static inline const char * str0(const char *s) { return s?s:"(null)"; }
 static inline double cut300(double x) { return fabs(x)>=1e-300 ? x : 0.0; }
