@@ -23,6 +23,19 @@
 #define QWE_UTILC_DEF
 #include "uc0.h"
 
+/*** input buf (io, wrk) ******/
+typedef void (*lfun)(char *, int, int);
+typedef struct { int fd, siz, cont, arg; lfun lf; char * p; } ibuf;
+
+static int ib_read(ibuf * b) { // -1:unixerr -2:zero_ret -3:frag_discard -4:no_fd
+	if (b->fd<0) return -4;
+	char *q, *ql, *p = b->p;
+	int ag = b->arg, sz = b->siz, r = read(b->fd, p + b->cont, sz - b->cont); if (r<1) return -1-!r;
+	for (q=p+b->cont, ql=q+r; q<ql; q++) if (*q==10) (*b->lf)(p,q-p,ag), p = q+1;
+	int k = b->cont = q-p; 
+	return k ? ( (4*k>3*sz) ? (b->cont=0, -3) : (memmove(b->p, p, b->cont), 0) ) : 0;
+}
+
 //// auconv /////////////////////////////////////////////////////////////////
 
 volatile int flacpid = 0;
@@ -161,17 +174,26 @@ int e_main() { /* editor */
 			 			  : (perror(cnm),1)); }}
 
 /**************** log i/o ****************************************************/
-
+#define N_IBUF 9
+#define LOG LOG_io
+static void LOG_io(const char * fmt, ...), bye(int kf), log_l(char*,int,int), cmd_l(char*,int,int);
 volatile int chld_flg = 0;
 static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1, wrkdir_l = 0,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0, dflg = 0;
-static char xapp_nbuf[N_XAPP*256];
 static const char *xapp_name[N_XAPP], *wrkdir, *lf_ed;
 static unsigned int ino_bv = 0u;
 static int ino_epid[32], ino_oid[32], ino_fd = -1;
-static char ino_inm[80];
-
-static void LOG(const char * fmt, ...), bye(int kf);
+static char ino_inm[80], logbuf[16384], bigbuf[0x8000], xapp_nbuf[N_XAPP*256];
+static int log_ix = 0, log_ox = 0, log_flg = 0;
+static ibuf ib[9] = {{ 0, 3072, 0, 0,   &cmd_l, bigbuf},
+		     {-1, 4096, 0, '.', &log_l, bigbuf+0x0c00},
+		     {-1, 1024, 0, 'C', &cmd_l, bigbuf+0x1c00},
+		     {-1, 4096, 0, 'p', &log_l, bigbuf+0x2000},
+		     {-1, 4096, 0, 't', &log_l, bigbuf+0x3000},
+		     {-1, 4096, 0, 'u', &log_l, bigbuf+0x4000},
+		     {-1, 4096, 0, 'x', &log_l, bigbuf+0x5000},
+		     {-1, 4096, 0, 'k', &log_l, bigbuf+0x6000},
+		     {-1, 4096, 0, 's', &log_l, bigbuf+0x7000}};
 
 static void ts_9(char *to) {
         static time_t sec = 0; static char sbuf[8] = {48,48,48,48,48,46,0,0};
@@ -259,9 +281,6 @@ static void close_all() {
 	int i,n; for (i=0, n = (int)rlim.rlim_cur; i<n; i++) close(i); }
 
 /*** output buf ***************/
-static char logbuf[16384];
-static int log_ix = 0, log_ox = 0, log_flg = 0;
-
 static void con_end() { if (con_stat) kill(con_stat,9),con_stat=0; if (msg_fd>=0) close(msg_fd),msg_fd=-1; }
 
 static void log_sn(const char *s, int n, int conpfx) {
@@ -401,7 +420,7 @@ static void ino_read() {
                 int l = INEV_SIZ + ev->len; if ((r-=l)<=0) return; else s+=l;
         }}
 
-/*** cmd **********************/
+/*** cmd/io_ibuf **************/
 static int start_con() {
 	static const char * sh = 0;
 	return -((!sh && !(sh = getenv("LF_CON"))) || launch(xapp_name[0], "!(x1", "-e", sh, (char*)0)<0); }
@@ -435,42 +454,20 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 
-/*** input buf ****************/
-typedef void (*lfun)(char *, int, int);
-typedef struct { int fd, siz, cont, arg; lfun lf; char * p; } ibuf;
+static void io_ib_read(ibuf *b) {
+	int ec = ib_read(b); if (!ec) return;
+	if (ec<-2) return LOG("ib_read: %s", "no file\0fragment discarded"+8*(ec&1));
+	const char *es = (ec&1) ? strerror(errno) : "zero returned";
+	int ag = b->arg, rof = (errtemp+=10)<99;
+	close(b->fd); if (ag<65) return b->fd=-1, LOG("pipe(%c): %s -- bye", ag?ag:48, es), shutdn(2+2*!!ag);
+	LOG("logpipe(%c): %s, eT=%d -- %s", ag, es, errtemp, rof?"reopening":"giving up"); if (!rof) return;
+	b->fd = open(tpipe_name(ag), O_RDWR); LOG("logpipe(%c): reopen: %s", b->fd<0 ? strerror(errno):"OK");
+}
 
-#define N_IBUF 9
-char bigbuf[0x8000];
-static ibuf ib[9] = {{ 0, 3072, 0, 0,   &cmd_l, bigbuf},
-		     {-1, 4096, 0, '.', &log_l, bigbuf+0x0c00},
-		     {-1, 1024, 0, 'C', &cmd_l, bigbuf+0x1c00},
-		     {-1, 4096, 0, 'p', &log_l, bigbuf+0x2000},
-		     {-1, 4096, 0, 't', &log_l, bigbuf+0x3000},
-		     {-1, 4096, 0, 'u', &log_l, bigbuf+0x4000},
-		     {-1, 4096, 0, 'x', &log_l, bigbuf+0x5000},
-		     {-1, 4096, 0, 'k', &log_l, bigbuf+0x6000},
-		     {-1, 4096, 0, 's', &log_l, bigbuf+0x7000}};
-
-static void ib_init(int mlog_fd) {
+static void io_ib_init(int mlog_fd) {
 	if ((ib[1].fd = mlog_fd)&0xffff8000) LOG("mlog_fd = %d", mlog_fd); 
 	int i; for (i=2; i<N_IBUF; i++) if ((ib[i].fd = open(tpipe_name(ib[i].arg), O_RDWR))<0)
 		LOG("cannot open log pipe '%c': %s", ib[i].arg, strerror(errno));
-}
-
-static void ib_read(ibuf * b) {
-	if (b->fd<0) return;
-	char *q, *ql, *p = b->p;
-	int ag = b->arg, sz = b->siz, r = read(b->fd, p + b->cont, sz - b->cont);
-	if (r<1) { LOG("inpipe(%c): %s", ag?ag:48, r?strerror(errno):"zero returned");
-		   if (ag<65) { close(b->fd); b->fd = -1; shutdn(2+2*!!ag); return; }
-		   LOG("logpipe fail, errtemp=%d", errtemp);
-		   if (errtemp<99) errtemp+=10, close(b->fd),
-			           b->fd = open(tpipe_name(ag), O_RDWR);
-		   return; }
-	for (q=p+b->cont, ql=q+r; q<ql; q++) if (*q==10) (*b->lf)(p,q-p,ag), p = q+1;
-	if (p==q) { b->cont = 0; return; }
-	if (4*(b->cont=q-p)>3*sz) LOG("line len>%d, thrown away...", b->cont), b->cont = 0;
-	else memmove(b->p, p, b->cont);
 }
 
 /*** main *****/
@@ -498,7 +495,7 @@ int i_main(int ac, char ** av) {
 	if (!(lf_ed=getenv("LF_ED"))) fail("ed-wrap");
 	ino_ini();
 	for (i=0; i<N_XAPP; i++) if (!(xapp_name[i] = getenv(xapp_env[i]))) xapp_name[i] = xapp_dflt[i];
-	ib_init(   ac<2 ? -1 : qh4r(*(int*)av[1]));
+	io_ib_init(ac<2 ? -1 : qh4r(*(int*)av[1]));
 	killer_fd = (ac<3||*av[2]<48) ? 0 : qh4r(*(int*)av[2]);
 	der_alte = ac<4 ? getppid() : qh4r(*(int*)av[3]);
 	fd_set rset; struct timeval tv;
@@ -513,7 +510,7 @@ int i_main(int ac, char ** av) {
 		shutdn(0);
 		if(!r){ if ((errtemp -= 20)<0) errtemp = 0;  continue; }
 		if ((errtemp -= r)<0) errtemp = 0;
-		FOR_IB if (FD_ISSET(k, &rset)) ib_read(ib+i);
+		FOR_IB if (FD_ISSET(k, &rset)) io_ib_read(ib+i);
 		if (FD_ISSET(ino_fd, &rset)) ino_read();
 	}}
 
