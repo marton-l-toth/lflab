@@ -1826,6 +1826,8 @@ static int tx_box_split_c(cairo_t * cr, int x, int y, int w, int h, int h0, cons
 #define DACLR4(w,i) RGB_C((w)->arg[4].c[i])
 #define DABOOL(w) ( (w)->arg[3].c[0] )
 #define DALBL_TXT(x) ((x)->arg[2].c)
+#define DACLB_ARG(x) ((x)->arg[3].i[0])
+#define DACLB_FLG(x) ((x)->arg[3].i[1])
 
 static const char * daerr_txt(int i, int j);
 static void dalbl_draw(ww_t * ww, cairo_t * cr2) {
@@ -1866,7 +1868,7 @@ static void daclb_draw(ww_t * ww, cairo_t * cr2) {
 	char *q, *s = ww->etc, buf[32];
 	if (!memcmp(s, "@@@", 4)) { s=buf; strcpy(s,"n/m/upuiAhnbjm/dpn"); for (q=s; *q; q++) --*q; } 
 	RGB_C3(cr2, ww->arg[2].c+3); cairo_paint(cr2); RGB_C3(cr2, ww->arg[2].c);
-	if (DABOOL(ww)) tx_box_split_c (cr2, 1, 1, DA_W(ww)-1, DA_H(ww)-1, conf_lbfs, s);
+	if (DACLB_FLG(ww)&1) tx_box_split_c (cr2, 1, 1, DA_W(ww)-1, DA_H(ww)-1, conf_lbfs, s);
 	else tx_box (cr2, 2, 2, DA_W(ww)-4, DA_H(ww)-4, conf_lbfs, s);
 	if (s==buf) memset(s, 0, 32);
 	da_frame(ww, cr2);
@@ -1970,17 +1972,17 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 	char buf[256]; int force = 0;
 	if (**pp=='!') force=1, ++*pp;
 	if (!memcmp(*pp, "==> ", 4)) {
-		memcpy(ww->arg[2].c, "Azz666_", 6); ww->arg[3].i[0] = -1;
+		memcpy(ww->arg[2].c, "Azz666_", 6); DACLB_ARG(ww) = -1;
 	} else if (**pp=='('&&!(flg&8)) { 
 		++*pp; int x = 0; while (**pp&80) x = 16*x+hxd2i(**pp), ++*pp;
-		ww->arg[3].i[0] = x; if (**pp==')') ++*pp;
-	} else { ww->arg[3].i[0] = 0; }
+		DACLB_ARG(ww) = x; if (**pp==')') ++*pp;
+	} else { DACLB_ARG(ww) = 0; }
 	if (**pp==',') ++*pp; else if (!(flg&2)) memcpy(ww->arg[2].c, *pp, 6), *pp += 6;
 	int l = get_tok(buf, 256, pp, ((flg&1)<<7)+36);
 	if (l) ++l; else buf[0]=32, buf[1]=0, l=2;
 	ww->etc = realloc(ww->etc, l); memcpy(ww->etc, buf, l);
-	if (ww->arg[3].i[0]<0) {
-		int l2 = 0; while (buf[l2] && memcmp(buf+l2, " -- ", 4)) ++l2; ww->arg[3].i[0] = -l2; }
+	if (DACLB_ARG(ww)<0) {
+		int l2 = 0; while (buf[l2] && memcmp(buf+l2, " -- ", 4)) ++l2; DACLB_ARG(ww) = -l2; }
 	if (force) {
 		if (buf[0]!='.') { LOG("daclb_set: path begins with 0x%x", buf[0]); return; }
 		int j; for (j=l-1; buf[j]!='.'; j--) ;
@@ -1991,7 +1993,7 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
 }
 
 static void daclb_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	int k = ww->arg[3].i[0]; if (!k) return;
+	int k = DACLB_ARG(ww); if (!k) return;
 	if(k<0){char * q = (char*)ww->etc; int c = q[-k]; q[-k] = 0;
 		CMD("W%s%s", (q[4]=='.')?"":".!b.?.", q + 4); q[-k] = c; return; }
 	int tid = ww->top->id, f = (k==(tid>>4));
@@ -2008,7 +2010,7 @@ static void daclb_cmd(struct _ww_t * ww, const char * arg) {
 }
 
 static void daclb_skel(struct _ww_t * ww, const char **pp) {
-	int f2 = DABOOL(ww) = (**pp=='/' && ++*pp);
+	int f2 = DACLB_FLG(ww) = (**pp=='/' && ++*pp);
 	int w = get_dec(pp, 36), w2 = 0;
 	int h = get_dec(pp, 36);
 	if (h<2) w2 = h, h = f2 ? 2*conf_lbh-6 : conf_lbh;

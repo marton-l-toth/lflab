@@ -422,17 +422,22 @@ int ANode::get_path(char* to, int max) {
 }
 
 int ANode::get_path_uf(char * to, int max) {
-        if (max<NODE_NAME_LEN+3) return 0;
-        int r = get_path_2(to, max);
-        if (!r) return *to='.', 1;
-        if (!(r & (1<<30))) return r;
-        char nm[24]; int l = get_name(nm);
-        memcpy(to+max-l-3, "...", 3);
-        memcpy(to+max-l, nm, l);
-        return max;
+	ANode *rt = root(), *nd = this;
+	if (nd==rt) return *to='.', 1;
+	if (max<44) return max = min_i(max,6), memcpy(to, "BUG44!", max), max;
+	char nm[24]; int k = --max;
+	while (1) {
+		if (!nd) return memcpy(to, "BUG!!!", 6), 6;
+		int n1 = nd->get_name(nm);
+		if (n1>=k) { if (nd->m_up==rt) break; else if (k>5) memcpy(to+5, nm+(n1-k+5), k-5);
+			     do nd=nd->m_up; while (nd->m_up!=rt);   break; }
+		memcpy(to+(k-=n1), nm, n1), to[--k] = '.';
+		if ((nd=nd->m_up)==rt) return k ? (memmove(to, to+k, max-=k), max) : max;
+	}
+	to[0] = '.'; memcpy(to+1+nd->get_name(to+1),"...",3); return max;
 }
 
-const char * ANode::path255() { static char s[256]; s[get_path_uf(s,255)] = 0; return s; }
+const char * ANode::path255(int l) { static char s[256]; s[get_path_uf(s,l&255)] = 0; return s; }
 
 int ANode::get_path_2(char* to, int max) {
         if (!m_up) return 0;
@@ -1113,7 +1118,7 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 	switch(*s) {
 		case 'D': case 'E': {
 			char buf[4096]; buf[0]='h'; buf[1]=*s; h5f(buf+2, m_id); buf[7]='.';
-			int l = 9+get_path_uf(buf+8,120); buf[l-1] = '$';
+			int l = 9+get_path_uf(buf+8,70); buf[l-1] = '$';
 			l += m_ui.ro()->dump_dsc(buf+l,0);
 			buf[l++] = 10; return pt_iocmd_sn(buf, l); }
 		case 'Q': {
