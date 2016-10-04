@@ -2,9 +2,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
-#include "cmd.h"
 #include "glob.h"
-#include "gp.h"
+#include "pt.h"
+#include "cmd.h"
 #include "guistub.h"
 #include "mx.h"
 #include "util.h"
@@ -429,8 +429,7 @@ class AWrapGen : public BoxGen {
 			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
 		int save2_aw(SvArg * sv);
 		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(v_rgb(),6); }
-		int plot_t(double t0, double t1, int n, int flg);
-		int plot_f(double t0, double t1, double f0, double f1, int n, int flg);
+		int plot_tf(double t0, double t1, int flg);
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
 			return (k=add2mx_txdlv(r,f,0,INT_MAX,0))<0 ? (mx_del(r),k) : r; }
 		int qcopy(int tf, int nof) { return tf ? trk_glob_paste(this, nof)
@@ -1615,78 +1614,22 @@ int AWrapGen::batch_calc(double *to0, double *to1, int skip, int n, int nch) {
 	mx_del(mxid); if (DBGC) log("batch_mono: %d", clk.get()); return nzch;
 }
 
-int AWrapGen::plot_t(double t0, double t1, int n, int flg) {
-	if (DBGC) log("plot_t: %.15g %.15g %d f:%d", t0, t1, n, flg);
+int AWrapGen::plot_tf(double t0, double t1, int flg) {
         int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f7 = flg&7;
-        if (len<1) return log("plot_t: length = %d samples, sorry.", len), BXE_RANGE;
-	if (DBGC) log("plot_t: n=%d, i0=%d, len=%d", n, i0, len);
-	double *res = (double*)malloc(8*(f7?2*len:len)); // TODO: stop wasting memory
-	int k, r = batch_calc(res, f7?res+len:0, i0, len, 0);
+	if (DBGC) log("plot_tf: [%.15g ... %.15g] -> [%d %d] l=%d flg=0x%x", t0, t1, i0, i1, len, flg);
+        if (len<1) return log("plot_tf: length = %d samples, sorry.", len), BXE_RANGE;
+	int siz = 64, bits = 6, samp_bits = 20 + CFG_PLOT_XSIZ.i, samp_lim = 1<<samp_bits;
+	if (len>samp_lim) { log("plot_tf: len cut to %g", sample_length*(double)samp_lim);
+			    siz = len = samp_lim, bits = samp_bits; }
+	else 		  { while (len>siz) siz+=siz,++bits;   if ((flg&12)==8) len=siz; }
+	double *to = pt_samp_shm(bits); if (!to) return EEE_SHM; log("samp_shm: len=%d, bits=%d", len, bits);
+	// TODO: qstat
+	int k, r = batch_calc(to, f7?to+siz:0, i0, len, 0);
 	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
-	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), flg = f7 = 0;
-        if (len <= n) {
-		qstat.store(res, f7?2*len:len);
-                PlotPar_arr par0(res, len, t0, t1), par1(res+len, len, t0, t1);
-		if (f7<3) k=1, Gnuplot::sg()->setfun1(0, arrfun1, f7==2 ? &par1:&par0, 0, "out\0L\0  R"+4*f7);
-		else      k=3, Gnuplot::sg()->setfun1(0, arrfun1, &par0, 0, "L"),
-			       Gnuplot::sg()->setfun1(1, arrfun1, &par1, 0, "R");
-		return Gnuplot::sg()->plot1(k, t0, t1, len), 0;
-        } else {
-		int nst = (0x62333>>(4*f7))&7; if (!nst) return BXE_PARSE;
-		PlotPar_arr par[nst]; double st[n*nst]; const char * spt;
-		if (f7<3) samp_stat(f7==2?res+len:res, len, n, 0, 0.0, st+n,st+2*n,st),
-			  spt="avg\0min\0max\0agL\0mnL\0mxL\0agR\0mnR\0mxR\0"+12*f7;
-		else if (f7==3) samp_stat(res,     len, n, 0, 0.0, 0,0, st), spt="agL\0agR",
-				samp_stat(res+len, len, n, 0, 0.0, 0,0, st+n);
-		else samp_stat(res,     len, n, 0, 0.0, st+2*n, st+4*n, st),
-		     samp_stat(res+len, len, n, 0, 0.0, st+3*n, st+5*n, st+n),
-		     spt="agL\0agR\0mnL\0mnR\0mxL\0mxR";
-		if (!f7) qstat.store(st+n, n); else if (f7==3) qstat.store(st, 2*n);
-		for (int i=0; i<nst; i++) par[i].s(st+i*n, n, t0, t1),
-				          Gnuplot::sg()->setfun1(i, arrfun1, par+i, 0, spt+4*i);
-		return Gnuplot::sg()->plot1((1<<nst)-1, t0, t1, n), 0;
-	}
-	free(res);
-}
-
-int AWrapGen::plot_f(double t0, double t1, double f0, double f1, int n, int flg) {
-	if (DBGC) log("plot_f: %.15g %.15g %.15g %.15g %d %d", t0, t1, f0, f1, n, flg);
-        int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f3 = flg&3;
-        if (len<1) return log("plot_f: length = %d samples, sorry.", len), BXE_RANGE;
-        int siz = 64, bits = 6, samp_bits = 20 + CFG_PLOT_XSIZ.i, samp_lim = 1<<samp_bits;
-        if (len>samp_lim) { log("plot(F): len cut to %g", sample_length*(samp_lim));
-			   siz = len = samp_lim, bits = samp_bits; }
-	else 		 { while (len>siz) siz+=siz,++bits;   if (!(flg&4)) len=siz; }
-        double *ri = (double*)malloc(16*siz);
-	int r = batch_calc(ri, f3?ri+siz:0, i0, len, 0), f2 = (f3&r&2)>>1;
-	log("plot_f: f3=%d, f2=%d", f3, f2);
-	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
-	if (len<siz) memset(ri+(siz&-f2)+len, 0, 8*(siz-len));
-	Clock clk; clk.reset(); fft(ri, bits, f2); int fft_t = clk.get();
-	int fmx = -1; double fmv = -1.0;
-        for (int i=0; i<=siz/2; i++) // TODO: phase
-                if ((ri[i] = sqrt(ri[2*i]*ri[2*i] + ri[2*i+1]*ri[2*i+1]))>fmv) fmv = ri[i], fmx = i;
-	log("plot_f: (max@Hz) %s%.9g  t=%d", DEBUG_UTXT(15), (double)fmx / (double)siz * (double)sample_rate,
-					     fft_t);
-        int ix0 = (int)round(f0 * sample_length * (double)(siz));
-        int ix1 = (int)round(f1 * sample_length * (double)(siz));
-        if (ix1<siz-1) ++ix1;
-        int n0 = ix1 - ix0;
-        if (n > n0) n = n0;
-	if (n<2 || n0<2) return log("plot_f: n=%d, n0=%d", n, n0), BXE_RANGE;
-        bool statflg = (n < n0);
-        double stat[ (statflg ? 3 : 2) * n ];
-        samp_stat(ri+ix0, n0, n, false, 0.0, 0, 0, stat);
-	qstat.store(stat, n);
-        samp_stat(ri+ix0, n0, n, true, 55.0, 0, statflg ? stat+2*n : 0, stat+n);
-        PlotPar_arr p_avg(stat, n, f0, f1);
-        PlotPar_arr p_lavg(stat+n, n, f0, f1);
-        PlotPar_arr p_lmax(stat+2*n, n, f0, f1);
-        Gnuplot::sg()->setfun1(0, arrfun1, &p_avg, 0, "avg\0lft\0rgt\0BUG\0A/z\0L/z\0R/z\0BUG"+4*flg);
-        Gnuplot::sg()->setfun1(1, arrfun1, &p_lavg, 1, "lavg");
-        if (statflg) Gnuplot::sg()->setfun1(2, arrfun1, &p_lmax, 1, "lmax");
-        Gnuplot::sg()->plot1(statflg ? 7 : 3, f0, f1, n);
-        free(ri); return 0;
+	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), f7 = 0, flg &= 8;
+	char buf[96]; k = sprintf(buf, "gs%c%c,%x,", hexc1(flg), 48+bits, len); 
+	k += m_node->get_path_uf(buf+k, 63); buf[k++]=10;
+	return pt_wrk_cmd(buf, k);
 }
 
 #define CH(X) BXCMD_H(AWrapGen, X)
@@ -1705,13 +1648,12 @@ CH(tf){	float *q = p->core_rw()->tf01; int flg = s[1]; double x; s += 2;
 	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
 	return 0; }
 
-CH(pl){	if (s[1]<58) return p->key_op(11, s[1]-48, 0, cb->cnof());
-	if (s[1]=='P') return p->add2mx_txdlv(0,0,0,INT_MAX,0);
-	const float * q = p->core_ro()->tf01; switch(s[1]) {
-		case 'T': return p->plot_t(q[0], q[1], 		   512, s[2]&7);
-		case 'F': return p->plot_f(q[0], q[1], q[2], q[3], 512, s[2]&7);
-		default: return BXE_CENUM;
-}}
+CH(pl){	int c = s[1]; if (c<58) return p->key_op(11, c-48, 0, cb->cnof());
+	switch(c){ case 'P': return p->add2mx_txdlv(0,0,0,INT_MAX,0);
+		   case 'T': case 'F': {
+			const float *q = p->core_ro()->tf01;
+			return p->plot_tf(q[0], q[1], (s[2]&7)+4*(c&2)); }
+		   default:  return BXE_CENUM; }}
 
 CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 
 			   : p->wlg(p->m_node->wdat_raw(), s[1]&3, (8+(s[1]&4))<<20); }

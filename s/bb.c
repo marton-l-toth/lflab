@@ -227,7 +227,8 @@ static void shutdn(int ev) {
 	if (st>=0) bye(st);
 }
 
-static void del_n_log(const char *s, int f){ if ((f?rmdir:unlink)(s)<0) LOG("del %s: %s",s,strerror(errno));}
+static void del_n_log(const char *s, int f, int e) {
+	if ((f?rmdir:unlink)(s)<0 && errno != e) LOG("del %s: %s",s,strerror(errno));}
 static void rm_r(const char * dn) {
 	DIR * dir = opendir(dn); if (!dir) return LOG("rm_r: opendir: %s\n", strerror(errno));
 	struct dirent * ent;  
@@ -235,9 +236,9 @@ static void rm_r(const char * dn) {
 	while ((ent = readdir(dir))) {
 		const char * s = ent->d_name; 
 		if (*s=='.' && (!s[1] || (s[1]=='.'&&!s[2]))) continue;
-		strncpy(buf+l0, s, 1024); del_n_log(buf, 0);
+		strncpy(buf+l0, s, 1024); del_n_log(buf, 0, 0);
 	}
-	buf[l0] = 0; del_n_log(buf,1);
+	buf[l0] = 0; del_n_log(buf,1,0);
 }
 
 static void search_and_destroy(int kfd) {
@@ -271,9 +272,10 @@ static void del_workdir() {
         const char *s, *s0 = wrkdir;  int l0 = wrkdir_l;
 	ino_inm[l0+4] = ino_inm[l0+44] = 0; rm_r(ino_inm+1); rm_r(ino_inm+41);
         char buf[l0+16]; memcpy(buf, s0, l0); buf[l0] = '/'; buf[l0+2] = 0;
-        for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0);
-        memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0);
-        buf[l0] = 0; del_n_log(buf, 1);
+        for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0, 0);
+        for (s="+,"     ; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0, ENOENT);
+        memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0, 0);
+        buf[l0] = 0; del_n_log(buf, 1, 0);
 }
 
 static void close_all() {
@@ -688,45 +690,61 @@ static int t_main(int ac, char ** av) {
 
 #undef LOG
 #define LOG LOG_wrk
-#define LOG_E(S,X) LOG_wrk("%s: error %d, unix err: %s", (S), (X), strerror(errno));
+#define LOG_E(S,X) LOG_wrk(NULL, (X), errno, (S))
 #define GP_SAMPSIZ 2048
+#define GP_RGB(J) ( gp_rgb + 8 * ((gp_u_perm7>>(4*(J)-4)) & 7) )
+#define GP_N_CMDK (sizeof(gp_cmd_key)/sizeof(char*))
 
 typedef int (*gp_statfun)(int, int);
 typedef int (*gp_ls_fun)(char *to, const double *x, const double *y, int n);
 
-static void LOG_wrk(const char * fmt, ...) {
-        char buf[1024]; va_list ap; va_start(ap, fmt);
-        int r = vsnprintf(buf, 1023, fmt, ap); va_end(ap); if (r<0) return;
-	buf[r] = 10; write(2, buf, r+1);
-}
+static void LOG_wrk(const char * fmt, ...), wrk_cmd_l(char*,int,int);
 static int statf_null() { return LOG("statf_null called!"), 0; }
 static gp_statfun gp_cur_statfun = &statf_null;
 static double * samp2gplot = NULL;
-static double * shm_gp_samp;
 static int gp_inpipe = -1, gp_outpipe = -1, gp_pid = 0, gp_w_id = 0, gp_len = 0,
-	   gp_res_22 = 4, gp_u_msk = 0, gp_u_lr = 0, gp_u_clr = 0;
+	   gp_res22 = 4, gp_u_msk = 0, gp_u_lr = 0, gp_u_perm7 = 0x6543210;
 static double gp_ctr = 0.5, gp_rad = 0.5;
 static char gp_w_title[64], gp_f_title[64];
-static const char gp_rgb[] = "#000000\0#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#808080";
+static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000";
 static int gp_tlog_n = 0, gp_tlog_siz = 0, *gp_tlog = NULL;
 static double * gp_ptf_dat = 0;
-static int gp_ptf_siz, gp_ptf_bits, gp_ptf_2ch;
+static int gp_ptf_siz, gp_ptf_bits, gp_ptf_flg;
 
 static void wbye(int j) { LOG("bye %d", gp_pid); if (gp_pid>0) kill(gp_pid,9); exit(j); }
-static inline int gp_res() { return (128+(53&-(gp_res_22&1))) << (gp_res_22>>1); }
+static inline int gp_res() { return (128+(53&-(gp_res22&1))) << (gp_res22>>1); }
 
+static char wrk_cb_s[1024];
+static ibuf wrk_cb = { 0, 1024, 0, 0, &wrk_cmd_l, wrk_cb_s };
+#define GP_CKY17(J) "gbf" #J "\0" #J , "gbs" #J "\0ctrl-" #J
+static const char * gp_cmd_key[] = {"gmX4\0#Left", "gmx4\0#Right", "gmc4\0#Down", "gmC4\0#Up", "gc\0c",
+	"gmX@\0&#Left", "gmx@\0&#Right", "gm0\0^#Left", "gm1\0^#Right", "gmX1\0#End", "gmx1\0#PageDown",
+	"gm*\0^#Down", "gm+\0^#Up", "gm<4\0#Home", "gm>4\0#PageUp", "gr-\08", "gr+\09",
+	GP_CKY17(1), GP_CKY17(2), GP_CKY17(3), GP_CKY17(4), GP_CKY17(5), GP_CKY17(6), GP_CKY17(7) };
+
+static void LOG_wrk(const char * fmt, ...) {
+        char buf[1024]; int k,r; va_list ap; va_start(ap, fmt);
+	if (fmt) r = vsnprintf(buf, 1023, fmt, ap); 
+	else if ((r = va_arg(ap,int))>=0) return va_end(ap);
+	else k = va_arg(ap,int), fmt = va_arg(ap,const char*),
+	     r = snprintf(buf, 1023, "%s: ec=%d ue: %s", fmt, r, strerror(k));
+        va_end(ap); if (r>=0) buf[r] = 10, write(2, buf, r+1);
+}
+//// w/gnuplot /////
 static int gp_start() {
 	static const char ini[] = "set style data line\nset autoscale fix\n"
-		"set y2tics nomirror format \"%g\"\nbind c 'print \"%8K^q!\"'\n";
-	static const char *dir[4] = {"Up", "Left", "Down", "Right"},
-		     	  *mod[3] = {"", "ctrl-", "alt-"};
+		"set y2tics nomirror format \"%g\"\n"; // "bind c 'print \"%8K^q!\"'\n";
         if (gp_pid>0) return -1;
 	if ((gp_pid = launch("gnuplot", "!><1", &gp_inpipe, &gp_outpipe, (char*)0)) < 0) return -2;
 	if ((gp_inpipe|gp_outpipe)<0) return -3;
 	int i; char buf[4096], *q = buf + sizeof(ini)-1; memcpy(buf, ini, sizeof(ini)-1);
-	for (i=0; i<12;i++) q+=sprintf(q, "bind '%s%s' \"print \\\"%%8K^q%c\\\"\"\n",mod[i>>2],dir[i&3],35+i);
-	for (i=0; i<9; i++) q += sprintf(q,      "bind '%c' 'print \"%%8K^q%c\"'\n", i+49, i+49);
-	for (i=0; i<7; i++) q += sprintf(q, "bind 'ctrl-%c' 'print \"%%8K^q%c\"'\n", i+49, i+65);
+	for (i=0;i<GP_N_CMDK; i++) { 
+		const char *s = gp_cmd_key[i];  while (*++s); ++s;
+		int j, kf = 0; for (j=0;j<3;j++) if (*s=="^&#"[j]) ++s, kf |= (1<<j);
+		const char *mod = "\0(==#==)ctrl-\0__alt-\0___BUG" + 8*(kf&3);
+		q +=		sprintf(q,"bind '%s%s' 'print \"%%8K^q%c\"'\n", mod, s, i+40);
+		if(kf&4) q+= sprintf(q,"bind '%sKP_%s' 'print \"%%8K^q%c\"'\n", mod, s, i+40);
+	}
 	if (write(gp_inpipe, buf, q-buf) != q-buf) return -4;
         return 0;
 }
@@ -745,8 +763,7 @@ static int gp_binplot(int n, int flg) {
 			int i,k,rgt=!!(y2f&(1<<j)); char b4[8];
 			for (i=1;i<8;i++) k=(i==(int)j), memcpy(q, "%*double%double"+8*k, 8), q+=8-k;
 			b4[2-2*rgt]=0; b4[1+rgt]='|'; b4[3*rgt]=48+j; b4[4]=0;
-			q += sprintf(q, "' title '%s%s%s' lc rgbcolor '%s'", 
-					b4, gp_f_title+8*j, b4+2, gp_rgb+8*((j+gp_u_clr)&7));
+			q += sprintf(q,"' title '%s%s%s' lc rgbcolor '%s'", b4,gp_f_title+8*j,b4+2, GP_RGB(j));
 			if (rgt) memcpy(q," axes x1y2",10), q+=10;  }
 	*(q++)='\n'; return write(gp_inpipe, buf, q-buf) == (q-buf) ? 0 : -1;
 }
@@ -758,7 +775,12 @@ static int gp_plot(int d) {
 	    jz = ivlim((int)lround(dc+dr), j0+1, gp_len);
 	return gp_binplot(-1,(*gp_cur_statfun)(j0, jz)); }
 
-///// tlog ///////////////////////////////////////////////////////
+static void gp_rgb_shuffle() {
+	int i, j, k, i4, j4, x, r = random(), v = gp_u_perm7;
+	for (i=0; i<6; i++) k = 7-i, j=r%k, r/=k, i4=4*i, j4=4*j, x=((v>>i4)^(v>>j4))&7, v^=((x<<i4)|(x<<j4));
+	gp_u_perm7 = v; }
+
+///// w/tlog ////
 static int gp_tlog_t(int ix) {  int i, i6 = ix>>6, t = gp_tlog[gp_tlog_n + i6];
 				for (i=64*i6; i<ix; i++) t += gp_tlog[i]&262143;   return t; }
 
@@ -795,7 +817,84 @@ static int gp_tlog_read(const char *fname) {
 	gp_cur_statfun = &gp_statf_tlog; return 0;
 }
 
-///// plot(t/F) //////////////////////////////////////////////////
+///// w/fft ////////
+inline unsigned int bit_rev(unsigned int n, int bits) {
+        return ( (unsigned int)bitrev8[n>>24] + ((unsigned int)bitrev8[(n>>16)&255]<<8) +
+                ((unsigned int)bitrev8[(n>>8)&255]<<16) + ((unsigned int)bitrev8[n&255]<<24) ) >> (32-bits); }
+
+#define REV_S_BITS 5
+#define REV_S_BLK (1<<REV_S_BITS)
+#define REV_XC1 (t=re[y],re[y]=re[x],re[x]=t)
+
+static void rev_small1(double *re, int bits) {
+        int x, y, n = 1<<bits;  double t; for (x=0; x<n; x++) if ((y=bit_rev(x, bits))>x) REV_XC1; }
+
+static void rev_big1(double *re, int bits) {
+        int lo, hi, mi, n = 1<<bits, lhbits = (bits+1-REV_S_BITS)>>1, mbits = bits - 2*lhbits,
+            x,y,nlo = 1<<lhbits, hstep = 1<<(lhbits+mbits);
+        for (hi=0; hi<n; hi+=hstep) { for (lo=0; lo<nlo; lo++) {
+                double t; int mi2, bs = hi+lo, rbs = bit_rev(bs, bits);
+                if (bs<rbs) continue;
+                if (bs==rbs) { for (mi=0; mi<hstep; mi+=nlo) if ((mi2=bit_rev(mi, bits))>mi)
+                                                                  x=bs+mi, y= bs+mi2, (REV_XC1); }
+                else { for (mi=0; mi<hstep; mi+=nlo) x=bs+mi, y=rbs+bit_rev(mi,bits), (REV_XC1); }}}}
+
+static void bit_rev_blk(double *re, int bits) { (bits>REV_S_BITS?rev_big1:rev_small1)(re, bits); }
+
+#define RE(J) ri[2*(J)]
+#define IM(J) ri[2*(J)+1]
+
+#define FFT_PASS12(P) double x00=P[j], x01=P[j+1], x02=P[j+2], x03=P[j+3], \
+        x0=x00+x01, x1=x00-x01, x2=x02+x03, x3=x02-x03; \
+        RE(j)   = x0+x2; IM(j)=0.0; RE(j+2) = x0-x2; IM(j+2) = 0.0;\
+        RE(j+1) = RE(j+3) = x1; IM(j+1) = x3; IM(j+3) = -x3
+
+static void fft_pass12_1(double *ri, int n) {
+        int j; double *q = ri + n; for (j=0; j<n; j+=4) { FFT_PASS12(q); }}
+
+static void fft_pass12_0(double *ri, int n) {
+        int i, j, k;
+        for (i=(n-1)&~4095; i>0; i-=4096) for (j=i,k=i+4096; j<k; j+=4) { FFT_PASS12(ri); }
+        for (j=(n-4)&4092; j>=0; j-=4) { FFT_PASS12(ri); }}
+
+#define ANG1_BITS 9
+#define ANG1_SIZ (1<<ANG1_BITS)
+static void fft2(double * ri, int n) {
+        int m, m2, df = (n>(1<<19));
+        double oAr[2*ANG1_SIZ], *oAi=oAr+ANG1_SIZ, circ = /*reverse ? (-2.0*M_PI) :*/ (2.0*M_PI);
+        for (m=8,m2=4; m<=n; (void)(df&&(LOG("fft2: %d/%d", m,n),1)),m2=m,m*=2) {
+                int mm = m2-1;
+                double fi2, fi = circ / (double)m, o1i = sin(fi), o1r = cos(fi);
+                if (m2<=ANG1_SIZ) {
+                        int j, k, k0, l;
+                        double oR = 1.0, oi = 0.0;
+                        for (j=0; j<m2; j++) { if (!(j&63)) fi2 = fi*(double)(j), oR = cos(fi2), oi = sin(fi2);
+                                               oAr[j] = oR; oAi[j] = oi;
+                                               double tR = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tR; }
+                        for (j=0; j<n; j+=m) { for (k0=0; k0<m2; k0++) { k = k0 + j;
+                                double rel = RE(l=k+m2), iml = IM(l),
+                                       tr = rel*oAr[k0] - iml*oAi[k0], ti = iml*oAr[k0] + rel*oAi[k0];
+                                RE(l) = RE(k)-tr; RE(k)+=tr; IM(l)=IM(k)-ti; IM(k)+=ti; }}}
+
+                else {
+                        int j, k, k0, l; double oR = 1.0, oi = 0.0;
+                        for (j=0; j<n; j+=m) { for (k0=0; k0<m2; k0+=ANG1_SIZ) {
+                                int k1, jk0 = j+k0;
+                                for (k1 = 0; k1<ANG1_SIZ; k1++) {
+                                        k = jk0 + k1; if (!(k&63)) fi2 = fi*(double)(k&mm), oR = cos(fi2), oi = sin(fi2);
+                                        double rel = RE(l=k+m2), iml = IM(l),
+                                               tr = rel*oR - iml*oi, ti = iml*oR + rel*oi;
+                                        RE(l) = RE(k)-tr; RE(k)+=tr; IM(l)=IM(k)-ti; IM(k)+=ti;
+                                        double tR = oR*o1r - oi*o1i; oi = oi*o1r + oR*o1i; oR = tR; }
+                        }}}}}
+
+static void fft(double * re_im, int bits, int flg) { // 1: high
+        int n = 1<<bits, df = (bits>19), ofs = n &- (flg&1); if (df) LOG("fft: start");
+        bit_rev_blk(re_im+ofs, bits); 			     if (df) LOG("fft/bitrev done");
+        (ofs?fft_pass12_1:fft_pass12_0)(re_im, n);	     if (df) LOG("fft/pass12 done");
+        fft2(re_im,n); }
+
+///// w/plot_tF ////
 #define GP_PT_L1(S,M) for (j=1,x=y=acc=p[0]; j<(S); j++) { acc+=(z=p[j]); if (z<x) x=z; else if (z>y) y=z; } \
 		 to[0] = (M)*acc; to[1] = x; to[2] = y
 static void gp_pt_mma(double *to, const double *p, int cnt, int siz, int rem) {
@@ -804,73 +903,118 @@ static void gp_pt_mma(double *to, const double *p, int cnt, int siz, int rem) {
 		      case 2: for (i=0; i<cnt; i++, to+=8,p+=2) to[0] = .5*((x=p[0])+(y=p[1])),
 				      (x<y) ? (to[1]=x,to[2]=y) : (to[1]=y,to[2]=x);
 			      if (rem) to[0]=to[1]=to[2] = p[0];       return;
-		      default: break;
-	}
+		      default: break; }
 	for (i=0,sz_1=1.0/(double)siz; i<cnt; i++, to+=8, p+=siz) { GP_PT_L1(siz, sz_1); }
 	if (rem) { GP_PT_L1(rem, 1.0/(double)rem); }}
 
-static int gp_statf_pt(int j0, int jz) {
+static void gp_pt_alp(double *to, const double *p, int cnt, int siz, int rem) {
+	double x, y; int i;
+	if (siz==1) { for (i=0; i<cnt; i++, to+=8,p+=2) x=*p,y=p[1], to[3]=log(to[0]=sqrt(x*x+y*y)),
+							to[6] = atan2(y,x);  return; }
+	double z, xa, ya, za, zm, zM, sz_1 = 1.0/(double)siz;
+	int j, i1 = cnt + !!rem;
+	for (i=0; i<i1; i++, to+=8,p++) { 
+		if (i==cnt) siz = rem, sz_1 = 1.0/(double)(rem);
+		for (j=1, xa=*p,ya=*++p,zm=zM=za=xa*xa+ya*ya ; j<siz; j++) {
+			x=*++p, y=*++p, xa+=x,ya+=y; za += (z = x*x+y*y); if(z>zM) zM=z; else if(z<zm) zm=z; }
+		to[3] = log(to[0] = sqrt(za*sz_1)); to[4] = log(to[1] = sqrt(zm));
+		to[6] = atan2(ya, xa); 		    to[5] = log(to[2] = sqrt(zM)); }}
+
+static int gp_statf_tf(int j0, int jz) {
+	if (!gp_ptf_dat) return LOG("gp_statf_tf: no data no draw"), -2;
 	int nsamp = jz-j0, res = gp_res()-1, siz = 1+nsamp/res, cnt = nsamp/siz, rem = nsamp%siz,
-	    rcnt = cnt+!!rem, rv = (rcnt<<13) | (siz ? 0x7e : 0x12);
-	double *to = samp2gplot, *p = gp_ptf_dat+j0;
-	gp_pt_mma(to+1, p, cnt, siz, rem); to[0] = (double)j0/44100.0; to[rcnt-1] = (double)jz/44100.0;
-	return (gp_ptf_2ch) ? (gp_pt_mma(to+4, p+gp_ptf_siz, cnt, siz, rem), rv) : (rv & ~112);
+	    gf = gp_ptf_flg, rcnt = cnt+!!rem, rv = rcnt<<16; //| (gf&8*((siz>1 ? 0x7ef0fe : 0x1280);
+	LOG("gp_statf_tf: j0=%d, jz=%d, len=%d ==> rcnt=%d cnt=%d siz=%d rem=%d gsiz=%d",
+			  j0,    jz,    gp_len,    rcnt,   cnt,   siz,   rem, gp_ptf_siz);
+	double x, jj0 = (double)j0, jjz = (double)jz, *to = samp2gplot, *p = gp_ptf_dat+j0;
+	if(gf&8) return x = 44100.0 / ((double)(1<<gp_ptf_bits)), to[0] = jj0*x, to[8*rcnt-8] = jjz*x,
+			gp_pt_alp(to+1, p+j0, cnt,siz,rem), rv | ((siz>1?0xf0fe:0x9092));
+	gp_pt_mma(to+1, p, cnt, siz, rem); to[0] = jj0/44100.0; to[8*rcnt-8] = jjz/44100.0;
+	return (gf&1) ? (gp_pt_mma(to+4, p+gp_ptf_siz, cnt, siz, rem), rv | (siz>1?0x7e:0x12))
+		      : rv | (siz>1?0xe:0x2);
 }
 
-///// cmd ////////////////////////////////////////////////////////
-static void gp_key(int c) {
-	static const signed char xstp[8] = {-5,5,-30,30,-1,1,0,0};
-	static const signed char zstp[8] = {-4,4,-16,16,-1,1,0,0};
-	if (c>46) { unsigned int k = c-65; if (k<7) return (void) (gp_u_lr  ^= 2<<k, gp_plot(0));
-		    k = 	     c-49; if (k<7) return (void) (gp_u_msk ^= 2<<k, gp_plot(0));
-		    if (k<9) return c = (k&1) ? max_i(0, gp_res_22-1) : min_i(8, gp_res_22+1),
-			    	    (c==gp_res_22) ? LOG("nothing happens") : (void)(gp_res_22=c,gp_plot(0));
-		    return LOG("unknown key 0x%x",c); }
-	if (c==33) return (void) (gp_u_clr++, gp_plot(0));
-	if ((c-=35)<0) { return LOG("invalid key 0x%x",c+35); }
-	double g_c = gp_ctr, g_r = gp_rad;
-	if (c&1) g_c += .2*(double)(int)(xstp[(c>>1)&7])*g_r;
-	else     g_r *= exp(M_LN2*.125*(double)(int)(zstp[(c>>1)&7]));
-	if (g_r>.5) { g_r = g_c = .5; goto crok; }
-	if (g_r<4.76837158203125e-07) g_r = 4.76837158203125e-07;
-	if (g_c<g_r) g_c = g_r; else if (g_c>1.0-g_r) g_c = 1.0-g_r;
-crok:	if (fabs(g_c-gp_ctr)>1e-11 || fabs(g_r-gp_rad)>1e-11) 
-		LOG("gp_key: c=%g r=%g", gp_ctr = g_c, gp_rad = g_r), gp_plot(0);
-	else LOG("gp_key: nothing happens"); 
+static void gp_ptf_drop(){ if(gp_ptf_dat) munmap(gp_ptf_dat,16<<gp_ptf_bits), gp_ptf_dat=NULL, gp_ptf_bits=0;
+			   if(gp_cur_statfun==&gp_statf_tf) gp_cur_statfun = &statf_null; }
+
+static int gp_ptf_ini(const char *s) {
+	int flg = hxd2i(*s), bits = s[1]-48; if (s[2]!=',') return LOG("gs: parse error"), -1;
+	int len = 0; for (s+=3; *s>47; s++) len = 16*len + hxd2i(*s); 
+	if (*s==',' && *++s) strncpy(gp_w_title, s, 63); else memcpy(gp_w_title, "unnamed", 8);
+	LOG("gp_ptf_ini: flg=%d bits=%d len=%d", flg, bits, len);
+	if (bits != gp_ptf_bits) { gp_ptf_drop(); if (!bits) return 0;
+				   gp_ptf_dat = map_wdir_shm('+', 16<<(gp_ptf_bits=bits), 1); 
+				   if (gp_ptf_dat==MAP_FAILED) return gp_ptf_dat=NULL, gp_ptf_bits=0, -2;  }
+	int siz = 1<<bits, k = siz - len;
+	if (k) { memset(gp_ptf_dat+len, 0, 8*k); if (flg&1)  memset(gp_ptf_dat+siz+len, 0, 8*k); }
+	gp_ptf_siz = siz; gp_cur_statfun = &gp_statf_tf; gp_ptf_flg = flg; 
+	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
+		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
+	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48); 
+	return 0;
 }
+
+///// w/cmd  ///////
+static int gp_move(int c, int v) {
+	double g_c = gp_ctr, g_r = gp_rad, sg = (c&32) ? 1.0 : -1.0, vv = .125*(double)v,
+	       x, r_min = (gp_len<127) ? 0.5 : 63.0/(double)gp_len;
+	switch(c|32) {
+		case ' ': goto rchk;
+		case 'c': g_r *= exp(sg*M_LN2*vv); goto rchk;
+		case '+': g_r = r_min;     goto cchk;
+		case '*': g_c = g_r = 0.5; goto echk;
+		case 'x': g_c += sg*g_r*vv; goto cchk;
+		case '0': g_c = g_r; goto echk;
+		case '1': g_c = 1.0-g_r; goto echk;
+		case '<': x = g_c-g_r; if ((g_r*=exp(-M_LN2*vv)) < r_min) g_r = r_min; g_c = x+g_r; goto cchk;
+		case '>': x = g_c+g_r; if ((g_r*=exp(-M_LN2*vv)) < r_min) g_r = r_min; g_c = x-g_r; goto cchk;
+		default:  return LOG("gp_move: invalid cmd 0x%x", c), 0;
+	}
+rchk:	if (g_r<r_min) g_r=r_min; else if (g_r>.5) g_r = .5;
+cchk:   if (g_c<g_r) g_c = g_r; else if (g_c>1.0-g_r) g_c = 1.0-g_r;
+echk:	return (fabs(g_c-gp_ctr)>1e-11 || fabs(g_r-gp_rad)>1e-11) ? (gp_ctr=g_c, gp_rad=g_r, 1) : 0;
+}
+
+static int gp_cmd(const char *s) {
+	LOG("gp_cmd: \"%s\"", s);
+	int r; switch(*s) { 
+		case 't': return ((r=gp_tlog_read(s+1))<0) ? r : gp_plot(1);
+		case 's': return ((r=gp_ptf_ini  (s+1))<0) ? r : gp_plot(1);
+		case 'S': return gp_ptf_drop(), 0;
+		case 'c': return gp_rgb_shuffle(), gp_plot(0);
+		case 'm': return gp_move(s[1], s[2]-48) ? gp_plot(0) : (LOG("gp/move: nothing happens"), 0);
+		case 'r': return ((s[1]&2) ? (gp_res22<8&&++gp_res22) : (gp_res22&&gp_res22--)) ? gp_plot(0)
+					   : (LOG("gp_resol: nothing happens"), 0);
+		case 'b': return *((s[1]&1) ? &gp_u_lr : &gp_u_msk) ^= ((1<<(s[2]-48))&0xfe), gp_plot(0);
+		default: return -9;
+	}}
+
+static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
+	case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
+	case 'q': bye(0);
+	default: LOG("unknown command \"%s\"", s); break;
+}}
 
 static void gp_out() {
 	static int state = 37;
 	signed char buf[4096];
 	int i, c, r = read(gp_outpipe, buf, 4096);
 	if (r<=0) perror("gp_pipe/read"), exit(1);
-  	LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r]=0,buf) : "...");
-	for (i=0; i<r; i++) {
-		if ((c=buf[i])==state) { state += 19; }
-		else { if (state==132) gp_key(c); state = 37; }}}
-
-static int gp_cmd(const char *s) {
-	int r; switch(*s) { 
-		case 't' : return ((r=gp_tlog_read(s+1))<0) ? r : gp_plot(1);
-		default: return -9;
-	}}
-
-int w_main() {
-	char s[256];
-	if ((samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 1))==MAP_FAILED) return perror("mmap"), 1;
-	int r = gp_start(); if (r<0) LOG_E("gp_start", r);
+  	LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r-(buf[r-1]==10)]=0,buf) : "...");
+	for (i=0;i<r;i++) { if	    ((c=buf[i])==state) state+=19;
+			    else if (state!=132) state = (c==37) ? 56 : 37;
+			    else if (state=37, (unsigned int)(c-=40) >= GP_N_CMDK) LOG("gp_key=%d,???", c);
+			    else wrk_cmd_l((char*)gp_cmd_key[c],-1,0); }}
+int w_main(int ac, char ** av) {
+	if ((samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 3))==MAP_FAILED) return perror("mmap"), 1;
+	int r = gp_start(); LOG_E("gp_start", r);
+	if (ac>1) ((r=gp_tlog_read(av[1]))<0) ? LOG_E(av[1],r) : gp_plot(1);
 	fd_set rset; while (1) {
 		FD_ZERO(&rset); FD_SET(0, &rset); FD_SET(gp_outpipe, &rset);
-		r = select(gp_outpipe+1, &rset, 0, 0, NULL);
+		r = select(gp_outpipe+1, &rset, 0, 0, NULL); if (r<0) perror("select");
 		if (FD_ISSET(gp_outpipe, &rset)) gp_out();
-		if (FD_ISSET(0, &rset)) {
-			int l = read(0, s, 256); if (l<=0) perror("stdin"), wbye(!!l);
-			if (s[l-1]==10) s[--l] = 0;
-			switch(*s) {
-				case 'g': if ((r=gp_cmd(s+1))<0) LOG_E("gp_cmd",r); break;
-				case 'q': bye(0); break;
-				default: puts("error"); break;
-		}}}}
+		if (FD_ISSET(0, &rset) && (r=ib_read(&wrk_cb))<0 && (LOG_E("cmd/read",r), r>-3)) wbye(r&1); 
+	}}
 
 /*******************************/
 
@@ -888,7 +1032,6 @@ int main(int ac, char ** av) {
 		case 'i': return i_main(ac, av);
 		case 'q': return q_main(ac, av);
 		case 't': return t_main(ac, av);
-		case 'w': return w_main();
+		case 'w': return w_main(ac, av);
 		case 'l': return execlp("less", "less", getenv("LF_LIC"), NULL);
 		default: return usage(q); }}
-

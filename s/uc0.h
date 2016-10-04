@@ -13,8 +13,8 @@ static inline void d59(char *p, int v) {int t = (v*13)>>7;   *(short*)p = (short
 static inline void d99(char *p, int v) {int t = (v*205)>>11; *(short*)p = (short)(t + ((v-10*t)<<8) + 0x3030);}
 static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
 static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
-static inline int atoi_h(const char *s) { int r = 0, x = 0;
-	for (*s=='-'&&s++&&(--x); *s&80; s++) r=16*r+hxd2i(*s); return (r^x)-x; }
+static inline int atoi_h(const char *s) { int r = 0, x = -(*s=='-');
+	for (s-=x; *s&80; s++) r = 16*r+hxd2i(*s); return (r^x)-x; }
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 
 #define qh4rs(P) qh4r(*(const int*)(P))
@@ -30,7 +30,7 @@ int qh4(unsigned int x), qh4r(unsigned int x);
 void h5f(char *to, int x);
 const char * tpipe_name(int c);
 int launch(const char * exe, const char * iocfg, ...);
-void * map_wdir_shm(int c, size_t siz, int wrf);
+void * map_wdir_shm(int c, size_t siz, int wrf); // 1:wr 2:cre
 #else
 
 volatile char vstring[16];
@@ -103,15 +103,18 @@ const char * tpipe_name(int c) {
 }
 
 void * map_wdir_shm(int c, size_t siz, int wrf) {
-        static const int md[4] = { O_RDONLY, O_RDWR, PROT_READ, PROT_READ|PROT_WRITE };
-        const char * fnm = tpipe_name(c);   int fd = open(fnm, md[wrf&=1]);   void *r;
-        return (fd<0) ? MAP_FAILED : (r = mmap(NULL, siz, md[2+wrf], MAP_SHARED, fd, 0), close(fd), r);
+        static const int md[6] = { O_RDONLY,O_RDWR,O_RDONLY,O_RDWR|O_CREAT, PROT_READ,PROT_READ|PROT_WRITE };
+        const char * fnm = tpipe_name(c);   int fd = open(fnm, md[wrf&3], 0600); if (fd<0) return MAP_FAILED;
+	if ((wrf&2) && ftruncate(fd, siz)<0) return close(fd), MAP_FAILED;
+	//fprintf(stderr,"c='%c' wrf=%d shm:siz=%d -- open/trunc OK\n", c, wrf, (int)siz);
+	void *r = mmap(NULL, siz, md[4+(wrf&1)], MAP_SHARED, fd, 0); close(fd); return r;
 }
 
 // (iocfg-a*: (|)|. :none <|>:int* -|*|=|+->const char*) a1 a2 ... (char*)NULL 
 // null(r), null(w), keep   ro,cre,app,rw,wr
 // len(iocfg)>3 -> a1 is ("%04X",fd)*
 
+#define LAUNCH_DBG //fprintf(stderr, "launch:%s:%d : vararg for '%c'\n", exe, i, k)
 int launch(const char * exe, const char * iocfg, ...) {
         const char *av[256], *s;
         int k, ff, r, ac = 1, i, nf, fds[64], a0buf[64], a0cp = iocfg[0]=='!' && ++iocfg;
@@ -119,12 +122,12 @@ int launch(const char * exe, const char * iocfg, ...) {
         va_list ap; va_start(ap, iocfg);
         for (i=0; i<60 && (k=iocfg[i]); i++) { switch(k) {
                 case '<': if (pipe(fds+i)<0 || (ff=fcntl(fds[i],F_GETFD))<0
-					    ||     fcntl(fds[i],F_SETFD,ff|FD_CLOEXEC)<0) return -1;
+					    ||     fcntl(fds[i],F_SETFD,ff|FD_CLOEXEC)<0) return -1; LAUNCH_DBG;
                           *(va_arg(ap, int*)) = fds[i]; fds[i] = fds[i+1]; continue;
                 case '>': if (pipe(fds+i)<0 || (ff=fcntl(fds[i+1],F_GETFD))<0
-					    ||     fcntl(fds[i+1],F_SETFD,ff|FD_CLOEXEC)<0) return -1; 
+					    ||     fcntl(fds[i+1],F_SETFD,ff|FD_CLOEXEC)<0) return -1; LAUNCH_DBG;
                           *(va_arg(ap, int*)) = fds[i+1]; continue;
-                case '-': case '+': case '*': case '=':
+                case '-': case '+': case '*': case '=': LAUNCH_DBG;
                           av[i] = va_arg(ap, const char*); if (!av[i]) av[i] = "/dev/null"; continue;
                 default: continue;
         }}

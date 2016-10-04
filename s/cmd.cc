@@ -11,7 +11,6 @@
 #include "cmd.h"
 #include "glob.h"
 #include "pzrf.h"
-#include "gp.h"
 #include "guistub.h"
 #include "mx.h"
 #include "asnd.h"
@@ -370,7 +369,7 @@ int CmdTab::c_wav(CmdBuf * p) {
 
 int CmdTab::c_misc(CmdBuf * p) {
 	int i,j; char *s = p->m_c_a0; switch(*s) {
-		case 'g': Gnuplot::sg() -> restart(); return 0;
+		case 'g': return pt_wrk_cmd("gu\n", 3);
 		case 'F': pzrf_show_last(); return 0;
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
 		case 'w': i = s[1]&1 ? snd0.hcp_start(209203*CFG_AO_RECLIM.i-818) : snd0.hcp_end();

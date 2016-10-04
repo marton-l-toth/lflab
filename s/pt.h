@@ -4,10 +4,10 @@
 #define PT_IOP   0
 #define PT_GUI   1
 #define PT_DOT   2
-#define PT_GPLT  3
+#define PT_WRK   3
 #define PT_ACV   4
 #define PT_COUNT 5
-#define PT_STR "ioprc\0  gui\0    dot\0    gnuplot\0auconv\0 "
+#define PT_STR "ioprc\0  gui\0    dot\0    worker \0auconv\0 "
 
 #define QENV(c)  pt_qenv_v[(int)c&31]
 #define QENVL(c) pt_qenv_l[(int)c&31]
@@ -36,6 +36,9 @@ int pt_acv_op(int id, int op, const char *a1, const char *a2);
 int pt_kill_pa(int flg);
 int pt_show_lic();
 void pt_calc_xbv();
+double * pt_samp_shm(int bits);
+int pt_wrk_cmd(const char *s, int n);
+int pt_wrk_start(int re);
 void pt_debug();
 
 #endif // __qwe_pt_h__

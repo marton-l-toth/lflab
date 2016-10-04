@@ -43,6 +43,8 @@ EEE_ASVFAIL  autosave failed
 EEE_PARSE    parse error (most likely a bug)
 EEE_FDNOSEL  file dialog: nothing selected
 EEE_RANGE    value out of range
+EEE_SHM      failed to allocate/map shared mem (/dev/shm full?)
+EEE_NOWRK    worker process not running (most likely a BUG)
 S1__________ __________________________________________________________(BUG)__
 RTE_BUG      you just have found a bug in a primitive box
 RTE_RANGE    box parameter out of range (runtime)
@@ -63,6 +65,7 @@ AUE_MCFLY    time went backwards (maybe this is a virtual machine?)
 AUE_RECOVER  audio: recoverable error (buffer empty?)
 S13_________ __________________________________________________________(BUG)__
 PTE_GUICRASH Unexpected GUI exit. Please see help 'reporting bugs'.
+PTE_WRKCRASH Unexpected exit of worker process. See help 'reporting bugs'.
 PTE_IOCRASH  Unexpected exit of IO process. Please see help 'reporting bugs'.
 PTE_ACVERR   Audio converter exited with error
 PTE_ACVSIG   Audio converter crashed

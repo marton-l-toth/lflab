@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 
 #include "pt.h"
@@ -39,6 +40,8 @@ static uid_t pt_uid, pt_gid;
 static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
 static const char** ppath = 0;
 static struct timeval tv_zero;
+static int pt_wrk_m2w = -1, pt_wrk_pid = 0, pt_samp_bits = 0;
+static double * pt_samp_buf;
 
 static void qfail(const char * fmt, ...) {
 	va_list ap; va_start(ap, fmt);
@@ -371,6 +374,34 @@ void pt_calc_xbv() {
 	for (int i=0; i<N_XAPP; i++) {
 		const char **pp = xapp_ls[i];
 		for (int j=0; pp[j]; j++) if(pfind(pp[j])) pt_xapp_bv[i] |= (1<<j); }}
+
+int pt_wrk_cmd(const char *s, int n) {  int r, j = pt_wrk_m2w; if (j<0) return EEE_NOWRK;
+					return ((r=write(j,s,n))==n) ? 0 : EEE_ERRNO-(r>=0); }
+
+static void pt_samp_drop() { if (pt_samp_buf) munmap(pt_samp_buf, 16<<pt_samp_bits), unlink(tpipe_name('+')),
+					      pt_samp_buf = 0, pt_samp_bits = 0, pt_wrk_cmd("gs0\n", 4); }
+static int wrk_dead(int pid, int stat, int td) {
+	if (td<2) log("FATAL: wrk exited again in < 2 seconds"), bye(1);
+	gui_errq_add(PTE_WRKCRASH); 
+	int pid2 = pt_wrk_start(1); if (pid2<0) log("FATAL: wrk restart failed"), bye(1);
+	return pid2;
+}
+
+double * pt_samp_shm(int bits) { log("pt_samp_shm: bits=%d", bits);
+	if (bits<=pt_samp_bits) return bits ? pt_samp_buf : (pt_samp_drop(), (double*)0); else pt_samp_drop();
+	return (pt_samp_buf=(double*)map_wdir_shm('+',16<<bits,3)) ? (pt_samp_bits=bits, pt_samp_buf) : 0; }
+
+int pt_wrk_start(int re) {
+	int pf1, pid = launch(QENV('b'), ">p1", &pf1, "lf.wrk", (char*)0); // TODO: cmdpipe
+	if ((pid|pf1)<0) return -1;
+	if (re) pt_samp_drop(); else pt_reg(PT_WRK, pid, &wrk_dead);
+	set_fd(&pt_wrk_m2w, pf1, 0); pt_wrk_pid = pid;
+	return pid;
+}
+
+int pt_wrk_stop() { return (pt_wrk_pid<=0) ? EEE_STATE :
+	(kill(pt_wrk_pid,9)<0) ? EEE_ERRNO : (pt_wrk_pid = 0); }
+	
 
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static void ee_msg() {

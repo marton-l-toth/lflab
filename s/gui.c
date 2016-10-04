@@ -1150,8 +1150,8 @@ TDIV_MENU_LN
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
-{'P', 6, 8,7,1, "[avg]  avg    left   right  A:L,R  *:L,R  ", "001234"},
-{0,   7, 8,7,1, "[avg]  avg    left   right  avg/Z  lft/Z  rgt/Z  ", "0012456"},
+{'P', 3, 8,7,1, "[avg]  avg    L + R  ", "001"},
+{0,   7, 8,7,1, "[avg]  avg    left   right  avg/Z  lft/Z  rgt/Z  ", "0013457"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;

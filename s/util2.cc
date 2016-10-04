@@ -3,14 +3,12 @@
 #include "node.h"
 #include "util2.h"
 #include "glob.h"
-#include "gp.h"
 #include "pt.h"
 #include "cfgtab.inc"
 
 void bye(int x) {
 	if (x&256 || (glob_flg&(GLF_FINAL_ASV|GLF_INI0|GLF_INI1))) fprintf(stderr, "skipping autosave\n");
 	else glob_flg|=GLF_FINAL_ASV, Node::save_batch(Node::root(), "//"+!(glob_flg&GLF_FSTATE), NOF_FORCE);
-	delete (Gnuplot::sg());
 	if (x&512) pt_iocmd_sn("r\n", 2);
 	exit(x&255);
 }
