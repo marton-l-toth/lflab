@@ -1122,11 +1122,13 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  22,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 ","*0123456789abcdefghijk"},
 {0,   7,0,5,15,"[Q2W]kZSXDkF1F2kkpd0tpad+tpad1empty","kv0,041714,66I6kv0,1f2f11,66F6kv0,3b460c,66I6"
 		  "k00,243208,66H6t00,818290,6OO6T00,818290,6OO6k00,000000,0000"},
-{'.',21,0,12,4, "filter disp.console     error list  ------------"
-		"audio configpath config midi config misc config ------------"
-		"flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
+{'.',12,0,12,4, "flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
 		"------------exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
-		"_F  _c-1_E  ####A0W cW  mW  cV  ####*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
+		"*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
+{0,  13,0,12,4, "[obj. tree] filter disp.console     error list  ------------"
+		"audio configpath config midi config misc config ------------"
+		"show tlog   show tlog/-1show tlog/-2", 
+		"$/  _F  _c-1_E  ####A0W cW  mW  cV  ####%gT0%gT1%gT2"},
 {'/',9, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  text   ","DCwsgicth"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
@@ -4495,7 +4497,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 
 static void mwin_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
-	"(3{B_unplot$_g}{B_?$$?})({22}3[3{B_LR$$/}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{VV v??.??}])]";
+	"(3{B_unplot$%gu}{B_?$$?})({22}3[3{Mw[LR]$|.1}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{VV v??.??}])]";
         tw->arg[0].p = parse_w(tw, &str);
 	memcpy(tw->title, "lf\0", 4);
 }

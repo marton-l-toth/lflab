@@ -59,6 +59,8 @@ class CmdTab {
                 static int c_sv2(CmdBuf * p) { CMD_NODE(ADir); return (!nd->id()) ? NDE_SLROOT :
 			p->fdok(Node::save_batch(nd,p->m_c_a1, p->m_c_nof&NOF_FORCE), 'L'); }
 		static int c_iofw(CmdBuf * p) { if(*p->m_c_a0=='f')fflush(stderr); return pt_iocmd(p->m_c_a0);}
+		static int c_wkfw(CmdBuf * p) { char*s = p->m_c_a0; int r, l = strlen(s);  s[l] = 10;
+						r = pt_wrk_cmd(s, l+1); s[l] = 0; return r; }
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0 - 48;
 					       return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
 		static int c_midi(CmdBuf *p) { return midi_cmd(p->m_c_a0); }
@@ -369,7 +371,6 @@ int CmdTab::c_wav(CmdBuf * p) {
 
 int CmdTab::c_misc(CmdBuf * p) {
 	int i,j; char *s = p->m_c_a0; switch(*s) {
-		case 'g': return pt_wrk_cmd("gu\n", 3);
 		case 'F': pzrf_show_last(); return 0;
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
 		case 'w': i = s[1]&1 ? snd0.hcp_start(209203*CFG_AO_RECLIM.i-818) : snd0.hcp_end();
@@ -473,4 +474,4 @@ CmdTab::ent_t CmdTab::m0_tab[] = {
 {'K'|CF_NODE,c_kfw}, {'D'|CF_NODE1,c_tree}, {'X'|CF_NODE1,c_xfw}, {'J'|CF_TOK,c_job}, {':',c_pfx}, {'Q',c_rpl},
 {'W'|CF_NODE,c_wfw}, {'E'|CF_NODE1,c_efw}, {'M'|CF_NODE,c_win}, {'s',c_save}, {'*', c_iofw}, {'L', c_live},
 {'d',c_debug}, {'_',c_misc}, {'<',c_cont}, {'.', c_source}, {'x', c_closewin}, {'A', c_snd}, {'R', c_report},
-{'w'|CF_TOK1,c_wav}, {'H'|CF_NODE, c_dsc}, {'m', c_midi}, {0,0} };
+{'w'|CF_TOK1,c_wav}, {'H'|CF_NODE, c_dsc}, {'m', c_midi}, {'%', c_wkfw}, {0,0} };

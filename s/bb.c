@@ -177,7 +177,7 @@ int e_main() { /* editor */
 #define N_IBUF 9
 #define LOG LOG_io
 static void LOG_io(const char * fmt, ...), bye(int kf), log_l(char*,int,int), cmd_l(char*,int,int);
-volatile int chld_flg = 0;
+volatile int chld_flg = 0; // also used by wrk
 static int con_stat = 0, msg_fd = -1, errtemp = 0, killer_fd = 0, der_alte = -1, wrkdir_l = 0,
 	   shutdn_flg = 8, cl_sec = 0, cl_usec = 0, selwt = 250000, gui_stat = 0, rs_ts = 0, dflg = 0;
 static const char *xapp_name[N_XAPP], *wrkdir, *lf_ed;
@@ -474,7 +474,7 @@ static void io_ib_init(int mlog_fd) {
 
 /*** main *****/
 
-static void i_chld(int _) { chld_flg = 1; signal(SIGCHLD, &i_chld); }
+static void i_w_chld(int _) { chld_flg = 1; signal(SIGCHLD, &i_w_chld); } // also used by wrk
 
 static void hello() {
 	char buf[1024]; int k = (int)readlink("/proc/self/fd/2", buf, 1023);
@@ -491,7 +491,7 @@ static void ch_bye() {
 
 #define FOR_IB for(i=0; i<N_IBUF; i++) if ((k=ib[i].fd)>=0)
 int i_main(int ac, char ** av) {
-	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN); signal(SIGCHLD, i_chld);
+	signal(SIGPIPE, SIG_IGN); signal(SIGHUP, SIG_IGN); signal(SIGINT, SIG_IGN); signal(SIGCHLD, i_w_chld);
 	hello();   int i,k;
 	if (!(wrkdir=getenv("LF_TMPDIR")) || (wrkdir_l=strlen(wrkdir))>20) fail("workdir");
 	if (!(lf_ed=getenv("LF_ED"))) fail("ed-wrap");
@@ -716,6 +716,8 @@ static inline int gp_res() { return (128+(53&-(gp_res22&1))) << (gp_res22>>1); }
 
 static char wrk_cb_s[1024];
 static ibuf wrk_cb = { 0, 1024, 0, 0, &wrk_cmd_l, wrk_cb_s };
+static const char *wrk_etab[] = { "bug!!", "some error", "gp start","read","write",
+				  "open",  "file-op",    "wrongdat","rsrv","bug"  };
 #define GP_CKY17(J) "gbf" #J "\0" #J , "gbs" #J "\0ctrl-" #J
 static const char * gp_cmd_key[] = {"gmX4\0#Left", "gmx4\0#Right", "gmc4\0#Down", "gmC4\0#Up", "gc\0c",
 	"gmX@\0&#Left", "gmx@\0&#Right", "gm0\0^#Left", "gm1\0^#Right", "gmX1\0#End", "gmx1\0#PageDown",
@@ -727,17 +729,18 @@ static void LOG_wrk(const char * fmt, ...) {
 	if (fmt) r = vsnprintf(buf, 1023, fmt, ap); 
 	else if ((r = va_arg(ap,int))>=0) return va_end(ap);
 	else k = va_arg(ap,int), fmt = va_arg(ap,const char*),
-	     r = snprintf(buf, 1023, "%s: ec=%d ue: %s", fmt, r, strerror(k));
+	     r = snprintf(buf, 1023, "%s: ec=%d(%s) ue: %s", fmt, r, (r<-9)?"??":wrk_etab[-r], strerror(k));
         va_end(ap); if (r>=0) buf[r] = 10, write(2, buf, r+1);
 }
 //// w/gnuplot /////
 static int gp_start() {
 	static const char ini[] = "set style data line\nset autoscale fix\n"
 		"set y2tics nomirror format \"%g\"\n"; // "bind c 'print \"%8K^q!\"'\n";
-        if (gp_pid>0) return -1;
-	if ((gp_pid = launch("gnuplot", "!><1", &gp_inpipe, &gp_outpipe, (char*)0)) < 0) return -2;
-	if ((gp_inpipe|gp_outpipe)<0) return -3;
-	int i; char buf[4096], *q = buf + sizeof(ini)-1; memcpy(buf, ini, sizeof(ini)-1);
+        if (gp_pid>0) return -9;
+	int i, inp=-1, outp=-1;
+	if ((gp_pid = launch("gnuplot", "!><1", &inp, &outp, (char*)0)) < 0) return -2;
+	if ((inp|outp)<0) return -2; else set_fd(&gp_inpipe, inp, 0), set_fd(&gp_outpipe, outp, 0);
+	char buf[4096], *q = buf + sizeof(ini)-1; memcpy(buf, ini, sizeof(ini)-1);
 	for (i=0;i<GP_N_CMDK; i++) { 
 		const char *s = gp_cmd_key[i];  while (*++s); ++s;
 		int j, kf = 0; for (j=0;j<3;j++) if (*s=="^&#"[j]) ++s, kf |= (1<<j);
@@ -746,14 +749,15 @@ static int gp_start() {
 		if(kf&4) q+= sprintf(q,"bind '%sKP_%s' 'print \"%%8K^q%c\"'\n", mod, s, i+40);
 	}
 	if (write(gp_inpipe, buf, q-buf) != q-buf) return -4;
-        return 0;
+        LOG("gnuplot started, pid=%d", gp_pid); return 0;
 }
 
 static int gp_binplot(int n, int flg) {
 	if (n<0) n = flg>>16;
 	char buf[4096], *q=buf;
-	int ch = ' ', yf = (flg&254) & ~gp_u_msk, y2f = yf & ((flg>>8) ^ gp_u_lr);
-	if (!yf) return LOG("gp_binplot: nothing to do!"), 0;
+	int yf = (flg&254) & ~gp_u_msk; if (!yf) LOG("gp_binplot: flg reset"), gp_u_msk=0, yf = (flg&254);
+	int r, ch = ' ', y2f = yf & ((flg>>8) ^ gp_u_lr);
+	if (gp_pid<=0 && (r=gp_start())<0) return r;
 	if (!(flg&1) && n>2) {  double *px=samp2gplot, x=px[0], stp = (px[8*n-8]-x)/(double)(n-1);
 				int i; for (i=1; i<n-1; i++) *(px+=8) = (x+=stp); }
 	q += sprintf(q, "set term x11 %d title '%s'\nset ytics %s%s%s", gp_w_id, gp_w_title,
@@ -765,7 +769,7 @@ static int gp_binplot(int n, int flg) {
 			b4[2-2*rgt]=0; b4[1+rgt]='|'; b4[3*rgt]=48+j; b4[4]=0;
 			q += sprintf(q,"' title '%s%s%s' lc rgbcolor '%s'", b4,gp_f_title+8*j,b4+2, GP_RGB(j));
 			if (rgt) memcpy(q," axes x1y2",10), q+=10;  }
-	*(q++)='\n'; return write(gp_inpipe, buf, q-buf) == (q-buf) ? 0 : -1;
+	*(q++)='\n'; return write(gp_inpipe, buf, q-buf) == (q-buf) ? 0 : -4;
 }
 
 static int gp_plot(int d) { 
@@ -802,16 +806,16 @@ static int gp_statf_tlog(int j0, int jz) {
 
 static int gp_tlog_read(const char *fname) {
 	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.+-\0__cpu%\0__", 24);
-	int fd = open(fname, O_RDONLY); if (fd<0) return -1;
-	int n = lseek(fd, 0, SEEK_END); if (n<4) return -2; else gp_len=gp_tlog_n=(n>>=2);
-	int r = lseek(fd, 0, SEEK_SET); if (r) return -3;
+	int fd = open(fname, O_RDONLY); if (fd<0) return -5;
+	int n = lseek(fd, 0, SEEK_END); if (n<4) return -7; else gp_len=gp_tlog_n=(n>>=2);
+	int r = lseek(fd, 0, SEEK_SET); if (r) return -6;
 	int n6 = (n+63)>>6, siz = n + n6;
 	if (siz>gp_tlog_siz) {
-		if (siz>(1<<28)) return -4;
+		if (siz>(1<<28)) return -7;
 		int sz = 2*gp_tlog_siz; if (sz) free(gp_tlog); else sz = 4096;
 		while (sz<n) sz+=sz;
 		gp_tlog = malloc(4*(gp_tlog_siz=sz)); }
-	if ((r = read(fd, gp_tlog, 4*n)) != 4*n) return close(fd), -6; else close(fd);
+	if ((r = read(fd, gp_tlog, 4*n)) != 4*n) return close(fd), -3; else close(fd);
 	int i, j, k, t = 0, *q = gp_tlog+n; 
 	for (*(q++)=0, i=0; (k=i+64)<n; i=k,*(q++)=t) for (j=i; j<k; j++) t += gp_tlog[j] & 262143;
 	gp_cur_statfun = &gp_statf_tlog; return 0;
@@ -921,7 +925,7 @@ static void gp_pt_alp(double *to, const double *p, int cnt, int siz, int rem) {
 		to[6] = atan2(ya, xa); 		    to[5] = log(to[2] = sqrt(zM)); }}
 
 static int gp_statf_tf(int j0, int jz) {
-	if (!gp_ptf_dat) return LOG("gp_statf_tf: no data no draw"), -2;
+	if (!gp_ptf_dat) return LOG("gp_statf_tf: no data no draw"), 7;
 	int nsamp = jz-j0, res = gp_res()-1, siz = 1+nsamp/res, cnt = nsamp/siz, rem = nsamp%siz,
 	    gf = gp_ptf_flg, rcnt = cnt+!!rem, rv = rcnt<<16; //| (gf&8*((siz>1 ? 0x7ef0fe : 0x1280);
 	LOG("gp_statf_tf: j0=%d, jz=%d, len=%d ==> rcnt=%d cnt=%d siz=%d rem=%d gsiz=%d",
@@ -938,13 +942,13 @@ static void gp_ptf_drop(){ if(gp_ptf_dat) munmap(gp_ptf_dat,16<<gp_ptf_bits), gp
 			   if(gp_cur_statfun==&gp_statf_tf) gp_cur_statfun = &statf_null; }
 
 static int gp_ptf_ini(const char *s) {
-	int flg = hxd2i(*s), bits = s[1]-48; if (s[2]!=',') return LOG("gs: parse error"), -1;
+	int flg = hxd2i(*s), bits = s[1]-48; if (s[2]!=',') return LOG("gs: parse error"), -7;
 	int len = 0; for (s+=3; *s>47; s++) len = 16*len + hxd2i(*s); 
 	if (*s==',' && *++s) strncpy(gp_w_title, s, 63); else memcpy(gp_w_title, "unnamed", 8);
 	LOG("gp_ptf_ini: flg=%d bits=%d len=%d", flg, bits, len);
 	if (bits != gp_ptf_bits) { gp_ptf_drop(); if (!bits) return 0;
 				   gp_ptf_dat = map_wdir_shm('+', 16<<(gp_ptf_bits=bits), 1); 
-				   if (gp_ptf_dat==MAP_FAILED) return gp_ptf_dat=NULL, gp_ptf_bits=0, -2;  }
+				   if (gp_ptf_dat==MAP_FAILED) return gp_ptf_dat=NULL, gp_ptf_bits=0, -6;  }
 	int siz = 1<<bits, k = siz - len;
 	if (k) { memset(gp_ptf_dat+len, 0, 8*k); if (flg&1)  memset(gp_ptf_dat+siz+len, 0, 8*k); }
 	gp_ptf_siz = siz; gp_cur_statfun = &gp_statf_tf; gp_ptf_flg = flg; 
@@ -975,9 +979,16 @@ cchk:   if (g_c<g_r) g_c = g_r; else if (g_c>1.0-g_r) g_c = 1.0-g_r;
 echk:	return (fabs(g_c-gp_ctr)>1e-11 || fabs(g_r-gp_rad)>1e-11) ? (gp_ctr=g_c, gp_rad=g_r, 1) : 0;
 }
 
+static const char * tlog_name(int c) {
+	static char *buf = 0; static int clen = 0;
+	if(!buf){ const char * nm0 = getenv("LF_TLOG"); if (!nm0) return LOG("LF_TLOG undefined"), "BUG!";
+		  int len = strlen(nm0); clen = len-5; buf = malloc(len+5); memcpy(buf, nm0, clen); }
+	return memcpy(buf+clen+((c==48)?0:(buf[clen]=buf[clen+1]='-',buf[clen+2]=c,3)),".tlog",6), buf; }
+
 static int gp_cmd(const char *s) {
 	LOG("gp_cmd: \"%s\"", s);
 	int r; switch(*s) { 
+		case 'T': return ((r=gp_tlog_read(tlog_name(s[1])))<0) ? r : gp_plot(1);
 		case 't': return ((r=gp_tlog_read(s+1))<0) ? r : gp_plot(1);
 		case 's': return ((r=gp_ptf_ini  (s+1))<0) ? r : gp_plot(1);
 		case 'S': return gp_ptf_drop(), 0;
@@ -986,7 +997,8 @@ static int gp_cmd(const char *s) {
 		case 'r': return ((s[1]&2) ? (gp_res22<8&&++gp_res22) : (gp_res22&&gp_res22--)) ? gp_plot(0)
 					   : (LOG("gp_resol: nothing happens"), 0);
 		case 'b': return *((s[1]&1) ? &gp_u_lr : &gp_u_msk) ^= ((1<<(s[2]-48))&0xfe), gp_plot(0);
-		default: return -9;
+		case 'u': return (gp_pid>0) ? kill(gp_pid, 9) : -7;
+		default: LOG("gp: unknown cmd 0x%x \"%s\"", *s, s); return -7;
 	}}
 
 static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
@@ -999,20 +1011,28 @@ static void gp_out() {
 	static int state = 37;
 	signed char buf[4096];
 	int i, c, r = read(gp_outpipe, buf, 4096);
-	if (r<=0) perror("gp_pipe/read"), exit(1);
-  	LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r-(buf[r-1]==10)]=0,buf) : "...");
+	if (r<=0) return LOG("gp_pipe/read: %s", r ? strerror(errno) : "zero"), set_fd(&gp_outpipe, -1, 0),
+			 (void)kill(gp_pid,9);
+//  	LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r-(buf[r-1]==10)]=0,buf) : "...");
 	for (i=0;i<r;i++) { if	    ((c=buf[i])==state) state+=19;
 			    else if (state!=132) state = (c==37) ? 56 : 37;
 			    else if (state=37, (unsigned int)(c-=40) >= GP_N_CMDK) LOG("gp_key=%d,???", c);
 			    else wrk_cmd_l((char*)gp_cmd_key[c],-1,0); }}
+
+void w_chdone() { static int t0 = 0; int r = waitpid(-1,NULL,WNOHANG), t = time(NULL);
+		  if (r!=gp_pid) return LOG("w_chdone: %d, %s", r, r<0 ? strerror(errno) : "unknown prc");
+		  gp_pid = 0, set_fd(&gp_outpipe, -1, 0);
+		  if (t==t0) LOG("gp exited again, no restart"); else t0=t, LOG_E("gp_start",gp_start()); }
+
 int w_main(int ac, char ** av) {
 	if ((samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 3))==MAP_FAILED) return perror("mmap"), 1;
-	int r = gp_start(); LOG_E("gp_start", r);
+	int zfd,r; signal(SIGCHLD, i_w_chld); LOG_E("gp_start", gp_start());
 	if (ac>1) ((r=gp_tlog_read(av[1]))<0) ? LOG_E(av[1],r) : gp_plot(1);
 	fd_set rset; while (1) {
-		FD_ZERO(&rset); FD_SET(0, &rset); FD_SET(gp_outpipe, &rset);
-		r = select(gp_outpipe+1, &rset, 0, 0, NULL); if (r<0) perror("select");
-		if (FD_ISSET(gp_outpipe, &rset)) gp_out();
+		FD_ZERO(&rset); FD_SET(0, &rset); if ((zfd=max_i(gp_outpipe,0))) FD_SET(zfd, &rset);
+		r = select(zfd+1, &rset, 0, 0, NULL); if (r<0) perror("select");
+		if (chld_flg) zfd = 0,  chld_flg = 0, w_chdone();
+		if (zfd && FD_ISSET(gp_outpipe, &rset)) gp_out();
 		if (FD_ISSET(0, &rset) && (r=ib_read(&wrk_cb))<0 && (LOG_E("cmd/read",r), r>-3)) wbye(r&1); 
 	}}
 
