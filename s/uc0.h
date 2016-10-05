@@ -31,6 +31,7 @@ void h5f(char *to, int x);
 const char * tpipe_name(int c);
 int launch(const char * exe, const char * iocfg, ...);
 void * map_wdir_shm(int c, size_t siz, int wrf); // 1:wr 2:cre
+void set_fd(int *to, int from, int keep);
 #else
 
 volatile char vstring[16];
@@ -109,6 +110,9 @@ void * map_wdir_shm(int c, size_t siz, int wrf) {
 	//fprintf(stderr,"c='%c' wrf=%d shm:siz=%d -- open/trunc OK\n", c, wrf, (int)siz);
 	void *r = mmap(NULL, siz, md[4+(wrf&1)], MAP_SHARED, fd, 0); close(fd); return r;
 }
+
+void set_fd(int *to, int from, int keep) { if (*to!=from) *to<0 ? (*to=from)
+	        : (close(*to), from<0 ? (*to=from) : (dup2(from, *to), (keep||close(from)))); }
 
 // (iocfg-a*: (|)|. :none <|>:int* -|*|=|+->const char*) a1 a2 ... (char*)NULL 
 // null(r), null(w), keep   ro,cre,app,rw,wr
