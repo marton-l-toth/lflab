@@ -35,7 +35,7 @@ void GuiStub::errq_add(int ec, const char *s) {
 }
 
 void GuiStub::errq_cfl() {
-	if (!m_errq_n || !(snd0.cond_clk(m_errq_t0, 250000))) return;
+	if (!m_errq_n || !(snd0.cond_clk(m_errq_t0, 250))) return;
 	memcpy(m_bufp, "\tC47$E>?", 8), m_bufp+=7;
 	for (int i=0; i<m_errq_n; i++) hex8(m_errq_v[i]);   m_errq_n = 0; }
 
@@ -60,6 +60,7 @@ int GuiStub::start(int * pfd) {
 	m_gf0 = glob_flg;
 	set_fd(&m_inpipe, pfi, 0); set_fd(&m_tpipe, pft, 0);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
+	snd0.cond_clk(m_errq_t0); --*m_errq_t0;
 	set_tlog(); savename(); vol(); xapp_bv(); flush();
 	return 0;
 }

@@ -57,7 +57,7 @@ static void ini(const char ** ppf) {
 	if (glob_flg&GLF_HITHERE) {const char *s="getting started"; snd0.w(-1); hlp->sn(&s)->draw_window(11);}
 	pt_wrk_start(0); if (CFG_DEVEL.i) pt_con_op("-1");
 	snd0.cfg(gui2.tpipe(), 0); snd0.start(); 
-	snd0.cond_clk(asv_ts, 1); glob_flg &= ~GLF_INI1; glob_flg |= GLF_SAVED;
+	snd0.cond_clk(asv_ts); glob_flg &= ~GLF_INI1; glob_flg |= GLF_SAVED;
 }
 
 #define FOR_SLC for (int k,i=0; i<N_SLCMD; i++) if ((k=sl_cmd[i].fd()) >= 0)
@@ -76,7 +76,7 @@ static void sel_loop() {
 		if ((nj=jobq.nj())){ while (snd0.time4job()&&jobq.run());  jobq.upd_gui(0), nj=jobq.purge(); }
 		snd0.c_play();
 		if ((r=glob_flg&GLF_SILENCE) && !((glob_flg^=r)&GLF_FSTATE) && (r=CFG_ASV_MIN.i) &&
-			   snd0.cond_clk(asv_ts, r*60000000)) Node::save_batch(Node::root(), "/", 0);
+			   snd0.cond_clk(asv_ts, r*60000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
 int main(int ac, char** av) { ini(pt_init(ac,av,PFD(0),PFD(2))); sel_loop(); }

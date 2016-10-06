@@ -328,17 +328,8 @@ int CmdTab::c_vol(CmdBuf * p) {
 }
 
 int CmdTab::c_stat(CmdBuf * p) { 
-	// TODO: mx_debug
 	log("total_played: %g", sample_length * (double)snd0.total_played());
-	unsigned int buf[16384];
-	int n = snd0.stat(buf, 16384);
-	char nm[16];
-	nm [ sprintf(nm, "t%08x.bin", (unsigned int)time(0)) ] = 0;
-	int fd = creat(nm, 0644);
-	if (fd<0) return EEE_ERRNO;
-	write(fd, buf, n*sizeof(unsigned int));
-	close(fd);
-	return 0;
+	return 0; // TODO: more debug
 }
 
 int CmdTab::c_cfg(CmdBuf * p) {

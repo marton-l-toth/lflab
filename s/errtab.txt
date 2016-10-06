@@ -55,14 +55,15 @@ RTE_FZZZ     too many zeroes in filter
 S11_________ __________________________________________________________(BUG)__
 AUE_START    failed to start audio
 AUE_RE_CLK   failed to set audio clock on recovering, trying to restart...
+AUE_CLOCK    failed to set clock
 AUE_AVAIL    audio: snd_pcm_avail() failed (see console/log for details)
-AUE_DLY      audio: snd_pcm_delay() failed (see console/log for details)
 AUE_WRITEI   audio: snd_pcm_writei() failed (see console/log for details)
 AUE_LESSWR   audio: less frames written than requested
 AUE_ZEROWR   audio: zero frames written 
-AUE_PLAYRCV  audio: recover (after write) failed
-AUE_MCFLY    time went backwards (maybe this is a virtual machine?)
+AUE_MCFLY    clock: clock is supposed to be monotonous
+AUE_LTNOSEE  clock: long time, no see (>0.26 sec)
 AUE_RECOVER  audio: recoverable error (buffer empty?)
+AUE_UNRECOV  audio: unrecoverable error (see console/log)
 S13_________ __________________________________________________________(BUG)__
 PTE_GUICRASH Unexpected GUI exit. Please see help 'reporting bugs'.
 PTE_WRKCRASH Unexpected exit of worker process. See help 'reporting bugs'.
