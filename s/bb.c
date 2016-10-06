@@ -717,7 +717,7 @@ static inline int gp_res() { return (128+(53&-(gp_res22&1))) << (gp_res22>>1); }
 static char wrk_cb_s[1024];
 static ibuf wrk_cb = { 0, 1024, 0, 0, &wrk_cmd_l, wrk_cb_s };
 static const char *wrk_etab[] = { "bug!!", "some error", "gp start","read","write",
-				  "open",  "file-op",    "wrongdat","rsrv","bug"  };
+				  "open",  "mmap",       "wrongdat","rsrv","bug"  };
 #define GP_CKY17(J) "gbf" #J "\0" #J , "gbs" #J "\0ctrl-" #J
 static const char * gp_cmd_key[] = {"gmX4\0#Left", "gmx4\0#Right", "gmc4\0#Down", "gmC4\0#Up", "gc\0c",
 	"gmX@\0&#Left", "gmx@\0&#Right", "gm0\0^#Left", "gm1\0^#Right", "gmX1\0#End", "gmx1\0#PageDown",
@@ -728,7 +728,7 @@ static void LOG_wrk(const char * fmt, ...) {
         char buf[1024]; int k,r; va_list ap; va_start(ap, fmt);
 	if (fmt) r = vsnprintf(buf, 1023, fmt, ap); 
 	else if ((r = va_arg(ap,int))>=0) return va_end(ap);
-	else k = va_arg(ap,int), fmt = va_arg(ap,const char*),
+	else k = va_arg(ap,int), fmt = va_arg(ap,const char*), k = (r==-6) ? map_errno : k,
 	     r = snprintf(buf, 1023, "%s: ec=%d(%s) ue: %s", fmt, r, (r<-9)?"??":wrk_etab[-r], strerror(k));
         va_end(ap); if (r>=0) buf[r] = 10, write(2, buf, r+1);
 }
@@ -808,7 +808,7 @@ static int gp_tlog_read(const char *fname) {
 	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.+-\0__cpu%\0__", 24);
 	int fd = open(fname, O_RDONLY); if (fd<0) return -5;
 	int n = lseek(fd, 0, SEEK_END); if (n<4) return -7; else gp_len=gp_tlog_n=(n>>=2);
-	int r = lseek(fd, 0, SEEK_SET); if (r) return -6;
+	int r = lseek(fd, 0, SEEK_SET); if (r) return -9;
 	int n6 = (n+63)>>6, siz = n + n6;
 	if (siz>gp_tlog_siz) {
 		if (siz>(1<<28)) return -7;
@@ -948,7 +948,7 @@ static int gp_ptf_ini(const char *s) {
 	LOG("gp_ptf_ini: flg=%d bits=%d len=%d", flg, bits, len);
 	if (bits != gp_ptf_bits) { gp_ptf_drop(); if (!bits) return 0;
 				   gp_ptf_dat = map_wdir_shm('+', 16<<(gp_ptf_bits=bits), 1); 
-				   if (gp_ptf_dat==MAP_FAILED) return gp_ptf_dat=NULL, gp_ptf_bits=0, -6;  }
+				   if (!gp_ptf_dat) return gp_ptf_bits=0, -6;  }
 	int siz = 1<<bits, k = siz - len;
 	if (k) { memset(gp_ptf_dat+len, 0, 8*k); if (flg&1)  memset(gp_ptf_dat+siz+len, 0, 8*k); }
 	gp_ptf_siz = siz; gp_cur_statfun = &gp_statf_tf; gp_ptf_flg = flg; 
@@ -1025,7 +1025,8 @@ void w_chdone() { static int t0 = 0; int r = waitpid(-1,NULL,WNOHANG), t = time(
 		  if (t==t0) LOG("gp exited again, no restart"); else t0=t, LOG_E("gp_start",gp_start()); }
 
 int w_main(int ac, char ** av) {
-	if ((samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 3))==MAP_FAILED) return perror("mmap"), 1;
+	if (!(samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 3))) 
+		return LOG("mmap: %s", strerror(map_errno)), 1;
 	int zfd,r; signal(SIGCHLD, i_w_chld); LOG_E("gp_start", gp_start());
 	if (ac>1) ((r=gp_tlog_read(av[1]))<0) ? LOG_E(av[1],r) : gp_plot(1);
 	fd_set rset; while (1) {

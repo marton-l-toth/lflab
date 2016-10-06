@@ -16,11 +16,11 @@ static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
 static inline int atoi_h(const char *s) { int r = 0, x = -(*s=='-');
 	for (s-=x; *s&80; s++) r = 16*r+hxd2i(*s); return (r^x)-x; }
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
-
 #define qh4rs(P) qh4r(*(const int*)(P))
 extern const unsigned char bitrev8[256];
 
 #ifndef QWE_UTILC_DEF
+extern int map_errno;
 extern volatile char vstring[16];
 extern char *xapp_env[N_XAPP], *xapp_dflt[N_XAPP];
 extern const char **xapp_ls[N_XAPP];
@@ -35,6 +35,7 @@ void set_fd(int *to, int from, int keep);
 #else
 
 volatile char vstring[16];
+int map_errno = 0;
 const char *xapp_env[N_XAPP] = { "LF_XTERM", "LF_X_ED_T", "LF_X_ED_X" };
 const char *xapp_dflt[N_XAPP] = { "xterm", "nano", "xedit" };
 static const char *xterm_ls[] = { "x-terminal-emulator", "xterm", "gnome-terminal", "konsole", "lxterminal",
@@ -105,10 +106,11 @@ const char * tpipe_name(int c) {
 
 void * map_wdir_shm(int c, size_t siz, int wrf) {
         static const int md[6] = { O_RDONLY,O_RDWR,O_RDONLY,O_RDWR|O_CREAT, PROT_READ,PROT_READ|PROT_WRITE };
-        const char * fnm = tpipe_name(c);   int fd = open(fnm, md[wrf&3], 0600); if (fd<0) return MAP_FAILED;
-	if ((wrf&2) && ftruncate(fd, siz)<0) return close(fd), MAP_FAILED;
-	//fprintf(stderr,"c='%c' wrf=%d shm:siz=%d -- open/trunc OK\n", c, wrf, (int)siz);
-	void *r = mmap(NULL, siz, md[4+(wrf&1)], MAP_SHARED, fd, 0); close(fd); return r;
+        const char * fnm = tpipe_name(c); void *r = 0;
+	int fd = open(fnm, md[wrf&3], 0600); if (fd<0) return  map_errno=errno, r;
+	if ((wrf&2) && ftruncate(fd, siz)<0) return close(fd), map_errno=errno, r;
+	if ((r = mmap(NULL, siz, md[4+(wrf&1)], MAP_SHARED, fd, 0)) == MAP_FAILED) map_errno=errno, r=0;
+	close(fd); return r;
 }
 
 void set_fd(int *to, int from, int keep) { if (*to!=from) *to<0 ? (*to=from)

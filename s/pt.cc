@@ -389,7 +389,8 @@ static int wrk_dead(int pid, int stat, int td) {
 
 double * pt_samp_shm(int bits) { log("pt_samp_shm: bits=%d", bits);
 	if (bits<=pt_samp_bits) return bits ? pt_samp_buf : (pt_samp_drop(), (double*)0); else pt_samp_drop();
-	return (pt_samp_buf=(double*)map_wdir_shm('+',16<<bits,3)) ? (pt_samp_bits=bits, pt_samp_buf) : 0; }
+	return (pt_samp_buf=(double*)map_wdir_shm('+',16<<bits,3)) ? (pt_samp_bits=bits, pt_samp_buf)
+		      : (log("pt_samp_shm: %s", strerror(map_errno)), pt_samp_bits = 0,  pt_samp_buf); }
 
 int pt_wrk_start(int re) {
 	int pf1, pid = launch(QENV('b'), ">p1", &pf1, "lf.wrk", (char*)0); // TODO: cmdpipe
