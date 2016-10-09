@@ -391,6 +391,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'S': return s[1]=='c' ? ((p->m_cont=qstat.chk0(s+2)) ? 0 : BXE_QSTATDIF) : qstat.cmd(s+1);
 		case 'D': return (j=s[1]) ? (strncpy(DEBUG_UTXT(hxd2i(j)), s+2, 63), 0) : GCE_PARSE;
 		case '>': return log("_> %s", s+1), 0;
+		case '@': return clk0.gplot();
 		default: return GCE_UMISC;
 	}}
 

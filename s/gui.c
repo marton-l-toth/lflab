@@ -1691,7 +1691,7 @@ static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
 #define CLOG if (errtemp<1000) errtemp+=20, LOG
 static void tlog_cmd(const char * h16) {
 	static int maxv = 0, cnt = 0, errtemp = 0;
-	unsigned int *q = tlog_cp(h16), x0 = *q;
+	unsigned int *q = tlog_cp(h16, 0), x0 = *q;
 	if (errtemp) --errtemp;
 	if (x0>0xfffeffff) { CLOG("tlog_cp: error %d", x0 & 65535); return; }
 	char bbuf[32]; int i, nf=0, n = (int)x0, j=0, m=0, lt = -1;

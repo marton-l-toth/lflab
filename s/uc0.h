@@ -114,7 +114,7 @@ void * map_wdir_shm(int c, size_t siz, int wrf) {
 	close(fd); return r;
 }
 
-unsigned int * tlog_cp(const char *h16) {
+unsigned int * tlog_cp(const char *h16, int xf) {
 	static unsigned int bits = 99, ec = 0, *buf = 0;
 	if (bits>98)  { if (bits>99) return &bits;
 			const char * s = getenv("LF_TLOG_BITS"); if (!s) return bits=0xffff0001, &bits;
@@ -123,7 +123,7 @@ unsigned int * tlog_cp(const char *h16) {
 	int i, h4[4]; for (i=0; i<4; i++) h4[i] = qh4rs(h16+4*i);
 	int siz = 2<<bits, i0 = (h4[0]<<16) + h4[1], n = (h4[2]<<16) + h4[3];
 	if ((i0|n) >= siz) return ec=0xffff0003, &ec;
-	unsigned int *r = (unsigned int*)malloc(4*n+8); r[0] = n;
+	unsigned int *r = (unsigned int*)malloc(4*(n+(xf?(n>>6)+4:2))); r[0] = n;
 	return (i0+n<=siz) ?  memcpy(r+2, buf+i0, 4*n) 
 			   : (memcpy(r+2, buf+i0, 4*(siz-i0)), memcpy(r+2+siz-i0, buf, 4*(n-siz+i0))), r;
 }

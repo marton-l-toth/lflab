@@ -707,7 +707,8 @@ static int gp_inpipe = -1, gp_outpipe = -1, gp_pid = 0, gp_w_id = 0, gp_len = 0,
 static double gp_ctr = 0.5, gp_rad = 0.5;
 static char gp_w_title[64], gp_f_title[64];
 static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000";
-static int gp_tlog_n = 0, gp_tlog_siz = 0, *gp_tlog = NULL;
+static int gp_tlog_n = 0, gp_tlog_siz = 0;
+static unsigned int *gp_tlog = NULL, *gp_tlog_tab;
 static double * gp_ptf_dat = 0;
 static int gp_ptf_siz, gp_ptf_bits, gp_ptf_flg;
 
@@ -777,6 +778,7 @@ static int gp_plot(int d) {
 	double dl = (double)gp_len, dc = dl*gp_ctr, dr = dl*gp_rad;
 	int j0 = ivlim((int)lround(dc-dr), 0,  gp_len-1),
 	    jz = ivlim((int)lround(dc+dr), j0+1, gp_len);
+	LOG("gp_len=%d, j0=%d, jz=%d", gp_len, j0, jz);
 	return gp_binplot(-1,(*gp_cur_statfun)(j0, jz)); }
 
 static void gp_rgb_shuffle() {
@@ -785,39 +787,56 @@ static void gp_rgb_shuffle() {
 	gp_u_perm7 = v; }
 
 ///// w/tlog ////
-static int gp_tlog_t(int ix) {  int i, i6 = ix>>6, t = gp_tlog[gp_tlog_n + i6];
-				for (i=64*i6; i<ix; i++) t += gp_tlog[i]&262143;   return t; }
+#define TLSEC(J) (1e-9*(double)(gp_tlog[J]&0x3fffff80))
+static double gp_tlog_t(int ix) {
+	int i, i6 = ix>>7; double x = (double)gp_tlog_tab[2*i6] + 1e-9*(double)gp_tlog_tab[2*i6+1];
+	for (i=128*i6; i<ix; i+=2) x += TLSEC(i);    return x; }
 
 static int gp_statf_tlog(int j0, int jz) {
-	int x, x0, k0, j, samp_cnt = 0, samp_calc = 0;
-	double cpu0 = 0.0, *q = samp2gplot;
-	int ttot = 0; for (j=j0; j<jz; j++) ttot += gp_tlog[j]&262143;
-	int td1, t = gp_tlog_t(j0), td = 0, tdloc = 0, tdmin = ttot/(gp_res()-1), t1 = tdmin;
-	for (j=j0,x0=0; j<jz; j++,x0=x) {
-		int k = (x=gp_tlog[j]) >> 18, xt = x&262143;
-		if (k>127) { if (k<4096) td1 = (k-1090), td += td1, tdloc += td1;  }
-		else { if ((k|1)=='q' && (k0=(x0>>18)-4096)>=0) samp_cnt += k0, samp_calc += xt+(x0&262143); }
-		if ((t+=xt)>t1) q[3] = !samp_cnt ? cpu0 : (cpu0=4.41*(double)samp_calc/(double)samp_cnt,
+	j0<<=1, jz<<=1;
+	unsigned int x, x0;
+	int j, samp_cnt = 0;
+	double samp_calc=0.0, xt, cpu0 = 0.0, *q = samp2gplot;
+	double td1, ttot = 0.0; for (j=j0; j<jz; j+=2) ttot += TLSEC(j);
+	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, tdloc = 0.0, t1 = t+tdmin;
+	LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
+	int pcnt = 0, PQcnt = 0;
+	for (j=j0,x0=0; j<jz; j+=2,x0=x) {
+		int k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
+		switch(k){ case 'p': td1 = 1e-6*(double)(int)gp_tlog[j+1], td+=td1, tdloc += td1; ++pcnt; break;
+			   case 'P': case 'Q': samp_cnt += gp_tlog[j+1]; samp_calc += xt;   ++PQcnt; break;
+			   default: break; }
+		if ((t+=xt)>t1) q[3] = !samp_cnt ? cpu0 : (cpu0=4.41e6*samp_calc/(double)samp_cnt,
 							   samp_calc=samp_cnt=0, cpu0),
-				q[2] = 1e-3*(double)tdloc, tdloc = 0,
-				q[0] = 1e-6*(double)t, q[1] = 1e-3*(double)td, t1 = t+tdmin, q += 8; }
+				q[2] = tdloc, tdloc = 0.0,
+				q[0] = t, q[1] = td, t1 = t+tdmin, q += 8; }
+	LOG("gp_tl: #p=%d, #PQ=%d", pcnt, PQcnt);
 	return 0x80f + ((q-samp2gplot)<<13);
 }
 
-static int gp_tlog_read(const char *fname) {
+static unsigned int * tlog_rf(const char * fname) {
+	int fd = open(fname, O_RDONLY); if (fd<0) return perror(fname), NULL ;
+	int n = lseek(fd, 0, SEEK_END); if (n<0) return perror("lseek/e"),close(fd),NULL;
+	if (n<8) return LOG("tlog_rf: len=%d", n), close(fd), NULL; else n>>=3;
+	int r = lseek(fd, 0, SEEK_SET); if (r)  return perror("lseek/0"), NULL;
+	int siz = n + (n>>6) + 3;
+	unsigned int * buf = malloc(8*siz);
+	if ((r = read(fd, buf+2, 8*n)) != 8*n) 
+		return LOG("read(%s): %d/%d: %s", fname, r, 8*n, r<0?strerror(errno):"???"), close(fd), NULL;
+	buf[0] = 2*n; return buf;
+}
+
+static int gp_tlog_read(int flg, const char *arg) {
+	if (gp_tlog) free(gp_tlog), gp_tlog = NULL;
+	unsigned int *q, *tab;
+	if (flg&1) { if (!(q = gp_tlog = tlog_rf(arg))) return -3; }
+	else 	   { if (*(q = tlog_cp(arg, 1))>0xfffeffff) return -6; else gp_tlog = q; }
 	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.+-\0__cpu%\0__", 24);
-	int fd = open(fname, O_RDONLY); if (fd<0) return -5;
-	int n = lseek(fd, 0, SEEK_END); if (n<4) return -7; else gp_len=gp_tlog_n=(n>>=2);
-	int r = lseek(fd, 0, SEEK_SET); if (r) return -9;
-	int n6 = (n+63)>>6, siz = n + n6;
-	if (siz>gp_tlog_siz) {
-		if (siz>(1<<28)) return -7;
-		int sz = 2*gp_tlog_siz; if (sz) free(gp_tlog); else sz = 4096;
-		while (sz<n) sz+=sz;
-		gp_tlog = malloc(4*(gp_tlog_siz=sz)); }
-	if ((r = read(fd, gp_tlog, 4*n)) != 4*n) return close(fd), -3; else close(fd);
-	int i, j, k, t = 0, *q = gp_tlog+n; 
-	for (*(q++)=0, i=0; (k=i+64)<n; i=k,*(q++)=t) for (j=i; j<k; j++) t += gp_tlog[j] & 262143;
+	int i, j, k, n = (int)*q;  gp_tlog_n = gp_len = n>>1; LOG("tlog_read: n=%d", n);
+	unsigned int as = 0, ans = 0;
+	q += 2; tab = q+n; tab[0] = tab[1] = 0u; gp_tlog_tab = tab;
+	for (i=0; (k=i+128)<n; i+=128, tab[1]=ans|'_', tab[0]=ans, tab+=2) 
+		for (j=i; j<k; j+=2) if (ans+=(q[j]&0x3fffff80)>999999999u) ans-=1000000000u, as++;
 	gp_cur_statfun = &gp_statf_tlog; return 0;
 }
 
@@ -988,8 +1007,8 @@ static const char * tlog_name(int c) {
 static int gp_cmd(const char *s) {
 	LOG("gp_cmd: \"%s\"", s);
 	int r; switch(*s) { 
-		case 'T': return ((r=gp_tlog_read(tlog_name(s[1])))<0) ? r : gp_plot(1);
-		case 't': return ((r=gp_tlog_read(s+1))<0) ? r : gp_plot(1);
+		case 'T': return ((r=gp_tlog_read(1, s+1))<0) ? r : gp_plot(1);
+		case 't': return ((r=gp_tlog_read(0, s+1))<0) ? r : gp_plot(1);
 		case 's': return ((r=gp_ptf_ini  (s+1))<0) ? r : gp_plot(1);
 		case 'S': return gp_ptf_drop(), 0;
 		case 'c': return gp_rgb_shuffle(), gp_plot(0);
@@ -1028,7 +1047,7 @@ int w_main(int ac, char ** av) {
 	if (!(samp2gplot = (double*)map_wdir_shm(',', 64*GP_SAMPSIZ, 3))) 
 		return LOG("mmap: %s", strerror(map_errno)), 1;
 	int zfd,r; signal(SIGCHLD, i_w_chld); LOG_E("gp_start", gp_start());
-	if (ac>1) ((r=gp_tlog_read(av[1]))<0) ? LOG_E(av[1],r) : gp_plot(1);
+	if (ac>1) ((r=gp_tlog_read(1,av[1]))<0) ? LOG_E(av[1],r) : gp_plot(1);
 	fd_set rset; while (1) {
 		FD_ZERO(&rset); FD_SET(0, &rset); if ((zfd=max_i(gp_outpipe,0))) FD_SET(zfd, &rset);
 		r = select(zfd+1, &rset, 0, 0, NULL); if (r<0) perror("select");

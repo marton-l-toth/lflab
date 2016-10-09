@@ -189,6 +189,16 @@ int BufClock::j1(int cont) {
         cont &= ((m_t-=dn>m_cf_jtmin)); BCLKJ( (((cont-1)|m_j_ct|m_j_cn)<0) ? jwr(cont) : cont );
 }
 
+int BufClock::gplot(int n) {
+	if (n<=0) n = (m_buf[m_ix_msk-1]) ? 0x7fffffff : (m_ix&m_ix_msk);
+	if ((n&=~1)>(int)(m_ix_msk-1023)) n = m_ix_msk - 1023;
+	int i0 = (m_ix - n) & m_ix_msk;
+	log("clk/gplot: i0=%d, n=%d", i0 ,n);
+	int buf[6]; buf[0] = 0x74670000; buf[1] = qh4(i0>>16); buf[2] = qh4(i0&65535);
+	buf[3] = qh4(n>>16); buf[4] = qh4(n&65535); buf[5] = 10;
+	return pt_wrk_cmd(((const char*)buf)+2, 19);
+}
+
 int packflg(int flg, const int * mv) {
 	int fm = mv[0], f2 = flg & fm; if (f2==mv[1]) return -1;
 	int k=0, r=0; BVFOR_JM(fm) r |= ((f2>>j)&1) << (k++);   return r; }
