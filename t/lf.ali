@@ -3,3 +3,5 @@ alias mk='../t/prod.sh -rsm'
 alias mk0='../t/prod.sh -rsm -0' 
 alias vim=$HOME/g/lflab/t/vimwrap
 alias mkg='../t/prod.sh -rsg lf.gui'
+alias mkcl='rm -r $HOME/lf-prod/s'
+alias mkre='rm -r $HOME/lf-prod/s; time ../t/prod.sh'
