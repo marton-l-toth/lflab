@@ -12,13 +12,10 @@ class GuiStub {
 	public:
 		typedef int (*fun_t) (void*, char*, int);
 		static int gui_dead(int pid, int stat, int td);
-		GuiStub() : m_pfd(0), m_pid(0), m_inpipe(-1), m_tpipe(-1), m_lwi(-1), 
-			    m_errq_n(0), m_bufp(0), m_gnaq_n(0), m_gnaq_t(-9999ll) 
-			  { m_errq_t0[0] = m_errq_t0[1] = 0; }
-		// ~GuiStub () { if (m_pid) stop(); }
+		GuiStub() : m_pfd(0), m_pid(0), m_inpipe(-1), m_lwi(-1), 
+			    m_errq_n(0), m_bufp(0), m_gnaq_n(0), m_gnaq_t(-9999ll) {}
 		int start(int *pfd = 0);
 		void stop();
-		int tpipe() const { return m_tpipe; }
 		int flush();
 		void flush_all();
 		int pending() const {return m_bufp!=m_buf0 || glob_flg!=m_gf0 ||
@@ -110,10 +107,11 @@ class GuiStub {
 		void set_tlog();
 		int gna_add2q(int id) { return (m_gnaq_n>15) ? 0 : (m_gnaq_id[m_gnaq_n++]=id, 256); }
 	protected:
-		int *m_pfd, m_pid, m_inpipe, m_tpipe, m_gf0;
+		int *m_pfd, m_pid, m_inpipe, m_gf0;
 		int m_cwt, m_lwi, m_cwi;
 		int m_th, m_wh;
-		int m_errq_v[32], m_errq_n, m_errq_t0[2];
+		int m_errq_v[32], m_errq_n;
+		struct timespec m_errq_t0;
 		char m_buf0[65536], *m_bufp;
 		int m_gnaq_n, m_gnaq_id[16]; long long m_gnaq_t;
 };

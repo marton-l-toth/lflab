@@ -1,5 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <time.h>
+
 #include "node.h"
 #include "util2.h"
 #include "glob.h"
@@ -133,9 +135,65 @@ int B91Reader::get_short2() {
         return get_bit() ? -base-get_bebin(bits) : base+get_bebin(bits);
 }
 
+///// buffer clock
+#define BLLN 1000000000
+#define BCLK00 struct timespec ts; memcpy(&ts, &m_ts, sizeof(ts))
+#define BCLK01 int dn = ((int)m_ts.tv_nsec&~127) - ((int)ts.tv_nsec&~127), ds = m_ts.tv_sec - ts.tv_sec, \
+                   cf = (ds|(dn&0x80000000))
+#define BCLK0 BCLK00; clock_gettime(m_ty, &m_ts); BCLK01
+#define BCLK1(E) (dn = BLLN + ((ds==1) ? (dn<=0 ? dn : ((E)|=1,128)) : (ds=1+(ds<0), (E)|=ds, ds<<7)))
+#define BCLKN(C) (m_ix+=2, m_buf[m_ix&m_ix_msk]  = ((m_ix<<m_seq_sh)&(3u<<30)) + (C))
+#define BCLKJ(R) if (dn>m_j_max) m_j_max=dn; return m_j_ct-=dn, (R)
+
+int BufClock::ini(int bits, int flg, int jst, int jsn) {
+	static clockid_t cv[2] = { CLOCK_MONOTONIC, CLOCK_MONOTONIC_RAW };
+        if (!(m_buf = (unsigned int *)map_wdir_shm('@', 8<<bits, 3))) return -1;
+	m_bits = bits, m_ix_msk = (2<<bits)-1, m_seq_sh = 29-bits; m_cf_jst=jst, m_cf_jsn=jsn;
+	m_buf[0] = 0x40000021; m_g_ix = m_ix = 2u<<bits; m_gcnt = 0;
+	if (clock_gettime(m_ty=cv[1& flg], &m_ts)>=0) return 0;
+	if (clock_gettime(m_ty=cv[1&~flg], &m_ts)>=0) return 1; else return -2;
+}
+
+int BufClock::f2play(int qf) {
+	int nf, t0 = ev('P'+qf);
+	if (t0>m_cf_half) { if (qf && t0>2*m_cf_full) set(m_cf_half-1); nf = 0; }
+	else if ((nf=(m_cf_full-t0)/m_cf_nspf) > m_cf_fmax) { nf = m_cf_fmax; if (qf && t0<0) set(m_cf_half); }
+	return *pa() = nf;
+}
+
+int BufClock::set(int t) {
+	BCLK00; if (clock_gettime(m_ty, &m_ts)<0) return -1; BCLK01; int e;
+	return m_t = t, cf ? (e=0,BCLK1(t),e|=m_err) : (e=m_err), m_err=0, *pt()+=dn, BCLKN('K'), *pa()=t, e; }
+
+void BufClock::bcfg(int rate, int bs, int bs2, int fmax) {
+        double npf = 1e9 / (double)rate; int e,f,fe;
+        m_cf_nspf  = (int)lround(     npf);   m_cf_empty = e = (int)lround(npf*(double)(  bs+bs2));
+        m_cf_ns16f = (int)lround(16.0*npf);   m_cf_full  = f = (int)lround(npf*(double)(2*bs+bs2));
+        m_cf_fmax = fmax; fe = f-e; m_cf_jtmin = m_cf_half = e+(fe>>1); m_cf_stmin = e+(fe>>3); }
+
+int BufClock::ev(int c) { BCLK0; if (cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), m_t-=dn; }
+
+int BufClock::sel(int zf) { int t = ev('s'); return *pa() = (zf||t<m_cf_stmin) ? 0 : (t-m_cf_empty)>>10; }
+
+int BufClock::j0() { BCLK0; if (cf) BCLK1(m_err);   int r = ((m_t-=dn) >= m_cf_jtmin);
+                     return *pt() += dn, BCLKN('J'+32*r), jvi(), r;     }
+
+int BufClock::jwr(int cf) { return *pt() += (m_cf_jst-m_j_ct),
+                                   *pa() = m_j_max+(m_cf_jsn-1-m_j_cn), BCLKN('J'+32*cf), jvi(), cf; }
+
+int BufClock::j1(int cont) {
+        BCLK0; int qstp = ((cont-1)|(m_t-dn-m_cf_jtmin)), qwr = (--m_j_cn)|(m_j_ct-dn);
+        if (!(cf | ((qstp|qwr)&0x80000000))) { m_t -= dn; BCLKJ(1); }
+        if (!cf) { m_t -= dn; BCLKJ(jwr(qstp>=0)); }
+        int ec = 0; if (BCLK1(ec), ec) { m_err|=ec; m_t-=dn; BCLKJ(jwr(0)); }
+        cont &= ((m_t-=dn>m_cf_jtmin)); BCLKJ( (((cont-1)|m_j_ct|m_j_cn)<0) ? jwr(cont) : cont );
+}
+
 int packflg(int flg, const int * mv) {
 	int fm = mv[0], f2 = flg & fm; if (f2==mv[1]) return -1;
 	int k=0, r=0; BVFOR_JM(fm) r |= ((f2>>j)&1) << (k++);   return r; }
 
 void unpkflg(int *to, int fpk, const int * mv) {
 	int m1, fm = mv[0], k = 0; BVFOR_JM(fm) m1=1<<j, (fpk&(1<<(k++))) ? (*to|=m1) : (*to&=~m1); }
+
+

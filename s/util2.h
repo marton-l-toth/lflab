@@ -18,6 +18,40 @@ class Clock {
                 struct timeval tv;
 };
 
+extern void gui_tlog(int,int);
+class BufClock {
+        public: 
+                int ini(int bits, int flg, int jst, int jsn); // flg: 1-monot.raw
+                void bcfg(int rate, int bs, int bs2, int fmax);
+                int set(int t);
+                int ev(int c), j0(), j1(int cont), sel(int zf), f2play(int qf);
+                inline int t() const { return m_t; }
+                inline int add(int t) { return m_t += t; }
+                inline unsigned int *pt(int j=0) { return m_buf+((m_ix+2*j  ) & m_ix_msk); }
+                inline unsigned int *pa(int j=0) { return m_buf+((m_ix+2*j+1) & m_ix_msk); }
+                inline int err(int z=1) { return z ? (z=m_err, m_err=0, z) : m_err; }
+                inline int tcond(struct timespec *p, int min_ms = 0x80000000) {
+                        return (1000*(m_ts.tv_sec-p->tv_sec)+(m_ts.tv_nsec-p->tv_nsec)/1000000>=min_ms)
+                                && (memcpy(p, &m_ts, sizeof(m_ts)), 1); }
+		inline int f2ns(int nf) { return (nf*m_cf_ns16f+8)>>4; }
+		inline int set_f(int nf) { return set(f2ns(nf)); }
+		inline int add_f(int nf) { return m_t += f2ns(nf); }
+		inline void cls() { ev('x'); m_t = m_cf_half-1; }
+		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);;
+				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev('#'); }
+        protected:
+                inline void jvi() { m_j_ct = m_cf_jst, m_j_cn = m_cf_jsn-1, m_j_max = 0; }
+                int jwr(int cont);
+                struct timespec m_ts;
+                unsigned int *m_buf;
+                unsigned int m_ix, m_ix_msk, m_seq_sh;
+                int m_j_cn, m_j_ct, m_j_max;
+                int m_cf_full, m_cf_empty, m_cf_half, m_cf_stmin, m_cf_jtmin, m_cf_jst, m_cf_jsn;
+                int m_cf_nspf, m_cf_ns16f, m_cf_fmax;
+                clockid_t m_ty;
+                int m_bits, m_t, m_gcnt, m_g_ix, m_err;
+};
+
 // sh0: 0 10sx 110sxx 1110sxxxx 11110sx6 11111sx15
 // sh1: 00 01sx 10sxxx 110sx6 111sx15
 // sh2: 00 01sxx 10sxxxxx 110sx9 111sx15
@@ -76,5 +110,7 @@ int intv_cmd_b(unsigned int *bv, int b0, int nb, const char * arg, int mul4=0x01
 
 int  packflg(         int flg, const int * mv); // mv[0]:mask mv[1]:dflt-val
 void unpkflg(int *to, int fpk, const int * mv);
+
+extern BufClock clk0;
 
 #endif // __qwe_util2_h__

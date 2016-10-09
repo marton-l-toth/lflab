@@ -9,11 +9,13 @@
 #include "asnd.h"
 #include "cfgtab.inc"
 #include "midi.h"
+#include "util2.h"
 
 void gui_closewin(int x) { gui2.closewin(x); }
 void gui_errq_add (int x, 	 const char *s) { gui2.errq_add (x,    s); }
 void gui_errq_add2(int x, int y, const char *s) { gui2.errq_add2(x, y, s); }
 void gui_midi(int flg) { gui2.midi(flg); }
+void gui_tlog(int i0, int n) { gui2.c2(9, 'c'); gui2.hex8(i0); gui2.hex8(n); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
 	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
@@ -35,7 +37,7 @@ void GuiStub::errq_add(int ec, const char *s) {
 }
 
 void GuiStub::errq_cfl() {
-	if (!m_errq_n || !(snd0.cond_clk(m_errq_t0, 250))) return;
+	if (!m_errq_n || !(clk0.tcond(&m_errq_t0, 250))) return;
 	memcpy(m_bufp, "\tC47$E>?", 8), m_bufp+=7;
 	for (int i=0; i<m_errq_n; i++) hex8(m_errq_v[i]);   m_errq_n = 0; }
 
@@ -52,15 +54,15 @@ int GuiStub::gui_dead(int pid, int stat, int td) {
 int GuiStub::start(int * pfd) {
         if (m_pid) return log("gui2 already started: pid %d", m_pid), PTE_WTF;
 	if (pfd) m_pfd = pfd; else if (!m_pfd) bug("gui start without pfd");
-	int pfi, pft;  p_close(m_pfd);
+	int pfi;  p_close(m_pfd);
 	setenv("LF_GUI_SLFOC", "0\0""1"+2*(CFG_GUI_SLFOC.i&1), 1);
-	if ((m_pid = launch(QENV('g'), "!><u>", &pfi, m_pfd, &pft, (char*)0)) < 0)
+	if ((m_pid = launch(QENV('g'), "!><u", &pfi, m_pfd, (char*)0)) < 0)
 		log("FATAL: %s\n", QENV('g')), bye(1);
 	pt_reg(PT_GUI, m_pid, &gui_dead);
 	m_gf0 = glob_flg;
-	set_fd(&m_inpipe, pfi, 0); set_fd(&m_tpipe, pft, 0);
+	set_fd(&m_inpipe, pfi, 0);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
-	snd0.cond_clk(m_errq_t0); --*m_errq_t0;
+	clk0.tcond(&m_errq_t0);
 	set_tlog(); savename(); vol(); xapp_bv(); flush();
 	return 0;
 }

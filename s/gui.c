@@ -278,10 +278,9 @@ static int get_dec(const char ** pp, int delim) {
 	return a;
 }
 
-static void write_tlog();
 static void bye(int op) {
 	LOG("bye(0x%x)", op );
-	if (tlog_c_onq) write_tlog();
+	if (tlog_c_onq) LOG("hmmm"); // TODO write_tlog();
 	write(2, "bye\n&CMD0\n", 10);
 	if (op<32) exit(op);
 	CMD("q%c", 32+(op&31));
@@ -1646,8 +1645,6 @@ static void please_wait(cairo_t * cr2) {
 static unsigned char cpu_bmp[160];
 static cairo_surface_t * cpu_surf;
 static int cpu_austat = 1;
-static unsigned int tlog_dat[0x101000];
-static int tlog_ix_c = 0, tlog_ix_i = 0, tlog_wr = 0;
 
 static void dabmp_draw(ww_t * ww, cairo_t * cr2) {
 	static const double fg[2]={.2, 1.0}, bg[2]={.1,.3};
@@ -1691,40 +1688,26 @@ static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
 	if (nf&64) da_fullre(ww);
 }
 
-static void write_tlog() {
-	static const char *fn = 0; if (!fn && !(fn=getenv("LF_TLOG"))) fn = "lf.tlog";
-	backup(fn, tlog_c_bk);
-	LOG("write_tlog, expected file size: %d bytes", tlog_wr ? (1<<22) - 4*!!(tlog_ix_c&3) : 4*tlog_ix_i);
-	int n, k, fd = creat(fn, 0644); if (fd<0) return perror(fn);
-	if (tlog_wr && (n=(1<<22)-(k=(tlog_ix_c+3)&~3))) write(fd, (char*)tlog_dat + k, n);
-	if (tlog_ix_i) write(fd, tlog_dat, 4*tlog_ix_i);
-	close(fd);
-}
-
-static gboolean tpipe_in (GIOChannel *src, GIOCondition cond, gpointer data) {
-	static int maxv = 0, cnt = 0, unexp = 0;
-	if (cond!=G_IO_IN) return LOG("ioc=%d", cond), FALSE;
-	int r = read( g_io_channel_unix_get_fd  (src), (char*)tlog_dat + tlog_ix_c, 4096);
-	if (r<1) return LOG("tpipe errno: r=%d, %d/%s", r, errno, strerror(errno)), TRUE;
-	int k, i, j=0, m=0, nxc = tlog_ix_c + r, nxi = nxc>>2;
-	unsigned int * q = tlog_dat;  char bbuf[32];
-	for (i=tlog_ix_i; i<nxi; i++) {
-		int c = q[i]>>18; if ((c|1)=='q') cpu_austat = 'q'-c; else continue;
-		if (!i || (k=q[i-1]>>18)<4097) {
-			if (++unexp<1001) LOG("unexp 'p' in tlog (cnt:%d)%s", unexp, 
-					unexp==1000?" -- this is the last message":"");
-			if (unexp>999888777) LOG("this is impossible."), kill(getppid(), 9);
-			continue; 
-		}
-		int v = (51 * ((q[i]&262143)+(q[i-1]&262143)) / (k-4096)) >> 5;
-		if (v>maxv) maxv = v;
+#define CLOG if (errtemp<1000) errtemp+=20, LOG
+static void tlog_cmd(const char * h16) {
+	static int maxv = 0, cnt = 0, errtemp = 0;
+	unsigned int *q = tlog_cp(h16), x0 = *q;
+	if (errtemp) --errtemp;
+	if (x0>0xfffeffff) { CLOG("tlog_cp: error %d", x0 & 65535); return; }
+	char bbuf[32]; int i, nf=0, n = (int)x0, j=0, m=0, lt = -1;
+	for (i=2; i<=n; i+=2) {
+		int v, c = q[i]&127, t = (q[i]>>7)&0x7fffff;
+		if ((c|33)!='q') { if (lt>=0) (c=='K') ? (lt=-1,nf=0) : (lt+=t); continue; }
+		cpu_austat = 1 & ~c;
+		if (!(c&32)) {  if (lt>=0) { CLOG("tlog: unexp %c",c); } nf = q[i+1]; lt = t|-!nf; continue; }
+		if (lt<0 || !nf) { CLOG("tlog: unexp p/q"); v = 0; }
+		else { v = ((51 * lt) / nf)>>8; lt = -1; nf = 0; if (v>maxv) maxv = v; }
 		if (++cnt>3) cnt = 0, bbuf[j] = min_i(maxv, 99), maxv = 0, j = j<31 ? j+1 : (++m,0);
 	}
-	if (j|m) { if (m) LOG("tipe_in: lots of input, m=%d", m), dabmp_upd(NULL, bbuf+j, 32-j);
+	if (!j || cnt) { CLOG("tlog_cmd: j=%d, cnt=%d", j, cnt); }
+	if (j|m) { if (m) { CLOG("tipe_in: lots of input, m=%d", m), dabmp_upd(NULL, bbuf+j, 32-j); }
 		   if (j) dabmp_upd(NULL, bbuf, j+64); }
-	tlog_ix_c = nxc & 0x3fffff; tlog_ix_i = nxi & 0xfffff;
-	if (nxc>0x400000) memcpy((char*)q, (char*)(q+(1<<20)), tlog_ix_c), tlog_wr = 1;
-	return TRUE;
+	free(q);
 }
 
 //////// mini-wrap(18x44)  arg: nmxy12v:rgbrgb /////////////////////////
@@ -4941,9 +4924,8 @@ static void cmd1(char * str) {
 			   else lsr_upd(i, s);
 			   return;
 		case 'v': memcpy(help_vpos, s, 4); return;
-		case 't': switch(*s) { case 'w': case 0: write_tlog(); return;
-				       case 'c': tlog_c_onq = (s[1]>63), tlog_c_bk = s[1]&15; return;
-				       default: LOG("t: invalid subcmd"); return; }
+		case 't': LOG("t: command removed, BUG"); return;
+		case 'c': tlog_cmd(s); return;
 		case 'f': choo_cmd(choo_tab+chtab_get(&choo_ch, *s), s+1); return; 
 		case 'd': switch(*s) {
 				case 'S': sleep(1); return;
@@ -5090,7 +5072,6 @@ int main(int ac, char **av) {
 	gtk_disable_setlocale();
 	if (getenv("LF_TMPDIR")) write(2, "&CMD1\n", 6), signal(SIGHUP, SIG_IGN), signal(SIGINT, SIG_IGN);
 	else LOG("(gui test mode)");
-	int tpipe_fd = ac<2 ? -1 : qh4r(*(int*)av[1]);
 	obidtab_ini(&oi_box, 0);
 	obidtab_ini(&oi_dir, 1); ot_dir[0].flg = 3; ot_dir[0].id = 0; ot_dir[0].clip = NULL;
 	obidtab_ini(&oi_etc, 0); // ot_etc[0].state = ot_etc[1].state = 0;
@@ -5119,6 +5100,5 @@ int main(int ac, char **av) {
 	}
 	add_in(0,        &cmd_in,   2);
 	add_in(-'T',     &from_dot, 0);
-	add_in(tpipe_fd, &tpipe_in, 3);
 	gtk_main (); write(2, "whaaat???\n&CMD0\n", 16); return 0;
 }
