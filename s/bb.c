@@ -623,69 +623,6 @@ static int q_main(int ac, char** av) {
 	return 0;
 }
 
-/* lf.tlogdump (debug tool for lflab)
-   dumps tlog in a more-or-less human-readable format (time:event pairs)
-   time: duration (time until next event) in microseconds unless "m" says millisec.
-   event: (s) - select (with wait)         +-  - clock adjust
-   	  (S) - select (without wait)      j88 - job slice (j1: longest)
-   	  888 - calculate main mixer       (J) - no time for job exec    
-          (p) - play (send to audio dev)
-   every 4th cycle the data is send to GUI process (for CPU meter display)
-   (this has no separate event, you can see that every 4th "clock adjust" takes a little longer)
-*/
-
-static void dur4(char * to, int t) {
-	if (t<=9999) return (void)sprintf(to, "%4d", t);
-	if (t>262141) return (void)memcpy(to, "FRVR-WTF"+4*(t&1), 4);
-	if (t>99999) return (void)sprintf(to, "%dm", t/1000);
-	t/=100; sprintf(to, "%dm%c", t/10, 48+(t%10));
-}
-
-static int ev4(char *to, int k) {
-	if (k<128) to[0]=40, to[2]=41, to[3]=32, to[1] = k?k:63;
-	else if (k<2048) return sprintf(to, "%+d", k-1090), k-1090;
-	else if (k<4096) (k&=2047)<1000 ? sprintf(to, "j%d", k) 
-				        : (k/=100, sprintf(to, "j%ck%c",48+k/10,48+k%10));
-	else k&=4095, sprintf(to, " %d"+(k>999), k);
-	return 0;
-}
-
-#define MEGA 1000000
-
-static int  ent10(char *q, unsigned int x) { return dur4(q,x&262143), q[4]=q[9]=58, ev4(q+5, x>>18); }
-static void top10(char *q, long long t) { sprintf(q, "%02d.%06d", (int)((t/MEGA)%60), (int)(t%MEGA)); }
-
-static int t_main(int ac, char ** av) {
-	long long t0 = 0LL, t1 = 0LL;
-	int nrow = 30, ncol = 10, nblk = 0, atot2 = 0;
-	if (ac==4) nrow=atoi(av[1]), ncol = atoi(av[2]), av += 2;
-	else if (ac!=2) return fprintf(stderr,"usage: %s [nrow ncol] <binfile>\n", *av), 1;
-	int fd = open(av[1], O_RDONLY); if (fd<0) return  perror(av[1]), 1;
-	int blks = nrow * ncol, ibuf[blks], wid = 10*ncol, osiz0 = (nrow+1)*wid;
-	char obuf[osiz0 + 80]; memset(obuf, 32, osiz0);
-	while(1) {
-		int i,j,k,nr = read(fd, ibuf, 4*blks), eof = 4*blks - nr;
-		t1 = t0;
-		if (nr<=0) return nr ? (perror("read"),1) : 0;
-		if (nr&3) fprintf(stderr, "ignoring %c extra bytes\n", nr&3);
-		int nrow2 = ((nr>>=2) + ncol - 1) / ncol, osiz2 = (nrow2+1)*wid;
-		int adjm = 0, adjM = 0, adjtot = 0;
-		for (i=0,j=0,k=0; k<nr; k++, i += (++j>=nrow2 && !(j=0))) {
-			if (!j) { top10(obuf+10*i, t0); obuf[10*i+9] = (i==ncol-1)?10:'|'; }
-			int a = ent10(obuf + 10*i + wid*(j+1), ibuf[k]); t0 += ibuf[k]&262143;
-			if (a) { adjtot+=a; if (a<adjm) adjm=a; else if (a>adjM) adjM=a; }
-		}
-		for (i=0; i<osiz2; i++) if (!obuf[i]) obuf[i] = 32;
-		for (i=9; i<osiz2; i+=10) obuf[i] = 32; 
-		for (i=wid-1; i<osiz2; i+=wid) obuf[i] = 10;
-		int sec = t0/MEGA, nx;
-		nx=sprintf(obuf+osiz2, "blk%04d t%02d:%02d.%06d len:%d.%06d +-min,max,tot,atot: %d,%d,%d,%d\n",
-		    	nblk++, sec/60, sec%60, (int)(t0%MEGA), (int)((t0-t1)/MEGA), (int)((t0-t1)%MEGA),
-			adjm, adjM, adjtot, atot2+=adjtot);
-		write(1, obuf, osiz2+nx);
-		if (eof) return 0;
-	}}
-
 /**************** worker proc. (plot+tbd) **********************************/
 
 #undef LOG
@@ -794,14 +731,14 @@ static double gp_tlog_t(int ix) {
 
 static int gp_statf_tlog(int j0, int jz) {
 	j0<<=1, jz<<=1;
-	unsigned int x, x0;
+	unsigned int x;
 	int j, samp_cnt = 0;
 	double samp_calc=0.0, xt, cpu0 = 0.0, *q = samp2gplot;
 	double td1, ttot = 0.0; for (j=j0; j<jz; j+=2) ttot += TLSEC(j);
 	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, tdloc = 0.0, t1 = t+tdmin;
 	LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
 	int pcnt = 0, PQcnt = 0;
-	for (j=j0,x0=0; j<jz; j+=2,x0=x) {
+	for (j=j0; j<jz; j+=2) {
 		int k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
 		switch(k){ case 'p': td1 = 1e-6*(double)(int)gp_tlog[j+1], td+=td1, tdloc += td1; ++pcnt; break;
 			   case 'P': case 'Q': samp_cnt += gp_tlog[j+1]; samp_calc += xt;   ++PQcnt; break;
@@ -1065,6 +1002,26 @@ int w_main(int ac, char ** av) {
 		if (zfd && FD_ISSET(gp_outpipe, &rset)) gp_out();
 		if (FD_ISSET(0, &rset) && (r=ib_read(&wrk_cb))<0 && (LOG_E("cmd/read",r), r>-3)) wbye(r&1); 
 	}}
+
+/**************** tlog dump (text) *****************************************/
+
+int t_main(int ac, char** av) {
+	if (ac==3 && !memcmp(av[1],"-x",3)) return w_main(2, av+1);
+        if (ac!=2) return fprintf(stderr,"usage: %s [-x] <binfile>\n", *av), 1;
+        int i, r, sq0=-1, fd = open(av[1], O_RDONLY); if (fd<0) return  perror(av[1]), 1;
+        unsigned int x, y, buf[4096];
+        while ((r=read(fd, buf, 16384))>0) {
+                for (i=0, r>>=2; i<r; i+=2) {
+                        x = buf[i]; y = buf[i+1];
+                        int c = x&127; if (!c) goto done; if (c<32) c='?';
+                        int t = x&0x3fffff80, sq = (int)(x>>30);
+                        if (sq!=sq0) printf(" [[s=%d]]", sq0=sq);
+                        putchar(c=='s' ? 10 : 32); putchar(c); if (y) printf("(%d)",(int)y);
+                        printf(":%d.%c", t/1000, 48+(t%1000)/100);
+                }}
+done:   puts("");
+        return 0;
+}
 
 /*******************************/
 
