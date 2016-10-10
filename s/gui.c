@@ -226,7 +226,6 @@ static int conf_lbh = 18, conf_lbfh = 15, conf_lbfs = 15, conf_lbfh_s = 12, conf
 static int conf_nomwin = 0, conf_slider_focus = 0;
 static int conf_portwid;
 
-static int tlog_c_onq = 0, tlog_c_bk = 0;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf 40:track\n"
 			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo 2000:vblu\n"
@@ -280,7 +279,6 @@ static int get_dec(const char ** pp, int delim) {
 
 static void bye(int op) {
 	LOG("bye(0x%x)", op );
-	if (tlog_c_onq) LOG("hmmm"); // TODO write_tlog();
 	write(2, "bye\n&CMD0\n", 10);
 	if (op<32) exit(op);
 	CMD("q%c", 32+(op&31));
@@ -1123,11 +1121,10 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 		  "k00,243208,66H6t00,818290,6OO6T00,818290,6OO6k00,000000,0000"},
 {'.',12,0,12,4, "flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
 		"------------exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
-		"*f  $!t c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
-{0,  13,0,12,4, "[obj. tree] filter disp.console     error list  ------------"
-		"audio configpath config midi config misc config ------------"
-		"show tlog   show tlog/-1show tlog/-2", 
-		"$/  _F  _c-1_E  ####A0W cW  mW  cV  ####%gT0%gT1%gT2"},
+		"*f  _@1 c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
+{0,  11,0,12,4, "[obj. tree] filter disp.console     error list  ------------"
+		"audio configpath config midi config misc config ------------show tlog   ",
+		"$/  _F  _c-1_E  ####A0W cW  mW  cV  ####_@  "},
 {'/',9, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  text   ","DCwsgicth"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},

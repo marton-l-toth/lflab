@@ -217,7 +217,6 @@ static int ocfg_iv(int j, const char *s) {
 	if ((unsigned int)(j-1) >= (unsigned int)(sizeof(cfg_tab)/sizeof(cfg_ent)-1)) return GCE_UCFG;
 	cfg_ent * q = cfg_tab + j;
 	if (!(intv_cmd_cfg(q, s, -1))) return 0;
-	if (q==&CFG_TLOG_BACKUP || q==&CFG_TLOG_AUTO) gui2.set_tlog();
 	gui2.setwin(0x37,'k'); gui2.ocfg_l(j+48); return 0;
 }
 
@@ -391,7 +390,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'S': return s[1]=='c' ? ((p->m_cont=qstat.chk0(s+2)) ? 0 : BXE_QSTATDIF) : qstat.cmd(s+1);
 		case 'D': return (j=s[1]) ? (strncpy(DEBUG_UTXT(hxd2i(j)), s+2, 63), 0) : GCE_PARSE;
 		case '>': return log("_> %s", s+1), 0;
-		case '@': return clk0.gplot();
+		case '@': return clk0.wrk(s[1]);
 		default: return GCE_UMISC;
 	}}
 

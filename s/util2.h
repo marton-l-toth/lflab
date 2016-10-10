@@ -39,7 +39,7 @@ class BufClock {
 		inline void cls() { ev('x'); m_t = m_cf_half-1; }
 		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);;
 				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev('#'); }
-		int gplot(int n = 0);
+		int wrk(int op, int n = 0);
         protected:
                 inline void jvi() { m_j_ct = m_cf_jst, m_j_cn = m_cf_jsn-1, m_j_max = 0; }
                 int jwr(int cont);

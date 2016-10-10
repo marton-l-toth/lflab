@@ -63,7 +63,7 @@ int GuiStub::start(int * pfd) {
 	set_fd(&m_inpipe, pfi, 0);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
 	clk0.tcond(&m_errq_t0);
-	set_tlog(); savename(); vol(); xapp_bv(); flush();
+	savename(); vol(); xapp_bv(); flush();
 	return 0;
 }
 
@@ -189,7 +189,6 @@ void GuiStub::ref_title(int wwt, ANode * nd, int wwix, const char * defstr) {
 	sn("(no ", 4); sz(defstr); sn(" box)", 5);
 }
 
-void GuiStub::set_tlog() { c4(9, 't', 'c', 48+16*!!CFG_TLOG_AUTO.i + CFG_TLOG_BACKUP.i); }
 void GuiStub::vol() { setwin(7,'.'); wupd_i2('v', snd0.vol() - 12); }
 
 void GuiStub::midi(int flg) {

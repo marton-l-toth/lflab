@@ -12,7 +12,7 @@ SV_EXEC     |i|0          |0   |1    |svexe |1:save files have exec perm and '#!
 SV_BACKUP   |i|5          |1   |31   |svbk  |# of backups for save file
 ASV_BACKUP  |i|5          |1   |31   |asbk  |# of backups for autosave
 ASV_MIN     |i|5          |0   |35   |asmin |minutes between autosaves (0: no autosave)
-TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit
+TLOG_AUTO   |i|0          |0   |1    |tlau  |automatic tlog write on exit (DOES NOT WORK)
 TLOG_BACKUP |i|2          |0   |31   |tkbk  |# of backups for tlog
 LOG_BACKUP  |i|3          |0   |31   |lbk   |# of backups for log
 AO_ACTION   |i|0          |0   |3    |aoact |default action for tmp audio (0:ask 1:keep 2:wav 3:flac)

@@ -27,7 +27,6 @@ static inline double cut300(double x) { return fabs(x)>=1e-300 ? x : 0.0; }
 static inline int is_hx(int c) { return (unsigned int)(c-48)<10u || (unsigned int)((c|32)-97)<6u; }
 static inline int hex2(const char*s) { return 16*hxd2i(*s)+hxd2i(s[1]); }
 #define HEX2(p,v) ( *(p) = hexc1(((v)>>4)&15), (p)[1] = hexc1((v)&15), (p) += 2 )
-static inline int i_to_b32(int x) { return x<10 ? '0'+x : 'a'-10+x ; }
 static inline int chtab_get(chtab * p, int c) { c-=32; if(c<0||c>95) c=95; return p->tab[c]; }
 static inline int s__cat(char * to, const char * s) { int i = 0; while (s[i]) to[i] = s[i], i++; return i; }
 static inline int bitcnt_8(int c) { return c=(c&0x55)+((c>>1)&0x55), c = (c&0x33)+((c>>2)&0x33), (c&15)+(c>>4);}
@@ -37,7 +36,6 @@ static inline int mul40320(int x) { return (x>87?315:"\x01\x05\a#\x03\x0f\x15i\t
 
 #ifndef QWE_UTILC_DEF
 
-int backup(const char *fn, int k);
 int bitcnt(unsigned int x);
 void chtab_ini(chtab * p, int fill);
 int chtab_force(chtab * p, int c); 
@@ -57,20 +55,6 @@ int trk_g_parse(const char * s, unsigned char * div, unsigned char * gwfr);
 int find_dev(unsigned char *to, int midiflg, int max);
 
 #else
-
-int backup(const char *fn, int k) {
-        if (!k || !fn || !*fn) return 0; int ni, di, l = strlen(fn);
-        char nm1[l+4], nm2[l+4]; const char *s1 = nm1;
-	for (di=l-1; di>0; di--) { if (fn[di]=='/') break; if (fn[di]=='.') {
-		memcpy(nm1, fn, di); memcpy(nm1+di, "--0.", 4); memcpy(nm1+di+4, fn+di+1, l-di);
-		ni = di+2; goto ok1; }}
-	memcpy(nm1, fn, l); memcpy(nm1+l, "--0", 4); ni = l+2;
-ok1:	memcpy(nm2, nm1, l+4);
-        while (k--) {
-                if (!k) s1 = fn; else nm1[ni] = i_to_b32(k);
-                nm2[ni] = i_to_b32(k+1);
-                if (rename(s1, nm2)<0 && errno!=ENOENT) return -17; /*EEE_ERRNO*/
-        } return 0; }
 
 int bitcnt(unsigned int x) {
         x = (x&0x55555555) + ((x>>1)&0x55555555);

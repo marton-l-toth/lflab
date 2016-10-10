@@ -15,6 +15,7 @@ static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
 static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
 static inline int atoi_h(const char *s) { int r = 0, x = -(*s=='-');
 	for (s-=x; *s&80; s++) r = 16*r+hxd2i(*s); return (r^x)-x; }
+static inline int i_to_b32(int x) { return x + (x<10?48:87); }
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define qh4rs(P) qh4r(*(const int*)(P))
 extern const unsigned char bitrev8[256];
@@ -33,6 +34,7 @@ int launch(const char * exe, const char * iocfg, ...);
 void * map_wdir_shm(int c, size_t siz, int wrf); // 1:wr 2:cre
 unsigned int * tlog_cp(const char *h16);
 void set_fd(int *to, int from, int keep);
+int backup(const char *fn, int k);
 #else
 
 volatile char vstring[16];
@@ -188,6 +190,20 @@ fdchk:          if (k<0) k = open("/dev/null", md);
         fprintf(stderr,"execvp \"%s\" failed: %s\n", exe,  strerror(errno)); fflush(stderr);
 	raise(9); while(1) sleep(60); // call your <censored>, not the static destructors
 }
+
+int backup(const char *fn, int k) {
+        if (!k || !fn || !*fn) return 0; int ni, di, l = strlen(fn);
+        char nm1[l+4], nm2[l+4]; const char *s1 = nm1;
+        for (di=l-1; di>0; di--) { if (fn[di]=='/') break; if (fn[di]=='.') {
+                memcpy(nm1, fn, di); memcpy(nm1+di, "--0.", 4); memcpy(nm1+di+4, fn+di+1, l-di);
+                ni = di+2; goto ok1; }}
+        memcpy(nm1, fn, l); memcpy(nm1+l, "--0", 4); ni = l+2;
+ok1:    memcpy(nm2, nm1, l+4);
+        while (k--) {
+                if (!k) s1 = fn; else nm1[ni] = i_to_b32(k);
+                nm2[ni] = i_to_b32(k+1);
+                if (rename(s1, nm2)<0 && errno!=ENOENT) return -17; /*EEE_ERRNO*/
+        } return 0; }
 
 #endif // QWE_UTILC_DEF
 #endif // __qwe_uc0_h__

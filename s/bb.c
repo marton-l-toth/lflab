@@ -273,7 +273,7 @@ static void del_workdir() {
 	ino_inm[l0+4] = ino_inm[l0+44] = 0; rm_r(ino_inm+1); rm_r(ino_inm+41);
         char buf[l0+16]; memcpy(buf, s0, l0); buf[l0] = '/'; buf[l0+2] = 0;
         for (s=FIFO_LIST; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0, 0);
-        for (s="+,"     ; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0, ENOENT);
+        for (s="+,@"     ; *s; s++) buf[l0+1] = *s, del_n_log(buf, 0, ENOENT);
         memcpy(buf+l0+1, "killer-file", 12); del_n_log(buf, 0, 0);
         buf[l0] = 0; del_n_log(buf, 1, 0);
 }
@@ -1004,6 +1004,15 @@ static const char * tlog_name(int c) {
 		  int len = strlen(nm0); clen = len-5; buf = malloc(len+5); memcpy(buf, nm0, clen); }
 	return memcpy(buf+clen+((c==48)?0:(buf[clen]=buf[clen+1]='-',buf[clen+2]=c,3)),".tlog",6), buf; }
 
+static int tlog_hcp(int bk, const char * arg) {
+	static const char *nm = 0; if (!nm && !(nm=getenv("LF_TLOG"))) return -9;
+	unsigned int * q = tlog_cp(arg, 0); if (*q>0xfffeffff) return LOG("tlog_cp: errror %d", *q&65535), -1;
+	backup(nm, bk); 
+	int n = 4**q, r, fd = creat(nm, 0600); 
+	if (fd<0) return -5; if ((r=write(fd, q+2, n)!=n)) return perror(nm), close(fd), -5;
+	close(fd); return 0;
+}
+
 static int gp_cmd(const char *s) {
 	LOG("gp_cmd: \"%s\"", s);
 	int r; switch(*s) { 
@@ -1023,6 +1032,7 @@ static int gp_cmd(const char *s) {
 static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
 	case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
 	case 'q': bye(0);
+	case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2));
 	default: LOG("unknown command \"%s\"", s); break;
 }}
 
