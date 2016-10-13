@@ -129,7 +129,7 @@ int Dot::start() {
 	const char * path = "dot"; // TODO: config(?)
 	m_pid = launch(path, "!>Tt", &m_pipe, "-Tplain-ext", (char*)0);
 	pt_reg(PT_DOT, m_pid, &dot_dead);
-	return (m_pid<0) ? (log("failed to start %s\n", path), -1) : 0;
+	return (m_pid<0) ? (log("failed to start %s (ret: %d, ue: %s)\n", path, m_pid, strerror(errno)), -1) : 0;
 }
 
 void Dot::flush() {

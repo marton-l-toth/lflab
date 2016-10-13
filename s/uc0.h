@@ -145,10 +145,10 @@ int launch(const char * exe, const char * iocfg, ...) {
         va_list ap; va_start(ap, iocfg);
         for (i=0; i<60 && (k=iocfg[i]); i++) { switch(k) {
                 case '<': if (pipe(fds+i)<0 || (ff=fcntl(fds[i],F_GETFD))<0
-					    ||     fcntl(fds[i],F_SETFD,ff|FD_CLOEXEC)<0) return -1; LAUNCH_DBG;
+					    ||     fcntl(fds[i],F_SETFD,ff|FD_CLOEXEC)<0) return -2-i; LAUNCH_DBG;
                           *(va_arg(ap, int*)) = fds[i]; fds[i] = fds[i+1]; continue;
                 case '>': if (pipe(fds+i)<0 || (ff=fcntl(fds[i+1],F_GETFD))<0
-					    ||     fcntl(fds[i+1],F_SETFD,ff|FD_CLOEXEC)<0) return -1; LAUNCH_DBG;
+					    ||     fcntl(fds[i+1],F_SETFD,ff|FD_CLOEXEC)<0) return -2-i; LAUNCH_DBG;
                           *(va_arg(ap, int*)) = fds[i+1]; continue;
                 case '-': case '+': case '*': case '=': LAUNCH_DBG;
                           av[i] = va_arg(ap, const char*); if (!av[i]) av[i] = "/dev/null"; continue;
