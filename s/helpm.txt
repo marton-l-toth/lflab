@@ -1132,7 +1132,7 @@ Here you can bind play actions (more or less having the same
 effect as a click on the grid) to MIDI keys/controls. Since it
 is possible to bind actions of many different shadow wraps to
 the same keys/controls, these bindings have to be "grabbed":
-==> 3.midi/control -- see here how grab/release works
+==> 4.grab/release -- see here how it works
 You can have at most 21 play actions defined for each shadow
 wrap. In the first line, the number of play actions is shown
 ("play:<n>"), you can add a new line (right-cl. for menu) and 
