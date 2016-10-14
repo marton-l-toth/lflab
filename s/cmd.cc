@@ -375,7 +375,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'M': return mx_debug(s+1);
 		case 'm': return nd_mem_debug();
 		case 'p': return pt_debug(), 0;
-		case 's': return u_sleep((int)lround(1000.0*atof(s+1))), 0;
+		case 's': return i=(int)lround(1e3*atof(s+1)), u_sleep(((s[1]-43)&~2) ? i:i+(clk0.t()/1000)),0;
 		case 'G': switch(j=s[1], i=j?atoi_h(s+2):0, j) {
 				  case '-': i=~i; case '&': i &= glob_flg; break;
 				  case '+':       case '|': i |= glob_flg; break; default:i=glob_flg; break; }

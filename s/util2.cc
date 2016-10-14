@@ -158,6 +158,7 @@ int BufClock::f2play(int qf) {
 	int nf, t0 = ev('P'+qf);
 	if (t0>m_cf_half) { if (qf && t0>2*m_cf_full) set(m_cf_half-1); nf = 0; }
 	else if ((nf=(m_cf_full-t0)/m_cf_nspf) > m_cf_fmax) { nf = m_cf_fmax; if (qf && t0<0) set(m_cf_half); }
+	else { nf *= (rnd5()+225); nf>>=8; }
 	return *pa() = nf;
 }
 
@@ -171,8 +172,8 @@ void BufClock::bcfg(int rate, int bs, int bs2, int fmax) {
         m_cf_ns16f = (int)lround(16.0*npf);   m_cf_full  = f = (int)lround(npf*(double)(2*bs+bs2));
         m_cf_fmax = fmax; fe = f-e; m_cf_jtmin = m_cf_half = e+(fe>>1); m_cf_stmin = e+(fe>>3); }
 
-int BufClock::ev(int c) { BCLK0; if (cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), m_t-=dn; }
-
+int BufClock::ev(int c)		{ BCLK0; if(cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), 	   m_t-=dn; }
+int BufClock::ev2(int c, int a) { BCLK0; if(cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), *pa()=a, m_t-=dn; }
 int BufClock::sel(int zf) { int t = ev('s'); return *pa() = (zf||t<m_cf_stmin) ? 0 : (t-m_cf_empty)>>10; }
 
 int BufClock::j0() { BCLK0; if (cf) BCLK1(m_err);   int r = ((m_t-=dn) >= m_cf_jtmin);

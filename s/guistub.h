@@ -17,7 +17,7 @@ class GuiStub {
 		int start(int *pfd = 0);
 		void stop();
 		int flush();
-		void flush_all();
+		int flush_all();
 		int pending() const {return m_bufp!=m_buf0 || glob_flg!=m_gf0 ||
 					    (m_gnaq_n|m_errq_n|Node::slr_flg());}
 		inline int cfl() { return ((m_bufp-m_buf0)&0xffff8000) && flush(); }

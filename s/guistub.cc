@@ -75,7 +75,7 @@ void GuiStub::stop() {
 }
 
 int GuiStub::flush() {
-	int r, i = 0, nx = 0, l = m_bufp - m_buf0 + 1; if (l<2) return 0; else *m_bufp = 10;
+	int r, i = 0, nx = 0, l0 = m_bufp - m_buf0 + 1, l = l0; if (l<2) return 0; else *m_bufp = 10;
 	for (int c,j=0; j<l; j++) if ((unsigned int)((c=m_buf0[j])-32)>94u && ((c-9)&254)) ++nx,m_buf0[j]=63;
 	if (nx) log("BUG: gui2/flush: %d invalid characters, replaced with '?'");
 	if ((debug_flags & DFLG_GUI2)) log_sn("to-gui2:", m_buf0, l);
@@ -89,7 +89,7 @@ int GuiStub::flush() {
 		log("ERROR: GUI does not seem to work, type 's<filename>' to save, 'q' to quit (with autosave)");
 		pt_con_op("-1"); return -1;
 	} 
-	return 1;
+	return l0;
 }
 
 void GuiStub::hexs(unsigned const char * s, int k) {
@@ -162,14 +162,14 @@ void GuiStub::node_rm(int i, ANode * nd) {
 	c2(9, 'N'); hex5(dir->id()); c2(i+49, '-'); hex5(nd->id());
 }
 
-void GuiStub::flush_all() { 
+int GuiStub::flush_all() { 
 	cfl(); slr_upd(); errq_cfl();
 	int x = glob_flg^m_gf0; m_gf0 = glob_flg;
 	if (x & GLF_FSTATE) savename();
 	if (m_gnaq_n && (snd0.total_played()-m_gnaq_t)>(long long)(44*CFG_GUI_TRKUP.i)) {
 		for (int i=0, n=m_gnaq_n; i<n; i++) trk_w_gna(m_gnaq_id[i]);
 		m_gnaq_t = snd0.total_played(); m_gnaq_n = 0; }
-	flush();
+	return flush();
 }
 
 void GuiStub::j_upd(int wwt, int st, int wwix) {

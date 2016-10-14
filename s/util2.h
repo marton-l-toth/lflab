@@ -24,7 +24,8 @@ class BufClock {
                 int ini(int bits, int flg, int jst, int jsn); // flg: 1-monot.raw
                 void bcfg(int rate, int bs, int bs2, int fmax);
                 int set(int t);
-                int ev(int c), j0(), j1(int cont), sel(int zf), f2play(int qf);
+                int ev(int c), ev2(int c, int a = 0), j0(), j1(int cont);
+		int sel(int zf), f2play(int qf);
                 inline int t() const { return m_t; }
                 inline int add(int t) { return m_t += t; }
                 inline unsigned int *pt(int j=0) { return m_buf+((m_ix+2*j  ) & m_ix_msk); }
@@ -41,6 +42,7 @@ class BufClock {
 				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev('#'); }
 		int wrk(int op, int n = 0);
         protected:
+		inline int rnd5() { int r = m_rnd>31 ? m_rnd : random()|0x40000000; m_rnd=r>>5; return r&31; }
                 inline void jvi() { m_j_ct = m_cf_jst, m_j_cn = m_cf_jsn-1, m_j_max = 0; }
                 int jwr(int cont);
                 struct timespec m_ts;
@@ -50,7 +52,7 @@ class BufClock {
                 int m_cf_full, m_cf_empty, m_cf_half, m_cf_stmin, m_cf_jtmin, m_cf_jst, m_cf_jsn;
                 int m_cf_nspf, m_cf_ns16f, m_cf_fmax;
                 clockid_t m_ty;
-                int m_bits, m_t, m_gcnt, m_g_ix, m_err;
+                int m_bits, m_t, m_gcnt, m_g_ix, m_err, m_rnd;
 };
 
 // sh0: 0 10sx 110sxx 1110sxxxx 11110sx6 11111sx15

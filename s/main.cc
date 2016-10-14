@@ -69,10 +69,10 @@ static void sel_loop() {
 		tv.tv_sec=0; tv.tv_usec = clk0.sel(nj);
 		int r = select(nfd, &rset, 0, 0, &tv), cf = pt_chld_flg; 
 		if (cf) pt_chld_act(), cf &= 3;
-		if (r>0){ FOR_SLC FD_ISSET(k,&rset) && !((1<<i)&cf) && (clk0.ev(48+i), sl_cmd[i].read_f());
-			  BVFOR_JM(midi_bv) if (FD_ISSET(midi_fd[j], &rset)) clk0.ev('M'), midi_input(j);  }
+		if (r>0){ FOR_SLC FD_ISSET(k,&rset) && !((1<<i)&cf) && (clk0.ev2('c',i), sl_cmd[i].read_f());
+			  BVFOR_JM(midi_bv) if (FD_ISSET(midi_fd[j], &rset)) clk0.ev2('M',j), midi_input(j); }
 		else if (r<0) { perror("select"); }
-		if (gui2.pending()) clk0.ev('G'), gui2.flush_all();
+		if (gui2.pending()) clk0.ev('G'), *clk0.pa() = gui2.flush_all();
 		if ((nj=jobq.nj())&&clk0.j0()){ while (clk0.j1(jobq.run())); jobq.upd_gui(0),nj=jobq.purge(); }
 		snd0.c_play();
 		if ((r=glob_flg&GLF_SILENCE) && !((glob_flg^=r)&GLF_FSTATE) && (r=CFG_ASV_MIN.i) &&

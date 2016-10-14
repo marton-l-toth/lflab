@@ -1010,14 +1010,21 @@ int t_main(int ac, char** av) {
         if (ac!=2) return fprintf(stderr,"usage: %s [-x] <binfile>\n", *av), 1;
         int i, r, sq0=-1, fd = open(av[1], O_RDONLY); if (fd<0) return  perror(av[1]), 1;
         unsigned int x, y, buf[4096];
+	double ttot = 0.0;
+	int ldiv = 10, lcnt = 0;
         while ((r=read(fd, buf, 16384))>0) {
                 for (i=0, r>>=2; i<r; i+=2) {
                         x = buf[i]; y = buf[i+1];
                         int c = x&127; if (!c) goto done; if (c<32) c='?';
                         int t = x&0x3fffff80, sq = (int)(x>>30);
                         if (sq!=sq0) printf(" [[s=%d]]", sq0=sq);
-                        putchar(c=='s' ? 10 : 32); putchar(c); if (y) printf("(%d)",(int)y);
+			if (c!='s') { putchar(32); }
+			else if (putchar(10), !(lcnt++%ldiv)) {
+				int min = (int)floor(ttot) / 60;
+				printf("============= %d:%.7g ======\n", min, ttot - (double)(60*min)); }
+                        putchar(c); if (y) printf("(%d)",(int)y);
                         printf(":%d.%c", t/1000, 48+(t%1000)/100);
+			ttot += 1e-9*(double)t;
                 }}
 done:   puts("");
         return 0;
