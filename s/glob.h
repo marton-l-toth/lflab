@@ -47,8 +47,8 @@ extern int killer_fd;
 extern int qstat_size;
 
 #define zeroblkD ((double*)(zeroblkC))
-extern char zeroblkC[32768];
-extern double junkbuf[4096];
+#define junkbuf  ((double*)(junkbufC))
+extern char zeroblkC[32768], junkbufC[32768];
 extern char save_file_name[1024], debug_utxt_buf[1024];
 
 extern int v_major, v_minor;

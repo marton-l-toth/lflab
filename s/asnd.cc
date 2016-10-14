@@ -19,7 +19,8 @@
 #define ADDSAMP(X) (m_clk_nbuf += SAMP2NS(X))
 static fa_writer fa_wr;
 
-int ASnd::close() { clk0.cls(); if (m_hnd) snd_pcm_close(m_hnd); return w(1024), m_hnd=0, m_n_chan=0; }
+int ASnd::close() { clk0.cls(); if (m_hnd) snd_pcm_close(m_hnd); 
+		    return w(1024), m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
 int ASnd::start(int flg, int mxid) {
@@ -62,7 +63,7 @@ int ASnd::start1(int sc_lim) {
 	log("snd: open(%s) OK, #chan=%d, rate=%d, bufsiz=%d", CFG_AU_NAME.s, m_n_chan, sample_rate, m_bufsiz);
         if ((e=snd_pcm_nonblock(m_hnd,1))<0) return err(e,"nonblock");
         if ((e=snd_pcm_prepare(m_hnd)) < 0) return err(e,"prepare");
-	return play_and_adj((short*)zeroblkD, 64, sc_lim|(1<<30));
+	return m_cur_cpf = &cpf_true, play_and_adj((short*)zeroblkD, 64, sc_lim|(1<<30));
 }
 
 int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
@@ -99,21 +100,22 @@ int ASnd::play_and_adj(short *buf, int nf, int opt) {
 	clk0.add(adj); *clk0.pa() = (unsigned int) adj; clk0.gcond(); return 0;
 }
 
-void ASnd::c_play() {
-	int nf = clk0.f2play(!m_hnd); if (!nf) return;
-	short buf[nf*m_cfg.nch];
-	int ec = 0, mxr = mx_calc_int(m_mxid, buf, &m_cfg, m_hcp?&fa_wr : 0, nf);
-	if (mxr<0) gui_errq_add(mxr);
-	m_total_played += nf;
-	if (m_hcp) {
-		if (mxr==MXE_HCPFAIL || (m_hcp -= nf)<=0) ec = hcp_end(1);
-		else if (m_hcp<m_hcp_s0) ec = m_hcp / 44100, m_hcp_s0 = ec * 44100,
-					 d99(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
-					 gui2.setwin(7,'.'), gui2.wupd_s('W', m_hcp_lbl), ec = 0;
-	}
-	if (!m_hnd) return glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond();
-	if ((ec=play_and_adj(buf, nf, 0))<0) gui_errq_add(ec), start(1);
-}
+void ASnd::play2(short *buf, int nf) {
+	int ec = mx_calc_int(m_mxid, buf, &m_cfg, m_hcp?&fa_wr : 0, nf);
+	m_total_played += nf; if (ec<0) gui_errq_add(ec);
+	if (m_hcp) { if (ec==MXE_HCPFAIL || (m_hcp-=nf)<=0) { if ((ec=hcp_end(1))<0) gui_errq_add(ec); }
+		     else if (m_hcp<m_hcp_s0) { int t = m_hcp/44100; m_hcp_s0 = 44100*t;
+			     			d99(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
+						gui2.setwin(7,'.'), gui2.wupd_s('W', m_hcp_lbl); }}}
+
+void ASnd::cpf_mute(ASnd *p) {
+	int nf = clk0.f2play(1); if (!nf) return; else p->play2((short*)junkbufC, nf);
+	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
+
+void ASnd::cpf_true(ASnd *p) {
+	int nf = clk0.f2play(0); if (!nf) return;
+	short buf[nf*p->m_cfg.nch]; p->play2(buf, nf);
+	int ec = p->play_and_adj(buf, nf, 0); if (ec<0)  gui_errq_add(ec), p->start(1); }
 
 int ASnd::w(int flg) {
 	if (flg&   1) gui2.cre(0x67, 'S'); else gui2.setwin(0x67, 'S');
