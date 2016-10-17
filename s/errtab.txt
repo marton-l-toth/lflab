@@ -59,7 +59,8 @@ AUE_CLOCK    failed to set clock
 AUE_AVAIL    audio: snd_pcm_avail() failed (see console/log for details)
 AUE_WRITEI   audio: snd_pcm_writei() failed (see console/log for details)
 AUE_LESSWR   audio: less frames written than requested
-AUE_ZEROWR   audio: zero frames written 
+AUE_ZEROWR   audio: zero frames written
+AUE_LARGEBUF audio: delay will be longer than configured (see console/log)
 AUE_MCFLY    clock is supposed to be monotonous (BUG)
 AUE_LTNOSEE  clock: long time, no see (>1sec)
 AUE_RECOVER  audio: recoverable error (buffer empty?)

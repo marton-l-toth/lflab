@@ -154,11 +154,11 @@ int BufClock::ini(int bits, int flg, int jst, int jsn) {
 	if (clock_gettime(m_ty=cv[1&~flg], &m_ts)>=0) return 1; else return -2;
 }
 
-int BufClock::f2play(int qf) {
-	int nf, t0 = ev('P'+qf);
+int BufClock::f2play(int flg) {
+	int nf, qf = flg&1, t0 = ev('P'+qf);
 	if (t0>m_cf_half) { if (qf && t0>2*m_cf_full) set(m_cf_half-1); nf = 0; }
 	else if ((nf=(m_cf_full-t0)/m_cf_nspf) > m_cf_fmax) { nf = m_cf_fmax; if (qf && t0<0) set(m_cf_half); }
-	else { nf *= (rnd5()+225); nf>>=8; }
+	else if (flg&2) { nf *= (rnd5()+225); nf>>=8; }
 	return *pa() = nf;
 }
 
@@ -187,7 +187,7 @@ int BufClock::j1(int cont) {
         if (!(cf | ((qstp|qwr)&0x80000000))) { m_t -= dn; BCLKJ(1); }
         if (!cf) { m_t -= dn; BCLKJ(jwr(qstp>=0)); }
         int ec = 0; if (BCLK1(ec), ec) { m_err|=ec; m_t-=dn; BCLKJ(jwr(0)); }
-        cont &= ((m_t-=dn>m_cf_jtmin)); BCLKJ( (((cont-1)|m_j_ct|m_j_cn)<0) ? jwr(cont) : cont );
+        cont &= ((m_t-=dn)>m_cf_jtmin); BCLKJ( (((cont-1)|m_j_ct|m_j_cn)<0) ? jwr(cont) : cont );
 }
 
 int BufClock::wrk(int op, int n) {

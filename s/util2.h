@@ -25,7 +25,7 @@ class BufClock {
                 void bcfg(int rate, int bs, int bs2, int fmax);
                 int set(int t);
                 int ev(int c), ev2(int c, int a = 0), j0(), j1(int cont);
-		int sel(int zf), f2play(int qf);
+		int sel(int zf), f2play(int flg); // flg: 1:mute 2:random
                 inline int t() const { return m_t; }
                 inline int add(int t) { return m_t += t; }
                 inline unsigned int *pt(int j=0) { return m_buf+((m_ix+2*j  ) & m_ix_msk); }
@@ -35,7 +35,7 @@ class BufClock {
                         return (1000*(m_ts.tv_sec-p->tv_sec)+(m_ts.tv_nsec-p->tv_nsec)/1000000>=min_ms)
                                 && (memcpy(p, &m_ts, sizeof(m_ts)), 1); }
 		inline int f2ns(int nf) { return (nf*m_cf_ns16f+8)>>4; }
-		inline int set_f(int nf) { return set(f2ns(nf)); }
+		inline int set_f(int nf) { return set(nf*m_cf_nspf); }
 		inline int add_f(int nf) { return m_t += f2ns(nf); }
 		inline void cls() { ev('x'); m_t = m_cf_half-1; }
 		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);;
