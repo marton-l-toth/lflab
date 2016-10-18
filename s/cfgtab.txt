@@ -34,6 +34,8 @@ DEBUG_FLG   |i|0          |0   |DFLGZ|dflg  |init. debug_flg (decimal, type 'd?'
 MIDI_KTR    |i|7	  |0   |7    |ktr   |keyboard (virt.midi) trans: 1:f11,f12 2:q2w3... 4-zsxd...
 MIDI_PRM    |s|           |0   |32   |miprm |midi input device permutation
 PLOT_XSIZ   |i|4	  |0   |6    |plotx |max. FFT-plot samples - 2^x * (1Msamp=23.777sec=16MB)
+CLK_TYPE    |i|1	  |0   |1    |clkty |clock type: 0:monotonic 1:monot.raw (eff. after restart)
+CLK_TLBITS  |i|3	  |0   |10   |tlsiz |tlog buffer size 2^x Mbyte (2^x*131k events)
 _1_NOEX     |i|0          |0   |1    |n     |skip default example tree (.!e)
 _H1         |i|0          |0   |1    |h     |show help
 _H2         |i|0          |0   |1    |?     |show help

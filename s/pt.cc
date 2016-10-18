@@ -425,7 +425,7 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con) {
 	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io;
 	qe_ini(); cfg0(); 
 	const char ** ret = cfg1(ac, av);
-	int r = clk0.ini(20, 1, 1000000, 100); // TODO: config
+	int r = clk0.ini(17+CFG_CLK_TLBITS.i, CFG_CLK_TYPE.i, 1000000, 100); // TODO: config
 	if (r) (r<0) ? (r&=1, log("FATAL: clk0: init (%s, %s)", "clk\0mmap"+4*r, r?map_errno:errno), exit(1))
 		     : (log("WARNING: clk0: configured clk type nodes not work"));
 	setenv("LF_TLOG_BITS", "4", 1);
