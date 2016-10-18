@@ -36,6 +36,7 @@ int ASnd::start(int flg, int mxid) {
 void ASnd::cfg_pre(int spd, int rsrv, int liar) {
 	int bs  = m_bs  = (int)lround(2048.0 * ipow(0.965936328924846, spd)),
 	    bs2 = m_bs2 = (bs*rsrv+50)/100;
+	clk0.bcfg(sample_rate, bs, bs2, (3*bs)>>1);
 	m_flg &= ~1; m_flg |= liar;
 	if (liar) { m_cur_cpf = &cpf_liar, m_hwbs_trg = bs+bs2; }
 	else {	int n = 4096, l = bs*(500+3*rsrv)/200 + 1;
