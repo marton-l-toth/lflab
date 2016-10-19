@@ -35,6 +35,15 @@ static int ib_read(ibuf * b) { // -1:unixerr -2:zero_ret -3:frag_discard -4:no_f
 	int k = b->cont = q-p; 
 	return k ? ( (4*k>3*sz) ? (b->cont=0, -3) : (memmove(b->p, p, b->cont), 0) ) : 0;
 }
+// tlog copy (io, wrk);
+static int tlog_hcp(int bk, const char * arg) {
+	static const char *nm = 0; if (!nm && !(nm=getenv("LF_TLOG"))) return -9;
+	unsigned int * q = tlog_cp(arg, 0); if (*q>0xfffeffff) return -1;
+	backup(nm, bk); 
+	int n = 4**q, r, fd = creat(nm, 0600); 
+	if (fd<0) return -5; if ((r=write(fd, q+2, n)!=n)) return perror(nm), close(fd), -5;
+	close(fd); return 0;
+}
 
 //// auconv /////////////////////////////////////////////////////////////////
 
@@ -453,6 +462,7 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'x': case 'X': return set_xapp(s[1]-48, n-1, s+2);
 	case 'h': return (n>7 && s[7]=='.') ? ino_add(atoi_h(s+2), s[1]&1,  s+8, n-8) : LOG("h: parse error");
 	case 'd': return (void) (dflg = atoi_h(s+1));
+	case 'T': if (s[1]>=48) tlog_hcp(s[1]-48, s+2); return;
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 
@@ -940,15 +950,6 @@ static const char * tlog_name(int c) {
 	if(!buf){ const char * nm0 = getenv("LF_TLOG"); if (!nm0) return LOG("LF_TLOG undefined"), "BUG!";
 		  int len = strlen(nm0); clen = len-5; buf = malloc(len+5); memcpy(buf, nm0, clen); }
 	return memcpy(buf+clen+((c==48)?0:(buf[clen]=buf[clen+1]='-',buf[clen+2]=c,3)),".tlog",6), buf; }
-
-static int tlog_hcp(int bk, const char * arg) {
-	static const char *nm = 0; if (!nm && !(nm=getenv("LF_TLOG"))) return -9;
-	unsigned int * q = tlog_cp(arg, 0); if (*q>0xfffeffff) return LOG("tlog_cp: errror %d", *q&65535), -1;
-	backup(nm, bk); 
-	int n = 4**q, r, fd = creat(nm, 0600); 
-	if (fd<0) return -5; if ((r=write(fd, q+2, n)!=n)) return perror(nm), close(fd), -5;
-	close(fd); return 0;
-}
 
 static int gp_cmd(const char *s) {
 	LOG("gp_cmd: \"%s\"", s);

@@ -29,7 +29,9 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con);
 void pt_reg(int ix, int pid, pt_wfun fun);
 void pt_wait();
 void pt_chld_act();
-int pt_iocmd_sn(const char *s, int n);
+int pt_iw_cmd_sn(int trg, const char *s, int n);
+inline int pt_iocmd_sn(const char *s, int n) { return pt_iw_cmd_sn(0, s, n); }
+inline int pt_wrk_cmd (const char *s, int n) { return pt_iw_cmd_sn(1, s, n); }
 int pt_iocmd(char *s);
 int pt_con_op(const char * arg); // -1:start -2:stop -3:restart -4:killed /:prclink
 int pt_acv_op(int id, int op, const char *a1, const char *a2);
@@ -37,7 +39,6 @@ int pt_kill_pa(int flg);
 int pt_show_lic();
 void pt_calc_xbv();
 double * pt_samp_shm(int bits);
-int pt_wrk_cmd(const char *s, int n);
 int pt_wrk_start(int re);
 void pt_debug();
 

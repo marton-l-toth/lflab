@@ -38,8 +38,8 @@ class BufClock {
 		inline int set_f(int nf) { return set(nf*m_cf_nspf); }
 		inline int add_f(int nf) { return m_t += f2ns(nf); }
 		inline void cls() { ev('x'); m_t = m_cf_half-1; }
-		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);;
-				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev('#'); }
+		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);
+				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev2('#'); }
 		int wrk(int op, int n = 0);
         protected:
 		inline int rnd5() { int r = m_rnd>31 ? m_rnd : random()|0x40000000; m_rnd=r>>5; return r&31; }

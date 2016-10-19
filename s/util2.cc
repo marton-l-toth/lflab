@@ -11,6 +11,7 @@
 void bye(int x) {
 	if (x&256 || (glob_flg&(GLF_FINAL_ASV|GLF_INI0|GLF_INI1))) fprintf(stderr, "skipping autosave\n");
 	else glob_flg|=GLF_FINAL_ASV, Node::save_batch(Node::root(), "//"+!(glob_flg&GLF_FSTATE), NOF_FORCE);
+	if (CFG_TLOG_AUTO.i) clk0.ev2('z', x), clk0.wrk(3);
 	if (x&512) pt_iocmd_sn("r\n", 2);
 	exit(x&255);
 }
@@ -191,14 +192,14 @@ int BufClock::j1(int cont) {
 }
 
 int BufClock::wrk(int op, int n) {
-	if (n<=0) n = (m_buf[m_ix_msk-1]) ? 0x7fffffff : (m_ix&m_ix_msk);
+	ev('T'); if (n<=0) n = (m_buf[m_ix_msk-1]) ? 0x7fffffff : (m_ix&m_ix_msk);
 	if ((n&=~1)>(int)(m_ix_msk-1023)) n = m_ix_msk - 1023;
-	int i0 = (m_ix - n) & m_ix_msk;
-	log("clk/gplot: i0=%d, n=%d", i0 ,n);
+	*pa() = n; int i0 = (m_ix - n) & m_ix_msk;
+	if (debug_flags&DFLG_AUDIO) log("clk/tlog-cp: op=%d, i0=%d, n=%d", op, i0 ,n);
 	int buf[6]; buf[0] = (op&1) ? 0x30540000+(CFG_TLOG_BACKUP.i<<24) : 0x74670000;
 	buf[1] = qh4(i0>>16); buf[2] = qh4(i0&65535);
 	buf[3] = qh4(n>>16); buf[4] = qh4(n&65535); buf[5] = 10;
-	return pt_wrk_cmd(((const char*)buf)+2, 19);
+	return pt_iw_cmd_sn(!(op&2), ((const char*)buf)+2, 19);
 }
 
 int packflg(int flg, const int * mv) {

@@ -34,14 +34,16 @@ static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
 
 typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
 
-static int pt_cp_m2i = -1, pt_constat = 0, pt_pid;
+#define pt_cp_m2i  (pt_cp_m2iw[0])
+#define pt_wrk_m2w (pt_cp_m2iw[1])
+static int pt_cp_m2iw[2] = {-1, -1}, pt_constat = 0, pt_pid;
 static volatile pt_tab_t pt_tab[PT_COUNT];
 static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0, *pt_io_pfd = 0;
 static uid_t pt_uid, pt_gid;
 static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
 static const char** ppath = 0;
 static struct timeval tv_zero;
-static int pt_wrk_m2w = -1, pt_wrk_pid = 0, pt_samp_bits = 0;
+static int pt_wrk_pid = 0, pt_samp_bits = 0;
 static double * pt_samp_buf;
 
 static void qfail(const char * fmt, ...) {
@@ -302,8 +304,8 @@ static int con_started(const char *s) {
 
 //////// export ////////////////////////////////////////////
 
-int pt_iocmd_sn(const char *s, int n) { int r = write(pt_cp_m2i,s,n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
-
+int pt_iw_cmd_sn(int j, const char *s, int n) { int fd = pt_cp_m2iw[j&1]; if (fd<0) return EEE_NOWRK;
+				                int r  = write(fd,s,n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
 int pt_iocmd(char *s) {
 	if ((pt_chld_flg & (1<<PT_IOP))) return EEE_NOPRC;
 	int r, l = strlen(s), c = s[l]; s[l] = 10;
@@ -375,9 +377,6 @@ void pt_calc_xbv() {
 	for (int i=0; i<N_XAPP; i++) {
 		const char **pp = xapp_ls[i];
 		for (int j=0; pp[j]; j++) if(pfind(pp[j])) pt_xapp_bv[i] |= (1<<j); }}
-
-int pt_wrk_cmd(const char *s, int n) {  int r, j = pt_wrk_m2w; if (j<0) return EEE_NOWRK;
-					return ((r=write(j,s,n))==n) ? 0 : EEE_ERRNO-(r>=0); }
 
 static void pt_samp_drop() { if (pt_samp_buf) munmap(pt_samp_buf, 16<<pt_samp_bits), unlink(tpipe_name('+')),
 					      pt_samp_buf = 0, pt_samp_bits = 0, pt_wrk_cmd("gs0\n", 4); }
