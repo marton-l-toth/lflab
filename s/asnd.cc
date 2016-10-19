@@ -71,7 +71,7 @@ int ASnd::start1(int sc_lim) {
         if ((e=snd_pcm_hw_params_set_buffer_size_near(m_hnd, hwpar, &bsiz))<0) {
 		log("bufsiz/near(%d) failed", (int)bsiz);
 		if (m_flg&2) { if (bsiz<8192) bsiz *= 2; }
-		else         { m_flg |= 2; for (bsiz=1024; bsiz<m_hwbs_trg; bsiz+=bsiz); }
+		else         { m_flg |= 2; for (bsiz=1024; (int)bsiz<m_hwbs_trg; bsiz+=bsiz); }
 		m_hwbs_trg = bsiz; return err(e, "bufsiz/n");
 	}
         if ((e=snd_pcm_hw_params(m_hnd, hwpar))<0) return err(e,"setpar");
@@ -102,8 +102,12 @@ int ASnd::e_msg_re(int e1, const char *s, int re) {
 	return log("audio/%s: %s (R: %s)", s, snd_strerror(e1), e2<0 ? snd_strerror(e2) : "OK"), e2;
 }
 
-int ASnd::adj2(int dif) { int adj = ivlim(dif/16,-960000,960000);
-			  clk0.add(adj); *clk0.pa() = (unsigned int)adj; clk0.gcond(); return 0; }
+int ASnd::adj2(int dif, unsigned int *to) { int adj = ivlim(dif/16,-960000,960000);
+					    clk0.add(adj); *to = (unsigned int)adj; clk0.gcond(); return 0; }
+
+void ASnd::err3(int flg) { if (flg&  1) gui_errq_add(AUE_LTNOSEE);
+			   if (flg&  2) gui_errq_add(AUE_MCFLY);
+			   if (flg&508) gui_errq_add(AUE_RECOVER); }
 
 #define TWICE(X,S) ( (ec1=(X))<0 && (++rcnt, e_msg_re(ec1,S,1)<0 || e_msg_re((X),S,0)<0) )
 int ASnd::play_and_adj(short *buf, int nf, int opt) {
@@ -111,20 +115,17 @@ int ASnd::play_and_adj(short *buf, int nf, int opt) {
 	if ((!cs && TWICE(av0=snd_pcm_avail(m_hnd),"avail1")) 
 		 || TWICE((t1=clk0.ev('w'), wr=snd_pcm_writei(m_hnd,buf,nf)),"writei")
 		 || TWICE((t2=clk0.ev('v'), av1=snd_pcm_avail(m_hnd)),"avail2")) return AUE_UNRECOV;
-	int ce=clk0.err(), clke = ce|oldce, err2 = clke|rcnt;
-	if (err2) { if (clke&1) gui_errq_add(AUE_LTNOSEE); if (clke&2) gui_errq_add(AUE_MCFLY);
-		    if (rcnt)   gui_errq_add(AUE_RECOVER); }
-	if (err2|cs) return (cs && ((ce|rcnt) || (t0-t1)>(opt&0xfffff))) ? AUE_CLOCK
-		: (clk0.set_f(m_bufsiz - av1), 0);
+	int ce=clk0.err(), clke = ce|oldce, err2 = clke+4*rcnt;
+	if (err2|cs) {  if (err2) err3(err2);
+			return (cs && ((ce|rcnt) || (t0-t1)>(opt&0xfffff))) ? AUE_CLOCK
+				: (clk0.set_f(m_bufsiz - av1), 0); }
 	if (wr<nf) log("alsa/wr: %d/%d written", wr, nf), gui2.errq_add(wr?AUE_LESSWR:AUE_ZEROWR); // TODO
 	int t3 = clk0.ev('p'), tea = t0-t1, teb = t2-t3, tb1 = clk0.f2ns(m_bufsiz-av1), tb0 = tb1-teb,
 	    taz = clk0.f2ns(m_bufsiz-av0+wr)+t3, ta0 = taz-t0, ta1 = taz-t1;
+	unsigned int *paa = clk0.pa();
 	*clk0.pa(-1) = (unsigned int) (m_bufsiz-av1); 
 	*clk0.pa(-2) = (unsigned int) (m_bufsiz-av0); 
-	if (clke|rcnt) { if (rcnt) gui_errq_add(AUE_RECOVER);
-			 if (clke&1) gui_errq_add(AUE_MCFLY);
-			 if (clke&2) gui_errq_add(AUE_LTNOSEE); }
-	int t4 = clk0.add_f(wr), avg = (ta0+ta1+tb0+tb1+2)>>2; return adj2(avg-t4);
+	int t4 = clk0.add_f(wr), avg = (ta0+ta1+tb0+tb1+2)>>2; return adj2(avg-t4, paa);
 }
 
 void ASnd::play2(short *buf, int nf) {
@@ -148,13 +149,14 @@ void ASnd::cpf_liar(ASnd *p) {
 	int nf0 = clk0.f2play(0); if (!nf0) return;
 	int nch = p->m_cfg.nch, bs3 = p->m_bufsiz, t0 = clk0.t();
 	short *buf = p->m_swb;
-	int wr = snd_pcm_writei(p->m_hnd,buf,bs3);
-	if (wr<0 && (p->e_msg_re(wr,"writei",1)<0 || 
-		     p->e_msg_re(wr=snd_pcm_writei(p->m_hnd,buf,bs3),"writei",0)<0 ))
+	int wr = snd_pcm_writei(p->m_hnd,buf,bs3), re = (wr<0);
+	if (re && (p->e_msg_re(wr,"writei",1)<0 || 
+		   p->e_msg_re(wr=snd_pcm_writei(p->m_hnd,buf,bs3),"writei",0)<0 ))
 		return (void)(log("liar: nf0=%d", nf0), gui_errq_add(AUE_UNRECOV), p->start(1));
 	int t1 = clk0.ev2('f', wr), rs = bs3-wr, rs2 = nch*rs, tx = clk0.f2ns(bs3+rs);
+	if ((re*=4, re|=clk0.err())) p->err3(re);
 	memmove(buf, buf+nch*wr, 2*rs2); p->play2(buf+rs2, wr); 
-	clk0.add_f(wr); clk0.ev('p'); p->adj2(tx-((t0+t1)>>1));
+	clk0.add_f(wr); clk0.ev('p'); p->adj2(tx-((t0+t1)>>1), clk0.pa());
 }
 
 int ASnd::w(int flg) {

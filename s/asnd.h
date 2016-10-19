@@ -21,7 +21,8 @@ class ASnd {
 		int start1(int sc_lim), try_start(int n);
 		void cfg_pre(int spd, int rsrv, int liar);
 		int start_buf(int tlim);
-		int adj2(int dif);
+		int adj2(int dif, unsigned int *to);
+		void err3(int flg);
                 int err(int k, const char *s, int ec = 0);
 		void play2(short *buf, int nf);
 		int e_msg_re(int e1, const char *s, int re);
