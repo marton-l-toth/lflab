@@ -782,7 +782,7 @@ static int gp_tlog_read(int flg, const char *arg) {
 	int i, j, k, n = (int)*q;  gp_tlog_n = gp_len = n>>1; LOG("tlog_read: n=%d", n);
 	unsigned int as = 0, ans = 0;
 	q += 2; tab = q+n; tab[0] = tab[1] = 0u; gp_tlog_tab = tab;
-	for (i=0; (k=i+128)<n; LOG("i=%d, k=%d, as=%u ans=%u", i, k, as, ans), i+=128, tab[1]=ans, tab[0]=as, tab+=2) 
+	for (i=0; (k=i+128)<n; i+=128, tab[1]=ans, tab[0]=as, tab+=2) 
 		for (j=i; j<k; j+=2) if ((ans+=(q[j]&0x3fffff80))>999999999u) ans-=1000000000u, as++;
 	gp_cur_statfun = &gp_statf_tlog; return 0;
 }
