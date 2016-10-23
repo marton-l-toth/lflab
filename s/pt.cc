@@ -427,7 +427,7 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con) {
 	int r = clk0.ini(17+CFG_CLK_TLBITS.i, CFG_CLK_TYPE.i, 1000000, 100); // TODO: config
 	if (r) (r<0) ? (r&=1, log("FATAL: clk0: init (%s, %s)", "clk\0mmap"+4*r, r?map_errno:errno), exit(1))
 		     : (log("WARNING: clk0: configured clk type nodes not work"));
-	setenv("LF_TLOG_BITS", "4", 1);
+	setenv("LF_TLOG_BITS", "0\0001\0002\0003\0004\0005\0006\0007\0008\0009\00010"+2*CFG_CLK_TLBITS.i, 1);
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
 	if ((pt_nullfd = open("/dev/null", O_RDWR)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("FATAL: nullfd"), exit(1);

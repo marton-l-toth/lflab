@@ -1690,7 +1690,7 @@ static void tlog_cmd(const char * h16) {
 	static int maxv = 0, cnt = 0, errtemp = 0;
 	unsigned int *q = tlog_cp(h16, 0), x0 = *q;
 	if (errtemp) --errtemp;
-	if (x0>0xfffeffff) { CLOG("tlog_cp: error %d", x0 & 65535); return; }
+	if (x0>0xfffeffff) { CLOG("tlog_cp: \"%s\": error %d", h16,  x0 & 65535); return; }
 	char bbuf[32]; int i, nf=0, n = (int)x0, j=0, m=0, lt = -1;
 	for (i=2; i<=n; i+=2) {
 		int v, c = q[i]&127, t = (q[i]>>7)&0x7fffff;
