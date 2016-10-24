@@ -33,6 +33,8 @@ const char * tpipe_name(int c);
 int launch(const char * exe, const char * iocfg, ...);
 void * map_wdir_shm(int c, size_t siz, int wrf); // 1:wr 2:cre
 unsigned int * tlog_cp(const char *h16);
+void enc11(char* to, double x);
+int dcd11(double *to, const char * s);
 void set_fd(int *to, int from, int keep);
 int backup(const char *fn, int k);
 #else
@@ -128,6 +130,20 @@ unsigned int * tlog_cp(const char *h16, int xf) {
 	unsigned int *r = (unsigned int*)malloc(4*(n+(xf?(n>>6)+4:2))); r[0] = n;
 	return (i0+n<=siz) ?  memcpy(r+2, buf+i0, 4*n) 
 			   : (memcpy(r+2, buf+i0, 4*(siz-i0)), memcpy(r+2+siz-i0, buf, 4*(n-siz+i0))), r;
+}
+
+void enc11(char* to, double x) {
+        int i,j; unsigned int qw[2]; memcpy(qw, &x, 8);
+        to[0] = 42 + (qw[0]>>30) + ((qw[1]>>28)&12);
+        for (i=0;i<2;i++) for (j=0; j<5; j++) to[5*i+j+1] = 59 + ((qw[i]>>(6*j))&63);
+}
+
+int dcd11(double *to, const char * s) {
+        unsigned int qw[2], k = s[0] - 42u; if (k>15u) return 0;
+        qw[0] = (k&3u)<<30; qw[1] = (k&12u)<<28;
+        int i,j; for (i=0;i<2;i++) { for (j=0; j<5; j++) {
+                if ((k=s[5*i+j+1]-59) > 63u) return 0; else qw[i] |= k << (6*j); }}
+        return memcpy(to, qw, 8), 1;
 }
 
 void set_fd(int *to, int from, int keep) { if (*to!=from) *to<0 ? (*to=from)

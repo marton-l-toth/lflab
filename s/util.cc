@@ -118,20 +118,6 @@ double ipow(double x, int k) {
 
 ///////// debug tools ///////////////////////////////////////////////////////
 
-static void enc11(char* to, double x) {
-        int i,j; unsigned int qw[2]; memcpy(qw, &x, 8);
-        to[0] = 42 + (qw[0]>>30) + ((qw[1]>>28)&12);
-        for (i=0;i<2;i++) for (j=0; j<5; j++) to[5*i+j+1] = 59 + ((qw[i]>>(6*j))&63);
-}
-
-static int dcd11(double *to, const char * s) {
-        unsigned int qw[2], k = s[0] - 42u; if (k>15u) return 0;
-        qw[0] = (k&3u)<<30; qw[1] = (k&12u)<<28;
-        int i,j; for (i=0;i<2;i++) { for (j=0; j<5; j++) {
-                if ((k=s[5*i+j+1]-59) > 63u) return 0; else qw[i] |= k << (6*j); }}
-        return memcpy(to, qw, 8), 1;
-}
-
 class QSCReader : public AReader {
 	public:
 		QSCReader(QuickStat * qs) : m_qs(qs), m_siz(qs->size()), m_n(0), m_p((double*)malloc(8*m_siz)) {}
