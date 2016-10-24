@@ -23,7 +23,7 @@ BufClock clk0;
 ASnd snd0;
 QuickStat qstat;
 
-#define N_SLCMD 4
+#define N_SLCMD 5
 #define PFD(J) sl_cmd[J].pfd()
 static CmdBuf sl_cmd[N_SLCMD];
 static struct timespec asv_ts;
@@ -51,6 +51,7 @@ static void ini(const char ** ppf) {
 	sl_cmd[1].init( -1,  NOF_GUI, 126);
 	sl_cmd[2].init( -1 , NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
+	sl_cmd[4].init( -1 , NOF_ERRMSG);
 	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
 		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
 	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);
@@ -79,4 +80,4 @@ static void sel_loop() {
 			   clk0.tcond(&asv_ts, r*60000)) Node::save_batch(Node::root(), "/", 0);
 	}}
 
-int main(int ac, char** av) { ini(pt_init(ac,av,PFD(0),PFD(2))); sel_loop(); }
+int main(int ac, char** av) { ini(pt_init(ac,av,PFD(0),PFD(2),PFD(4))); sel_loop(); }

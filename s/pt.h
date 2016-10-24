@@ -25,7 +25,7 @@ struct cfg_ent;
 void cfg_setint(cfg_ent *p, int k); 
 int cfg_setstr(cfg_ent *p, const char *s); 
 
-const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con);
+const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wrk);
 void pt_reg(int ix, int pid, pt_wfun fun);
 void pt_wait();
 void pt_chld_act();

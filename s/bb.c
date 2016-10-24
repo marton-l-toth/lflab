@@ -670,6 +670,7 @@ static const char *wrk_etab[] = { "bug!!", "some error", "gp start","read","writ
 static const char * gp_cmd_key[] = {"gmX4\0#Left", "gmx4\0#Right", "gmc4\0#Down", "gmC4\0#Up", "gc\0c",
 	"gmX@\0&#Left", "gmx@\0&#Right", "gm0\0^#Left", "gm1\0^#Right", "gmX1\0#End", "gmx1\0#PageDown",
 	"gm*\0^#Down", "gm+\0^#Up", "gm<4\0#Home", "gm>4\0#PageUp", "gr-\08", "gr+\09",
+	"!W#2.gnuplot\0h", "!W#2.gnuplot\0H",
 	GP_CKY17(1), GP_CKY17(2), GP_CKY17(3), GP_CKY17(4), GP_CKY17(5), GP_CKY17(6), GP_CKY17(7) };
 
 static void LOG_wrk(const char * fmt, ...) {
@@ -970,7 +971,8 @@ static int gp_cmd(const char *s) {
 static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
 	case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
 	case 'q': bye(0);
-	case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2));
+	case '!': { int l=strlen(++s); char buf[l+1]; memcpy(buf,s,l); buf[l]=10; write(1,buf,l+1); return; }
+	case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2)); /*else FT*/
 	default: LOG("unknown command \"%s\"", s); break;
 }}
 
@@ -984,7 +986,7 @@ static void gp_out() {
 	for (i=0;i<r;i++) { if	    ((c=buf[i])==state) state+=19;
 			    else if (state!=132) state = (c==37) ? 56 : 37;
 			    else if (state=37, (unsigned int)(c-=40) >= GP_N_CMDK) LOG("gp_key=%d,???", c);
-			    else wrk_cmd_l((char*)gp_cmd_key[c],-1,0); }}
+			    else wrk_cmd_l((char*)gp_cmd_key[c],-1,0), state = 37; }}
 
 void w_chdone() { static int t0 = 0; int r = waitpid(-1,NULL,WNOHANG), t = time(NULL);
 		  if (r!=gp_pid) return LOG("w_chdone: %d, %s", r, r<0 ? strerror(errno) : "unknown prc");

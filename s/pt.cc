@@ -43,7 +43,7 @@ static uid_t pt_uid, pt_gid;
 static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
 static const char** ppath = 0;
 static struct timeval tv_zero;
-static int pt_wrk_pid = 0, pt_samp_bits = 0;
+static int pt_wrk_pid = 0, pt_samp_bits = 0, *pt_wrk_pfd = 0;
 static double * pt_samp_buf;
 
 static void qfail(const char * fmt, ...) {
@@ -393,7 +393,8 @@ double * pt_samp_shm(int bits) { log("pt_samp_shm: bits=%d", bits);
 		      : (log("pt_samp_shm: %s", strerror(map_errno)), pt_samp_bits = 0,  pt_samp_buf); }
 
 int pt_wrk_start(int re) {
-	int pf1, pid = launch(QENV('b'), ">p1", &pf1, "lf.wrk", (char*)0); // TODO: cmdpipe
+	p_close(pt_wrk_pfd);
+	int pf1, pid = launch(QENV('b'), "><p", &pf1, pt_wrk_pfd, "lf.wrk", (char*)0);
 	if ((pid|pf1)<0) return -1;
 	if (re) pt_samp_drop(); else pt_reg(PT_WRK, pid, &wrk_dead);
 	set_fd(&pt_wrk_m2w, pf1, 0); pt_wrk_pid = pid;
@@ -417,11 +418,11 @@ static void ee_msg() {
 				  : log("error in \"%s\", line %d", QENV('j'), k);
 }
 
-const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con) {
+const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wrk) {
 	gettimeofday(&tv_zero, 0);
 	struct rlimit cl; cl.rlim_cur=cl.rlim_max=1<<28; setrlimit(RLIMIT_CORE, &cl);
 	FPU_INI; vstring_set(v_major, v_minor);  signal(SIGPIPE, SIG_IGN);
-	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io;
+	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io; pt_wrk_pfd = pfd_wrk;
 	qe_ini(); cfg0(); 
 	const char ** ret = cfg1(ac, av);
 	int r = clk0.ini(17+CFG_CLK_TLBITS.i, CFG_CLK_TYPE.i, 1000000, 100); // TODO: config

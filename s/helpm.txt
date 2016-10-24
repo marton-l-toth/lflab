@@ -42,6 +42,31 @@ read the following general help texts:
 ==> 1.auconv -- how to write to wav/flac
 ==> 4.overview -- how to use MIDI input
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
+{{{0.gnuplot}}}
+This window describes how gnuplot is used in lflab. To access
+the original gnuplot help, please start gnuplot manually.
+---
+gnuplot is used for two purposes in lflab: displaying waves and
+frequency spectra (from wrap config window)
+==> 2.wrap
+also it can be used for visualizing main loop timings (this can
+be started with "see tlog" from the "[LR]" menu in main window)
+---
+The following keys are (re)defined in gnuplot-in-lflab:
+1,2,3,...7 : toggle graph display
+Ctrl-1 ... Ctrl-7 : toggle graph display side (L/R)
+8/9: decrease/increase resolution
+Up/Down - zoom in/out
+Ctrl-Up/Ctrl-Down - max zoom / view all
+Left/Right: move view
+Ctrl-Left/Ctrl-Right: move to start/end
+Alt-Left/Alt-Right: small move
+Home/PgUp: zoom up with left/right side fixed
+h - this help
+g - toggle grid (orig. gnuplot binding)
+---
+Many thanks to Thomas Williams, Colin Kelley, and others for
+developing/maintaining this wonderful piece of free software.
 {{{2.!b and !e}}}
 Without any save files, you start with the "!b", "!c" subtree,
 and (unless you started with the "-n" option) the "!e" subtree.
