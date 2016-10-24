@@ -49,7 +49,8 @@ int ASnd::start_buf(int tlim) {
 		clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1); m_cur_cpf = &cpf_liar;
 		int sb1 = 2 * m_bufsiz * m_cfg.nch;
 		if (sb1>m_swb_siz) { if(m_swb_siz)free(m_swb);  m_swb = (short*)malloc(m_swb_siz=sb1); }
-		memset(m_swb, 0, sb1); clk0.set_f(2*m_bufsiz); u_sleep(10000); return 0; }
+		memset(m_swb, 0, sb1); clk0.set_f(m_bufsiz+wr0); snd_pcm_writei(m_hnd,m_swb,wr0);
+		return 0; }
 	else  { clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1);  m_cur_cpf = &cpf_true;
 		return play_and_adj((short*)zeroblkD, wr0, tlim|(1<<30)); }}
 
@@ -88,7 +89,6 @@ int ASnd::start1(int sc_lim) {
         if ((e=snd_pcm_nonblock(m_hnd,1))<0) return err(e,"nonblock");
         if ((e=snd_pcm_prepare(m_hnd)) < 0) return err(e,"prepare");
 	return start_buf(sc_lim);
-	return m_cur_cpf = &cpf_true, play_and_adj((short*)zeroblkD, 64, sc_lim|(1<<30));
 }
 
 int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
@@ -151,8 +151,9 @@ void ASnd::cpf_liar(ASnd *p) {
 	short *buf = p->m_swb;
 	int wr = snd_pcm_writei(p->m_hnd,buf,bs3), re = (wr<0);
 	if (re && (p->e_msg_re(wr,"writei",1)<0 || 
-		   p->e_msg_re(wr=snd_pcm_writei(p->m_hnd,buf,bs3),"writei",0)<0 ))
-		return (void)(log("liar: nf0=%d", nf0), gui_errq_add(AUE_UNRECOV), p->start(1));
+		   (wr=p->e_msg_re(snd_pcm_writei(p->m_hnd,buf,bs3),"writei",0))<0 ))
+		return wr==-EAGAIN ? (void)(clk0.ev2('f'), clk0.ev('p'), p->adj2(clk0.f2ns(nf0>>1), clk0.pa()))
+				   : (void)(log("liar: nf0=%d",nf0), gui_errq_add(AUE_UNRECOV), p->start(1));
 	int t1 = clk0.ev2('f', wr), rs = bs3-wr, rs2 = nch*rs, tx = clk0.f2ns(bs3+rs);
 	if ((re*=4, re|=clk0.err())) p->err3(re);
 	memmove(buf, buf+nch*wr, 2*rs2); p->play2(buf+rs2, wr); 
