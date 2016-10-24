@@ -1,0 +1,8 @@
+rec:
+main -> wrk -> (fft) -> min512 -> rec-cmd-2-main
+
+chk:
+plot_cmd -> wrk -> (fft) -> min512 -> store
+chk_cmd (+difflim)  -> wrk -> cmp -> result-2-main
+---
+tlog_mode: res

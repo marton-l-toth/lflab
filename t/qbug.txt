@@ -1,2 +1,3 @@
 trk: c> <m -- empty disp. (sporadic)
-shwrap: <x : x + s4 (iadj.S) --> x + 2*s4
+graph: dot start fail (retry!!)
+shwrap: <x : x + s4 (iadj.S) --> x + 2*s4 (->compat. mode flg???)
