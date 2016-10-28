@@ -193,6 +193,15 @@ static void mklog() {
 	lbuf[lbl]=10; write(lfd, lbuf, lbl+1); close(lfd);
 }
 
+static void cfg_export(cfg_ent *p) {
+	char nm[64]; memcpy(nm  , "LF_", 3);
+	int vbuf[3]; strcpy(nm+3, p->s_vd);
+	if (p->i_m==0x7fffffff) return (void)setenv(nm, p->s, 1);
+	if (p->i&~65535) vbuf[0]=qh4((p->i>>16)&65535), vbuf[1]=qh4(p->i&65535), vbuf[2]=0;
+	else		 vbuf[0]=qh4(p->i), vbuf[1]=0;
+	setenv(nm, (const char*)vbuf, 1);
+}
+
 int cfg_write(int lg) {
         backup(QENV('j'), 9);  int k = -1;  const char *v;
         FILE * f = fopen(QENV('j'), "w"); if (!f) goto err0;
@@ -428,7 +437,7 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wr
 	int r = clk0.ini(17+CFG_CLK_TLBITS.i, CFG_CLK_TYPE.i, 1000000, 100); // TODO: config
 	if (r) (r<0) ? (r&=1, log("FATAL: clk0: init (%s, %s)", "clk\0mmap"+4*r, r?map_errno:errno), exit(1))
 		     : (log("WARNING: clk0: configured clk type nodes not work"));
-	setenv("LF_TLOG_BITS", "0\0001\0002\0003\0004\0005\0006\0007\0008\0009\00010"+2*CFG_CLK_TLBITS.i, 1);
+	cfg_export(&CFG_CLK_TLBITS);
 	signal(SIGHUP, &pt_sighup); signal(SIGINT, &pt_sigint); 
 	if ((pt_nullfd = open("/dev/null", O_RDWR)) < 0 ||
 	    (pt_nullfd ? dup2(pt_nullfd, 0) : (pt_nullfd = dup(0))) < 0) perror("FATAL: nullfd"), exit(1);

@@ -121,8 +121,8 @@ void * map_wdir_shm(int c, size_t siz, int wrf) {
 unsigned int * tlog_cp(const char *h16, int xf) {
 	static unsigned int bits = 99, ec = 0, *buf = 0;
 	if (bits>98)  { if (bits>99) return &bits;
-			const char * s = getenv("LF_TLOG_BITS"); if (!s) return bits=0xffff0001, &bits;
-			if (!(buf=(unsigned int *)map_wdir_shm('@', 8<<(bits=*s&31), 0))) 
+			const char * s = getenv("LF_CLK_TLBITS"); if (!s) return bits=0xffff0001, &bits;
+			if (!(buf=(unsigned int *)map_wdir_shm('@', 8<<(bits=atoi_h(s)+17), 0))) 
 				return bits=0xffff0002, &bits; }
 	int i, h4[4]; for (i=0; i<4; i++) h4[i] = qh4rs(h16+4*i);
 	int siz = 2<<bits, i0 = (h4[0]<<16) + h4[1], n = (h4[2]<<16) + h4[3];
