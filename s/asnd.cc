@@ -133,7 +133,7 @@ void ASnd::play2(short *buf, int nf) {
 	m_total_played += nf; if (ec<0) gui_errq_add(ec);
 	if (m_hcp) { if (ec==MXE_HCPFAIL || (m_hcp-=nf)<=0) { if ((ec=hcp_end(1))<0) gui_errq_add(ec); }
 		     else if (m_hcp<m_hcp_s0) { int t = m_hcp/44100; m_hcp_s0 = 44100*t;
-			     			d99(m_hcp_lbl+2, ec/60), d59(m_hcp_lbl+5, ec%60),
+			     			d99(m_hcp_lbl+2, t/60), d59(m_hcp_lbl+5, t%60),
 						gui2.setwin(7,'.'), gui2.wupd_s('W', m_hcp_lbl); }}}
 
 void ASnd::cpf_mute(ASnd *p) {
