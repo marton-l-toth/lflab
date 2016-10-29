@@ -84,28 +84,13 @@ const char * au_file_name(const char *dir, int dlen, int id, const char *a1, con
 int fa_start(fa_writer * fa, int nch);
 int fa_add12(fa_writer * fa, const double * x, const double * y, int n);
 int fa_end(fa_writer * fa);
-void samp_stat(const double *p, int n, int k, bool dB, double dBy, double *pmin, double *pmax, double *pavg);
 int is_asv_name(const char *s);  // /.../__asv.lf /.../__asv--x.lf
 int coward(const char * fn);
 
 class AReader { public: virtual int line(char * s) = 0; virtual ~AReader() {} }; // ret: 0:done <0:err
-
-class QuickStat {
-	public:
-		QuickStat() : m_siz(63), m_flg(0) {}
-		int size() const { return m_siz; }
-		void store(const double * p, int n);
-		int cmd(const char *s);
-		AReader * chk0(const char *s);
-		int chk1(const double *p);
-	protected:
-		void cfg();
-		int qcmp(double x, double y);
-		int m_siz, m_flg;
-		int m_pos[64];
-		double m_val[64], m_dlim, m_rlim;
-};
-extern QuickStat qstat;
+int qstat_op(int op);
+int qstat_cfg(int op, const char * arg);
+int qstat_chk0(AReader ** ppr, const char *s);
 
 class Scale01 {
 	public:

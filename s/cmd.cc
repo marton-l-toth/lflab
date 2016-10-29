@@ -346,6 +346,7 @@ int CmdTab::c_cfg(CmdBuf * p) {
 int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
 		case 'g': pt_calc_xbv(); gui2.xapp_bv();
 			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
+		case 'S': return qstat_op(p->m_c_a0[1]);
 		default: return GCE_UREPORT;
 	}}
 
@@ -385,9 +386,11 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'R': if ( !!(glob_flg&GLF_RECORD) == (j = s[1]&1) ) return EEE_NOEFF;
 		          glob_flg ^= GLF_RECORD; gui2.pf("\tdf%x", j<<11);
 			  log("cmd/event recording st%sed", "opp\0art"+4*j);
-			  if (j) log("cmd_rec:0000 ^_Sn%d", qstat.size());
-			  else   fflush(stderr), i='f', pt_iocmd((char*)&i);    return 0;
-		case 'S': return s[1]=='c' ? ((p->m_cont=qstat.chk0(s+2)) ? 0 : BXE_QSTATDIF) : qstat.cmd(s+1);
+			  if (j) log("cmd_rec:0000 ^_Sn%s", s[2]?s+2:"63"),  qstat_cfg('N', s+2);
+			  else   fflush(stderr), i='f', pt_iocmd((char*)&i), qstat_cfg('-', 0);   return 0;
+		case 'S': switch(s[1]) { case 'n': return qstat_cfg('n', s+2);
+				  	 case 'c': return qstat_chk0(&p->m_cont, s+2);
+					 default : return GCE_PARSE; }
 		case 'D': return (j=s[1]) ? (strncpy(DEBUG_UTXT(hxd2i(j)), s+2, 63), 0) : GCE_PARSE;
 		case '>': return log("_> %s", s+1), 0;
 		case '@': return clk0.wrk(s[1]);
@@ -447,7 +450,7 @@ int CmdTab::c_live(CmdBuf *p) {
 int CmdTab::c_rpl(CmdBuf *p) {
 	static long long rec_ts = 0ll;
 	const char * s = p->m_c_a0;
-	if ((*s|2) != 'R') return GCE_PARSE;
+	if ((*s|2) != 'R') return (*s=='_') ? (log("cmd_rec:%s", s+1), 0) : GCE_PARSE;
 	int l, rf = *s & 2;
 	char buf[1024];
 	if(rf){ if ((l=p->rpl_cp(buf, s+1, CmdBuf::cf_i2p)) < 0) return l;

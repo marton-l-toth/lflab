@@ -118,20 +118,14 @@ double ipow(double x, int k) {
 
 ///////// debug tools ///////////////////////////////////////////////////////
 
-class QSCReader : public AReader {
+class QSReader : public AReader {
 	public:
-		QSCReader(QuickStat * qs) : m_qs(qs), m_siz(qs->size()), m_n(0), m_p((double*)malloc(8*m_siz)) {}
-		virtual ~QSCReader() { free(m_p); }
-		virtual int line(char * s) { while(1) { switch(*s) {
-			case 0  : return 1;
-			case '!': return (m_n==m_siz) ? m_qs->chk1(m_p) : BXE_QSTATCNT;
-			default : if (m_n>=m_siz) return BXE_QSTATCNT;
-				  if (dcd11(m_p+m_n, s)) m_n++, s+=11; else return BXE_PARSE;
-		}}}
+		QSReader(int n);
+		virtual ~QSReader() { free(m_buf); }
+		virtual int line(char * s);
 	protected:
-		QuickStat * m_qs;
-		int m_siz, m_n;
-		double * m_p;
+		int m_siz, m_j;
+		char * m_buf;
 };
 
 void log_sn(const char * pref, const char * str, int len) {
@@ -171,40 +165,32 @@ void log_sortedblk(short *p, int n, bool absf, const char * pref) {
 	log("");
 }
 
-void QuickStat::store(const double * p, int n) {
-	int m = m_siz, stp = 256*(n-1) / (m-1);
-	for (int k, j=0, i=0; i<m; i++, j+=stp) m_pos[i] = k = (j>>8), m_val[i] = p[k];
-	if (!(glob_flg&GLF_RECORD) || !m) return;
-	char buf[12]; log_n("cmd_rec:^_Sc%d", m);
-	for (int i=0; i<m; i++) enc11(buf, m_val[i]), log_n("\ncmd_rec:^<%.11s"+11*!!(i%7), buf); log("!");
+QSReader::QSReader(int n) : m_siz(12*n+20) { m_buf=(char*)malloc(m_siz); m_j=sprintf(m_buf,"Sc%d\n",n); }
+int QSReader::line(char *s) {
+	int j = m_j, l = strlen(s), l11 = l/11, r = l%11;   char * q = m_buf;
+	if (l11<1 || j+l+8>m_siz) return BXE_PARSE;
+	if (r && (r!=1 || s[--l]!='!')) return BXE_PARSE;
+	q[j] = 'S'; q[j+1] = 'C'; q[j+2] = 48+l11; memcpy(q+j+3, s, l); q[j+3+l] = 10; j+=l+4; 
+	return r ? (memcpy(m_buf+j,"SC0\n",4), pt_wrk_cmd(q,j+4)) : (m_j = j, 1);
 }
 
-AReader * QuickStat::chk0(const char *s) { return atoi(s)==m_siz ? new QSCReader(this) : 0; }
-
-void QuickStat::cfg() { m_dlim = exp(-M_LN2 * (double)CFG_QTST_ADIF.i);
-			m_rlim = exp( M_LN2 * (double)CFG_QTST_RDIF.i); m_flg |= 1; }
-
-int QuickStat::qcmp(double x, double y) {
-	if (x!=x) return (y==y) ? 1 : memcmp(&x,&y,8);
-	if (y!=y) return -1;
-	if (x==y) return 0;
-	double d = x - y;
-	int r = (d<0.0) ? (d=-d, -1) : 1;
-	if (d<m_dlim) return 0;
-	if (d*m_rlim < fabs(x)) return 0;
-	return r;
+int qstat_op(int op) { 
+	static int n0=0, n1=0; int x, rv=0;
+	if (op=='+') ++n0;
+	else if (++n1, x=(op-48)) rv = QSE_BUG - ( ((unsigned int)x<5u) ? x : 0 );
+	log("quickstat: %d/%d", n1, n0); return rv;
 }
 
-int QuickStat::chk1(const double * q) {
-	if (!(m_flg&1)) cfg();
-	for (int n=m_siz, i=0; i<n; i++) if (qcmp(m_val[i], q[i]))
-		return log("qstat/chk: val[%d] is %.15g, exp. %.15g", i, m_val[i], q[i]), BXE_QSTATDIF;
-	return 0; }
+int qstat_cfg(int op, const char * arg) {
+	int len; if (!arg || !*arg) arg="64", len=2; else len = strlen(arg);
+	char buf[len+3]; buf[0] = 'S'; buf[1] = op; memcpy(buf+2, arg, len); buf[len+2] = 10;
+	return pt_wrk_cmd(buf, len+3); }
 
-int QuickStat::cmd(const char * s) { int k; switch(*s) {
-	case 'n': return (k=atoi(s+1), k<2||k>64) ? EEE_RANGE : (m_siz=k, 0);
-	default:  return GCE_PARSE;
-}}
+int qstat_chk0(AReader ** ppr, const char *s) {
+	if (*ppr) return GCE_CONT2;
+	int k = atoi(s); if (k<1 || k>511) return EEE_RANGE;
+	*ppr = new QSReader(k); return 0;
+}
 
 ///////// sorting ASCII strings /////////////////////////////////////////////
 

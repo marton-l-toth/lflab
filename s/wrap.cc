@@ -1625,7 +1625,7 @@ int AWrapGen::plot_tf(double t0, double t1, int flg) {
 	double *to = pt_samp_shm(bits); if (!to) return EEE_SHM; log("samp_shm: len=%d, bits=%d", len, bits);
 	// TODO: qstat
 	int k, r = batch_calc(to, f7?to+siz:0, i0, len, 0);
-	if (r<=0) return r ? r : (qstat.store(zeroblkD, 1), BXE_ZPLOT);
+	if (r<=0) return r ? r : (pt_wrk_cmd("Sz\n", 3), BXE_ZPLOT);
 	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), f7 = 0, flg &= 8;
 	char buf[96]; k = sprintf(buf, "gs%c%c,%x,", hexc1(flg), 48+bits, len); 
 	k += m_node->get_path_uf(buf+k, 63); buf[k++]=10;

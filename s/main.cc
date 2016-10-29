@@ -1,7 +1,3 @@
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <signal.h>
-
 #define QWE_DEFINE_ERRTAB
 #include "glob.h"
 #include "cfgtab.inc"
@@ -21,7 +17,6 @@ GuiStub gui2;
 JobQ jobq;
 BufClock clk0;
 ASnd snd0;
-QuickStat qstat;
 
 #define N_SLCMD 5
 #define PFD(J) sl_cmd[J].pfd()
@@ -51,7 +46,7 @@ static void ini(const char ** ppf) {
 	sl_cmd[1].init( -1,  NOF_GUI, 126);
 	sl_cmd[2].init( -1 , NOF_ERRMSG);
 	sl_cmd[3].init(-'A', NOF_ERRMSG);
-	sl_cmd[4].init( -1 , NOF_ERRMSG);
+	sl_cmd[4].init( -1 , NOF_ERRMSG|NOF_FGUI);
 	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
 		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
 	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);

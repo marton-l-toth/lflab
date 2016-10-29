@@ -180,6 +180,7 @@ GCE_WRONGWT  wrong window type
 GCE_UPREFIX  undefined prefix
 GCE_NOPFX    prefix character expected
 GCE_NOCONT   '<' without continued command
+GCE_CONT2    unfinished previouts multi-line command
 GCE_EXWR     commands expects instrument/sound (no box)
 GCE_JRUN     job already running
 GCE_ROUTE    a right command at the wrong place (BUG)
@@ -220,10 +221,13 @@ BXE_FILTNIO  invalid number of inputs/outputs for filter
 BXE_FILTRM   filter removed due to invalid input/output count
 BXE_NOOUT    this object cannot be used as a box
 BXE_WLGDONE  wrap linegrp done (BUG)
-BXE_QSTATDIF plot quick stat mismatch (TEST CASE FAIL)
-BXE_QSTATCNT plot quick stat: wrong sample count (TEST CASE FAIL)
 BXE_ZPLOT    plot is all zeroes -- refusing to open window
 BXE_SORRY    sorry not yet implemented (box)
+QSE_BUG      plot quick stat: wrong status (BUG)
+QSE_DIF      plot quick stat mismatch (TEST CASE FAIL)
+QSE_CNT      plot quick stat: wrong sample count (TEST CASE FAIL)
+QSE_STATE    plot quick stat: unexp. message (BUG)
+QSE_PARSE    plot quick stat: parse error (BUG)
 S4__________ __________________________________________________________(BUG)__
 MDE_SEVEN    got MIDI data byte where cmd expected
 MDE_FRAG12   got MIDI arg 0/1

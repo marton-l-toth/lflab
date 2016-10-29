@@ -654,11 +654,13 @@ static int gp_inpipe = -1, gp_outpipe = -1, gp_pid = 0, gp_w_id = 0, gp_len = 0,
 static double gp_ctr = 0.5, gp_rad = 0.5;
 static char gp_w_title[64], gp_f_title[64];
 static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000";
-static int gp_tlog_n = 0, gp_tlog_siz = 0;
+static int gp_tlog_n = 0;
 static unsigned int *gp_tlog = NULL, *gp_tlog_tab;
 static double * gp_ptf_dat = 0;
 static int gp_ptf_siz, gp_ptf_bits, gp_ptf_flg;
 
+static int qstat_siz = 0, qstat_op = 0, qstat_pos = -1, qstat_ec = 0, qstat_uc = 0, qstat_flg = 0; // 1:ini
+double qstat_adlim, qstat_rdlim, *qstat_v = 0;
 static void wbye(int j) { LOG("bye %d", gp_pid); if (gp_pid>0) kill(gp_pid,9); exit(j); }
 static inline int gp_res() { return (128+(53&-(gp_res22&1))) << (gp_res22>>1); }
 
@@ -865,6 +867,71 @@ static void fft(double * re_im, int bits, int flg) { // 1: high
         (ofs?fft_pass12_1:fft_pass12_0)(re_im, n);	     if (df) LOG("fft/pass12 done");
         fft2(re_im,n); }
 
+///// w/qstat //////
+static void qstat_mk(double *q, int nq, const double *v, int nv) {
+	double x, mv, vstp = (double)nv/512.0;
+	int i,j,j0,j1,qj=0,hkj=0,hkj8=0,hkstp=0x1ff00/(nq-1);
+	for (i=j1=0; i<512; i++) { 
+		j0 = j1; j1 = (int)((double)(i+1)*vstp);
+		if (i==hkj) { hkj8 += hkstp; hkj = hkj8>>8; mv = v[j0];
+			      for (j=j0+1; j<j1; j++) if ((x=v[j])<mv) mv = x;
+			      q[qj++] = mv; }}}
+
+inline void qstat_report(int v) { int w = 0xa305352 + (v<<16); write(1, &w, 4); }
+
+static void qstat_dump(const double *v, int n) {
+	int i,j,k, n7 = (n+6)/7; if (n7<1) return LOG("BUG: qstat_dump: n=%d", n);
+	char buf[82*n7+20], *q = buf;
+	q += sprintf(q,"Q_^_Sc%d",n);
+	for (i=j=0; i<n7; i++) {
+		memcpy(q,"\nQ_^<",5); q += 5;
+		for (k = min_i(n,j+7); j<k; j++) enc11(q,v[j]), q+=11; }
+	q[0]='!'; q[1]=10; write(1, buf, q+2-buf);
+}
+
+int qstat_cmp(double x, double y) {
+        if (x!=x) return (y==y) ? 1 : memcmp(&x,&y,8);
+        if (y!=y) return -1; if (x==y) return 0;
+        double d = x - y; int r = (d<0.0) ? (d=-d, -1) : 1;
+        if (d<qstat_adlim) return 0;
+        if (d*qstat_rdlim < fabs(x)) return 0;
+        return r;
+}
+
+static int qstat_chk(int k, const char *s) {
+	if (!k) return k = (qstat_pos!=qstat_siz), qstat_pos = -1, qstat_report(k?2:!!qstat_ec), -k;
+	int i, j0 = qstat_pos, j1 = j0+k; 
+	if (j1>qstat_siz) return LOG("qs/chk: j=%d k=%d sz=%d",j0,k,qstat_siz), qstat_report(2), qstat_pos=-1;
+	for (i=0;i<k;i++){ double x1, x0 = qstat_v[j0+i]; 
+			   if (!dcd11(&x1, s+11*i)) return qstat_report(4), qstat_pos = -1;
+			   if (qstat_cmp(x0,x1)) ++qstat_ec, LOG("qstat[%d]: x0=%.15g x1=%.15g", j0+i, x0,x1);}
+	return qstat_pos = j1, 0;
+}
+
+static int qstat_cfg(int op, int siz) {
+	qstat_op = op; qstat_siz = siz; qstat_pos = -1; qstat_v = realloc(qstat_v, 8*qstat_siz);
+	if (qstat_flg&1) return 0; else qstat_flg|=1;
+	const char *s; int ax=-24, rx=20, r=0;
+	if ((s=getenv("LF_QTST_ADIF"))) ax = -atoi_h(s); else r=-9, LOG("qstat/adif undefined");
+	if ((s=getenv("LF_QTST_RDIF"))) rx =  atoi_h(s); else r=-9, LOG("qstat/rdif undefined");
+	qstat_adlim = exp(M_LN2 * (double)ax); 
+	qstat_rdlim = exp(M_LN2 * (double)rx);  return r;
+}
+
+static int qstat_cmd(const char *s, int n) { switch(*s) {
+	case '-': free(qstat_v); qstat_v = NULL; return qstat_siz = qstat_op = 0;
+	case 'z': if (qstat_siz) memset(qstat_v, 0, 8*qstat_siz); return 0;
+	case 'n': case 'N': return qstat_cfg(*s, ivlim(atoi(s+1),7,511));
+			    qstat_siz = ivlim(atoi(s+1),7,511); qstat_op=*s; qstat_pos = -1;
+			    qstat_v = realloc(qstat_v, 8*qstat_siz);
+			    return 0;
+	case 'c': if (qstat_pos>=0 || !qstat_uc) return qstat_report(3), -1;
+		  if (qstat_siz!=atoi(s+1))	 return qstat_report(2), -1;
+		  return qstat_uc = qstat_pos = qstat_ec = 0;
+	case 'C': return (qstat_pos<0) ? (qstat_report(3),-1) : qstat_chk(s[1]&7, s+2);
+	default:  return LOG("qs: unknown cmd 0x%x \"%s\"", *s, s), -7;
+}}
+
 ///// w/plot_tF ////
 #define GP_PT_L1(S,M) for (j=1,x=y=acc=p[0]; j<(S); j++) { acc+=(z=p[j]); if (z<x) x=z; else if (z>y) y=z; } \
 		 to[0] = (M)*acc; to[1] = x; to[2] = y
@@ -921,7 +988,10 @@ static int gp_ptf_ini(const char *s) {
 	gp_ptf_siz = siz; gp_cur_statfun = &gp_statf_tf; gp_ptf_flg = flg; 
 	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
 		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
-	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48); 
+	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48);
+	if (qstat_op) { qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len); 
+		        if (qstat_uc++) LOG("BUG: qstat: uc=%d (exp.1)", qstat_uc);
+			if (qstat_op=='N') qstat_dump(qstat_v, qstat_siz); }
 	return 0;
 }
 
@@ -946,14 +1016,8 @@ cchk:   if (g_c<g_r) g_c = g_r; else if (g_c>1.0-g_r) g_c = 1.0-g_r;
 echk:	return (fabs(g_c-gp_ctr)>1e-11 || fabs(g_r-gp_rad)>1e-11) ? (gp_ctr=g_c, gp_rad=g_r, 1) : 0;
 }
 
-static const char * tlog_name(int c) {
-	static char *buf = 0; static int clen = 0;
-	if(!buf){ const char * nm0 = getenv("LF_TLOG"); if (!nm0) return LOG("LF_TLOG undefined"), "BUG!";
-		  int len = strlen(nm0); clen = len-5; buf = malloc(len+5); memcpy(buf, nm0, clen); }
-	return memcpy(buf+clen+((c==48)?0:(buf[clen]=buf[clen+1]='-',buf[clen+2]=c,3)),".tlog",6), buf; }
-
 static int gp_cmd(const char *s) {
-	LOG("gp_cmd: \"%s\"", s);
+	// LOG("gp_cmd: \"%s\"", s); // TODO: debug_flg
 	int r; switch(*s) { 
 		case 'T': return ((r=gp_tlog_read(1, s+1))<0) ? r : gp_plot(1);
 		case 't': return ((r=gp_tlog_read(0, s+1))<0) ? r : gp_plot(1);
@@ -970,7 +1034,8 @@ static int gp_cmd(const char *s) {
 
 static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
 	case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
-	case 'q': bye(0);
+	case 'S': LOG_E("qstat_cmd", qstat_cmd(s+1, n-1)); return;
+	case 'q': wbye(0);
 	case '!': { int l=strlen(++s); char buf[l+1]; memcpy(buf,s,l); buf[l]=10; write(1,buf,l+1); return; }
 	case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2)); /*else FT*/
 	default: LOG("unknown command \"%s\"", s); break;
