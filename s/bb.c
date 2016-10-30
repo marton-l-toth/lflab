@@ -869,13 +869,16 @@ static void fft(double * re_im, int bits, int flg) { // 1: high
 
 ///// w/qstat //////
 static void qstat_mk(double *q, int nq, const double *v, int nv) {
-	double x, mv, vstp = (double)nv/512.0;
-	int i,j,j0,j1,qj=0,hkj=0,hkj8=0,hkstp=0x1ff00/(nq-1);
-	for (i=j1=0; i<512; i++) { 
-		j0 = j1; j1 = (int)((double)(i+1)*vstp);
-		if (i==hkj) { hkj8 += hkstp; hkj = hkj8>>8; mv = v[j0];
-			      for (j=j0+1; j<j1; j++) if ((x=v[j])<mv) mv = x;
-			      q[qj++] = mv; }}}
+	if(nv<513) {
+		int i, j, stp = 256*(nv-1)/(nq-1);
+		for (i=j=0; i<nq; i++, j+=stp) q[i] = v[j>>8]; }
+	else {	double x, mv, vstp = (double)nv/512.0;
+		int i,j,j0,j1,qj=0,hkj=0,hkj8=0,hkstp=0x1ff00/(nq-1);
+		for (i=j1=0; i<512; i++) { 
+			j0 = j1; j1 = (int)((double)(i+1)*vstp);
+			if (i==hkj) { hkj8 += hkstp; hkj = hkj8>>8; mv = v[j0];
+				for (j=j0+1; j<j1; j++) if ((x=v[j])<mv) mv = x;
+				q[qj++] = mv; }}}}
 
 inline void qstat_report(int v) { int w = 0xa305352 + (v<<16); write(1, &w, 4); }
 
