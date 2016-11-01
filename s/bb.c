@@ -921,9 +921,12 @@ static int qstat_cfg(int op, int siz) {
 	qstat_rdlim = exp(M_LN2 * (double)rx);  return r;
 }
 
+static void qstat_adm() { if (qstat_uc++) LOG("BUG: qstat: uc=%d (exp.1)", qstat_uc);
+			  if (qstat_op=='N') qstat_dump(qstat_v, qstat_siz); }
+
 static int qstat_cmd(const char *s, int n) { switch(*s) {
 	case '-': free(qstat_v); qstat_v = NULL; return qstat_siz = qstat_op = 0;
-	case 'z': if (qstat_siz) memset(qstat_v, 0, 8*qstat_siz); return 0;
+	case 'z': if (qstat_op) memset(qstat_v, 0, 8*qstat_siz), qstat_adm();    return 0;
 	case 'n': case 'N': return qstat_cfg(*s, ivlim(atoi(s+1),7,511));
 			    qstat_siz = ivlim(atoi(s+1),7,511); qstat_op=*s; qstat_pos = -1;
 			    qstat_v = realloc(qstat_v, 8*qstat_siz);
@@ -992,9 +995,7 @@ static int gp_ptf_ini(const char *s) {
 	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
 		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
 	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48);
-	if (qstat_op) { qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len); 
-		        if (qstat_uc++) LOG("BUG: qstat: uc=%d (exp.1)", qstat_uc);
-			if (qstat_op=='N') qstat_dump(qstat_v, qstat_siz); }
+	if (qstat_op) qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len), qstat_adm();
 	return 0;
 }
 

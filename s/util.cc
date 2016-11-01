@@ -189,7 +189,7 @@ int qstat_cfg(int op, const char * arg) {
 int qstat_chk0(AReader ** ppr, const char *s) {
 	if (*ppr) return GCE_CONT2;
 	int k = atoi(s); if (k<1 || k>511) return EEE_RANGE;
-	*ppr = new QSReader(k); return 0;
+	*ppr = new QSReader(k); qstat_op('+'); return 0;
 }
 
 ///////// sorting ASCII strings /////////////////////////////////////////////
