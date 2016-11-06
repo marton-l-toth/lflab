@@ -892,11 +892,20 @@ static void entry_set(ww_t * ww, const char * s) {
 	gtk_entry_set_text(GTK_ENTRY(ww->w), s);
 }
 
+static char * fix50k(char *to, unsigned int k) {
+	static char buf[24]; char *s = to?to:buf;
+	int hi = k/50000u, lo = 2*(k%50000u);
+	if (!lo) return sprintf(s, "%d", hi), s;
+	int n = sprintf(s, "%d.%05d", hi, lo); while(s[n-1]==48) --n;
+	s[n] = 0; return s;
+}
+
 static void entry_cmd(struct _ww_t * ww, const char * arg) {
 	if (!arg) { LOG("entry_cmd: arg==0, cl->ch=0x%x(%c)", ww->cl->ch, ww->cl->ch); return; }
 	switch(*arg) {
 		case 't': entry_set(ww, arg+1); return;
-		case '@': entry_set(ww, hxdoub_str(NULL, arg+1, 15)); return;
+		case '@': entry_set(ww, hxdoub_str(NULL, arg+1, 15));     return;
+		case 'v': entry_set(ww, fix50k    (NULL, atoi_h(arg+1))); return;
 		default: LOG("entry: invalid cmd 0x%x(%c)", *arg, *arg); return;
 	}
 }
@@ -1148,8 +1157,7 @@ TDIV_MENU_LN
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
-{'P', 3, 8,7,1, "[avg]  avg    L + R  ", "001"},
-{0,   7, 8,7,1, "[avg]  avg    left   right  avg/Z  lft/Z  rgt/Z  ", "0013457"},
+{'P', 9, 1,2,1, "[]t1t2F1FLFRf1fLfR", "|@L`dhptx"},
 {-1,0,0,0,0,NULL,NULL} };
 
 static char * menu_txt = NULL;
@@ -2434,8 +2442,7 @@ static void wrap_cmd (struct _topwin * tw, char * arg) {
 static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	"([{Mm$Xm|#1}{B_stp$X.1}{B_kill$X.2}]{1w}"
 	"3[3{+#XG.}0{__}]0"
-	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{L_s}{M_plot(t)$XPT|P0})"
-	        "(3{ef6$Xt4}0{L_...}3{eF6$Xt8}0{L_Hz}{M_plot(F)$XPF|P1})])"
+	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{__})({Mf$Xt|P0}3{B_plot$XPG})])"
 		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
 
 static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};

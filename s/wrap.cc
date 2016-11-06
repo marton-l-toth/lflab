@@ -61,6 +61,7 @@
 static const unsigned char i8tab[8] = {2,3,4,5,6,7,8,9};
 static const double d8tab[8] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
 static const int wr_flg_mv[4] = { WRF_MVC|3, 0, WRF_IADJS|WRF_IADJT|WRF_MVC|1023, 12 };
+static double t01fac;
 #define WR_FLG_MV(P) (wr_flg_mv+2*!!((P)->m_bflg&WRF_SHADOW))
 
 static int slbv_2(int r,int y) { return r>>=2, r | (64&(((0x0e13173f>>(4*(bitcnt_8(r)&6)))&63)-y)); }
@@ -132,11 +133,11 @@ class WrapCore : public SOB {
 		WrapCore(int uarg) : SOB(uarg), ktab(0) {}
 		WrapCore(const WrapCore * that, int uarg);
 		~WrapCore() { del_keytab(); }
-		void ini_default(int _) { tf01[0]=tf01[2]=0.0; tf01[1]=1.0; tf01[3]=22050.0;
+		void ini_default(int _) { t01[0]=0u; t01[1]=50000u;
 			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); } 
                 int save2(SvArg * p);
 		void debug2() { log("WrapCore: xfd=0x%x(0x%x)", xfd, wr_ixtr_r(xfd)); } 
-		int sv_tf01(char * to);
+		int sv_t01(char * to);
 		void grcmd(const char * i8) { gui2.c4('#', 'g', grdim[0]+48, grdim[1]+48);
 			gui2.c4(grdim[8]+48, grdim[9]+48, i8[0]+48, i8[1]+48); }
 		void upd_grid(const char * i8, int gui9) {
@@ -154,8 +155,10 @@ class WrapCore : public SOB {
 		void set_key(int i, int v) { if (v) set_key_nz(i,v); else rm_key(i); }
 		void del_keytab();
 		int dump_keytab(char * to);
-		float tf01[4];
-		char grdim[10], xfd;
+		void w_fzrl() { gui2.wupd_c0('f','t'); gui2.c2( (0x66463f74>>((2*fzrl)&24)) & 127,
+								(0x32524c31>>((8*fzrl)&24)) & 127); }
+		unsigned int t01[2];
+		char grdim[10], xfd, fzrl;
 		key_t * ktab;
 };
 
@@ -413,7 +416,6 @@ class AWrapGen : public BoxGen {
 		void set_tl(int t = INT_MAX) { m_node->etc()->i[0] = t; }
 		int key_op(int k, int op, const char * xys, int nof);
 	protected:
-		typedef struct { int f; char xy[8]; } qsav_t;
 		typedef int (acmd_t) (AWrapGen *, const char *, CmdBuf *);
 		static int slf_conv(int k);
 		static acmd_t c_c2k, c_cut, c_gcl, c_gmd, c_gr, c_ky, c_pl, c_stp, c_tf, c_wav, c_win, c_rvt,
@@ -422,14 +424,12 @@ class AWrapGen : public BoxGen {
 		virtual int wlg(sthg * bxw_rawptr, int ix, int flg) = 0;
 		virtual void w_col0() = 0;
 		virtual int sl_bv() = 0;
-		inline void qsav(qsav_t * q) { q->f = m_bflg; memcpy(q->xy, m_xys6, 8); }
-		inline void qrst(qsav_t * q) { m_bflg = q->f; memcpy(m_xys6, q->xy, 8); }
 		inline void wdat_cons_aw(sthg * bxw_rawptr) { WR_TAB=0; WR_WLG=0; WR_SLFLG=64; }
 		inline int add2ctl(int mxbi, int mxky) {
 			return mx_c_add(m_mxctl?m_mxctl:(m_mxctl=mx_mkctl(this)), mxbi, mxky); }
 		int save2_aw(SvArg * sv);
 		void gr_rgbc(){ char buf[4]; get_nm2(buf); gui2.c3('M',buf[0],buf[1]); gui2.sn(v_rgb(),6); }
-		int plot_tf(double t0, double t1, int flg);
+		int plot_tf();
 		int mx1(int f=0) { int k, r = mx_mkroot(); if (r<0) return r;
 			return (k=add2mx_txdlv(r,f,0,INT_MAX,0))<0 ? (mx_del(r),k) : r; }
 		int qcopy(int tf, int nof) { return tf ? trk_glob_paste(this, nof)
@@ -457,7 +457,7 @@ class AWrapGen : public BoxGen {
 
 class DWrapGen : public AWrapGen {
 	public:
-		static void st_init() { cmd_init(); }
+		static void st_init() { cmd_init(); t01fac = (double)sample_rate*2e-5; }
 		DWrapGen(ABoxNode * nd);
 		DWrapGen(ABoxNode * nd, const DWrapGen * that);
                 virtual ~DWrapGen() {}
@@ -562,9 +562,9 @@ SOB_INIFUN(SWrapMEC,  1)
 SOB_INIFUN(SWrapMEP,  1)
 /////// core SOB (grid config) //////////////////////////////////////////////
 
-WrapCore::WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd) {
+WrapCore::WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd), fzrl(that->fzrl) {
 	if (DBGC) log("wrcore copy: %p -> %p", that, this);
-	memcpy(tf01, that->tf01, 16); memcpy(grdim, that->grdim, 10); 
+	memcpy(t01, that->t01, 8); memcpy(grdim, that->grdim, 10); 
 	key_t * oktab = that->ktab; if (!oktab) { ktab = 0; return; }
 	(ktab = (key_t*)ANode::a64())->n5 = oktab->n5;
 	for (int i=0;i<4;i++) if ((ktab->bv[i]=oktab->bv[i])) ktab->pk[i] = (short*)ANode::cp64(oktab->pk[i]);
@@ -585,12 +585,11 @@ void WrapCore::set_key_nz(int i, int v) {
 	ktab->bv[ih] |= (1u << il);  ktab->pk[ih][il] = v;
 }
 
-int WrapCore::sv_tf01(char * to) {
-	float *q = tf01, *q0 = WrapCore_default(0)->tf01;
-	int r = 0, flg = 0; 
-	for (int i=0; i<4; i++) if (fabs(q[i]-q0[i])>1e-5) flg |= (1<<i);
-	if (!flg) return 0; else memcpy(to, "X$t0", 4), to[3]+=flg, r = 4;
-	for (int i=0; i<4; i++) if (flg & (1<<i)) to[r] = '#', doub2hx(to+r+1, q[i]), r+=17;
+int WrapCore::sv_t01(char * to) {
+	int r=4, hl[2], c = 4*fzrl + !!t01[0] + 2*(t01[1]!=50000); unsigned int k;
+	if (!c) return 0; else memcpy(to, "X$t@", 4), to[3] += c;
+	for (int i=0; i<2; i++) if (c&(i+1)) 
+		k=t01[i], hl[0]=qh4(k>>16), hl[1]=qh4(k&65535u), memcpy(to+r, hl, 8), r+=8;
 	return to[r]=10, r+1;
 }
 
@@ -599,7 +598,7 @@ int WrapCore::save2(SvArg * sv) {
 	for (int i=0; i<10; i++) buf[i+4] = grdim[i]+48;   buf[14] = 10;
 	int l = (xfd == 63) ? 15 : 15+sprintf(buf+15,"X$x%02x\n", wr_ixtr_r(xfd));
 	if (ktab) memcpy(buf+l, "X$k", 3), l += 4+wrap_dump_keytab(buf+l+3, ktab->bv, ktab->pk), buf[l-1] = 10;
-	return sv->st2=-1, l+=sv_tf01(buf+l), sv->out->sn(buf, l);
+	return sv->st2=-1, l+=sv_t01(buf+l), sv->out->sn(buf, l);
 }
 
 /////// scale ///////////////////////////////////////////////////////////////
@@ -1492,9 +1491,8 @@ void AWrapGen::box_window() {
 	gui2.cre(w_oid(), 'w'); if (m_node->cl_id()=='s') gui2.c1('s');
 	gui2.own_title(); show_tab(-1); w_mini(); w_gmd();
 	WrapCore * cr = core_ro();
-	const float * p = cr->tf01;
-	for (int i=0; i<4; i++) gui2.wupd_d((0x46665474>>(8*i))&127, (double)p[i]);
-	cr->upd_grid(m_xys6, w_oid(1));
+	for (int i=0; i<2; i++) gui2.wupd_c0('t'-32*i, 'v'), gui2.hex8(cr->t01[i]);
+	cr->w_fzrl(); cr->upd_grid(m_xys6, w_oid(1));
 	sthg * q = m_node->wdat_raw();
 	int ec; for (int i=0; (ec=wlg(q, i, pflg()))>=0; i++) ;
 	if (ec!=BXE_WLGDONE) gui_errq_add(ec, "wrap/wlg");
@@ -1587,9 +1585,9 @@ void AWrapGen::w_slbv(int flg) {
 int AWrapGen::write_a20() {
 	int n, ec, ch2 = !!(m_bflg&WRF_W_CH2), mxr = mx1(ch2?0:WRF_MONO), nf;
 	if (m_bflg&WRF_W_PLOT) {
-		float * q = core_ro()->tf01;
-		int skip = (int)lround((double)q[0] * (double)sample_rate);
-		if  ((nf = (int)lround((double)q[1] * (double)sample_rate) - skip)<1) return BXE_ZEROWAV;
+		unsigned int * q = core_ro()->t01;
+		int skip = (int)lround((double)q[0] * t01fac);
+		if  ((nf = (int)lround((double)q[1] * t01fac) - skip)<1) return BXE_ZEROWAV;
 		while (skip>1023) mx_calc(mxr, junkbuf, ch2?junkbuf:0, 1024, 0), skip -= 1024;
 		if    (skip)      mx_calc(mxr, junkbuf, ch2?junkbuf:0, skip, 0);
 	} else { nf = sample_rate * CFG_AO_TLIM.i; }
@@ -1614,9 +1612,11 @@ int AWrapGen::batch_calc(double *to0, double *to1, int skip, int n, int nch) {
 	mx_del(mxid); if (DBGC) log("batch_mono: %d", clk.get()); return nzch;
 }
 
-int AWrapGen::plot_tf(double t0, double t1, int flg) {
-        int i0 = sec2samp(t0), i1 = sec2samp(t1), len = i1 - i0, f7 = flg&7;
-	if (DBGC) log("plot_tf: [%.15g ... %.15g] -> [%d %d] l=%d flg=0x%x", t0, t1, i0, i1, len, flg);
+int AWrapGen::plot_tf() {
+	WrapCore * cr = core_ro();
+        int i0 = (int)lround((double)cr->t01[0] * t01fac), flg = cr->fzrl, f3 = flg&3,
+	    i1 = (int)lround((double)cr->t01[1] * t01fac), len = i1-i0;
+	if (DBGC) log("plot_tf:  [%d %d] l=%d flg=0x%x", i0, i1, len, flg);
         if (len<1) return log("plot_tf: length = %d samples, sorry.", len), BXE_RANGE;
 	int siz = 64, bits = 6, samp_bits = 20 + CFG_PLOT_XSIZ.i, samp_lim = 1<<samp_bits;
 	if (len>samp_lim) { log("plot_tf: len cut to %g", sample_length*(double)samp_lim);
@@ -1624,9 +1624,9 @@ int AWrapGen::plot_tf(double t0, double t1, int flg) {
 	else 		  { while (len>siz) siz+=siz,++bits;   if ((flg&12)==8) len=siz; }
 	double *to = pt_samp_shm(bits); if (!to) return EEE_SHM; log("samp_shm: len=%d, bits=%d", len, bits);
 	// TODO: qstat
-	int k, r = batch_calc(to, f7?to+siz:0, i0, len, 0);
+	int k, r = batch_calc(to, f3?to+siz:0, i0, len, 0);
 	if (r<=0) return r ? r : (pt_wrk_cmd("Sz\n", 3), BXE_ZPLOT);
-	if (f7 && r==1) log("plot_t: sound is centered, drawing mono..."), f7 = 0, flg &= 8;
+	if (f3 && r==1) log("plot_t: sound is centered, drawing mono..."), flg &= 12;
 	char buf[96]; k = sprintf(buf, "gs%c%c,%x,", hexc1(flg), 48+bits, len); 
 	k += m_node->get_path_uf(buf+k, 63); buf[k++]=10;
 	return pt_wrk_cmd(buf, k);
@@ -1644,15 +1644,16 @@ CH(stp){return p->m_mxctl ? mx_c_stop(p->m_mxctl, 0, s[1]&3) : EEE_NOEFF; }
 CH(xfd){return p->core_rw()->xfd = wr_ixtr(atoi_h(s+1)), 0; }
 CH(flg){return unpkflg(&p->m_bflg, atoi_h(s+1), WR_FLG_MV(p)), p->m_bflg&=~WRF_B_RSRV, 0; }
 
-CH(tf){	float *q = p->core_rw()->tf01; int flg = s[1]; double x; s += 2;
-	for (int i=0, j=1; i<4; i++, j+=j) if (flg&j) s+=parse_num(&x,s), q[i] = (float)x;
+CH(tf){	WrapCore * cr = p->core_rw(); unsigned int *q = cr->t01; int c = s[1]; double x; s += 2;
+	if(c<64){ for (int i=0;i<2;i++) if (c&(i+1)) s+=parse_num(&x,s), q[i] = (unsigned int)(x*5e4+.5);  }
+	else	{ for (int i=0;i<2;i++) if (c&(i+1)) q[i]=(unsigned int)((qh4rs(s)<<16)+qh4rs(s+4)), s+=8;
+		  int of = cr->fzrl, nf = cr->fzrl = (~c&60) ? (c>>2)&15 : ((of&3) ? of^3 : (of?0:8));
+		  if (p->wnfl() && nf!=of) gui2.setwin(p->w_oid(),'w'), cr->w_fzrl(); }
 	return 0; }
 
 CH(pl){	int c = s[1]; if (c<58) return p->key_op(11, c-48, 0, cb->cnof());
 	switch(c){ case 'P': return p->add2mx_txdlv(0,0,0,INT_MAX,0);
-		   case 'T': case 'F': {
-			const float *q = p->core_ro()->tf01;
-			return p->plot_tf(q[0], q[1], (s[2]&7)+4*(c&2)); }
+		   case 'G': return p->plot_tf();
 		   default:  return BXE_CENUM; }}
 
 CH(win){return (s[1]=='t') ? (p->show_tab(s[2]&7), 0) 

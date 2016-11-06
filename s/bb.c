@@ -990,7 +990,7 @@ static int gp_ptf_ini(const char *s) {
 				   gp_ptf_dat = map_wdir_shm('+', 16<<(gp_ptf_bits=bits), 1); 
 				   if (!gp_ptf_dat) return gp_ptf_bits=0, -6;  }
 	int siz = 1<<bits, k = siz - len;
-	if (k) { memset(gp_ptf_dat+len, 0, 8*k); if (flg&1)  memset(gp_ptf_dat+siz+len, 0, 8*k); }
+	if (k) { memset(gp_ptf_dat+len, 0, 8*k); if (flg&3)  memset(gp_ptf_dat+siz+len, 0, 8*k); }
 	gp_ptf_siz = siz; gp_cur_statfun = &gp_statf_tf; gp_ptf_flg = flg; 
 	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
 		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
