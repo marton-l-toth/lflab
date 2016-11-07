@@ -2,6 +2,7 @@
 #include "box0.h"
 #include "glob.h"
 #include "nz.h"
+#include "cfgtab.inc"
 
 #define IMPBOX(NM,NA,NT) class NM : public BoxInst { \
 	public: NM() : m_t(0) {} \
@@ -369,9 +370,9 @@ void HistGInst::upd_blk() {
 }
 
 int HistGInst::calc(int inflg, double** inb, double** outb, int n) {
-	int m, *q, xf = inflg&1;  double *ob, *to = outb[0], *p = inb[0];
+	int m, *q, sr = sample_rate, xf = inflg&1;  double *ob, *to = outb[0], *p = inb[0];
 	if (!m_len) { if (!n) return 0;
-		      m = m_len = ivlim((int)lround(inb[1][0]*(double)sample_rate), 2, 441000);
+		      m = m_len = ivlim((int)lround(inb[1][0]*(double)sr), 2, sr<<CFG_STATBUF_SIZ.i);
 		      m_mul = .5 * (double)m, m_add = (double)(m-1) / (double)(m);
 		      m_pos = m_total = 0;
 		      char * buf = (char*)calloc((3*m+1)&~1, 4);
