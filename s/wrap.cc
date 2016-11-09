@@ -881,7 +881,7 @@ int WrapAutoVol::save2(SvArg * p) {
                                         difftab[cnt++] = dif;
                                 }}}}
 	
-        if (DBGCV) c1 = clk.reset(), log_sortedblk(difftab, total, 1, "difftab2:");
+        if (DBGCV) c1 = clk.reset(); 
         int cost[3];    cost[0] = b91_cost0(difftab, total);
 			cost[1] = b91_cost1(difftab, total);	
 			cost[2] = b91_cost2(difftab, total);	

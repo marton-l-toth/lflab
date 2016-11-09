@@ -38,7 +38,6 @@ void bug(const char * fmt, ...);
 void log(const char * fmt, ...);
 void log_n(const char * fmt, ...);
 void log_sn(const char * pref, const char * s, int l);
-void log_sortedblk(short *p, int n, bool absf, const char * pref = 0);
 int u_sleep(int x);
 
 bool save_to_file(const char * fname);

@@ -129,41 +129,16 @@ class QSReader : public AReader {
 };
 
 void log_sn(const char * pref, const char * str, int len) {
-	if (pref) fprintf(stderr, "%s", pref), fflush(stderr); 
-	write(2, str, len); if (pref) putc(10, stderr);
+	int k, l0 = pref ? strlen(pref) : 0, l2 = l0+len+1, cf = l2>2048, l3 = cf?2048:l2;
+	char buf[l3], *q = buf+l0; memcpy(buf, pref, l0);
+	if (cf) k = l2 - 2025, memcpy(q, str, 1536), sprintf(q+1536, " [%05d", k),
+		memcpy(q+1543, " bytes skipped] ", 16), memcpy(q+1559, str+1536+k, 489); 
+	else	memcpy(q, str, len);
+	write(2, buf, l3);
 }
 
-void log(const char * fmt, ...) {
-        va_list ap; va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap); putc(10, stderr); va_end(ap);
-}
-
-void log_n(const char * fmt, ...) {
-        va_list ap; va_start(ap, fmt);
-        vfprintf(stderr, fmt, ap); va_end(ap);
-}
-
-void log_smallint(int i) { switch(i) {
-		case 0: log_n("o"); return;
-		case 1: log_n("/"); return;
-		case 2: log_n("="); return;
-		case 3: log_n("Y"); return;
-		case 4: log_n("X"); return;
-		case 5: log_n("H"); return;
-		case 6: log_n("*"); return;
-		default: log_n(" %d",i); return;
-}}
-
-int shortcmp(const void *p, const void *q) { return *(const short*)p - *(const short*)q; }
-void log_sortedblk(short *p, int n, bool absf, const char * pref) {
-	short q[n];
-	if (pref) log_n("%s",pref);
-	if (absf) for (int i=0; i<n; i++) q[i] = abs(p[i]);
-	else for (int i=0; i<n; i++) q[i] = p[i];
-	qsort(q, n, sizeof(short), shortcmp);
-	for (int i=0; i<n; i++) log_smallint(q[i]);
-	log("");
-}
+void log  (const char *f,...) { va_list a; va_start(a,f); vfprintf(stderr,f,a); putc(10,stderr); va_end(a); }
+void log_n(const char *f,...) { va_list a; va_start(a,f); vfprintf(stderr,f,a);			 va_end(a); }
 
 QSReader::QSReader(int n) : m_siz(12*n+20) { m_buf=(char*)malloc(m_siz); m_j=sprintf(m_buf,"Sc%d\n",n); }
 int QSReader::line(char *s) {
