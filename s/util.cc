@@ -157,7 +157,7 @@ int qstat_op(int op) {
 }
 
 int qstat_cfg(int op, const char * arg) {
-	int len; if (!arg || !*arg) arg="64", len=2; else len = strlen(arg);
+	int len; if (!arg || !*arg) arg="63", len=2; else len = strlen(arg);
 	char buf[len+3]; buf[0] = 'S'; buf[1] = op; memcpy(buf+2, arg, len); buf[len+2] = 10;
 	return pt_wrk_cmd(buf, len+3); }
 

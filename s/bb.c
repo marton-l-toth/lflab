@@ -650,10 +650,11 @@ static int statf_null() { return LOG("statf_null called!"), 0; }
 static gp_statfun gp_cur_statfun = &statf_null;
 static double * samp2gplot = NULL;
 static int gp_inpipe = -1, gp_outpipe = -1, gp_pid = 0, gp_w_id = 0, gp_len = 0,
-	   gp_res22 = 4, gp_u_msk = 0, gp_u_lr = 0, gp_u_perm7 = 0x6543210;
+	   gp_res22 = 4, gp_u_msk = 0, gp_u_lr = 0, gp_u_perm7 = 0x6543210, wrk_dflg = 0;
 static double gp_ctr = 0.5, gp_rad = 0.5;
 static char gp_w_title[64], gp_f_title[64];
-static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000";
+static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000",
+	     	  wrk_dflg_s[] = "1:qstat 2:plot 4:cmd";
 static int gp_tlog_n = 0;
 static unsigned int *gp_tlog = NULL, *gp_tlog_tab;
 static double * gp_ptf_dat = 0;
@@ -728,7 +729,7 @@ static int gp_plot(int d) {
 	double dl = (double)gp_len, dc = dl*gp_ctr, dr = dl*gp_rad;
 	int j0 = ivlim((int)lround(dc-dr), 0,  gp_len-1),
 	    jz = ivlim((int)lround(dc+dr), j0+1, gp_len);
-	LOG("gp_len=%d, j0=%d, jz=%d", gp_len, j0, jz);
+	if (wrk_dflg&2) LOG("gp_len=%d, j0=%d, jz=%d", gp_len, j0, jz);
 	return gp_binplot(-1,(*gp_cur_statfun)(j0, jz)); }
 
 static void gp_rgb_shuffle() {
@@ -745,11 +746,11 @@ static double gp_tlog_t(int ix) {
 static int gp_statf_tlog(int j0, int jz) {
 	j0<<=1, jz<<=1;
 	unsigned int x;
-	int j, samp_cnt = 0;
+	int j, samp_cnt = 0, df = wrk_dflg;
 	double samp_calc=0.0, xt, cpu0 = 0.0, *q = samp2gplot;
 	double td1, ttot = 0.0; for (j=j0; j<jz; j+=2) ttot += TLSEC(j);
 	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, tdloc = 0.0, t1 = t+tdmin;
-	LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
+	if (df&2) LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
 	int pcnt = 0, PQcnt = 0;
 	for (j=j0; j<jz; j+=2) {
 		int k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
@@ -760,7 +761,7 @@ static int gp_statf_tlog(int j0, int jz) {
 							   samp_calc=samp_cnt=0, cpu0),
 				q[2] = tdloc, tdloc = 0.0,
 				q[0] = t, q[1] = td, t1 = t+tdmin, q += 8; }
-	LOG("gp_tl: #p=%d, #PQ=%d", pcnt, PQcnt);
+	if (df&2) LOG("gp_tl: #p=%d, #PQ=%d", pcnt, PQcnt);
 	return 0x80f + ((q-samp2gplot)<<13);
 }
 
@@ -868,8 +869,16 @@ static void fft(double * re_im, int bits, int flg) { // 1: high
         fft2(re_im,n); }
 
 ///// w/qstat //////
-static void qstat_mk(double *q, int nq, const double *v, int nv) {
-	if(nv<513) {
+static void qstat_mk(double *q, int nq, const double *v, int nv, int flg) {
+	int df = wrk_dflg; if (df&1) LOG("qstat_mk: nq=%d nv=%d flg=%d",nq,nv,flg);
+	if (flg&8) {
+		double c, vm, y = 0.0, z = exp(4.5/(double)nq), x = (z-1.0)/(pow(z, (double)nq)-1.0);
+		int i, j, j0, j1;
+		for (i=j1=0; i<nq; i++, x*=z) {
+			j0 = j1; j1 = (int)lround((double)nv * (y+=x));
+			for (j=j0,vm=0.0; j<j1; j++) if ((c=v[2*j]*v[2*j]+v[2*j+1]*v[2*j+1])>vm) vm=c;
+			q[i]=sqrt(vm); if(df&1) LOG("y=%g fq1=%g j1=%d ==> vm=%g", y, 22050.0*y, j1, q[i]); }}
+	else if(nv<513) {
 		int i, j, stp = 256*(nv-1)/(nq-1);
 		for (i=j=0; i<nq; i++, j+=stp) q[i] = v[j>>8]; }
 	else {	double x, mv, vstp = (double)nv/512.0;
@@ -928,9 +937,6 @@ static int qstat_cmd(const char *s, int n) { switch(*s) {
 	case '-': free(qstat_v); qstat_v = NULL; return qstat_siz = qstat_op = 0;
 	case 'z': if (qstat_op) memset(qstat_v, 0, 8*qstat_siz), qstat_adm();    return 0;
 	case 'n': case 'N': return qstat_cfg(*s, ivlim(atoi(s+1),7,511));
-			    qstat_siz = ivlim(atoi(s+1),7,511); qstat_op=*s; qstat_pos = -1;
-			    qstat_v = realloc(qstat_v, 8*qstat_siz);
-			    return 0;
 	case 'c': if (qstat_pos>=0 || !qstat_uc) return qstat_report(3), -1;
 		  if (qstat_siz!=atoi(s+1))	 return qstat_report(2), -1;
 		  return qstat_uc = qstat_pos = qstat_ec = 0;
@@ -967,9 +973,9 @@ static void gp_pt_alp(double *to, const double *p, int cnt, int siz, int rem) {
 static int gp_statf_tf(int j0, int jz) {
 	if (!gp_ptf_dat) return LOG("gp_statf_tf: no data no draw"), 7;
 	int nsamp = jz-j0, res = gp_res()-1, siz = 1+nsamp/res, cnt = nsamp/siz, rem = nsamp%siz,
-	    gf = gp_ptf_flg, rcnt = cnt+!!rem, rv = rcnt<<16; //| (gf&8*((siz>1 ? 0x7ef0fe : 0x1280);
-	LOG("gp_statf_tf: j0=%d, jz=%d, len=%d ==> rcnt=%d cnt=%d siz=%d rem=%d gsiz=%d",
-			  j0,    jz,    gp_len,    rcnt,   cnt,   siz,   rem, gp_ptf_siz);
+	    gf = gp_ptf_flg, rcnt = cnt+!!rem, rv = rcnt<<16, df = wrk_dflg & 2;
+	if(df) LOG("gp_statf_tf: j0=%d, jz=%d, len=%d ==> rcnt=%d cnt=%d siz=%d rem=%d gsiz=%d",
+				 j0,    jz,    gp_len,    rcnt,   cnt,   siz,   rem, gp_ptf_siz);
 	double x, jj0 = (double)j0, jjz = (double)jz, *to = samp2gplot, *p = gp_ptf_dat+j0;
 	if(gf&8) return x = 44100.0 / ((double)(1<<gp_ptf_bits)), to[0] = jj0*x, to[8*rcnt-8] = jjz*x,
 			gp_pt_alp(to+1, p+j0, cnt,siz,rem), rv | ((siz>1?0xf0fe:0x9092));
@@ -983,9 +989,9 @@ static void gp_ptf_drop(){ if(gp_ptf_dat) munmap(gp_ptf_dat,16<<gp_ptf_bits), gp
 
 static int gp_ptf_ini(const char *s) {
 	int flg = hxd2i(*s), bits = s[1]-48; if (s[2]!=',') return LOG("gs: parse error"), -7;
-	int len = 0; for (s+=3; *s>47; s++) len = 16*len + hxd2i(*s); 
+	int len = 0, df = wrk_dflg&2; for (s+=3; *s>47; s++) len = 16*len + hxd2i(*s); 
 	if (*s==',' && *++s) strncpy(gp_w_title, s, 63); else memcpy(gp_w_title, "unnamed", 8);
-	LOG("gp_ptf_ini: flg=%d bits=%d len=%d", flg, bits, len);
+	if (df) LOG("gp_ptf_ini: flg=%d bits=%d len=%d", flg, bits, len);
 	if (bits != gp_ptf_bits) { gp_ptf_drop(); if (!bits) return 0;
 				   gp_ptf_dat = map_wdir_shm('+', 16<<(gp_ptf_bits=bits), 1); 
 				   if (!gp_ptf_dat) return gp_ptf_bits=0, -6;  }
@@ -995,7 +1001,7 @@ static int gp_ptf_ini(const char *s) {
 	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
 		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
 	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48);
-	if (qstat_op) qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len), qstat_adm();
+	if (qstat_op) qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len, flg), qstat_adm();
 	return 0;
 }
 
@@ -1036,14 +1042,18 @@ static int gp_cmd(const char *s) {
 		default: LOG("gp: unknown cmd 0x%x \"%s\"", *s, s); return -7;
 	}}
 
-static void wrk_cmd_l(char *s, int n, int src) { if (n>=0) /*!!*/ s[n] = 0; switch(*s) {
-	case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
-	case 'S': LOG_E("qstat_cmd", qstat_cmd(s+1, n-1)); return;
-	case 'q': wbye(0);
-	case '!': { int l=strlen(++s); char buf[l+1]; memcpy(buf,s,l); buf[l]=10; write(1,buf,l+1); return; }
-	case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2)); /*else FT*/
-	default: LOG("unknown command \"%s\"", s); break;
-}}
+static void wrk_cmd_l(char *s, int n, int src) {
+	if (n>=0) /*!!*/ s[n] = 0; if (wrk_dflg&4) LOG("wrk_cmd: \"%s\"", s); switch(*s) {
+		case 'g': LOG_E("gp_cmd", gp_cmd(s+1)); return;
+		case 'S': LOG_E("qstat_cmd", qstat_cmd(s+1, n-1)); return;
+		case 'q': wbye(0);
+		case '!':	{ int l = strlen(++s); char buf[l+1];
+				  memcpy(buf,s,l); buf[l]=10; write(1,buf,l+1); return; }
+		case 'd': if (s[1]==63) LOG("dflg=0x%x -- %s",wrk_dflg,wrk_dflg_s); 
+			  else wrk_dflg=atoi_h(s+1); 	return;
+		case 'T': if (s[1]>=48) return LOG_E("write_tlog", tlog_hcp(s[1]-48, s+2)); /*else FT*/
+		default: LOG("unknown command \"%s\"", s); break;
+	}}
 
 static void gp_out() {
 	static int state = 37;
