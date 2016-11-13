@@ -944,7 +944,7 @@ static void choo_cmd(choo_t *q, const char *s), local_error(int ec);
 
 static chtab choo_ch;
 static choo_t choo_tab[] = {{'?', 0, NULL, NULL, NULL, NULL, NULL, NULL},
-	{'<'|256, GTK_FILE_CHOOSER_ACTION_OPEN, "load",     "load", "see autosaves", ".", "$A", NULL},
+	{'<'|256, GTK_FILE_CHOOSER_ACTION_OPEN, "load file","load", "see autosaves", ".", "$A", NULL},
 	{'l'|256, GTK_FILE_CHOOSER_ACTION_OPEN, "load lib", "load", NULL, "l.", "", NULL},
 	{'>'|256, GTK_FILE_CHOOSER_ACTION_SAVE, "save as",  "save", NULL, "s",  "", NULL},
 	{'L'|384, GTK_FILE_CHOOSER_ACTION_SAVE, "save lib", "save (R)", "save (L)", "S@R$", "S@L$", NULL},
