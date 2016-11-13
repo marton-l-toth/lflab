@@ -2798,13 +2798,13 @@ static trk_24 * tc_a24(tc_t * tc, unsigned short * to) {
 static void tc_vw_cmd(tc_t * tc) { CMD("X#%x$V%c%c$%x$%x",
 		tc->nid, tc->y0a+48, tc->y1a+48, tc->x0a, tc->x1a); }
 
-static void tc_clear(tc_t * tc, int re) {
+static void tc_clear(tc_t * tc, int flg) { // 1: redraw   2: keep x1r
 	trk_24 sv, *q;
-	if (re) { memcpy(&sv, tc_p24(tc, 1), sizeof(trk_24));
+	if (flg&1) { memcpy(&sv, tc_p24(tc, 1), sizeof(trk_24));
 		  int i; for (i=0; i<tc->b3k_n; i++) free3k(tc->b3k[i]); }
-        tc->b3k_n = tc->t24_f = tc->flg = tc->gnaf = 0; tc->x1r = tc->x1a = -1;
+        tc->b3k_n = tc->t24_f = tc->flg = tc->gnaf = 0; tc->x1a = -1; if (!(flg&2)) tc->x1r = -1;
 	unsigned short qw=0; q = tc_a24(tc, &qw); if (qw!=1) LOG("BUG: tc_clear: %d!=1", qw);
-	if (re) memcpy(q, &sv, sizeof(trk_24)); else q->b.id = -1; 
+	if (flg&1) memcpy(q, &sv, sizeof(trk_24)); else q->b.id = -1; 
 }
 
 #define TC_BLK(P,X,Y) ((P)->blk[((X)&15)+16*((Y)&7)])
@@ -2859,7 +2859,7 @@ static void tc_adj_xy_a(tc_t * tc) {
 	//LOG("tc_adj_xy_a xr:%d:%d yr:%d:%d xa:%d:%d ya:%d:%d", tc->x0r, tc->x1r, tc->y0r, tc->y1r, tc->x0a, tc->x1a, tc->y0a, tc->y1a);
         if (tc->x1a<0) return tc_mk_xy_a(tc);
         if (tc->x1a<tc->x0r || tc->x0a>tc->x1r || tc->y1a<tc->y0r || tc->y0a>tc->y1r)
-                return tc_clear(tc, 1), tc_mk_xy_a(tc);
+                return tc_clear(tc, 3), tc_mk_xy_a(tc);
         int dw = tc->x0a - tc->x0r, de = tc->x1r - tc->x1a,
             dn = tc->y0a - tc->y0r, ds = tc->y1r - tc->y1a;
 	if (!(((dn+1)|(dw+1)|(de+1)|(ds+1))&(-2))) return;
