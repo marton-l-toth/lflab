@@ -1,4 +1,4 @@
-trk: c> <m -- empty disp. (sporadic)
 graph: dot start fail (rare) (retry!!)
 shwrap: <x : x + s4 (iadj.S) --> x + 2*s4 (->compat. mode flg???)
 wrap:  u/h/d rounding: interpolation?
+plot: extra partial plot (sporadic)

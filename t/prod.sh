@@ -1,4 +1,5 @@
 #!/bin/bash
+if [[ "$TERM" == "screen" ]]; then /bin/echo -e "\ekmk\e\\"; fi
 SDIR="$PWD"
 PDIR="$HOME/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS="";
