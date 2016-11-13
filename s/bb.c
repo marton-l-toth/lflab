@@ -1039,6 +1039,7 @@ static int gp_cmd(const char *s) {
 					   : (LOG("gp_resol: nothing happens"), 0);
 		case 'b': return *((s[1]&1) ? &gp_u_lr : &gp_u_msk) ^= ((1<<(s[2]-48))&0xfe), gp_plot(0);
 		case 'u': return (gp_pid>0) ? kill(gp_pid, 9) : -7;
+		case 'x': return gp_ptf_drop(), 0;
 		default: LOG("gp: unknown cmd 0x%x \"%s\"", *s, s); return -7;
 	}}
 

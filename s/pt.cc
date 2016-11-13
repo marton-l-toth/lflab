@@ -388,7 +388,7 @@ void pt_calc_xbv() {
 		for (int j=0; pp[j]; j++) if(pfind(pp[j])) pt_xapp_bv[i] |= (1<<j); }}
 
 static void pt_samp_drop() { if (pt_samp_buf) munmap(pt_samp_buf, 16<<pt_samp_bits), unlink(tpipe_name('+')),
-					      pt_samp_buf = 0, pt_samp_bits = 0, pt_wrk_cmd("gs0\n", 4); }
+					      pt_samp_buf = 0, pt_samp_bits = 0, pt_wrk_cmd("gx\n", 3); }
 static int wrk_dead(int pid, int stat, int td) {
 	if (td<2) log("FATAL: wrk exited again in < 2 seconds"), bye(1);
 	gui_errq_add(PTE_WRKCRASH); 
