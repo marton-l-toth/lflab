@@ -565,6 +565,7 @@ void qp1(FILE *f) {
 				  switch(*(q+=2*(IFHX(q[0], 65) && IFHX(q[1], 65)))) {
 					  case'c':case'e':case'k':case'g': l=*q;goto lim; default: goto wtf; }
 			case 10:  continue;
+			case 'q': return;
 			default:  goto wtf;
 		}
 lim:		l = LIM(l); if (k>l) k = l; goto sl;
@@ -869,7 +870,7 @@ static void fft(double * re_im, int bits, int flg) { // 1: high
         fft2(re_im,n); }
 
 ///// w/qstat //////
-static void qstat_mk(double *q, int nq, const double *v, int nv, int flg) {
+static void qstat_mk(double *q, int nq, const double *v, int nv, int flg, int siz) {
 	int df = wrk_dflg; if (df&1) LOG("qstat_mk: nq=%d nv=%d flg=%d",nq,nv,flg);
 	if (flg&8) {
 		double c, vm, y = 0.0, z = exp(4.5/(double)nq), x = (z-1.0)/(pow(z, (double)nq)-1.0);
@@ -879,15 +880,15 @@ static void qstat_mk(double *q, int nq, const double *v, int nv, int flg) {
 			for (j=j0,vm=0.0; j<j1; j++) if ((c=v[2*j]*v[2*j]+v[2*j+1]*v[2*j+1])>vm) vm=c;
 			q[i]=sqrt(vm); if(df&1) LOG("y=%g fq1=%g j1=%d ==> vm=%g", y, 22050.0*y, j1, q[i]); }}
 	else if(nv<513) {
-		int i, j, stp = 256*(nv-1)/(nq-1);
-		for (i=j=0; i<nq; i++, j+=stp) q[i] = v[j>>8]; }
+		int i, j, stp = 256*(nv-1)/(nq-1), par = siz &- !(~flg&3);
+		for (i=j=0; i<nq; i++, j+=stp) q[i] = v[ (j>>8) + ((-(i&1))&par) ]; }
 	else {	double x, mv, vstp = (double)nv/512.0;
-		int i,j,j0,j1,qj=0,hkj=0,hkj8=0,hkstp=0x1ff00/(nq-1);
+		int i,j,j0,j1,qj=0,hkj=0,hkj8=0,hkstp=0x1ff00/(nq-1),par=siz&-!(~flg&3),xo=0; if (df&1) LOG("par=%d",par);
 		for (i=j1=0; i<512; i++) { 
 			j0 = j1; j1 = (int)((double)(i+1)*vstp);
-			if (i==hkj) { hkj8 += hkstp; hkj = hkj8>>8; mv = v[j0];
-				for (j=j0+1; j<j1; j++) if ((x=v[j])<mv) mv = x;
-				q[qj++] = mv; }}}}
+			if (i==hkj) { int j2=j0+xo, j3=j1+xo; hkj8 += hkstp; hkj = hkj8>>8; mv = v[j2];
+				for (j=j2+1; j<j3; j++) if ((x=v[j])<mv) mv = x;
+				q[qj++] = mv; xo ^= par; }}}}
 
 inline void qstat_report(int v) { int w = 0xa305352 + (v<<16); write(1, &w, 4); }
 
@@ -1001,7 +1002,7 @@ static int gp_ptf_ini(const char *s) {
 	if (flg&8) fft(gp_ptf_dat, bits, (flg>>1)&1), gp_len=siz/2,
 		   memcpy(gp_f_title+8, "avg\0____min\0____max\0____lg:avg\0_lg:min\0_lg:max\0_phase\0_",56);
 	else gp_len=len, memcpy(gp_f_title+8, "avg\0____min\0____max\0____avgR\0____minR\0____maxR\0___", 48);
-	if (qstat_op) qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len, flg), qstat_adm();
+	if (qstat_op) qstat_mk(qstat_v, qstat_siz, gp_ptf_dat, gp_len, flg, siz), qstat_adm();
 	return 0;
 }
 
