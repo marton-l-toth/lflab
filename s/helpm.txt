@@ -437,7 +437,7 @@ This help text describes the main window (title "lf").
 ==> 0.getting started -- click here for general help
 kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restart gnuplot (close all gnuplot windows)
-LR - display tree window (on top)
+[LR] - left-cl: show tree window (on top) right-cl: window menu
 ++ - main menu (here you can open the console, show the
 pole-zero diagram for the last filter, open various config
 windows, write logs, and exit)
@@ -530,7 +530,7 @@ and clipboards, you can edit the text with an external editor.
 The text window should be updated when you save the file in the
 editor (if it doesn't, try another editor & report a bug).
 {{{1.midi config}}}
-This help text describes the config window (from main menu)
+This help text describes the config window (main w./[LR] menu)
 ==> 4.overview -- general description for MIDI inputs
 On the left you can see the list of MIDI input devices found at
 start (if you connect new devices, you have to restart lflab
@@ -566,7 +566,7 @@ There is only one config file, so "saveCfg" saves all other
 config parameters (audio, path, midi) as well.
 {{{1.path config}}}
 This help text describes the main config window (available from
-the "++" menu in the main window). For a list of command line
+the "[LR]" menu in the main window). For a list of command line
 options, start the program with "lflab -h".
 sv.exec - save files with exec right (line 1: #!/usr/bin/lflab)
 min/asv - autosave every x minutes (*) (0: off)
@@ -643,7 +643,7 @@ window, above the buttons) are standard text fields, with usual
 copy & paste functions.
 ---
 When strange things happen, it can be helpful to open the
-console (from main win./++ menu) because the information
+console (from main win./[LR] menu) because the information
 there is much more detailed then in the "Errors" window.
 {{{0.planned features}}}
 Planned features (please don't take these as promises :) )
@@ -714,20 +714,20 @@ If you have some other device (e.g. a touchpad that uses a
 different logic from that of nanoPAD2), please do as follows:
 (0) open MIDI config window and enable "log"
 ==> 1.midi config -- "log" button is in the top line
-(1) type a '?' in the console and a short description of the
-device (vendor/type) -- lines beginning with '?' will be
-echoed as "undefined commands" and written to log
-(2) Describe (again, beginning with a '?') what you are going
-to do with the MIDI device (you should get back "undefined 
-command" again), and do it -- lines like this should appear:
+(1) type "_>" in the console and a short description of the
+device (vendor/type) -- lines beginning with "_>" will be
+echoed to console and written to log
+(2) Describe (again, beginning lines with "_>") what you are
+going to do with the MIDI device (again, lines are echoed with
+a timestamp), and do it -- lines like this should appear:
 45602.387. midi: dev00(01) ch00 ky128 065=>067 (#00000,00)
 (3) Unless you think you did all the reasonable test cases for
 your device, go back to (2) and try something different.
 (4) Run "flush log" from the main menu. A file named "lf.log"
 should be there in the ".lflab" directory (under your home dir,
-see "userdir" in path config window (from main menu) for the
-exact path). This file should contain the MIDI messages as well
-as your comments. Send this file to:
+see "userdir" in path config window (from main/[LR] menu) for
+the exact path). This file should contain the MIDI messages as
+well as your comments. Send this file to:
 @@@
 {{{4.dev/chan/key}}}
 All MIDI keys and controllers (sliders/knobs/buttons etc.) are

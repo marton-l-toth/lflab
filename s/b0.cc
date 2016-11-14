@@ -105,10 +105,16 @@ STATELESS_BOX_0(VersionBox) { **outb = (double)v_major + 0.01 * (double)v_minor;
 
 //? {{{!._1}}}
 //? simple impulse (first sample is 1.0, the rest are all zero)
+//? HINT: since a simple impulse has a flat frequency graph, it is
+//? ideal for testing the frequency response of filters.
 IMPBOX(Impulse1, 0, 0) { return m_t ? (**outb=0.0, 0) 
 			   	 : (**outb=1.0, memset(*outb+1, 0, 8*n-8), m_t=1, 1); }
 //? {{{!._trI}}}
 //? triangle impulse (up and dn are in seconds)
+//? ---
+//? HINT: Because up, down and amplitude are cleary visible
+//? on a plot display, triangle impulses are ideal for checking
+//? if scales in wrap/shadow wrap are working as expected.
 IMPBOX(TriangImp, 3, 2) {
 	int i, n2, t = m_t;
 	if (!t) m_tx[0] = sec2samp(inb[0][0]), m_arg[0] = 1.0 / (double)m_tx[0], m_arg[2] = 0.0,
@@ -348,6 +354,11 @@ STATELESS_BOX_1(Sel2Box) { // TODO: io-ali
 //? t seconds the output is zero)
 //? interval -1...1 is divided to (t*sample_rate) equal intvals
 //? output is normalized (~= const 1.0 for equal distribution)
+//? ---
+//? While it is not impossible to play the output as sound, the
+//? recommended usage of this box is to see stats (e.g. for noise
+//? distribution) with gnuplot.
+//? TODO: examples
 class HistGInst : public BoxInst {
 	public:
 		HistGInst() : m_len(0) {}
