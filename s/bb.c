@@ -938,7 +938,8 @@ static int qstat_cmd(const char *s, int n) { switch(*s) {
 	case '-': free(qstat_v); qstat_v = NULL; return qstat_siz = qstat_op = 0;
 	case 'z': if (qstat_op) memset(qstat_v, 0, 8*qstat_siz), qstat_adm();    return 0;
 	case 'n': case 'N': return qstat_cfg(*s, ivlim(atoi(s+1),7,511));
-	case 'c': if (qstat_pos>=0 || !qstat_uc) return qstat_report(3), -1;
+	case 'c': if (--qstat_uc  ) return LOG("qstat/c: uc =%d", qstat_uc ), qstat_report(3), -1;
+		  if (qstat_pos>=0) return LOG("qstat/c: pos=%d", qstat_pos), qstat_report(3), -1;
 		  if (qstat_siz!=atoi(s+1))	 return qstat_report(2), -1;
 		  return qstat_uc = qstat_pos = qstat_ec = 0;
 	case 'C': return (qstat_pos<0) ? (qstat_report(3),-1) : qstat_chk(s[1]&7, s+2);
