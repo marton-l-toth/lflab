@@ -558,8 +558,7 @@ void qp1(FILE *f) {
 		switch(*s) {
 			case '#': m_sleep(k); if (s[1]&&s[1]!=10) fprintf(stderr,"%s",s); continue;
 			case '?': qpcmd(s+1); continue;
-			case '^': goto sl;
-			case 'm': case 'N': case 'Z': l = *s; goto lim;
+			case '^': case 'm': case 'N': case 'Z': l = *s; goto lim;
 			case 'Y': l = 'Z'; goto lim;
 			case 'V': for (q=s+1; *q && *q!=36; q++); if (!*q) goto wtf; else q+=3;
 				  switch(*(q+=2*(IFHX(q[0], 65) && IFHX(q[1], 65)))) {

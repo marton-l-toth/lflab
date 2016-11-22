@@ -10,6 +10,7 @@
 027f N`.tG`1$*`.tG.t_2`
 008b N`.tG`1$*`.tG.t_2`
 0000 N`.tG`1$W`.tG.t_2`
+0100 V`.tG.k2`3$KAc1
 0c9f V`.tG.k2`3$KKc1,c8010
 0471 V`.tG.k2`3$Kac3
 06ca m:del/s
@@ -49,6 +50,9 @@
 0460 V`.tG.k2`3$KKc1,2200b
 03b8 V`.tG.k2`3$Kac3
 0746 m:del/s
+0d76 V`.tG.k2`3$KKc1,25034
+0ee9 V`.tG.k2`3$Kac3
+07ca m:del/s
 02ee V`.tG.k2`3$Kac3
 23d6 m:del
 0949 N`.`1$*`.tG`

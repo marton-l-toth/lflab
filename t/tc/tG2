@@ -1,0 +1,103 @@
+?L N250 m200 e100 c250 Z250 g250 k250 ^200
+0000 ^_Sn63
+0000 N`.`1$*`.tG`
+0093 N`.`1$*`.tG`
+0000 N`.`1$W`.tG`
+0000 N`.`1$<`.tG`
+084e N`.tG`1$*`.tG.t_2`
+0081 N`.tG`1$*`.tG.t_2`
+0000 N`.tG`1$W`.tG.t_2`
+0986 V`.tG.t_2`b$t>c1
+0350 V`.tG.t_2`b$t>c1
+0d77 V`.tG.t_2`b$t>c1
+1853 V`.tG.t_2`b$tSc3
+06d9 m:copy
+16f5 Y`.tG.t_2`B$t
+1b88 V`.!b.[]`3$KKc9,2100e
+0100 V`.!b.[].0`b$w:c1
+010e V`.!b.[].0`b$wY14c1
+0100 V`.!b.[].0`b$wC01c1
+07f2 V`.!b.[].0`b$wC07c1
+1de8 V`.!b.[].0`b$wC0Cc7
+078f V`.!b.[].0`b$wC0Cc3
+00f6 V`.!b.[].0`b$wC0Cc3
+00df V`.!b.[].0`b$wC0Cc3
+00df V`.!b.[].0`b$wC0Cc3
+01f5 V`.!b.[].0`b$wC0Cc3
+4ea1 V`.!b.[].0`b$wZ01c1
+60b5 V`.!b.[].0`b$wC0Ec1
+62f5 V`.!b.[]`3$KAc1
+0100 V`.!b.[]`3$KKc2,27011
+0c75 V`.!b.[]`3$KKc9,1f02e
+60ec N`.tG`1$*`.tG.k2`
+0d02 V`.!b.[].1`b$wE00c1
+04b5 m:w< 1
+17c4 N`.`1$*`.tG`
+1606 V000017$/Eet
+03b0 V000017$/Eetr
+0b34 V000017$/Tc1
+0b40 m:track
+1570 V`.!b.[].1`b$wC07c1
+0e11 V`.!b.[].1`b$wC0Cc1
+0100 V`.!b.[]`3$Kac3
+0714 m:grabC
+2cb0 V`.tG.tr`b$tRc1
+0c6e ^mVKBB
+0082 ^mVK3B
+030e ^mVK96
+0071 ^mVK16
+18a1 V`.tG.tr`b$tRc1
+496d V`.tG.tr`b$tDc1
+1329 V`.tG.tr`b$tDc1
+0243 V`.tG.tr`b$tDc1
+082a V`.tG.tr`b$tDc1
+0e6c V`.tG.tr`b$tRc1
+1b58 ^mVKBC
+0091 ^mVK3C
+0ab7 ^mVK97
+009d ^mVK17
+3322 V`.tG.tr`b$tRc1
+175f V000007$.wc3
+18aa m:midi config
+1736 V000027$M_C2c1
+3bbb V`.tG.tr`b$tRc1
+10a6 ^mVK90
+009f ^mVK10
+080d V`.tG.tr`b$tRc1
+25d9 Y27$M
+0100 V`.!b.[]`3$KKc1,5a010
+06a1 V`.!b.[]`3$Kac1
+0913 m:new d
+101b V`.!b.[].8`b$wS00c1
+0520 m:t< tr
+0479 V`.!b.[].8`b$wS04c1
+10be V`.!b.[].8`b$wS09e60
+0d38 V`.!b.[].8`b$wS19e01
+2929 V`.!b.[].8`b$w_09c1
+^_Sc63
+^<2edlhtLNMhz3JzjJnD@xtz3kvscZwvbxz6xvwo=eeC;;9=UXpPPRX<;6kPTdmccw=;6spwo=eeC?;
+^<9t;HPgz;n?;9tFXpPPRX@;6`EVJ?zzGA;8zYH=kKUrA;8?mX]Tak\B;7_=R\<Y>AC;9I@QiSmrXC;
+^<9kIYYHx=nC;9NSaI=CICD;8q\iyqNTXD;7Z_hFIcHpD;2;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;
+^<*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;
+^<*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;3zlRiw];TKz3Qxx`HHvuWz3veRJh?oJdz
+^<4yFFl=wWbmz3ppCkkrORuz7^^lZYxse;;6`g[xd@?f@;7a=aDxZkfC;6WRPlrg`tD;9;Wn^x^zlD;
+^<9;T@TvImDC;8yuO;Gwnc?;4UuZ\^m<uzz5G]CP=_>Dtz3LgyGqKXAlz5`ytKfoqDaz5]J\]tydrUz
+^<5rML?sfSqHz2;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;
+^<*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;*;;;;;;;;;;!
+52df V000007$._01c1
+1306 V`.tG.tr`b$t>c1
+0626 V`.tG.tr`b$tSc3
+04ea m:cut
+1fc0 V`.tG.tr`b$t>c1
+17cf V`.tG.tr`b$t<c1
+0895 V`.tG.tr`b$tSc3
+0474 m:cut
+19da V`.!b.[]`3$Kac1
+06b5 m:clear
+06c8 V`.!b.[]`3$KKc1,13010
+06da Y`.!b.[]`3$K
+0b5f V`.tG.tr`b$t_02c1
+059d m:delete
+0650 N`.`1$*`.`
+009e N`.`1$*`.`
+0000 N`.`1$W`.`

@@ -33,7 +33,7 @@
 0000 V`.tG.k.0`b$wS0Ce.
 006f V`.tG.k.0`b$wS0Ce.1
 04a7 V`.tG.k.0`b$wS0De
-0008 V`.tG.k.0`b$wS0De1
+0008 V`.tG.k.0`b$wS0De.5
 0d15 V`.tG.k.0`b$wS0Ec3
 043a m:=
 1e68 V`.tG.k.0`b$wS15e
@@ -52,9 +52,9 @@
 04a5 m:lin
 1696 V`.tG.k.0`b$wE14e
 0000 V`.tG.k.0`b$wE14e-
-0030 V`.tG.k.0`b$wE14e-3
+0030 V`.tG.k.0`b$wE14e-12
 187a V`.tG.k.0`b$wE15e
-0000 V`.tG.k.0`b$wE15e3
+0000 V`.tG.k.0`b$wE15e12
 0000 V`.tG.k`3$Kac3
 050a m:new s
 38ff N`.tG`1$*`.tG.k`
@@ -176,6 +176,35 @@
 10b9 V`.tG.t_2.030:00003B10`b$w:c1
 103a V`.tG.t_2.030:00003B10`b$wY14c1
 41a0 Y`.tG.t_2.030:00003B10`B$w
+0100 V`.tG.k2`3$KKc1,1e028
+1114 V`.tG.k2`3$Kac1
+09a5 m:new d
+0eb3 N`.!b`2$*`.!b.imp`
+0c8d V`.tG.k2.1`b$wS02c1
+0701 m:_> ^gauss
+0820 V`.tG.k2.1`b$wE04c1
+12eb V`.tG.k2.1`b$wE12c1
+0350 m:y
+0818 V`.tG.k2.1`b$wE13c1
+03a6 m:lin
+0835 V`.tG.k2.1`b$wE14e
+000d V`.tG.k2.1`b$wE14e-
+0075 V`.tG.k2.1`b$wE14e-12
+039b V`.tG.k2.1`b$wE15e
+0008 V`.tG.k2.1`b$wE15e12
+0ea2 V`.tG.k2.1`b$wS04c1
+0b8e V`.tG.k2.1`b$wZ03c1
+0744 V`.tG.k2.1`b$wS11e
+0009 V`.tG.k2.1`b$wS11e1
+0364 V`.tG.k2.1`b$wS11e18
+143c V`.tG.k2.1`b$wS0Bc1
+04d9 m:lin
+0991 V`.tG.k2.1`b$wS0Ce
+0008 V`.tG.k2.1`b$wS0Ce.
+003b V`.tG.k2.1`b$wS0Ce.1
+04df V`.tG.k2.1`b$wS0De
+000b V`.tG.k2.1`b$wS0De.5
+f2d9 Y`.tG.k2.1`B$w
 056d Y`.tG.t_2`B$t
 0a51 Y`.tG.k2`3$K
 0806 N`.`1$*`.`
