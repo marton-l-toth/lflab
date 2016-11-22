@@ -322,7 +322,7 @@ class SWrapMEC : public SOB {
 		void w_line(int j, int flg);
 		void w_nl(int of) { int k = m_u32&2047; gui2.t_sz("("); gui2.hex4(k); 
 				    if (of) gui2.wupd_0('C', ".*"), gui2.hex4(1+2*k); }
-		void w(int of) { w_nl(of); BVFOR_JM(m_u32&2047) w_line(j, -1); }
+		void w(int of) { w_nl(of); if(of) { BVFOR_JM(m_u32&2047) w_line(j, -1); }}
 		int add_l() { BVFOR_JM(~m_u32&2047) return (m_u32|=1u<<j,j);   return MDE_FULLC; }
 		int del_l(int j) { unsigned int m = 1u<<j; return (m_u32&m) ? (m_u32&=~m,4096) : EEE_NOEFF; }
 		int dup_l(int j);
