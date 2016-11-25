@@ -77,11 +77,8 @@ class GraphBoxGen : public BoxGen {
         protected:
                 BXCMD_DECL(GraphBoxGen) c_ni, c_no, c_nfb, c_conn, c_ibx, c_dbx, c_shfl, c_dbg,
                                         c_gnd, c_g2, c_ck, c_uic, c_rpl;
-                typedef void (*rcf_t)(int*,int,int);
-                static void rcf_ins(int *p, int pos, int ix);
-                static void rcf_cut(int *p, int pos, int ix);
-                static void rcf_xcg(int *p, int pos, int ix);
-                static void rcf_nin(int *p, int pos, int ix);
+                typedef void (rcf_ft)(int*,int,int), (*rcf_t)(int*,int,int);
+		static rcf_ft rcf_ins, rcf_cut, rcf_xcg, rcf_nin, rcf_fb;
 
                 void dump_model();
                 void reconn(int pos, int i0, rcf_t fun);
@@ -251,6 +248,8 @@ void GraphBoxGen::rcf_xcg(int *p, int pos, int ix) {
 void GraphBoxGen::rcf_nin(int *p, int pos, int ix) {
 	if ((*p&0xffff)==0xfffe && (*p>>16) >= pos) *p=0xfffc;
 }
+void GraphBoxGen::rcf_fb(int *p, int pos, int ix) { // pos: old<<16 + new
+	if ((*p&0xffff)==0xfffe && *p >= (pos&0x7fff0000)) *p += (pos<<16) - (pos&0x7fff0000); }
 
 int GraphBoxGen::add_box(int pos, BoxGen* bx) {
 	if (n_box()==0xfff0) return BXE_GFULL; if (!bx->n_out()) return BXE_ZOUT;
@@ -433,6 +432,7 @@ void GraphBoxGen::box_window() {
 int GraphBoxGen::set_n_in(int n) {
 	if (n==m_n_in) return 0;
 	unset_model();
+	if (m_n_fb) reconn( ((m_n_in-m_n_fb)<<16) + n - m_n_fb,0,rcf_fb);
 	if (n<m_n_in) reconn(n,0,rcf_nin);
 	m_n_in = n; return BCR_NIO|BCR_WIN;
 }
