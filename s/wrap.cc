@@ -2131,13 +2131,8 @@ int SWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 }
 
 void SWrapGen::w_jtab(int flg) {
-	SWrapTab * tab = m_ssob.ro()->m_tab.ro();
-	DblVec   *  dv = m_ssob.ro()->m_con.ro();
-	double v[8], *pcon = dv->p[0];
-	cur_c0(v, flg); flg>>=2; gui2.setwin(w_oid(), 'w');
-	int i=0, bv = (m_bflg&WRF_NOCON) ? 0 : dv->bv[0];
-	BVFOR_JM(flg) tab->w_jline(j, (bv&(1<<j)) ? pcon[j] : v[i]), i++;
-}
+	double v[8]; cur_c0(v, flg); flg>>=2; gui2.setwin(w_oid(), 'w');
+	SWrapTab * tab = m_ssob.ro()->m_tab.ro(); BVFOR_JM(flg) tab->w_jline(j, v[j]); }
 
 void SWrapGen::w_col0_s(int f8) {
 	if (wlg_vis(1) <= 0) return;
