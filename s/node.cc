@@ -911,6 +911,7 @@ int ClipNode::add(ANode * that, const char * nm, int i, int j) {
 	return sel(ix);
 }
 
+int ClipNode::show_dsc(int f) { return !m_extra ? NDE_NODSC : f&1 ? lookup_n_q(m_extra)->draw_window(16) : 0; }
 void ClipNode::draw_1(ABoxNode * nd) { gui2.clip_box(this, nd->m_u24.c.i); }
 void ClipNode::show_newbox(ABoxNode * nd) { if (!nd->box()) return nd->winflg_or(8);
 	if (winflg(8)) gui2.clip_box(this, nd->m_u24.c.i); else draw();  }
@@ -1233,6 +1234,11 @@ int ABoxNode::cmd_H(CmdBuf * p) {
 	return cond_docw(), rv;
 }
 
+int ABoxNode::show_dsc(int flg) {
+	return !(m_box->ifflg()&BIF_GC) ? NDE_NOGUI :
+	       !(m_ui.ro()->m_dsc.ro()) ? NDE_NODSC :
+	       (flg&1) ? draw_window(0x1d) : 0;     }
+
 void ABoxNode::ab_debug(int flg) {
 	char nm[24]; nm[get_name(nm)] = 0;
 	log_n(" ("); m_box->model0()->debug0(); log_n(")"); if (!flg) return; 
@@ -1433,6 +1439,7 @@ int Node::obj_help(int cl) {
 	if (debug_flags & DFLG_GUICMD) log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
+		case 'D': nd = ANode::lookup_n_q(5), s = "object tree"; break;
 		case 'w': case 's': s = "wrap/config"; break;
 		case 'g': s = "graph-box"; break;
 		case 'c': s = "calc-box"; break;

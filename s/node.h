@@ -179,6 +179,7 @@ class ANode {
                 virtual int wdat_free() = 0;
 		virtual const char * rgb() { return "zz%z%%"; }
                 virtual int start_job_2(JobQ::ent_t * ent, char * arg) { return JQE_UNDEF; }
+		virtual int show_dsc(int flg) { return NDE_NOGUI; }
                 inline int sob_rw_arg() const { return (glob_flg&GLF_LIBMODE) + m_id; }
                 int id() const { return m_id; }
                 int cl_id() const { return m_u24.u[0]; }
@@ -456,6 +457,7 @@ class ABoxNode : public ANode {
 		virtual int wdat_alloc();
 		virtual int wdat_free();
 		virtual int start_job_2(JobQ::ent_t * ent, char * arg);
+		virtual int show_dsc(int flg);
 
 		BoxGen * box() const { return m_box; }
 		void setbx_0(BoxGen * bx) { m_box = bx; }
@@ -521,6 +523,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		virtual int gui_list(char *to, int flg);
 		virtual ANode * sn(const char **pp);
 		virtual ANode * sn_list(ANode ** pwl);
+		virtual int show_dsc(int flg);
 		virtual void debug(int flg);
 		ABoxNode * ent_j(int j) { return (ABoxNode*)(m0_pnb[(int)m_eh[j]] + 128*m_el[j]); }
 		ABoxNode * ent_jv(int j){ return (m_map&(1u<<j)) ? ent_j(j) : 0; }

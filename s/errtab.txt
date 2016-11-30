@@ -134,7 +134,8 @@ NDE_DIR255   sorry, max. 255 directories can be open
 NDE_BOX63    sorry, max. 63 boxes/instrs. can be open
 NDE_LOCK     global node lock is active (see job queue)
 NDE_QMKCAST  qmk/dyncast failed
-NDE_NOGUI    this box has no configurable user interface
+NDE_NOGUI    this type of object has no gui config/description
+NDE_NODSC    this object has no description
 NDE_LEAF     this box cannot have sub-nodes
 NDE_GUARD    invalid usage of guard node 
 NDE_NOLIB    a complete save cannot be loaded as library

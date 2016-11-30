@@ -40,7 +40,7 @@ read the following general help texts:
 ==> 2.box -- basic building blocks of sounds
 ==> 2.!b and !e -- overview of builtins and examples
 ==> 1.auconv -- how to write to wav/flac
-==> 4.overview -- how to use MIDI input
+==> 0.midi input devices -- how to use MIDI input
 ==> 2.save files -- THERE IS NO UNDO, SAVE OFTEN!!!
 {{{0.gnuplot}}}
 This window describes how gnuplot is used in lflab. To access
@@ -217,7 +217,7 @@ simple usage is swapping two controls (e.g. y<->s1) without
 having to recalculate the autovol table. The two main functions
 of shadow wraps are MIDI input config, and track editing.
 ==> 1.wrap/config -- config window (incl. MIDI)
-==> 4.overview
+==> 0.midi input devices
 Having configured a set of MIDI keys/controls once, you can
 easily use them for different sounds: just make a copy and
 change the target (and possibly the single "grab" control.)
@@ -531,7 +531,7 @@ The text window should be updated when you save the file in the
 editor (if it doesn't, try another editor & report a bug).
 {{{1.midi config}}}
 This help text describes the config window (main w./[LR] menu)
-==> 4.overview -- general description for MIDI inputs
+==> 0.midi input devices -- general description for MIDI inputs
 On the left you can see the list of MIDI input devices found at
 start (if you connect new devices, you have to restart lflab
 for them to be visible, sorry). You can rearrange the devices
@@ -634,9 +634,9 @@ On counters, left click increments, right clicks decrements.
 For some counters, shift+click and ctrl+click incr/decr more.
 (not all counters have an attached slider)
 ---
-For most menu buttons left & right click have the same effect,
-but for menus where the first item is in [brackets], left
-click activates the first item, without opening the menu.
+Right-clicking on menu buttons opens a menu. Some menus have a
+"quick" item (item #1 in [brackets]), activated by left-click;
+menus w/o a quick item can be opened by either L- or R-click.
 ---
 Text fields (like the two text fields at the bottom of the tree
 window, above the buttons) are standard text fields, with usual
@@ -654,28 +654,27 @@ Planned features (please don't take these as promises :) )
 - new time-varying filters
 - more builtin boxes and example editable boxes
 ==> 4.new devices
-{{{4.overview}}}
+{{{0.midi input devices}}}
 With lflab you can use at most 31 MIDI input devices, and one
 "virtual" MIDI device (GUI sliders & PC keyboard.)
 ==> 4.virtual device
 ==> 1.midi config -- configure/reorder devices
-Keys/sliders/buttons/knobs on MIDI devices can be referred as
-device ID, channel ID, and key/control ID:
-==> 4.dev/chan/key
+==> 4.dev/chan/key -- numbering of keys/sliders/knobs
+==> .!e.mi.1v -- examples for virtual dev. (see descr.)
+==> .!e.mi.1k -- examples for KORG NK2 & NP2 (see descr.)
 Keys/controls have a current value (zero when lflab starts,
 updated only when changed), for keys it is the press speed when
 pressed, zero when released. Values can be used as follows:
 ==> .!b.in.vlm.vlm05 -- input boxes like this one, or
 ==> 3.midi/sliders -- mapping MIDI controls to sliders
 ==> 2.shadow wrap -- in these objects.
-For the above usage, any number of boxes/wrap objects can refer
-to the same controller.
+Any number of input boxes/shadow wraps can use the same value.
 ---
 You can also assign control/play actions to MIDI keys/controls.
 (For non-key controls (buttons/knobs/sliders), "press" is value
 change from zero to nonzero, and "release" is value change from
 nonzero to zero.) Unlike for value-based usage above, a single
-key/control can only have one associated action at a time:
+key/control can only have one active assigned action at a time:
 ==> 4.grab/release -- see details here
 You can assign control/play events for individual keys/controls
 (for play events also sequence of keys or touchpad, see below)

@@ -132,9 +132,15 @@ X$g_201
 X$b900
 C.!e$Dmi$C1v$h?
 E$Guuu%%e
-E$C>
+E$CE
 <Examples for MIDI controls -- virtual device only
-<You can activate MIDI controls with "grabC" from "+" menu.
+<MIDI controls only work when activated with the "+" button.
+<(top right in clipboard window, left-click or [g*C] from menu)
+<---
+<PC keyboard as MIDI input only works when the "version" label
+<(bottom of main window) or the "[focus]" button in the midi
+<config window have keyboard focus. (click to focus, black on
+<yellow when on).
 <---
 <F1,F2,...,F6 - select instrument (0,1,...5)
 <q,2,w,3,e,...,] and z,s,x,d,...,/ - play
@@ -147,11 +153,13 @@ E$C>
 <slider 142: equalizer (loop)
 <slider 135: loop volume
 <slider 143: loop BPM
+<==> midi input devices
 C.!e.mi$C1k$h?
 E$Guuu%%e
-E$C>
+E$C@
 <Examples for MIDI controls -- KORG nanoPAD2 + nanoKONTROL2
-<You can activate MIDI controls with "grabC" from "+" menu.
+<MIDI controls only work when activated with the "+" button.
+<(top right in clipboard window, left-click or [g*C] from menu)
 <---
 <The first 6 columns on NK2 work as follows:
 <slider & knob: adjust (s1/s2 or s1/s3)
@@ -164,6 +172,7 @@ E$C>
 <knob #7: equalizer (loop)
 <slider #8: loop volume
 <knob #8: loop BPM
+<==> midi input devices
 C.!e.mi$Dbox$tl1-mi
 E$G%%%fYu
 E$C5
@@ -12998,7 +13007,7 @@ X$!6*6ov,0FF
 X$:+Ov.03D02
 X$;+kv0,041714,>@Q@
 X$;+kv0,1F2F11,R@b@
-X$G6004000I`
+X$G6000000I`
 X$F0023C
 X$>.!e.8.e
 C.!e.mi.1v$s1

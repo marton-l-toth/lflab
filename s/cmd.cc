@@ -287,6 +287,9 @@ int CmdTab::c_nadm(CmdBuf * p) {
 			  return p->m_nd_var[ec] = nd->id(); 
 		case 'F': return Node::lib_cfg(nd);
 		case '?': return Node::obj_help(nd->cl_id()+256*(arg[1]=='?'));
+		case 'I': return pt_con_op(0), p->m_c_node->debug(arg[1]&7), 0;
+		case 'D': if ((ec=nd->show_dsc(1))>=0 || !(arg[1]&1)) return ec;
+			  return (ec=nd->draw_window(16))>=0 ? ec : Node::obj_help(nd->cl_id());
 		case 0: return GCE_ZARG0;
 		default: return GCE_UNADM;
 	}}
