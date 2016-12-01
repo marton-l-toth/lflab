@@ -1,4 +1,2 @@
-graph: dot start fail (rare) (retry!!)
-shwrap: <x : x + s4 (iadj.S) --> x + 2*s4 (->compat. mode flg???)
-wrap:  u/h/d rounding: interpolation?
-plot: extra partial plot (sporadic)
+graph: dot start fail (rare) (retry!!) -> never seen again, low prio
+wrap:  u/h/d rounding: interpolation? (->next rls.)
