@@ -208,10 +208,12 @@ you need a direct wrap at the end of the chain. (circular
 references are not allowed.)
 ---
 For each control, you have the following options:
-- keep control position of target wrap
-- pass a real number in [0..1] interval
-- pass an integer
----
+(1) keep control position of target wrap
+(2) pass a real number in [0..1] interval
+(3) pass an integer [0..50, x/y/slider pos]
+(2) and (3) can be different if the grid size/slider resolution
+is different or when integer adjustment is switched on here:
+==> 3.shadow cfg
 You may also set a (weighted) sum of two controls. The most
 simple usage is swapping two controls (e.g. y<->s1) without
 having to recalculate the autovol table. The two main functions
@@ -223,11 +225,10 @@ easily use them for different sounds: just make a copy and
 change the target (and possibly the single "grab" control.)
 Shadow wraps make track editing much easier: in the following
 examples, the tracks differ in only one wrap (the muted
-"reference wrap" in line 04):
-==> .!e.5 -- wraps 8,9,A,B (use tracks below)
-==> .!e.box.trk.boci.1 -- make a copy and experiment
-==> .!e.box.trk.boci.2 -- ref. wrap control changed
-==> .!e.box.trk.boci.3 -- ref. wrap target changed
+"reference wrap" in line 03):
+==> .!e.sc.01.t3x3 -- these tracks have a description
+==> .!e.sc.01.t3x3_2
+==> .!e.sc.01.t3x3_3
 {{{2.box}}}
 A box is a little machine with 0...30 input ports and 1...30
 output ports, each of which receives/sends 44100 real(64-bit)
@@ -660,8 +661,7 @@ With lflab you can use at most 31 MIDI input devices, and one
 ==> 4.virtual device
 ==> 1.midi config -- configure/reorder devices
 ==> 4.dev/chan/key -- numbering of keys/sliders/knobs
-==> .!e.mi.1v -- examples for virtual dev. (see descr.)
-==> .!e.mi.1k -- examples for KORG NK2 & NP2 (see descr.)
+==> 4.examples -- links to examples w. short descr.
 Keys/controls have a current value (zero when lflab starts,
 updated only when changed), for keys it is the press speed when
 pressed, zero when released. Values can be used as follows:
@@ -701,6 +701,15 @@ following changes (can be turned on/off in MIDI config window):
 The slider values can be set in the MIDI config window.
 In the current version there is only one virtual MIDI device,
 with a single channel. (this might change in future versions.)
+---
+The PC keyboards only works as MIDI input when either the 
+"version label" (bottom of the main window), or the "[focus]"
+button (mid bottom of midi config window) has keyboard focus:
+you can give focus with a simple left-click, focused state is
+indicated by black-on-yellow color.
+HINT: it is easier to keep focus on these labels when keyboard
+focus for sliders is disabled. (misc config window, effective 
+only after GUI restart)
 {{{4.new devices}}}
 Currently supported:
 - MIDI keys (only press speed, no release speed or aftertouch)
@@ -733,7 +742,6 @@ All MIDI keys and controllers (sliders/knobs/buttons etc.) are
 identified by 3 numbers: device (0...31), channel (0...15), and
 key ID (0...127 for keys and 128...255 for controls).
 ==> 1.midi config -- device list & settings
-You can 
 For hardware MIDI devices numbering starts from 0, by default
 they are alphabetically sorted by ID string. The devices can be
 rearranged in the MIDI config window.
@@ -766,8 +774,25 @@ Using control actions, you can grab specific MIDI keys/controls
 for selected play actions and/or all control actions. Thus, it
 is enough to have a single MIDI key/control to select the wrap
 obj., and all other control/play keys can be "shared" by many
-objects. 
-TODO: examples
+objects.
+==> 4.examples -- see (links to) examples here
+{{{4.examples}}}
+In the current version, there are two clipboards with examples
+for the usage of MIDI inputs.
+==> .!e.mi.1v -- examples for virtual dev.
+==> .!e.mi.1k -- examples for KORG NK2 & NP2
+==> .!e.mi.1v.? -- description for clipboards above
+==> .!e.mi.1k.? -- (can also be opened from clipboard '+' menu)
+After opening a clipboard, left click on the '+' (top right) or
+select "[g*C]" from the menu to activate MIDI controls.
+==> 4.virtual device -- see how it works
+The "mi" folder also contains a simple track (with shadow wraps
+using external inputs for slider values), and a simple graph
+box which connects this track to a MIDI input box.
+---
+Like everything else in ".!e", these objects are read-only; but
+it is easy to make copy of individual shadow wraps, whole
+clipboards or the entire ".!e.mi" folder.
 {{{1.box-gui}}}
 Here you can configure the input/output labels and FG/BG colors
 for graph and calculator boxes. (iterated boxes "inherit" these
@@ -1009,8 +1034,9 @@ are added to the passed (integer) values.
 When iadj.S is on, the control positions of the used controls
 in the source (the shadow wrap in which you enable iadj.S) are
 added to the passed integers. This is only recommended to wraps
-which are used indirectly (TODO: example), because for direct
-use this means multiplying the control values by 2.
+which are used indirectly, because for direct use this means
+multiplying the control values by 2.
+==> .!e.sc.01.t3x3 -- iadj.S example in a track (with descr.)
 ==> 3.target -- how to change/configure target wrap
 {{{3.volume/envp}}}
 Open/close scale groups with the "<>" / "><" buttons (right)
@@ -1099,7 +1125,7 @@ Label (left): "on" means integer mode (useful for freq./notes),
 Counter (=x): adjustment (mult. by 0.01 in interval mode)
 Menu-number pairs: you can set the target control to be the
 sum of (at most) 2 weighted source side controls.
-TODO: examples
+==> .!e.sc.01.t3x3 -- track example with description
 ==> 3.shadow cfg -- extra options
 {{{3.midi/sliders}}}
 Here you can assign sliders 1...6 with MIDI controls. MIDI

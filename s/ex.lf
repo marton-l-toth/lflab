@@ -103,13 +103,32 @@ C.!e.sc.01$tt3x3_4
 X$g_201
 X$b600
 C.!e.sc.01$tt3x3_3
+E$G%%%fYu
+E$C>
+<An example of using shadow wraps for track editing.
+<The audible shadow wrap objects are in line 01, the "reference"
+<object is in line 03. The whole mini-track can be altered by
+<changing the x/y position (right click on grid) or the target
+<wrap ("[" "T" and "]" menu buttons) for the (muted) reference
+<object.
+<---
+<The easiest way to experiment is to make a copy of this track,
+<loop the first 3 beats (right click on "0" (beat number) and
+<select "loop3"), open the grid/config for the ref. wrap (right
+<click on wrap obj for menu, ctrl-cl: grid shift_cl: config),
+<and you should hear the changes instantly. You can change grid
+<or slider positions, or the "target" wrap.
+<==> etc.shadow wrap
 X$g_201
 X$b600
 C.!e.sc.01$tt3x3_2
+E$G%%%fYu
+E$O4.!e.sc.01.t3x3_3
 X$g_201
 X$b600
 C.!e.sc.01$tt3x3
-E$O0.!e.sc.02.t3x3_5
+E$G%%%fYu
+E$O4.!e.sc.01.t3x3_3
 X$g_201
 X$b600
 C.!e.sc.01$tt3x3L
@@ -1278,7 +1297,7 @@ E$C>
 <Fmul: feedback multiplier (*)
 <dlyI: integer (int*sample_length) part of delay
 <(*) when you have nonzero 1p and h1, filter may be stable
-<for Fmul>1.0, but in general values below 1.0 are safe.
+<for abs(Fmul)>1.0, but in general values below 1.0 are safe.
 <---
 <This is a raw feedback loop. See "info1" from the "+" menu to
 <see in which boxes it is used.
@@ -1361,7 +1380,16 @@ X$+8:0<7:0
 C.!e.box.fb.co$g=@-@-1p-1h-dly
 E$G;zM%%G
 E$00in$011p1$02dyF1$03mul1$04h1-1$05dyI1$06mulx$071p2$08dyF2$09mul2$0Ah1-2$0BdyI2$0Comix
-E$O4.!e.box.fb.co.=@-1p-1h-dly
+E$C9
+<raw feedback loop for two connected quasi-strings:
+<==> .!e.box.fb.co.=@-1p-1h-dly -- single string with descr.
+<The inputs are twice the inputs of the above box, and these:
+<mulx: cross-mixing factor between the 2 quasi-strings
+<omix: output mix, 0:str#1(input) ... 0.5(avg) ... 1:str#2
+<---
+<This is a raw feedback loop. See "info1" from the "+" menu to
+<see in which boxes it is used.
+<==> .!e.box.fb.=@-@fq-1p-1h -- an example with description
 X$<13
 X$>1
 X$@2
@@ -1480,7 +1508,21 @@ X$+3:2<2:0
 C.!e.box.fb.co$g=@-1p-1h-dly_2
 E$Guuu3%a
 E$00in$011p$02dlyF$03dlyI$04h1$05Fmul
-E$O4.!e.box.fb.co.=@-1p-1h-dly
+E$C>
+<raw simple feedback loop "string" with the following filters:
+<single-pole low-pass (coeff. is "1p")
+<simple high-pass (parameter is "h1")
+<static non-integer delay (for fine-tuning, "dlyF", in samples)
+<---
+<other inputs:
+<in: filter input
+<Fmul: feedback multiplier (*)
+<dlyI: integer (int*sample_length) part of delay
+<(*) when you have nonzero 1p and h1, filter may be stable
+<for Fmul>1.0, but in general values below 1.0 are safe.
+<---
+<This is a raw feedback loop. See "info1" from the "+" menu to
+<see in which boxes it is used.
 X$<6
 X$>1
 X$@1
@@ -1552,6 +1594,30 @@ X$+7:0<6:0
 C.!e.box.fb$g=@-@fq-1p-1h
 E$G;zM%%G
 E$O2.!e.box.fb.=@-@fq-1p-1h-
+E$CG
+<A "nice" interface for the raw feedback loop of two connected
+<quasi-strings. Input ports:
+<in - filter input
+<fq - base frequency
+<1p - (relative) parameter for single-pole filter
+<h1 - high-pass filter parameter
+<dmp - dampening (attenutation)
+<mulx - connection factor between the two strings
+<t* - delay multiplier (frq. divider) for second string
+<1p* - single-pole paran multiplier for second string
+<h1-2 - high-pass param for second string
+<omix - mixing of two strings for out0 (0:1st 0.5:avg 1:2nd)
+<---
+<It is generally advisable to have feedback boxes designed in a
+<similar way: the actual graph box with feedback should be a
+<minimal one (taking raw values for filters from the input),
+<and a separate "interface graph box" like this one should be
+<made to convert nice inputs (like frequency) to raw ones (like
+<integer and fractional delay). Besides making viewing/editing
+<easier that it would be for one huge graph, this is also good
+<for CPU usage: feedack loops get more and more CPU-hungry as
+<the delay time goes below about 10ms, so all computation that
+<can be done outside the feedback box should be done outside.
 X$<10
 X$>1
 X$iz$.!b.ar./
