@@ -15,6 +15,8 @@ static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
 static inline int hexc1(int x) { return x + 48 + (((9-x)>>4)&7); }
 static inline int atoi_h(const char *s) { int r = 0, x = -(*s=='-');
 	for (s-=x; *s&80; s++) r = 16*r+hxd2i(*s); return (r^x)-x; }
+static inline int atoi_h_pp(const char **pp) { int c, r = 0;
+	for (; (c=**pp)&80; ++*pp) r = 16*r+hxd2i(c); return r; }
 static inline int i_to_b32(int x) { return x + (x<10?48:87); }
 #define BVFOR_JMC(X) unsigned int j, m; for (m = (X); j=__builtin_ffs(m), j-- > 0; m &= ~(1u<<j))
 #define qh4rs(P) qh4r(*(const int*)(P))

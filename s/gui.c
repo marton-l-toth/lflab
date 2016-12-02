@@ -1959,16 +1959,13 @@ static void dalbl_skel(struct _ww_t * ww, const char **pp) {
         da_skel(ww, wid, conf_lbh + h2);
 }
 
-static void daclb_set(struct _ww_t * ww, const char **pp, int flg) {
+static void daclb_set(struct _ww_t * ww, const char **pp, int flg) { // 1:rbrace 2:noclr 8:docw
 	char buf[256]; int force = 0;
 	if (**pp=='!') force=1, ++*pp;
-	if (!memcmp(*pp, "==> ", 4)) {
-		memcpy(ww->arg[2].c, "Azz666_", 6); DACLB_ARG(ww) = -1;
-	} else if (**pp=='('&&!(flg&8)) { 
-		++*pp; int x = 0; while (**pp&80) x = 16*x+hxd2i(**pp), ++*pp;
-		DACLB_ARG(ww) = x; if (**pp==')') ++*pp;
-	} else { DACLB_ARG(ww) = 0; }
-	if (**pp==',') ++*pp; else if (!(flg&2)) memcpy(ww->arg[2].c, *pp, 6), *pp += 6;
+	if (flg&8) memcpy(ww->arg[2].c, "%%%ccc  Azz666"-8*(DACLB_ARG(ww)=-!memcmp(*pp, "==> ", 4)), 6);
+	else if (**pp=='(') ++*pp, DACLB_ARG(ww)=atoi_h_pp(pp), *pp += (**pp==')');
+	else DACLB_ARG(ww) = 0;
+	if (!(flg&2)) *pp += (**pp==',') ? 1 : (memcpy(ww->arg[2].c, *pp, 6), 6);
 	int l = get_tok(buf, 256, pp, ((flg&1)<<7)+36);
 	if (l) ++l; else buf[0]=32, buf[1]=0, l=2;
 	ww->etc = realloc(ww->etc, l); memcpy(ww->etc, buf, l);
