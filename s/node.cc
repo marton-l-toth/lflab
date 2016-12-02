@@ -355,6 +355,10 @@ NMFUN(nm_T) { *(int*)to = qh4(16*u->t.i)+0xa000000; *(int*)(to+4) = qh4(u->t.j>>
 					            *(int*)(to+8) = qh4(u->t.j&65535); return 12; }
 NMFUN(n2_T) { to[0] = to[1] = '+'; return 2; }
 
+const char * ANode::s_name() { static char s[24]; return m_u24.s[1]=='A' ? m_u24.d.s : (s[get_name(s)]=0,s); }
+const char * ANode::path255(int l) { static char s[256]; s[get_path_uf(s,l&255)] = 0; return s; }
+void ANode::close_window(int x) { int m=1<<(x&15); if ((m_winflg&m) && !((m_winflg&=~m)&WF_OID)) wdat_free(); }
+
 int SvArg::nxup(int x) {
 	ANode * q;      if (cn->winflg(WF_ROOT)) goto root;
 	q = cn->next(); if (flg&SVF_WRAP) 	 goto skip_g;
@@ -408,12 +412,6 @@ void ANode::st_init() {
 	wi_init(); memset(&m0_sv, 0, sizeof(m0_sv));
 }
 
-const char * ANode::s_name() {
-        static char nm[24];
-        if (m_u24.s[1]=='A') return m_u24.d.s;
-        nm[get_name(nm)] = 0; return nm;
-}
-
 int ANode::get_path(char* to, int max) {
         int r = get_path_2(to, max-1) & ~(1<<30);
         if (!r) to[r++] = '.';
@@ -437,8 +435,6 @@ int ANode::get_path_uf(char * to, int max) {
 	to[0] = '.'; memcpy(to+1+nd->get_name(to+1),"...",3); return max;
 }
 
-const char * ANode::path255(int l) { static char s[256]; s[get_path_uf(s,l&255)] = 0; return s; }
-
 int ANode::get_path_2(char* to, int max) {
         if (!m_up) return 0;
         int r = m_up->get_path_2(to, max);
@@ -457,10 +453,6 @@ int ANode::draw_window(int x) {
         if (prs) /*gui2.setwin(16*m_id + x4, k),*/ gui2.lx0('P');
         return m_winflg |= m1;
 }
-
-void ANode::close_window(int x) {
-        int m1 = 1 << (x&15);
-        if ((m_winflg&m1) && !((m_winflg&=~m1)&WF_OID)) wdat_free(); }
 
 int ANode::title_arg(char * to, int wid) {
         char * p = to;
@@ -620,7 +612,7 @@ int ADirNode::wdat_alloc() {
 }
 
 int ADirNode::wdat_free() {
-	int i = m_winflg & WF_WI8;
+	int i = m_winflg & WF_WI8; m_winflg &= ~WF_WI8;
 	if (!i) return 0; else i >>= 16;
 	m0_wi_d[i] = m0_wi_df + 1048576; m0_wi_df = i;
 	return 1;

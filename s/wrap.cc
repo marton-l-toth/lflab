@@ -1886,20 +1886,19 @@ int DWrapGen::wlg(sthg * bxw_rawptr, int ix, int flg) {
 	    of = (flg & WRF_SETOC) ? ((flg&WRF_OC) ? (WR_WLG|=(1<<ix),1) : (WR_WLG&=~(1<<ix),0))
 		    		   : (WR_WLG >> ix) & 1;
 	WrapSOB * sob = m_sob.ro();
-	gui2.setwin(oid, 'w'); 
-	if (of)                      gui2.wupd_0(gc, "S><$XW", 4), gui2.c1(48 + ix);
-	else gui2.wupd_0(gc, ".+1"), gui2.wupd_0(gc, "S<>$XW", 4), gui2.c1(52 + ix);
+	gui2.setwin(oid, 'w'); if (!of) gui2.wupd_0(gc, ".+1");
 	if (ix) {
-		BoxGen * bx = m_sfbx[--ix];
-		int ni = (m_bflg>>(2+10*ix))&31; ni -= (ni && ix);
+		int i1 = ix-1, ni = (m_bflg>>(2+10*i1))&31; ni -= (ni && i1);
+		BoxGen * bx = m_sfbx[i1];
 		if (of) gui2.wupd_0(gc, ".+"), gui2.c1(49+ni), 
-			sob->wl(oid, 65*ix, ni, pf|255, m_xys6, bx);
-		gui2.ref_title(gc, bx ? bx->node() : 0, 3, "source\0 filter"+8*ix);
+			sob->wl(oid, 65*i1, ni, pf|255, m_xys6, bx);
+		gui2.ref_title(gc, bx ? bx->node() : 0, 3, "source\0 filter"+8*i1);
 	} else {
-		sob->m_scl[0].ro()->w_ud(oid, 3);
 		if (of) gui2.wupd_0(gc, ".+9"), sob->wl(oid, 32, 6, pf|254, m_xys6, 0),
 						sob->wl(oid, 96, 2, pf|254, m_xys6, 0);
+		sob->m_scl[0].ro()->w_ud(oid, 3);
 	}
+	gui2.wupd_0(gc, "S<>$XW\0 S><$XW" + 8*of, 4); gui2.c1(52 - 4*of + ix);
 	return 0;
 }
 

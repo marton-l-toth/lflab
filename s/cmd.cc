@@ -403,16 +403,11 @@ int CmdTab::c_misc(CmdBuf * p) {
 int CmdTab::c_closewin(CmdBuf * p) {
 	char * s = p->m_c_a0;
 	if (!(*s & 80)) return GCE_WRONGWT;
-	int ty = hxd2i(*(s++));
-	while (ty!=7) {
-		if (*s==36) ++s;
-		if (!*s) return 0;
-		int id = 0; while (*s & 80) id = 16*id + hxd2i(*(s++));
-		ANode * nd = Node::lookup_n(id);
-		if (nd) nd -> close_window(ty);
-	}
-	return 0; // TODO (?)
-}
+	int ty = hxd2i(*(s++)); if (ty==7) return 0; // TODO
+	while (1) { if (*s==36) ++s; if (!*s) return 0;
+		    ANode * nd = Node::lookup_n(atoi_h_pp((const char**)&s));
+		    if (nd) nd -> close_window(ty);
+	}}
 
 int CmdTab::c_job(CmdBuf * p) {
 	char *s = p->m_c_a0, *a1 = p->tok();

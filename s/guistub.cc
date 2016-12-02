@@ -124,9 +124,8 @@ void GuiStub::t2_sel(int lr, ANode *nd) {
 int GuiStub::tree_expand(int lr, ADirNode * dir) {
 	if (!dir) return 0;
 	ADirNode * up = dynamic_cast<ADirNode*> (dir->up());
-	lr += 49; c2(9, 'T');
-	hex5(up?up->id():0); c2(lr, 36);
-	hex5(dir->id()); c2(lr|48, 36);
+	c2(9, 'T');    hex5(up?up->id():0);
+	c2(lr+49, 36); hex5(dir->id());     c2(lr+49, 36);
 	m_bufp += dir->gui_list(m_bufp, 0);
 	dir->winflg_or(2+2*lr); invd(); return 0;
 }
