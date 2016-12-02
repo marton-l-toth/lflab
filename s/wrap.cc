@@ -212,14 +212,14 @@ class WrapAVReader : public AReader {
 
 class WrapAVJob : public Job {
         public: 
-                WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid);
+                WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid, int flg);
                 virtual ~WrapAVJob() {}
                 virtual int run1();
 		virtual void abort();
         protected:
                 DWrapGen * m_bx;
                 WrapAutoVol * m_vt;
-               	int m_mxid; 
+               	int m_mxid, m_flg;
                 double m_fst, m_fstep;
                 double m_max;
                 unsigned char m_xy12ij[8], m_xy12ij_lim[8];
@@ -243,6 +243,8 @@ class WrapSOB : public SOB {
 		int sit_cmd(int tix, const char * s) { if (DBGC) log("sit_cmd: 0x%x, \"%s\"", tix, s); 
 						       return SOB_RW(scl[(tix>>6)&1]) -> cmdi(tix, s); }
 		void unflg();
+		inline DblVec * con_rw_f(int i, int *pbf) { if (*pbf&WRF_NOCON) unflg(), *pbf&=~WRF_NOCON;
+							    return SOB_RW(con[i]); }
 		int icmd(const char *s, int *pbf);
 		void wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen * bx);
 		SOB_RW_F0(core, WrapCore) SOB_RW_F0(avol, WrapAutoVol)
@@ -477,6 +479,7 @@ class DWrapGen : public AWrapGen {
 		int avj_state() { return jobq.jst(m_node, 1); }
 		int qdiff(DWrapGen * that); 
 		int sob_from(int ix, BoxGen * bx0, int bxf);
+		void set_con1(int i, int j, double v);
 		AReader * avreader(int cflg) { return new WrapAVReader(SOB_RW(sob)->avol_rw(), cflg); }
         protected:
 		virtual int sl_bv();
@@ -947,13 +950,14 @@ double WrapAutoVol::vol(double x, double y, double z, double w) {
         return exp ((1.0-tt[2])*val[0] + tt[2]*val[1]);
 }
 
-WrapAVJob::WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid) :
-	Job(ent), m_bx(wbx), m_vt(vtab), m_mxid(mxid), m_fst(0.0), m_max(0.0), m_trg(vtab->dat()) {
-	memset(m_xy12ij, 0, 8); vtab->get_xy12rt(m_xy12ij_lim); 
+WrapAVJob::WrapAVJob(JobQ::ent_t * ent, DWrapGen * wbx, WrapAutoVol * vtab, int mxid, int flg) :
+	Job(ent), m_bx(wbx), m_vt(vtab), m_mxid(mxid), m_flg(flg), m_fst(0.0), m_max(0.0) {
+	memset(m_xy12ij, 0, 8); 
+	if (vtab) { vtab->get_xy12rt(m_xy12ij_lim); if (!(m_trg = vtab->dat())) bug("avjob / zero trg"); }
+	else { memcpy(m_xy12ij_lim,  "\x1\x1\x1\x1\x1\x64", 8); m_trg = 0; }
 	int t = 1; for (int i=0; i<6; i++) t *= m_xy12ij_lim[i];
         m_fstep = 1000.0 / (double) t;
 	for (int k,i=0; i<4; i++) k = m_xy12ij_lim[i]-1, m_ixmul[i] = k ? 1.0 / (double)(k) : 0.0;
-	m_trg = vtab->dat(); if (!m_trg) bug("avjob / zero trg");
 }
 
 int WrapAVJob::run1() {
@@ -979,6 +983,7 @@ int WrapAVJob::run1() {
         if (m_max==0.0) {
                 log("ERROR: av: max=0 at %d,%d,%d,%d", m_xy12ij[0], m_xy12ij[1], m_xy12ij[2], m_xy12ij[3]);
 		gui2.errq_add(BXE_AVZERO); return JQE_FAIL; }
+	if (m_flg&1) { m_bx->set_con1(0,0,1.0/m_max); if (m_flg&2) m_bx->add2mx_txdlv(0,0,0,INT_MAX,0); return JQE_DONE; }
         int vi = (int)lround(-46.0 * log(m_max));
         if (vi>32767) vi = 32767; else if (vi<-32767) vi = -32767;
         *(m_trg++) = vi;
@@ -1060,15 +1065,14 @@ void WrapSOB::wl(int oid, int ix0, int n, int flg, const char *i8, BoxGen *bx) {
 // 1:lbl 2:src 4:fun 8:xf  32:c 64:v0 128:v1   256:(xf=='=') 512: slref 1024: unflg
 // ret: ff:col ff00:row ff0000:row2 1<<24:dep
 int WrapSOB::icmd(const char *s, int *pbf) { 
-	WrapCore * core = m_core.ro(); 
+	WrapCore *core = m_core.ro();
 	int ix0 = 16*(s[0]&7) + hxd2i(s[1]), ix = wr_ixtr(ix0),
 	    i = (ix>>6)&1, j = ix&63, xfd0 = core->xfd, r = ((xfd0==ix)<<24) | (ix0<<8);
 	if (j > 39) return BXE_IDX; else s += 2;
 	switch(*s) {
 		case 'X': return SOB_RW(core)->xfd = ix, 0; // (old) save file only
-		case '=': if (*pbf & WRF_NOCON) unflg(), *pbf &= ~WRF_NOCON;
-			  return (s[1]=='x' && !s[2]) ? (SOB_RW(con[i])->rm(j), r|4)
-						      : (parse_num(SOB_RW(con[i])->addp(j), s+1), 0);
+		case '=':{DblVec *dv = con_rw_f(i,pbf); 
+			  return (s[1]=='x'&&!s[2]) ? (dv->rm(j), r|4) : (parse_num(dv->addp(j), s+1), 0); }
 		case 'F': if (s[1]!='=') return r | sit_cmd(ix,s) | (xfd0==ix ? (SOB_RW(core)->xfd=63,8) : 0);
 			  return (xfd0==ix) ? 0 : (SOB_RW(core)->xfd = ix, r | 0x1000008 | ((xfd0^63)<<16)
 					  				     | sit_cmd(ix,"F.") );
@@ -1775,6 +1779,10 @@ int DWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs)
 	return (r<0 || !trf) ? r : trk_rec(m_node, r);
 }
 
+void DWrapGen::set_con1(int i, int j, double v) {
+	*(SOB_RW(sob)->con_rw_f(i, &m_bflg)->addp(j)) = v;
+	if (wlg_vis(1)==1) m_sob.ro()->wl(w_oid(), wr_ixtr_r(64*i+j), 1, pflg()|32, m_xys6, m_sfbx[0]); }
+
 int DWrapGen::qdiff(DWrapGen * that) {
 	return (this!=that) && (m_sob.ro() != that->m_sob.ro() || memcmp(m_xys6, that->m_xys6, 8)); }
 
@@ -1842,18 +1850,16 @@ int DWrapGen::sob_from(int ix, BoxGen * bx0, int bxf) {
 	}}
 
 int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
-	int ec; switch(ent->i4f) {
+	int c, ec, xf=0; switch(ent->i4f) {
 		case 1:
 			ent->plttwwii = 0x6b775924;
-			WrapAutoVol * av; av = (glob_flg&GLF_AVOLSHR) ? m_sob.ro()->m_avol.ro() 
-								      : SOB_RW(sob)->avol_rw();
-			if (arg && *arg && *arg!='w') {
-				if ((ec = av->parse_dim(arg))<0) return ec;
-			} else if (wnfl()) {
-				BXW_GET; if ((ec = av->upd_xy12rt(WR_AVCONF))<0) return ec;
-			}
-			ec = mx_mkroot();
-			return ec<0 ? ec : (ent->p = new WrapAVJob(ent, this, av, ec), 0);
+			xf = (arg && (c=*arg)) ? (c=='^' ? hxd2i(arg[1]) : ((c!='w')<<8)) : 0;
+			WrapAutoVol * av; if (xf&1) { av=0; goto mkr; }
+			av = (glob_flg&GLF_AVOLSHR) ? m_sob.ro()->m_avol.ro() : SOB_RW(sob)->avol_rw();
+			if (xf&256) 	 { if ((ec = av->parse_dim(arg))<0) return ec; }
+			else if (wnfl()) { BXW_GET; if ((ec = av->upd_xy12rt(WR_AVCONF))<0) return ec; }
+		   mkr: ec = mx_mkroot();
+			return ec<0 ? ec : (ent->p = new WrapAVJob(ent, this, av, ec, xf&255), 0);
 		case 9: return NDE_PERM;
 		default: return JQE_UNDEF;
 	}}

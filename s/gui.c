@@ -1123,6 +1123,7 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {0,  32,5,3,1, "C  2:33:22:44:23:32:55:22:63:44:36:22:77:23:55:32:84:48:22:93:66:39:24:55:4"
 	       "3:77:33:84:66:48:35:5", "p182@93H4:AP5X;I6B`7<QhCJ=Y>DRaK"},
 {0,  13,7,3,1, "C  C# D  D# E  F  F# G  G# A  A# H  3:4", "pqrstuvwxyz{:" /*"}"*/ },
+{'V', 2,0,6,5, "[ply1]calc/1", "J1+^3J1+^1"},
 {'s',10,1,4,1, "+0* +1* +x* +y* +s1*+s2*+s3*+s4*+s5*+s6*", "0123456789"},
 {0,  11,0,5,2, "kyseqtpad+tpad1dup  up1  down1up5  down5>top >bttmdel  ", "tktttT+ m-m+m<m>m0mv- "},
 {0,  22,0,3,1, "[*]0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 ","*0123456789abcdefghijk"},
@@ -2391,7 +2392,7 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] 
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
 "({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS}{Y4sl.upd$XAU})",
-"({M7+$XV|?1}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,0,
+"({M7+$|V0}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,0,
 "({Y0iadj.S$XcS}{Y1iadj.T$XcT})" };
 return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
 
