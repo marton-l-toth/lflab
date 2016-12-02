@@ -776,7 +776,7 @@ int NDirNode::add2(ANode * that, int h, const char * nm) {
 	that->m_u24.d.n = l = strlen(nm); memcpy(that->m_u24.d.s, nm, l+1);
 	dn1(ix, m_siz-ix); ++m_siz;
 	m_e[ix>>4][ix&15] = ((unsigned int)h<<20u) + (unsigned int)(that->m_id);
-	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, that);
+	for (int b=0; b<2; b++) if (winflg(2*b+2)) gui2.node_name(b, that);
 	return ix;
 }
 
