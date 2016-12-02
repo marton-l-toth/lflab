@@ -1179,8 +1179,7 @@ void lsr_upd(int k, const char * s) {
 	int i, j, c;
 	for (i=0; i<32; i++, np++) { 
 		if (*s==36) ++s; if (!*s) break;
-		np->ty = *(s++);
-		j=0; while (*s&80) j = 16*j+hxd2i(*s), s++; np->id = j;
+		np->ty = *(s++); np->id = atoi_h_ppc(&s);
 		for (j=0,++s; c=s[j], c && c-36 && j<20; j++) np->nm[j] = c;
 		s += j; np->nm[j] = 0; np->len = (char)j;
 	}
@@ -1417,8 +1416,7 @@ static void vbox_cmd(struct _ww_t * ww, const char * arg) {
 		case '.': k = (1<<(arg[1]-48)); break;
 		case '^': k = VB_LBV(ww) ^ (1<<(arg[1]-48)); break;
 		case '+': k = (1<<(arg[1]-48)) - 1; break;
-		case '*': ++arg; while(*arg&80) k = 16*k + hxd2i(*(arg++));
-			  break;
+		case '*': ++arg; k = atoi_h_ppc(&arg); break;
 		default: LOG("vbox: unknown cmd 0x%x(%c)",*arg,*arg); return;
 	}
 	vbox_show_bv(ww, k);
@@ -1963,7 +1961,7 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) { // 1:rbrace
 	char buf[256]; int force = 0;
 	if (**pp=='!') force=1, ++*pp;
 	if (flg&8) memcpy(ww->arg[2].c, "%%%ccc  Azz666"-8*(DACLB_ARG(ww)=-!memcmp(*pp, "==> ", 4)), 6);
-	else if (**pp=='(') ++*pp, DACLB_ARG(ww)=atoi_h_pp(pp), *pp += (**pp==')');
+	else if (**pp=='(') ++*pp, DACLB_ARG(ww)=atoi_h_ppc(pp), *pp += (**pp==')');
 	else DACLB_ARG(ww) = 0;
 	if (!(flg&2)) *pp += (**pp==',') ? 1 : (memcpy(ww->arg[2].c, *pp, 6), 6);
 	int l = get_tok(buf, 256, pp, ((flg&1)<<7)+36);
@@ -2193,9 +2191,7 @@ static void dacnt_cmd(struct _ww_t * ww, const char * arg) {
 			++arg; get_tok(DACNT_LBL(ww), 8, (const char**)&arg, 128); 
 			da_fullre(ww); return;
 		case 'c': case 'n': dacnt_set_x(ww, arg[0]+arg[1]-147, 768); return;
-		case 'x':
-			  x = 0; while ((k=*++arg)&80) x = 16*x + hxd2i(k);
-			  dacnt_set_x(ww, (*arg=='-') ? -x : x, 768); return;
+		case 'x': ++arg; x = atoi_h_ppc(&arg); dacnt_set_x(ww, (*arg=='-') ? -x : x, 768); return;
 		case 'C': x = arg[1]-48; k = arg[2]-48; arg += 3; break;
 		case 'X': x = hex2(arg+1); k = hex2(arg+3); arg += 5; break;
 		default: LOG("dacnt: unknown cmd 0x%x (%c)", *arg, *arg); return;
@@ -4246,7 +4242,7 @@ static void midi_lnupd(topwin * tw, int j, const char *s) {
 	int i0 = VB_WBASE(widg_lu1_pc(tw, 'v')) + 6*j;
 	ww_t * ww = widg_qp(tw, i0+1); memcpy(DALBL_TXT(ww), sd, 4); da_fullre(ww);
 	memcpy(xbuf, sc, 6); memcpy(xbuf+6, sn, nlen); xbuf[6+nlen] = 0;
-	daclb_set(widg_qp(tw, i0+2), &xp, 0);
+	daclb_set(widg_qp(tw, i0+2), (const char**)&xp, 0);
 }
 
 static void midi_cmd (struct _topwin * tw, char *s) { int j,k; switch(*s) {
@@ -4719,8 +4715,7 @@ static void tree_fill_node(GtkTreeIter * nd, int lr, const char * s, int xp) {
 			memcpy(nmbuf, "(...empty)", 11);
 			id2 = 1048576|tree_nd_id(lr, nd); dirflg = 0;
 		} else {
-			id2 = 0; while (*s & 80) id2<<=4, id2 += hxd2i(*s), s++;
-			if (!id2) break; if (*s == '$') ++s;
+			if (!(id2=atoi_h_ppc(&s))) break; if (*s == '$') ++s;
 			j=0; while (*s && *s!=36 && j<63) nmbuf[j++] = *(s++);
 			nmbuf[j] = 0; if (*s == '$') ++s;
 		}
@@ -4793,8 +4788,7 @@ static void ww_gencmd(ww_t * ww, const char *arg) { int c,k, cl=ww->cl->ch; swit
 static void cmd_tree(int id, char * s) {
 	GtkTreeIter * it = tree_lookup_it(id, 0);
 	if (!it) { LOG("T: lookup(0x%x) failed", id); return; }
-	int lr = (id & 1) ^ 1, id2 = 0;
-	while (*s & 80) id2<<=4, id2 += hxd2i(*s), s++;
+	int lr = (id & 1) ^ 1, id2 = atoi_h_pp(&s);
 	if (*s == 36) ++s;
 	if ((id^id2)&15) { LOG("T: lr mismatch(0x%x,0x%x)", id, id2); return; }
 	GtkTreeIter * it2 = tree_lookup_it (id2, 1);
@@ -4829,12 +4823,11 @@ static void cmd_path(int lr, int id, int snid, GtkTreeIter * it, path_fun f) {
 static void cmd_node(int id, char * s) {
 	int k = obidtab_lookup(&oi_dir, id, 0);
 	if (k<0) { LOG("N: node %x not found", id); return; }
-	int lr = (id-1)&1, snid = 0;
+	int lr = (id-1)&1;
 	ob_dir * oe = ot_dir + k; int flg = oe->flg;
 	/*LOG("oe->flg:%d", flg);*/ if (!(flg & (lr+1))) return;
-	int c0 = *(s++);
+	int c0 = *(s++), snid = atoi_h_pp(&s);
 	GtkTreeIter sn, *it = &sn;
-	while (*s & 80) snid<<=4, snid += hxd2i(*s), s++;
 	if (*s==36) ++s;
 	int found = snid ? tree_find_child(it, lr, oe->nd+lr, 16*snid+1+lr) : -1, itflg = (found>=0);
 	// LOG("cmd_node: itflg:%c s:\"%s\"", "ny"[itflg], s);
@@ -4903,8 +4896,7 @@ static void cmd1(char * str) {
 	int i, t, k = *str;
 	char * s = str + 1;
 	if ((unsigned int)(k-65) < 26u) {
-		int id = 0; while (*s & 80) id<<=4, id += hxd2i(*s), s++;
-		if (*s==36) ++s;
+		int id = atoi_h_pp(&s); if (*s==36) ++s;
 		if (id) cmd_ob(k, last_obid = id, s);
 		else if (last_obid) cmd_ob(k, last_obid, s);
 		else LOG("cmd_ob(%c): missing obid", k);
@@ -4916,8 +4908,7 @@ static void cmd1(char * str) {
 		case '#': return;
 		case '^': return CMD("%s", s);
 		case '+': 
-			  i = *(s++) - 48; t = *(s++);
-			  for (k=0; *s&80; s++) k=16*k + hxd2i(*s);
+			  i = *(s++) - 48; t = *(s++); k = atoi_h_pp(&s);
 			  if (*s==36) ++s;
 			  t2sel_upd(i&1, k, t, *s=='.'?"":s, s+6*(*s!='.'));
 			  return;

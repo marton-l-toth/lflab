@@ -405,7 +405,7 @@ int CmdTab::c_closewin(CmdBuf * p) {
 	if (!(*s & 80)) return GCE_WRONGWT;
 	int ty = hxd2i(*(s++)); if (ty==7) return 0; // TODO
 	while (1) { if (*s==36) ++s; if (!*s) return 0;
-		    ANode * nd = Node::lookup_n(atoi_h_pp((const char**)&s));
+		    ANode * nd = Node::lookup_n(atoi_h_pp(&s));
 		    if (nd) nd -> close_window(ty);
 	}}
 

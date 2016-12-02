@@ -1383,10 +1383,8 @@ int Node::hier(ANode * up, ANode *dn) { while(1) { if (!dn) return 0; if (dn==up
 ANode * Node::lookup_cb(CmdBuf * cb, const char * s) {
 	ANode * r; int i, j, c = *(s++);
 	if (c&1) {
-		if (c=='#') {
-			for (i=0; *s&80; s++) i = 16*i + hxd2i(*s);
-			r = ANode::lookup_n_q(i); if (!r->m_u24.s[0]) return 0;
-		} else if (c!='=' || !(r = cb->var(*(s++)&7))) { return 0; } 
+		if (c=='#') { r = ANode::lookup_n_q(atoi_h_ppc(&s)); if (!r->m_u24.s[0]) return 0; }
+		else if (c!='=' || !(r = cb->var(*(s++)&7))) { return 0; } 
 	} else if (c=='.') { r = ANode::root(); } else {
 		if (c!='@') return 0; else c = *(s++);
 		switch(c) {
