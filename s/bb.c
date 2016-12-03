@@ -23,7 +23,7 @@
 #define QWE_UTILC_DEF
 #include "uc0.h"
 
-/*** input buf (io, wrk) ******/
+// common: input buf (io, wrk)
 typedef void (*lfun)(char *, int, int);
 typedef struct { int fd, siz, cont, arg; lfun lf; char * p; } ibuf;
 
@@ -35,7 +35,7 @@ static int ib_read(ibuf * b) { // -1:unixerr -2:zero_ret -3:frag_discard -4:no_f
 	int k = b->cont = q-p; 
 	return k ? ( (4*k>3*sz) ? (b->cont=0, -3) : (memmove(b->p, p, b->cont), 0) ) : 0;
 }
-// tlog copy (io, wrk);
+// common: tlog copy (io, wrk)
 static int tlog_hcp(int bk, const char * arg) {
 	static const char *nm = 0; if (!nm && !(nm=getenv("LF_TLOG"))) return -9;
 	unsigned int * q = tlog_cp(arg, 0); if (*q>0xfffeffff) return -1;
@@ -169,12 +169,13 @@ static int a_main(int ac, char ** av) {
 }
 
 int c_main() { /* console */
-	const char * cnm = tpipe_name('C');
-	FILE * f = fopen(cnm, "a"); if (!f) return perror(cnm), sleep(3), 1;
+	struct stat buf; FILE *f; const char * cnm = tpipe_name('C');
+	if (stat(cnm, &buf)<0 || !(f = fopen(cnm, "a"))) return perror(cnm), sleep(3), 1;
 	fprintf(f, "_c/proc/%d/fd/1\n", getpid()); fclose(f); while(1) sleep(60);  }
 
 int e_main() { /* editor */
 	const char * cnm = tpipe_name('C'), *jt = getenv("LF_ED_TMPF"), *ed = getenv(xapp_env[1]);
+	if (!jt) return write(2,"$LF_ED_TMPF undefined\n",22), 1;
 	FILE *f; int x, r = fork(); switch(r) {
 		case 0: execlp(ed, ed, jt+1, NULL); perror("exec"); exit(1);
 		case -1: perror("fork"), exit(1);

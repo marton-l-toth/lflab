@@ -110,7 +110,7 @@ static void qe_ini() {
 	static const char * self = "/proc/self/exe";
 	static const char * rel[] = { "uh/.lflab", 
 		">u/lf.log", "ju/lf.ini", "=u/lf.tlog", "au/__asv.lf", "xu/__asv--x.lf", "zw/killer-file",
-		"ip/lf.io", "bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
+		"bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
 		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def", "@p/lf.ed" };
 	static const char * sete[] = { "kLF_CON", "?LF_HLP", "zLF_KILLER", "cLF_LIC", ">LF_LOG", "=LF_TLOG",
 		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", "@LF_ED"};
@@ -288,7 +288,7 @@ static int iop_dead(int pid, int stat, int td) {
 static int io_start(int re) {
 	char a2[16], *aa = a2; *(int*)aa = killer_fd>0 ? qh4(killer_fd) : 33; a2[4] = 0;
 	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;   p_close(pt_io_pfd);
-	int pf1, pf3, pid = launch(QENV('i'), "!><+>", &pf1, pt_io_pfd, QENV('>'), &pf3, a2, a2+8, (char*)0);
+	int pf1,pf3,pid = launch(QENV('b'), "><+>", &pf1,pt_io_pfd,QENV('>'),&pf3, "lf.io",a2,a2+8, (char*)0);
 	if ((pid|pf1|*pt_io_pfd|pf3)<0) return -1;
 	if (!re) pt_reg(PT_IOP, pid, &iop_dead);
 	fflush(stdout); fflush(stderr);

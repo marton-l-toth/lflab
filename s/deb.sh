@@ -10,7 +10,7 @@ pkgdir=$tmpr/$pkgnm
 debdir=$pkgdir/DEBIAN
 ctl=$debdir/control
 dep0="graphviz, gnuplot-x11"
-bblnk="/usr/bin/lf.acv $trgdir/lf.con $trgdir/lf.ed $trgdir/lf.io $trgdir/lf.lic"
+bblnk="/usr/bin/lf.acv $trgdir/lf.con $trgdir/lf.ed $trgdir/lf.lic"
 
 [[ -d $pkgdir ]] && rm -r $pkgdir
 mv $tmptree $pkgdir
