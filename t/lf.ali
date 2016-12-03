@@ -1,3 +1,4 @@
+if [[ "$TERM" == "screen" ]]; then /bin/echo -e "\ekmk\e\\"; fi
 ulimit -c 262144
 alias mk='../t/prod.sh -rsm'
 alias mk0='../t/prod.sh -rsm -0' 

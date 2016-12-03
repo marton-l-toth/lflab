@@ -1,8 +1,7 @@
 #!/bin/bash
-if [[ "$TERM" == "screen" ]]; then /bin/echo -e "\ekmk\e\\"; fi
 SDIR="$PWD"
 PDIR="$HOME/lf-prod/s"
-OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS="";
+OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
         case "$1" in
@@ -11,6 +10,7 @@ while [[ -n "$cond" ]]; do
                 -j*)  JARG=$1; shift ;;
                 "-S") SSE="-mno-sse2";  shift ;;
                 "-s") SSE="-msse2";  shift ;;
+                "-st") STFLG="y"; shift ;;
 		"-md") DEFS="$DEFS -DLF_C_MEMDEBUG"; shift ;;
 		"-0") OPTARG="";    shift ;;
 		"-cf")  UCFLG="$2"; shift 2 ;;
@@ -37,6 +37,16 @@ for a in * c/*; do
 	if [[ ! -f "$b" ]] || [[ "$a" -nt "$b" ]]; then cp $a $b; fi
 done
 cd "$PDIR"
+if [[ -n "$STFLG" ]]; then
+	LF_TMPROOT="$(readlink -f /run/shm)"
+	[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /dev/shm)"
+	[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /tmp)"
+	stfil=$LF_TMPROOT/mkstat-$$
+	make stat | awk  '/^ *[0-9]/{print $3 " print \"" $0 "\\t(\"; print eXpR1 " $3 " eXpR2; print \"%)\\n\"" }' | sort -n > $stfil
+	total=$(tail -1 $stfil | grep -o '^[0-9]*')
+	(echo scale=3; sed "s/^[0-9]* //;s/eXpR1/(100.0*/;s/eXpR2/+$total\/2000)\/$total/" $stfil) | bc
+	rm $stfil; exit 0
+fi
 CP=$(echo /run/shm/lf.*/A)
 CFLG="CFLAGS=$SSE $OPTARG $UCFLG$DEFS"
 echo make $JARG "\"$CFLG\"" $*
