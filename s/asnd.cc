@@ -20,7 +20,7 @@
 static fa_writer fa_wr;
 
 int ASnd::close() { clk0.cls(); if (m_hnd) snd_pcm_close(m_hnd); 
-		    return w(1024), m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0; }
+		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, w(1024), 0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
 int ASnd::start(int flg, int mxid) {
