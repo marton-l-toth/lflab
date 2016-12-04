@@ -620,7 +620,10 @@ int ADirNode::wdat_free() {
 
 ///////// dir ////////////////////////////////////////////////////////////////
 
+#define DIRLOOP2 for (int b=0; b<2; b++) if (winflg(2*b+2))
 #define ADDL(J) (q = lookup_n_q(J), q->is_wrap() ? (q->m_next=wl, wl=q) : (q->m_next=r, r=q))
+#define RMTHAT do { int ec; if (that->m_up && (ec=that->m_up->rm(that))<0) return ec; } while(0)
+
 ANode * NDirNode::sn_list(ANode ** pwl) {
 	int n = m_siz; if (!n) return 0;
 	unsigned int * pe = m_e[0];
@@ -763,12 +766,10 @@ int NDirNode::locmv(ANode * that, const char * nm) {
 	}
 	m_e[r>>4][r&15] = ((unsigned int)h2<<20u) + (unsigned int)id;
 	int l = strlen(nm); memcpy(that->m_u24.d.s, nm, l+1); that->m_u24.d.n = (char)l;
-	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, that);
+	DIRLOOP2 gui2.node_name(b, that);
 	return r;
 }
 	
-#define RMTHAT do { int ec; if (that->m_up && (ec=that->m_up->rm(that))<0) return ec; } while(0)
-
 int NDirNode::add2(ANode * that, int h, const char * nm) {
 	int l,ix = find(nm, h);
 	if (!(ix&64)) return NDE_NDUP; else ix &= 63;
@@ -776,7 +777,7 @@ int NDirNode::add2(ANode * that, int h, const char * nm) {
 	that->m_u24.d.n = l = strlen(nm); memcpy(that->m_u24.d.s, nm, l+1);
 	dn1(ix, m_siz-ix); ++m_siz;
 	m_e[ix>>4][ix&15] = ((unsigned int)h<<20u) + (unsigned int)(that->m_id);
-	for (int b=0; b<2; b++) if (winflg(2*b+2)) gui2.node_name(b, that);
+	DIRLOOP2 gui2.node_name(b, that);
 	return ix;
 }
 
@@ -786,7 +787,7 @@ int NDirNode::rm(ANode * that) {
 	up1(ix+1, m_siz - ix - 1); 
 	if (!(m_siz&7)) decr();
 	--m_siz; 
-	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_rm(b, that);
+	DIRLOOP2 gui2.node_rm(b, that);
 	return 0;
 }
 
@@ -861,13 +862,12 @@ int ClipNode::xchg(int i, int j) {
 		t = m_el[i], m_el[i] = m_el[j], m_el[j] = t;
 		(p = ent_j(i))->m_u24.c.i = i; 
 		(q = ent_j(j))->m_u24.c.i = j;
-		for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, p),
-							 gui2.node_name(b, q);
+		DIRLOOP2 gui2.node_name(b, p), gui2.node_name(b, q);
 	} else {
 		if ((m_map^=m12)&m1) i^=j, j^=i, i^=j;
 		m_eh[j] = m_eh[i], m_el[j] = m_el[i];
 		(p = ent_j(j))->m_u24.c.i = j;
-		for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, p);
+		DIRLOOP2 gui2.node_name(b, p);
 	}
 	if (winflg(8)) gui2.clip_box(this, i, j, -1);
 	return j;
@@ -898,7 +898,7 @@ int ClipNode::add(ANode * that, const char * nm, int i, int j) {
 	m_eh[ix] = (unsigned short) (that->m_id >> 8);
 	m_el[ix] = (unsigned char) (that->m_id & 255);
 	that->m_u24.c.ct = 'c'; that->m_u24.c.i = ix; that->m_up = this;
-	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_name(b, that);
+	DIRLOOP2 gui2.node_name(b, that);
 	if (winflg(8) || (i&NOF_FGUI)) show_newbox(ent_j(ix));
 	return sel(ix);
 }
@@ -913,7 +913,7 @@ int ClipNode::rm(ANode * that) {
 	unsigned int m1 = 1u << i; 
 	if (!(m_map&m1) || ent_j(i)!=that) return (m_extra==that->id()) ? (m_extra=0) : NDE_RMWHAT;
 	m_map &= ~m1; if (winflg(8)) gui2.clip_box(this, i);
-	for (int b=1; b<3; b++) if (winflg(2*b)) gui2.node_rm(b, that);
+	DIRLOOP2 gui2.node_rm(b, that);
 	return 0;
 }
 
