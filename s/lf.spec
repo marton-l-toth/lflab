@@ -29,7 +29,7 @@ ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.ed
 ln -sf %{LF_DIR}/lf.bb %{LF_DIR}/lf.lic
 
 %postun
-rm /usr/bin/%{LF_NM} /usr/bin/lf.acv %{LF_DIR}/lf.con %{LF_DIR}/lf.lic
+rm /usr/bin/%{LF_NM} /usr/bin/lf.acv %{LF_DIR}/lf.con %{LF_DIR}/lf.lic %{LF_DIR}/lf.ed
 rmdir %{LF_DIR}
 
 %files
