@@ -12,15 +12,12 @@
 int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
 double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625;
 char zeroblkC[32768], junkbufC[32768], save_file_name[1024], debug_utxt_buf[1024];
-
-GuiStub gui2;
-JobQ jobq;
-BufClock clk0;
-ASnd snd0;
+GuiStub gui2;	JobQ jobq;   BufClock clk0;	ASnd snd0;
 
 #define N_SLCMD 5
 #define PFD(J) sl_cmd[J].pfd()
 static CmdBuf sl_cmd[N_SLCMD];
+static int cmd_sc[] = {-1,9,0,0x6f69, -1,9,126,0x697567, -1,1,0,0x6e6f63, -'A',1,0,0, -1,9,0,0x6b7277};
 static struct timespec asv_ts;
 
 void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s", v_major, v_minor, pt_hello,
@@ -29,11 +26,11 @@ void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s",
 
 static void rf(const char ** ppf) {
 	for (int ec, i=0, ro=1; ppf[i]; i++) {
-		if (!ppf[i][0]) continue;
-		if (ppf[i][0]=='/' && !ppf[i][1]) { ro = 0; continue; }
-		log("reading %s... (r%c)", ppf[i], 119-8*ro);
-		if ((ec = CmdBuf::read_batch(ppf[i], NOF_BATCHF|(ro&&ppf[i+1]))) < 0) gui_errq_add(ec);
-		if (ec<0) log("%s: %s(%d)", ppf[i], err_str(ec), ec);
+		const char *s = ppf[i]; if (!*s) continue;
+		if (s[0]=='/' && !s[1]) { ro = 0; continue; }
+		int ro2 = (ro && ppf[i+1]); log("reading %s... (r%c)", s, 119-8*ro2);
+		if ((ec = CmdBuf::read_batch(ppf[i], NOF_BATCHF|ro2)) < 0) gui_errq_add(ec);
+		if (ec<0) log("%s: %s(%d)", s, err_str(ec), ec);
 	}}
 
 #define INI_LIST hi(), nd0_init(), nz_init(), calc_init(), graph_init(), nd_init(), mx_init(), wrap_init(), \
@@ -42,11 +39,7 @@ static void ini(const char ** ppf) {
 	extern void INI_LIST; INI_LIST;
 	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
 	if (CFG_INI_ORDER.i) gui2.start(PFD(1)), rf(ppf); else rf(ppf), gui2.start(PFD(1));
-	sl_cmd[0].init( -1,  NOF_ERRMSG|NOF_FGUI);
-	sl_cmd[1].init( -1,  NOF_GUI, 126);
-	sl_cmd[2].init( -1 , NOF_ERRMSG);
-	sl_cmd[3].init(-'A', NOF_ERRMSG);
-	sl_cmd[4].init( -1 , NOF_ERRMSG|NOF_FGUI);
+	for (int i=0,*q=cmd_sc; i<N_SLCMD; i++,q+=4) sl_cmd[i].init(q[0], q[1]<<23, q[2], (char*)(q+3));
 	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
 		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
 	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);

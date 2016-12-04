@@ -69,7 +69,6 @@
 #define NOF_BATCHV 0x11c00000
 #define NOF_BATCHF 0x11a00000
 #define NOF_CLI    0x00800000
-#define NOF_GUI    0x04800000
 #define NOF_EXPEOF 0x00200000
 #define SVF_FORCE 1
 #define SVF_COPY  2

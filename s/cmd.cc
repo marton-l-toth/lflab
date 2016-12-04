@@ -104,7 +104,7 @@ int CmdBuf::read_batch(const char * name, int nof1) {
 		if ((ec=is_asv_name(name))) glob_flg|=GLF_RECOVER, save_file_name[2]=ec;
 		else strncpy(save_file_name, name, 1023), glob_flg &= ~GLF_RECOVER;
 		if (!(glob_flg & GLF_INI1)) gui2.savename(); }
-	CmdBuf cb; cb.init(fd, nof1&(NOF_FLAGS&~NOF_FGUI));
+	CmdBuf cb; cb.init(fd, nof1&(NOF_FLAGS&~NOF_FGUI), 0, name);
 	do ec = cb.read_f(); while (ec>=0);
 	if (nof1&1) Node::lib_end();
 	if (ec==GCE_EOF) ec = (EEE_SUM &-!!cb.m_errcnt);
@@ -186,7 +186,7 @@ int CmdBuf::fdok(int ec, int ty) {
 void CmdBuf::show_error(int ec) {
 	// TODO: NOF_FGUI, NDE_CONFIRM
 	char * s0 = untok(); if (!s0) s0 = m_c_a0 - 1;
-	log("%d: \"%s\": %s (%d)", m_lineno, s0, err_str(ec), ec);
+	log("%s: %d: \"%s\": %s (%d)", m_iname, m_lineno, s0, err_str(ec), ec);
 }
 
 int CmdBuf::cf_p2i(CmdBuf *p, char *q, int l) {
