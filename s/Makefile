@@ -19,11 +19,12 @@ OBJC = $(shell c/upd_contrib.sh o  co/)
 SRCS = $(SRC1) $(SRC2) $(SRC3) $(SRCC)
 INCS = $(INC1) $(INC2) $(INCX)
 OBJS = $(OBJ1) $(OBJ2) $(OBJ3) $(OBJC) contrib.o hlpn.o
+export LF_BINS = lf.gui lf.bb lf.pump lf.bin
 
 GTKINC = -I/usr/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/ -I/usr/include/glib-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0/ -I/usr/include/gdk-pixbuf-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0
 GTKLIB = -lgtk-x11-2.0 -lgdk-x11-2.0 -lcairo -lgobject-2.0 -lglib-2.0 -lm
 
-all: lf.gui lf.bb lf.bin lf help.txt lf.con lf.acv lf.lic lf.ed
+all: $(LF_BINS) lf help.txt lf.con lf.acv lf.lic lf.ed
 
 lf.ed:
 	ln -sf lf.bb lf.ed
@@ -61,6 +62,9 @@ lf.gui: gui.c uc0.h uc1.h errtab.inc cfgtab.inc
 lf.bb:  bb.c uc0.h
 	gcc -g -Wall $(CFLAGS) bb.c -olf.bb -lm
 
+lf.pump: asnd.cc
+	ln -sf asnd.cc pump.c && gcc -g -Wall $(CFLAGS) -olf.pump pump.c -lm -lasound
+
 hlpt.txt: hlpt.sh helpm.txt
 	./hlpt.sh helpm.txt > hlpt.txt
 
@@ -70,10 +74,10 @@ hlpn.cc:  hlpc.sh helpm.txt
 help.txt: hlpt.txt $(SRCS)
 	tail -n +2 hlpt.txt > help.txt && sed -n '/^\/\/?/{s/^\/\/? *//;p}' $(SRCS) >> help.txt
 
-deb:	lf.gui lf.bb lf.bin help.txt ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
+deb:	$(LF_BINS) help.txt ex.lf lf.dsc.txt COPYING deb.sh pkg.sh
 	./deb.sh -v
 
-rpm:	lf.gui lf.bb lf.bin help.txt ex.lf lf.dsc.txt COPYING rpm.sh lf.spec pkg.sh
+rpm:	$(LF_BINS) help.txt ex.lf lf.dsc.txt COPYING rpm.sh lf.spec pkg.sh
 	./rpm.sh 
 
 clean:

@@ -1,5 +1,65 @@
 #include <alsa/asoundlib.h>
 
+#define CHK1(X,S) if ((e=(X))<0) { es=(S); goto err2; }
+inline int bitfill(int x) { return x|=(x>>16), x|=(x>>8), x|=(x>>4), x|=(x>>2), x|(x>>1); }
+static const char* au_op_cfg(snd_pcm_t ** pp_h, const char *nm, int *bufsiz, int *nchan, int *srate, int flg) {
+        snd_pcm_hw_params_t *hwpar = 0;
+        snd_pcm_uframes_t bs = *bufsiz;
+        unsigned int rate = *srate, nc = *nchan; 
+        const char *es = "BUG!!!";
+        int x, e = snd_pcm_open(pp_h, nm, SND_PCM_STREAM_PLAYBACK, 0); if (e<0) { es="0open"; goto err1; }
+        CHK1(snd_pcm_hw_params_malloc(&hwpar), "1allocpar");
+        CHK1(snd_pcm_hw_params_any(*pp_h,hwpar), "2initpar");
+        CHK1(snd_pcm_hw_params_set_access(*pp_h,hwpar,SND_PCM_ACCESS_RW_INTERLEAVED), "3access");
+        CHK1(snd_pcm_hw_params_set_format (*pp_h,hwpar,SND_PCM_FORMAT_S16_LE), "4format");
+        CHK1(snd_pcm_hw_params_set_rate_near (*pp_h,hwpar,&rate,0), "5rate");
+        CHK1(snd_pcm_hw_params_set_channels_min (*pp_h, hwpar, &nc), "6#chan");
+        CHK1(snd_pcm_hw_params_set_buffer_size_min(*pp_h, hwpar, &bs), "7bufsiz/m");
+        if (snd_pcm_hw_params_set_buffer_size_near(*pp_h, hwpar, &bs) < 0) {
+                int bs2 = bitfill(bs-1)+1;
+                while ((bs=bs2)<4444 && snd_pcm_hw_params_set_buffer_size_near(*pp_h, hwpar, &bs)<0) bs2<<=1; }
+        CHK1(snd_pcm_hw_params(*pp_h, hwpar),"setpar");
+        CHK1(snd_pcm_hw_params_get_channels(hwpar, &nc), "get_nchan");
+        CHK1(snd_pcm_hw_params_get_rate(hwpar, &rate, &x), "get_rate");
+        CHK1(snd_pcm_hw_params_get_buffer_size(hwpar, &bs), "get_bufsiz");
+        snd_pcm_hw_params_free(hwpar); hwpar = 0;
+        CHK1(snd_pcm_nonblock(*pp_h,flg&1),"nonblock");
+        CHK1(snd_pcm_prepare(*pp_h),"prepare");
+        return *bufsiz = bs, *nchan = nc, *srate = rate, (char*)0;
+err2:   snd_pcm_close(*pp_h); *pp_h = 0; if (hwpar) snd_pcm_hw_params_free(hwpar);
+err1:   *bufsiz = e; return es;
+}
+
+#ifndef __cplusplus
+#define FP2(S,X,Y)      fprintf(stderr, S "\n", (X),(Y))
+#define FP4(S,X,Y,Z,W)  fprintf(stderr, S "\n", (X),(Y),(Z),(W))
+static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
+static int atoi_h(const char *s) { int r=0; while(*s&80) r=16*r+hxd2i(*(s++)); return r; }
+static int report(int x) { int v=(x<<16)+0xa307052; return write(1, &v, 4), v; }
+
+int main(int ac, char** av) {
+        if (ac!=5) {int i,j; for(i=1;i<ac;i++) j=atoi(av[i]), FP2("err-%d: %s",j,snd_strerror(-j)); return 0;}
+        //if (ac!=5) return FP1("usage: %s devname flg-nch nf hwbufsiz", *av), 1;
+        snd_pcm_t * hnd;
+        int nc0=atoi_h(av[2]), nf=atoi_h(av[3]), hbsiz = atoi_h(av[4]),
+            nc = nc0&255, flg = nc0>>8, rate = 44100;
+        const char *nm = av[1], *es = au_op_cfg(&hnd, nm, &hbsiz, &nc, &rate, flg);
+        if (es) return FP2("error: %s: %s", es, snd_strerror(hbsiz)), report(9), 1;
+        FP4("%s started, #ch=%d, hwbs=%d, rate=%d", *av, nc, hbsiz, rate);
+        int fsiz = 2*nc, asiz = fsiz*nf, errtemp = 0;
+        char buf[asiz];
+        report(32+nc);
+        while(1) {
+                int k=0;do{int r=read(0,buf+k,asiz-k); if (r<=0) return report(8+!!r); k+=r;} while(k<asiz);
+                report(1);
+                k=0;do{ int r2,r=snd_pcm_writei(hnd,buf+k*fsiz,nf-k);
+                        if (r>0) { k+=r; errtemp -= !!errtemp; continue; }
+                        if (!r) return report(9);
+                        if (errtemp+=16>256) return report(9);
+                        if ((r2=snd_pcm_recover(hnd, r, 1))<0) return report(9); else report(7); } while(k<nf);
+        }}
+#else // cplusplus
+
 #include "cfgtab.inc"
 #include "util.h"
 #include "mx.h"
@@ -7,12 +67,7 @@
 #include "util2.h"
 #include "asnd.h"
 #include "pt.h"
-
-#ifdef DUMMY
-#include "t/dummybox.h"
-#else
 #include "box0.h"
-#endif
 
 #define IFDBG if (debug_flags&DFLG_AUDIO)
 #define SAMP2NS(X) (((X)*m_ns_16f+8)>>4)
@@ -23,14 +78,15 @@ int ASnd::close() { clk0.cls(); if (m_hnd) snd_pcm_close(m_hnd);
 		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, w(1024), 0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
-int ASnd::start(int flg, int mxid) {
-	int n = CFG_AU_TRY_N.i;
+
+int ASnd::start(int flg, int mxid, int *ppcp) {
+	int n = CFG_AU_TRY_N.i;  if (ppcp) m_pump_pcp = ppcp;
 	if (flg&1) n = (n+1)>>1; else if (mxid>=0) m_mxid = mxid;
 	double clf = (n<2) ? 1.0 : exp(M_LN10 / (double)(n-1)), sclim = 1e3*(double)CFG_AU_CLKLIM.i;
 	int e=-1, us = 1000 * CFG_AU_TRY_MS.i;   m_flg &= ~2;
 	for (int i=0; i<n; u_sleep(us), i++, sclim*=clf)
 		if ((e=start1(min_i((1<<27)-1, (int)lround(sclim))))>=0) return w(1024), e;
-	return err(e, "start", AUE_START), w(-1), AUE_START;
+	return err(e, "start", AUE_START), w(-1), AUE_START; // TODO
 }
 
 void ASnd::cfg_pre(int spd, int rsrv, int liar) {
@@ -45,6 +101,7 @@ void ASnd::cfg_pre(int spd, int rsrv, int liar) {
 int ASnd::start_buf(int tlim) {
 	int wr0=64, lr=m_flg&1; // TODO: config
 	if (m_bufsiz<m_hwbs_trg) return log("alsa/bsiz: ret(%d) < rq(%d)", m_bufsiz, m_hwbs_trg), close(), -1;
+	//if (m_flg&4) return m_cur_cpf=&cpf_pump, clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1), start_pump();
 	if(lr){ m_bs2 = 2*(m_bufsiz-m_bs);
 		clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1); m_cur_cpf = &cpf_liar;
 		int sb1 = 2 * m_bufsiz * m_cfg.nch;
@@ -58,36 +115,14 @@ int ASnd::start1(int sc_lim) {
 	if (m_hnd) close(); clk0.ev('o');
 	if (!(m_flg&2)) cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_LIAR.i);
 	if (CFG_AU_KILL_PA.i) gui2.errq_add(pt_kill_pa(CFG_AU_KILL_PA.i));
-        int qw, e = snd_pcm_open(&m_hnd, CFG_AU_NAME.s, SND_PCM_STREAM_PLAYBACK, 0);
-        if (e<0) return err(e, CFG_AU_NAME.s); 
-        snd_pcm_hw_params_t *hwpar;
-        if ((e=snd_pcm_hw_params_malloc(&hwpar))<0) return err(e, "allocpar");
-        if ((e=snd_pcm_hw_params_any(m_hnd,hwpar))<0) return err(e, "initpar");
-        if ((e=snd_pcm_hw_params_set_access(m_hnd,hwpar,SND_PCM_ACCESS_RW_INTERLEAVED))<0) return err(e, "access");
-        if ((e=snd_pcm_hw_params_set_format (m_hnd,hwpar,SND_PCM_FORMAT_S16_LE))<0) return err(e, "format");
-        unsigned int rate = 44100, chan = CFG_AU_CHCFG.i; snd_pcm_uframes_t bsiz = m_hwbs_trg;
-        if ((e=snd_pcm_hw_params_set_rate_near (m_hnd,hwpar,&rate,0))<0) return err(e, "rate");
-	if ((e=snd_pcm_hw_params_set_channels_min (m_hnd, hwpar, &chan))<0) return err(e, "#chan");
-        if ((e=snd_pcm_hw_params_set_buffer_size_min(m_hnd, hwpar, &bsiz))<0) return err(e, "bufsiz/m");
-        if ((e=snd_pcm_hw_params_set_buffer_size_near(m_hnd, hwpar, &bsiz))<0) {
-		log("bufsiz/near(%d) failed", (int)bsiz);
-		if (m_flg&2) { if (bsiz<8192) bsiz *= 2; }
-		else         { m_flg |= 2; for (bsiz=1024; (int)bsiz<m_hwbs_trg; bsiz+=bsiz); }
-		m_hwbs_trg = bsiz; return err(e, "bufsiz/n");
-	}
-        if ((e=snd_pcm_hw_params(m_hnd, hwpar))<0) return err(e,"setpar");
-	chan=rate=999888777; bsiz = 0;
-	if ((e=snd_pcm_hw_params_get_channels(hwpar, &chan))<0) err(e, "get_nchan");
-	if ((e=snd_pcm_hw_params_get_rate(hwpar, &rate, &qw))<0) err(e, "get_rate");
-	if (chan>16) return log("snd/init2: #chan=%d, WTF???"), -1;
-	if ((e=snd_pcm_hw_params_get_buffer_size(hwpar, &bsiz))<0) err(e, "get_bufsiz");
-	if ((int)bsiz < m_hwbs_trg) return log("alsa/bsiz: ret(%d) < rq(%d)", bsiz, m_hwbs_trg), -1;
-	m_n_chan=(int)chan, sample_rate=(int)rate; mx_au16_cfg(&m_cfg, m_n_chan, CFG_AU_CHCFG.s);
-        snd_pcm_hw_params_free(hwpar); *clk0.pa() = m_bufsiz = bsiz;
-	log("snd: open(%s) OK, #chan=%d, rate=%d, bufsiz=%d (trg:%d)", 
-		CFG_AU_NAME.s, m_n_chan, sample_rate, m_bufsiz,m_hwbs_trg);
-        if ((e=snd_pcm_nonblock(m_hnd,1))<0) return err(e,"nonblock");
-        if ((e=snd_pcm_prepare(m_hnd)) < 0) return err(e,"prepare");
+
+	int rate = 44100, chan = CFG_AU_CHCFG.i, bsiz = m_hwbs_trg;
+	const char *es = au_op_cfg(&m_hnd, CFG_AU_NAME.s, &bsiz, &chan, &rate, m_flg&1);
+
+	if (es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), bsiz;
+	m_n_chan = chan; sample_rate = rate; *clk0.pa() = m_bufsiz = bsiz;
+	mx_au16_cfg(&m_cfg, m_n_chan, CFG_AU_CHCFG.s);
+	
 	return start_buf(sc_lim);
 }
 
@@ -117,7 +152,7 @@ int ASnd::play_and_adj(short *buf, int nf, int opt) {
 		 || TWICE((t2=clk0.ev('v'), av1=snd_pcm_avail(m_hnd)),"avail2")) return AUE_UNRECOV;
 	int ce=clk0.err(), clke = ce|oldce, err2 = clke+4*rcnt;
 	if (err2|cs) {  if (err2) err3(err2);
-			return (cs && ((ce|rcnt) || (t0-t1)>(opt&0xfffff))) ? AUE_CLOCK
+			return (cs && ((ce|rcnt) || (t0-t1)>(opt&0xfffffff))) ? AUE_CLOCK
 				: (clk0.set_f(m_bufsiz - av1), 0); }
 	if (wr<nf) log("alsa/wr: %d/%d written", wr, nf), gui2.errq_add(wr?AUE_LESSWR:AUE_ZEROWR); // TODO
 	int t3 = clk0.ev('p'), tea = t0-t1, teb = t2-t3, tb1 = clk0.f2ns(m_bufsiz-av1), tb0 = tb1-teb,
@@ -139,6 +174,11 @@ void ASnd::play2(short *buf, int nf) {
 void ASnd::cpf_mute(ASnd *p) {
 	int nf = clk0.f2play(1); if (!nf) return; else p->play2((short*)junkbufC, nf);
 	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
+
+void ASnd::cpf_pump(ASnd *p) {
+	if (!p->m_pump_st) return; else p->m_pump_st = 0;
+	int nf = p->m_bs, bsc = nf*p->m_cfg.nch;
+	short buf[bsc]; p->play2(buf, nf); write(p->m_pump_ofd, buf, 2*bsc); }
 
 void ASnd::cpf_true(ASnd *p) {
 	int nf = clk0.f2play(2); if (!nf) return;
@@ -220,3 +260,4 @@ int rawmidi_desc(char *to, int id, int maxlen) {
 	if (dev)  snd_rawmidi_close(dev);
 	return len;
 }
+#endif // cplusplus

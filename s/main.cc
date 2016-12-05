@@ -14,10 +14,11 @@ double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65
 char zeroblkC[32768], junkbufC[32768], save_file_name[1024], debug_utxt_buf[1024];
 GuiStub gui2;	JobQ jobq;   BufClock clk0;	ASnd snd0;
 
-#define N_SLCMD 5
+#define N_SLCMD 6
 #define PFD(J) sl_cmd[J].pfd()
 static CmdBuf sl_cmd[N_SLCMD];
-static int cmd_sc[] = {-1,9,0,0x6f69, -1,9,126,0x697567, -1,1,0,0x6e6f63, -'A',1,0,0, -1,9,0,0x6b7277};
+static int cmd_sc[] = {-1,9,0,0x6f69, -1,9,126,0x697567, -1,1,0,0x6e6f63, -'A',1,0,0, -1,9,0,0x6b7277,
+		       -1,9,0,0x706d70 };
 static struct timespec asv_ts;
 
 void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s", v_major, v_minor, pt_hello,
@@ -46,7 +47,7 @@ static void ini(const char ** ppf) {
 	log("### i2m=%d, gcp=%d", *PFD(0), *PFD(1));
 	if (glob_flg&GLF_HITHERE) {const char *s="getting started"; snd0.w(-1); hlp->sn(&s)->draw_window(11);}
 	pt_wrk_start(0); if (CFG_DEVEL.i) pt_con_op("-1");
-	snd0.start(0, 0); clk0.tcond(&asv_ts); glob_flg &= ~GLF_INI1; glob_flg |= GLF_SAVED;
+	snd0.start(0, 0, PFD(5)); clk0.tcond(&asv_ts); glob_flg &= ~GLF_INI1; glob_flg |= GLF_SAVED;
 }
 
 #define FOR_SLC for (int k,i=0; i<N_SLCMD; i++) if ((k=sl_cmd[i].fd()) >= 0)

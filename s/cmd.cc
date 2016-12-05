@@ -350,6 +350,7 @@ int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
 		case 'g': pt_calc_xbv(); gui2.xapp_bv();
 			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
 		case 'S': return qstat_op(p->m_c_a0[1]);
+		case 'p': return snd0.pump_rprt(p->m_c_a0+1);
 		default: return GCE_UREPORT;
 	}}
 
