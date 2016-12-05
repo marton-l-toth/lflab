@@ -1155,7 +1155,7 @@ TDIV_MENU_LN
 	"KG    N?    $.W?  I3    Kd    Cw%K  Cs%K  Ch?   ##    KZ    Nd    ######$.X*$A"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
 {'S', 1, 0,1,1, "?", "#" },
-{0,   3, 1,5,1, "availdelayretBS", "012"},
+{0,   3, 1,5,1, "availnonblpump ", "012"},
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
 {'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
@@ -4297,8 +4297,8 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1faA0r}{!ttry$114A0t}{!wt/w$1faA0w}"
-	"[{B_?$$?}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}{L_clock:}"
-	"{Ycliar$A0c}(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
+	"[{B_?$$?}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}({L_clk:}3{Mc$A0c|S1})"
+	"(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "audio", 6);
 	else gtk_window_present(GTK_WINDOW(tw->w)); 
 }
