@@ -20,10 +20,11 @@ extern int pt_nullfd, 	      pt_qenv_l[32];
 extern const char *pt_hello, *pt_qenv_v[32];
 extern int pt_xapp_bv[];
 
-int cfg_write(int lg); 
-struct cfg_ent; 
-void cfg_setint(cfg_ent *p, int k); 
-int cfg_setstr(cfg_ent *p, const char *s); 
+int cfg_write(int lg);
+struct cfg_ent;
+void cfg_export(cfg_ent *p);
+void cfg_setint(cfg_ent *p, int k);
+int cfg_setstr(cfg_ent *p, const char *s);
 
 const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wrk);
 void pt_reg(int ix, int pid, pt_wfun fun);

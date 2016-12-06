@@ -193,7 +193,7 @@ static void mklog() {
 	lbuf[lbl]=10; write(lfd, lbuf, lbl+1); close(lfd);
 }
 
-static void cfg_export(cfg_ent *p) {
+void cfg_export(cfg_ent *p) {
 	char nm[64]; memcpy(nm  , "LF_", 3);
 	int vbuf[3]; strcpy(nm+3, p->s_vd);
 	if (p->i_m==0x7fffffff) return (void)setenv(nm, p->s, 1);

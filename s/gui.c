@@ -223,7 +223,7 @@ static topwin ot_etc[256];
 static int expand_cmd_flg = 1;
 
 static int conf_lbh = 18, conf_lbfh = 15, conf_lbfs = 15, conf_lbfh_s = 12, conf_lbfs_s = 12;
-static int conf_nomwin = 0, conf_slider_focus = 0;
+static int conf_nomwin = 0, conf_SLFOC = 0, conf_QCPU = 0;
 static int conf_portwid;
 
 static int dflg = 0;
@@ -1535,6 +1535,15 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 	cairo_destroy(cr); return FALSE;
 }
 
+static void draw_now(ww_t * ww, int wid, int heig) {
+	cairo_t * cr = gdk_cairo_create(gtk_widget_get_window(ww->w));
+	cairo_rectangle_int_t rct; rct.x=rct.y=0; rct.width=wid; rct.height=heig;
+	cairo_region_t * rg = cairo_region_create_rectangle(&rct);
+	gdk_cairo_region (cr, rg);
+	ww->arg[0].p = cr; (*ww->cl->cmd)(ww, NULL);
+	cairo_destroy(cr); cairo_region_destroy(rg);
+}
+
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
 	LOG("click: button %d, cx=%d, cy=%d -- nothing happens", b9, cx, cy); }
 
@@ -1688,7 +1697,7 @@ static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
 		for (i=k; i<38; i++) q[i]>>=1, q[i]|=0x80000000;
 		if (++q[38]==25) { q[38] = 0; for (i=2; i<37; i+=4) q[i]^=0x8000000; }
 	}
-	if (nf&64) da_fullre(ww);
+	if (nf&64) conf_QCPU ? draw_now(ww, 32, 40) : da_fullre(ww);
 }
 
 #define CLOG if (errtemp<1000) errtemp+=20, LOG
@@ -2276,7 +2285,7 @@ static void dacntvs_skel(struct _ww_t * ww, const char **pp) {
 	double step = 1.0 / (double) k;
 	//LOG("scale: ty:%c step=%g w:%d h:%d", 48+ty, step, wid, heig);
       	GtkWidget * scl = gtk_vscale_new_with_range(0.0, 1.0, step);
-	if (!conf_slider_focus) gtk_widget_set_can_focus(scl, FALSE);
+	if (!conf_SLFOC) gtk_widget_set_can_focus(scl, FALSE);
 	gtk_range_set_inverted (GTK_RANGE(scl), TRUE);
 	gtk_scale_set_draw_value(GTK_SCALE(scl), FALSE);
   	g_signal_connect (scl, "value-changed", G_CALLBACK (scale_chg), (gpointer)ww);
@@ -5060,6 +5069,7 @@ static void add_in(int fd, gboolean (*fun)(GIOChannel*,GIOCondition,gpointer), i
 	g_io_add_watch(chan, G_IO_IN, fun, 0);
 }	
 
+#define IMP(NM) if ((s=getenv("LF_GUI_" #NM))) conf_##NM = atoi_h(s)
 int main(int ac, char **av) {
 	gtk_disable_setlocale();
 	if (getenv("LF_TMPDIR")) write(2, "&CMD1\n", 6), signal(SIGHUP, SIG_IGN), signal(SIGINT, SIG_IGN);
@@ -5070,7 +5080,7 @@ int main(int ac, char **av) {
 	cltab_init(); txtm_init(); choo_init(); pf_buf[0] = '~';
 	gtk_init (&ac, &av);
 	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n';
-	conf_slider_focus = (s=getenv("LF_GUI_SLFOC")) && (*s&1);
+	IMP(SLFOC); IMP(QCPU);
 	const char * rcfn = getenv("LF_GTKRC"); if (!rcfn) rcfn = "lf.gtk.rc";
 	char rch[20];
 	int r, fd = open(rcfn, O_RDONLY);
