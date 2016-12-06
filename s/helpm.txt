@@ -1006,22 +1006,29 @@ Note: changing grid dimensions can change the selected sound
 (known bug: left col. in scl.grps. is not updated in this case)
 {{{3.autovol}}}
 "a.v" tab in the (direct) wrap config window
-When using source/filter pairs with a wide range of inputs,
-the output volume can vary greatly. The automatic volume
-calibration makes convenient playback of such configurations
-possible. The volume is computed on a (per default) 9x9x9x9
-hypercube grid, and interpolated (on log.scale) on positions
-between. The four dimensions are x, y (grid) and the first
-two sliders. Per default, s5 is L/R and s6 is (manual, mul. by
-autovol) volume, so if you use s3 and s4 you should only
-configure inputs for them which do not significantly alter the
-output volume. "t" is time in seconds, "r" is repeat (for boxes
-involving noise, currently buggy so leave it 1).
+When using source/filter pairs with a wide range of inputs, the
+output volume can vary greatly. Automatic volume calibration
+makes convenient playback of such configurations possible.
+---
+The volume is computed on a (per default) 9x9x9x9 hypercube
+grid, and interpolated (on log.scale) on positions between.
+The four dimensions are: x/y(grid) and s1/s2(sliders).
+Per default, s5 is L/R and s6 is (manual, mul. by autovol)
+volume, and on s3/s4 should only be used for inputs which do
+not affect the volume (or only slighlly). "t" is time (sec.),
+"r" is repeat (useful for noise, max. value is taken).
+---
 The button "calc" starts the calculation. (right-clk stops).
 The calculation goes left-to-right, so (assuming x=9) when it 
-reaches 11.2%, the first column is already playable.
+reaches 11.2%, the first column is already playable. You can
+abort the calculation with right-click.
+---
+With the '+' button you can do a quick calculation (only the
+current (left column) input values), it will be stored as vol1
+value. (left-click: calc.&play, right-cl./calc1: calc. only)
+---
 (known bug: sometimes the progress bar is stuck at 99.x%, but
-it is only a GUI error, the calculation is actually finishes)
+it is only a GUI error, the calculation is actually finished)
 {{{3.shadow cfg}}}
 "sic" tab in the (shadow) wrap config window
 Currently there are two toggle buttons here:
