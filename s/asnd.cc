@@ -48,7 +48,7 @@ int main(int ac, char** av) {
         FP4("%s started, #ch=%d, hwbs=%d, rate=%d", *av, nc, hbsiz, rate);
         int fsiz = 2*nc, asiz = fsiz*nf, errtemp = 0;
         char buf[asiz];
-        report(32+nc);
+        report(16+nc);
         while(1) {
                 int k=0;do{int r=read(0,buf+k,asiz-k); if (r<=0) return report(8+!!r); k+=r;} while(k<asiz);
                 report(1);
@@ -89,14 +89,30 @@ int ASnd::start(int flg, int mxid, int *ppcp) {
 	return err(e, "start", AUE_START), w(-1), AUE_START; // TODO
 }
 
-void ASnd::cfg_pre(int spd, int rsrv, int liar) {
+void ASnd::cfg_pre(int spd, int rsrv, int mode) {
 	int bs  = m_bs  = (int)lround(2048.0 * ipow(0.965936328924846, spd)),
 	    bs2 = m_bs2 = (bs*rsrv+50)/100;
 	clk0.bcfg(sample_rate, bs, bs2, (3*bs)>>1);
-	m_flg &= ~1; m_flg |= liar;
-	if (liar) { m_cur_cpf = &cpf_liar, m_hwbs_trg = bs+bs2; }
-	else {	int n = 4096, l = bs*(500+3*rsrv)/200 + 1;
-		while (n<l) n+=n; m_cur_cpf = &cpf_true; m_hwbs_trg = n; }}
+	m_flg &= ~3; m_flg |= mode;
+	if (mode) m_hwbs_trg = bs+bs2, m_cur_cpf = (mode&2) ? &cpf_pump : &cpf_liar;
+	else 	  m_hwbs_trg = bitfill(1024|bs*(500+3*rsrv)/200) + 1, m_cur_cpf = &cpf_true;
+}
+
+int ASnd::pump_op(int x) {
+	if (x==1) return (m_pump_st&7)==2 ? (++m_pump_st,0) : AUE_P_STATE;
+	int k; switch(x) {
+		case 0: k = AUE_P_CRASH; goto down;
+		case 8: k = 0;		 goto down;
+		case 9: k = AUE_P_ERREX; goto down;
+		case 7: return AUE_P_RECOV;
+		default: break; }
+	if ((unsigned int)(x-17)>15u) return AUE_P_WHAT;
+	if (!m_pump_st&4) return AUE_P_STATE;
+	mx_au16_cfg(&m_cfg, m_n_chan=x-16, CFG_AU_CHCFG.s);
+	
+down:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8;  m_pump_st = 0;
+	if (k) start();  return 0;
+}
 
 int ASnd::start_buf(int tlim) {
 	int wr0=64, lr=m_flg&1; // TODO: config
@@ -113,7 +129,7 @@ int ASnd::start_buf(int tlim) {
 
 int ASnd::start1(int sc_lim) {
 	if (m_hnd) close(); clk0.ev('o');
-	if (!(m_flg&2)) cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_LIAR.i);
+	if (!(m_flg&2)) cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_CMODE.i);
 	if (CFG_AU_KILL_PA.i) gui2.errq_add(pt_kill_pa(CFG_AU_KILL_PA.i));
 
 	int rate = 44100, chan = CFG_AU_CHCFG.i, bsiz = m_hwbs_trg;
@@ -206,7 +222,7 @@ int ASnd::w(int flg) {
 	if (flg&   4) gui2.wupd_i2('r', CFG_AU_RSRV.i);
 	if (flg&   8) gui2.wupd_s('n', CFG_AU_NAME.s);
 	if (flg&  16) gui2.wupd_s('o', CFG_AU_CHCFG.s);
-	if (flg&  32) gui2.wupd_i1('c', CFG_AU_LIAR.i);
+	if (flg&  32) gui2.wupd_c48('c', CFG_AU_CMODE.i);
 	if (flg&  64) gui2.wupd_i2('t', CFG_AU_TRY_N.i);
 	if (flg& 128) gui2.wupd_i2('w', CFG_AU_TRY_MS.i);
 	if (flg& 256) gui2.wupd_i1('0', CFG_AU_KILL_PA.i&1);
@@ -234,7 +250,7 @@ int ASnd::cmd(const char *s) { switch(*s) {
 	case 'W': return w(-1);
 	case 's': cfg_setint(&CFG_AU_SPD,   atoi_h(s+1)); return 0; 
 	case 'r': cfg_setint(&CFG_AU_RSRV,  atoi_h(s+1)); return 0; 
-	case 'c': CFG_AU_LIAR.i = s[1]&1; return w(32);
+	case 'c': CFG_AU_CMODE.i = s[1]&3; return w(32);
 	case 't': cfg_setint(&CFG_AU_TRY_N, atoi_h(s+1)); return 0; 
 	case 'w': cfg_setint(&CFG_AU_TRY_MS,atoi_h(s+1)); return 0;
 	case '0': CFG_AU_KILL_PA.i = 3*(s[1]&1); return w(768);

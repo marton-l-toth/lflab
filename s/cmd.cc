@@ -126,9 +126,12 @@ int CmdBuf::read_f() {
 		r ? (log("read_f(%s): %s", m_iname, strerror(errno)), GCE_FREAD) : GCE_EOF;
 	log("read_f(): %s(%d): %s (%dx)", m_iname?m_iname:"<unnamed>", m_fd,
 		                          r ? strerror(errno) : "EOF", m_try);
-	if (!m_fd) return m_fd=-1, pt_con_op("-4");
-	if (!m_iname || m_try>5) return p_close(&m_fd), r ? GCE_FREAD : GCE_EOF;
-	return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
+	if (m_iname) { switch (*m_iname) { // TODO: callback or defaultcmd
+		case 'c': return m_fd=-1, pt_con_op("-4");
+		case 'p': return snd0.pump_op(-1);
+		case '/': if (m_try<6) return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
+		default: break; }}
+	return p_close(&m_fd), r ? GCE_FREAD : GCE_EOF;
 }
 
 int CmdBuf::vpf(const char * fmt, va_list ap) {
@@ -350,7 +353,7 @@ int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
 		case 'g': pt_calc_xbv(); gui2.xapp_bv();
 			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
 		case 'S': return qstat_op(p->m_c_a0[1]);
-		case 'p': return snd0.pump_rprt(p->m_c_a0+1);
+		case 'p': return snd0.pump_op(p->m_c_a0[1]-48);
 		default: return GCE_UREPORT;
 	}}
 

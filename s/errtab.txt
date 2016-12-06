@@ -65,6 +65,11 @@ AUE_MCFLY    clock is supposed to be monotonous (BUG)
 AUE_LTNOSEE  clock: long time, no see (>1sec)
 AUE_RECOVER  audio: recoverable error (buffer empty?)
 AUE_UNRECOV  audio: unrecoverable error (see console/log)
+AUE_P_STATE  audiopump: unexp. msg. (BUG)
+AUE_P_WHAT   audiopump: unknown msg. (BUG)
+AUE_P_ERREX  audiopump: exited with error (see console/log)
+AUE_P_CRASH  audiopump: unexpected exit
+AUE_P_RECOV  audiopump: recoverable error (buffer empty?)
 S13_________ __________________________________________________________(BUG)__
 PTE_GUICRASH Unexpected GUI exit. Please see help 'reporting bugs'.
 PTE_WRKCRASH Unexpected exit of worker process. See help 'reporting bugs'.
