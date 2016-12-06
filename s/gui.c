@@ -1650,22 +1650,19 @@ static void please_wait(cairo_t * cr2) {
 static unsigned char cpu_bmp[160];
 static cairo_surface_t * cpu_surf;
 static int cpu_austat = 1;
+static int cpu_rgb[1280];
 
 static void dabmp_draw(ww_t * ww, cairo_t * cr2) {
-	static const double fg[2]={.2, 1.0}, bg[2]={.1,.3};
 	static int state = 0;
 	unsigned int * q = (unsigned int*)cpu_bmp;
+
 	if (!state && q[2]!=0x80000100) state=1, CMD("Rg");
-	int rf = !!(q[9]&0xf8000000), gf = !(q[3]&0xf8000000);
-	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE);
-	if (cpu_austat) cairo_set_source_rgb (cr2, bg[rf], bg[gf], *bg); 
-	else cairo_set_source_rgb(cr2, 0.0, 0.0, 0.0);
-	cairo_paint(cr2);
-	da_frame(ww, cr2);
-	if (cpu_austat) cairo_set_source_rgb (cr2, fg[rf], fg[gf], .2);
-	else cairo_set_source_rgb(cr2, 0.5, 0.5, 0.5);
-	cairo_set_antialias(cr2, CAIRO_ANTIALIAS_NONE);
-	cairo_mask_surface(cr2, cpu_surf, 1.0, 1.0);
+	int fg, bg, rf = -!!(q[9]&0xf8000000), gf = -!(q[3]&0xf8000000);
+	if (cpu_austat) fg = (rf&0xcc0000)+(gf&0xcc00)+0x333333, bg = (rf&0x330000)+(gf&0x3300)+0x1a1a1a;
+	else fg=0x999999, bg = 0;
+	int i, j, k, x, xg = fg^bg;
+	for (i=0,k=32; i<38; i++) for (j=0,x=q[i]; j<32; j++,k++,x>>=1) cpu_rgb[k] = bg ^ (xg &- (x&1));
+	cairo_set_source_surface (cr2, cpu_surf, 0.0, 0.0); cairo_paint(cr2); 
 }
 
 static void dabmp_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
@@ -1673,10 +1670,11 @@ static void dabmp_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton 
 
 static void dabmp_skel(struct _ww_t * ww, const char **pp) {
 	unsigned int * q = (unsigned int *) cpu_bmp;
-	int i; for (i=0; i<37; i++) q[i] = ((i-2)&3) ? 0 : 0x80000100;
+	int i; for (i=0; i<32; i++) cpu_rgb[i] = cpu_rgb[32*39+i] = 0xaaaaaa;
+	for (i=0; i<37; i++) q[i] = ((i-2)&3) ? 0 : 0x80000100;
 	q[37] = -1; q[38] = 0;
-	cpu_surf = cairo_image_surface_create_for_data(cpu_bmp, CAIRO_FORMAT_A1, 32, 38, 4);
-	da_skel(ww, 34, 40); }
+	cpu_surf = cairo_image_surface_create_for_data((unsigned char*)cpu_rgb, CAIRO_FORMAT_RGB24, 32, 40, 128);
+	da_skel(ww, 32, 40); }
 
 static void dabmp_cmd(struct _ww_t * ww, const char * arg) { return dabmp_draw(ww, (cairo_t*)ww->arg[0].p); }
 
@@ -4479,7 +4477,7 @@ static void clip_skel (struct _topwin * tw, char * arg) {
 
 static void mwin_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{CN100$20$%%%uuu/1234/67890123/56789}3({!vvol$163vG}3[3{B_kussb+$r}"
-	"(3{B_unplot$%gu}{B_?$$?})({22}3[3{Mw[LR]$|.1}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{VV v??.??}])]";
+	"(3{B_unplot$%gu}{B_?$$?})({__}{22}3[3{Mw[LR]$|.1}{Mm++$|.0}]){Bssave$s}{YWrec$_w}0{VV v??.??}])]";
         tw->arg[0].p = parse_w(tw, &str);
 	memcpy(tw->title, "lf\0", 4);
 }
