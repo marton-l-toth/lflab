@@ -7,7 +7,7 @@ AU_CLKLIM   |i|100        |0   |250  |aclkt |time limit for audio/setclk (only f
 AU_TRY_N    |i|10         |1   |99   |artn  |(re)try audio init x times
 AU_TRY_MS   |i|50         |10  |250  |artt  |millisecs. to wait between audio init retries
 AU_KILL_PA  |i|0          |0   |3    |kpa   |pulseaudio: 0-don't kill 1-sig15 3-sig9
-AU_LIAR     |i|0          |0   |1    |aliar |1:do not trust buffer status reports from soundcard
+AU_CMODE    |i|0          |0   |2    |acmod |audio/clock mode: 0-avail 1-nonblock 2-pump proc.
 SV_EXEC     |i|0          |0   |1    |svexe |1:save files have exec perm and '#!/usr/bin/lflab' as 1.line
 SV_BACKUP   |i|5          |1   |31   |svbk  |# of backups for save file
 ASV_BACKUP  |i|5          |1   |31   |asbk  |# of backups for autosave
