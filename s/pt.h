@@ -1,24 +1,15 @@
 #ifndef __qwe_pt_h__
 #define __qwe_pt_h__
 
-#define PT_IOP   0
-#define PT_GUI   1
-#define PT_DOT   2
-#define PT_WRK   3
-#define PT_ACV   4
-#define PT_COUNT 5
-#define PT_STR "ioprc\0  gui\0    dot\0    worker \0auconv\0 "
-
 #define QENV(c)  pt_qenv_v[(int)c&31]
 #define QENVL(c) pt_qenv_l[(int)c&31]
 
 #define ACV_WIN(J) (0xf00007 + 16*(J&65535))
 
-typedef int (*pt_wfun)(int,int,int);
-extern volatile int pt_chld_flg;
+extern volatile int pt_sig_flg;
 extern int pt_nullfd, 	      pt_qenv_l[32];
 extern const char *pt_hello, *pt_qenv_v[32];
-extern int pt_xapp_bv[];
+extern int pt_errtemp, pt_xapp_bv[];
 
 int cfg_write(int lg);
 struct cfg_ent;
@@ -27,9 +18,8 @@ void cfg_setint(cfg_ent *p, int k);
 int cfg_setstr(cfg_ent *p, const char *s);
 
 const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wrk);
-void pt_reg(int ix, int pid, pt_wfun fun);
-void pt_wait();
-void pt_chld_act();
+void pt_sig_act();
+int pt_reg_prc(int pid, const char** av, int rprt);
 int pt_iw_cmd_sn(int trg, const char *s, int n);
 inline int pt_iocmd_sn(const char *s, int n) { return pt_iw_cmd_sn(0, s, n); }
 inline int pt_wrk_cmd (const char *s, int n) { return pt_iw_cmd_sn(1, s, n); }
@@ -41,6 +31,8 @@ int pt_show_lic();
 void pt_calc_xbv();
 double * pt_samp_shm(int bits);
 int pt_wrk_start(int re);
+int pt_io_dead(), pt_wrk_dead(), pt_acv_dead(const char *);
+void errtemp_cond(const char* s);
 void pt_debug();
 
 #endif // __qwe_pt_h__

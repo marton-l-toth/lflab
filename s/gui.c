@@ -280,7 +280,7 @@ static int get_dec(const char ** pp, int delim) {
 static void bye(int op) {
 	LOG("bye(0x%x)", op );
 	write(2, "bye\n&CMD0\n", 10);
-	if (op<32) exit(op);
+	if (op<32) write(1,"~R1q\n", 5), exit(op);
 	CMD("q%c", 32+(op&31));
 	while(1) sleep(60); // patiently wait to be killed
 }

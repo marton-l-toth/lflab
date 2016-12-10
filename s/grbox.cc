@@ -20,7 +20,7 @@ class GRBX_Node {
 class Dot {
         public: 
                 static Dot * sg();
-		static int dot_dead(int pid, int stat, int td);
+		static int dot_dead();
                 Dot() : m_pid(0), m_pipe(-1), m_n(0), m_nids(0) {}
                 int start();
                 bool active() const { return !!m_pid; }
@@ -114,19 +114,18 @@ Dot * Dot::sg() {
 	if (!m0_sg) (m0_sg = new Dot()) -> start();
 	return m0_sg; }
 
-int Dot::dot_dead(int pid, int stat, int td) {
+int Dot::dot_dead() {
+	errtemp_cond("dot_dead");
 	if (!m0_sg) log("BUG: unexp. dot_dead() (!sg) ");
-	else if (m0_sg->m_pid!=pid) log("BUG: unexp. dot_dead() (%d!=%d)", m0_sg->m_pid, pid);
 	else close(m0_sg->m_pipe), m0_sg->m_pid = 0, delete(m0_sg), m0_sg = 0;
 	return 0;
 }
 
 int Dot::start() {
-        if (m_pid) { log("dot already started: pid %d", m_pid); return -3; }
+        if (m_pid>0) { log("dot already started: pid %d", m_pid); return -3; }
 	const char * path = "dot"; // TODO: config(?)
-	m_pid = launch(path, "!>Tt", &m_pipe, "-Tplain-ext", (char*)0);
-	pt_reg(PT_DOT, m_pid, &dot_dead);
-	return (m_pid<0) ? (log("failed to start %s (ret: %d, ue: %s)\n", path, m_pid, strerror(errno)), -1) : 0;
+	m_pid = launch(path, "!8>Tt", &m_pipe, "-Tplain-ext", (char*)0);
+	return (m_pid<0) ? (log("failed to start %s (ret: %d, ue: %s)\n", path,m_pid,strerror(errno)), -1) : 0;
 }
 
 void Dot::flush() {
@@ -741,3 +740,4 @@ BXCMD_DEF(GraphBoxGen) { {8192+'\\',0}, {'<',c_ni}, {'>',c_no}, {'@',c_nfb}, {'+
 
 void graph_init() { GraphBoxGen::cmd_init(); }
 int setbox_graph(ABoxNode * nd, BoxGen * _) { nd->m_box = new GraphBoxGen(nd); return 1; }
+int dot_dead() { return Dot::dot_dead(); }

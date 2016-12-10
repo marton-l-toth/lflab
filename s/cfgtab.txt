@@ -38,6 +38,8 @@ PLOT_XSIZ   |i|4	  |0   |6    |plotx |max. FFT-plot samples - 2^x * (1Msamp=23.7
 CLK_TYPE    |i|1	  |0   |1    |clkty |clock type: 0:monotonic 1:monot.raw (eff. after restart)
 CLK_TLBITS  |i|3	  |0   |10   |tlsiz |tlog buffer size 2^x Mbyte (2^x*131k events)
 STATBUF_SIZ |i|6	  |0   |10   |sbsiz |stat buffer max. size 2^x seconds (for histograms)
+ERRTEMP_INC |i|16	  |0   |999  |etinc |errtemp inc: #main_loop_iter/#error for cooldown
+ERRTEMP_LIM |i|100 	  |0   |999  |etlim |errtemp lim: max #error (w/o cooldown) until exit
 _1_NOEX     |i|0          |0   |1    |n     |skip default example tree (.!e)
 _H1         |i|0          |0   |1    |h     |show help
 _H2         |i|0          |0   |1    |?     |show help

@@ -20,24 +20,25 @@
 #define FPU_INI memcpy(pt_he_buf,"sse2:n",6);
 #endif
 
+int cmd_report2(int c, const char *s); // cmd.cc
 static int osb_hash(const char *s) { // od|sed|bc
 	int r=0; while (*s) r *= (*s>99)?1000:100, r += *s, s++;   return r&0x3fffffff; }
 #define QWE_DEFINE_CFGTAB
 #include "cfgtab.inc"
 
 static char pt_he_buf[40];
-volatile int pt_chld_flg = 0;
-int pt_nullfd = -1, pt_qenv_l[32], pt_xapp_bv[N_XAPP];
+volatile int pt_sig_flg = 0;
+int pt_nullfd = -1, pt_qenv_l[32], pt_errtemp = 0, pt_xapp_bv[N_XAPP];
 const char *pt_hello = pt_he_buf, *pt_qenv_v[32];
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static int ee_v[64], ee_n=0, ee_flg=0, ee_errno = 0;
 
-typedef struct { int pid, t, st; pt_wfun f; } pt_tab_t;
-
+typedef struct { int pid; char s[12]; } pt_ptent_t;
 #define pt_cp_m2i  (pt_cp_m2iw[0])
 #define pt_wrk_m2w (pt_cp_m2iw[1])
 static int pt_cp_m2iw[2] = {-1, -1}, pt_constat = 0, pt_pid;
-static volatile pt_tab_t pt_tab[PT_COUNT];
+static pt_ptent_t pt_ptab[32];
+static unsigned int pt_ptab_bv = 0u;
 static int pt_acv_cur = 0, pt_acv_cw = 0, *pt_con_pfd = 0, *pt_io_pfd = 0;
 static uid_t pt_uid, pt_gid;
 static int ppath_n = 0, ppath_maxlen = 0, *ppath_len;
@@ -110,7 +111,7 @@ static void qe_ini() {
 	static const char * self = "/proc/self/exe";
 	static const char * rel[] = { "uh/.lflab", 
 		">u/lf.log", "ju/lf.ini", "=u/lf.tlog", "au/__asv.lf", "xu/__asv--x.lf", "zw/killer-file",
-		"bp/lf.bb", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
+		"bp/lf.bb", "qp/lf.pump", "ep/ex.lf", "cp/COPYING", "vp/lf.lic", "gp/lf.gui", "mp/lf.bin",
 		"?p/help.txt", "kp/lf.con", "rp/lf.gtk.rc.def", "@p/lf.ed" };
 	static const char * sete[] = { "kLF_CON", "?LF_HLP", "zLF_KILLER", "cLF_LIC", ">LF_LOG", "=LF_TLOG",
 		"wLF_TMPDIR", "tLF_TMPROOT", "uLF_USERDIR", "rLF_GTKRC", "mLF_BIN", "pLF_DIR", "@LF_ED"};
@@ -248,10 +249,13 @@ static const char ** cfg1(int ac, char**av) {
 	return rv;
 }
 
-static void log_pidstat(const char *s, int pid, int stat) {
-        if (WIFEXITED(stat)) log("%s %d exited (%d)", s, pid, WEXITSTATUS(stat));
-        else if (WIFSIGNALED(stat)) log("%s %d killed (%d)", s, pid, WTERMSIG(stat));
-        else log("something happened to %s %d (0x%x)", s, pid, stat); }
+static int log_pidstat(const char *s, int pid, int stat) {
+	int r=0, rf=0; const char * sev = "stopped/resumed/etc";
+        if 	(WIFEXITED(  stat)) sev = "exited", ++rf, r = WEXITSTATUS(stat);
+        else if (WIFSIGNALED(stat)) sev = "killed", ++rf, r = WTERMSIG(   stat);
+	if (s) log("%s %d %s (%d)", s, pid, sev, r);
+	return rf ? *sev + 256*hexc1((r>>4)&15) + 65536*hexc1(r&15) : 0;
+}
 
 static void pt_dlog(const char * s) {
         int fd = open(QENV('>'), O_WRONLY|O_APPEND);
@@ -264,44 +268,39 @@ static void pt_dlog(const char * s) {
         if (s) write(2, s, strlen(s));
 }
 
-static void pt_sighup(int _) { pt_chld_flg |= 0x40000000; signal(SIGHUP, &pt_sighup); }
-static void pt_sigint(int _) { pt_chld_flg |= 0x20000000; signal(SIGINT, &pt_sigint); }
+static void pt_sighup (int _) { pt_sig_flg |= 4; signal(SIGHUP,  &pt_sighup ); }
+static void pt_sigint (int _) { pt_sig_flg |= 2; signal(SIGINT,  &pt_sigint ); }
+static void pt_sigchld(int _) { pt_sig_flg |= 1; signal(SIGCHLD, &pt_sigchld); }
 
-static void pt_sigchld(int _) { while(1) {
-        int i, st, pid = waitpid(-1, &st, WNOHANG); if (pid<=0) return (void) signal(SIGCHLD, &pt_sigchld);
-	for (i=0; i<PT_COUNT; i++) if (pt_tab[i].pid==pid) goto found;
-	log_pidstat("unreg. child", pid, st); continue;
-found:  if (!i) pt_dlog("\nERROR: ioprc exited, some logs will be lost...\n");
-	pt_tab[i].st = st;
-	log_pidstat(PT_STR+8*i, pid, st); pt_chld_flg |= (1<<i); signal(SIGCHLD, &pt_sigchld);
-}}
+void pt_sig_act() {
+	int pid, r, k, st, sf = __atomic_exchange_n(&pt_sig_flg, 0, __ATOMIC_RELAXED);
+	if (sf&6) log("exiting on SIG%s", "INT\0HUP"+(sf&4)), bye(sf&6);
+	while( (pid=waitpid(-1, &st, WNOHANG)) > 0 ) {
+		BVFOR_JMC(pt_ptab_bv) { if (pt_ptab[j].pid==pid) goto found; }
+		log_pidstat("unreg. child", pid, st); continue;
+	  found:if (!(r = log_pidstat(pt_ptab[j].s, pid, st))) continue; else pt_ptab_bv &= ~(1u<<j);
+		if ((k=pt_ptab[j].s[11])) cmd_report2(k, (const char*)&r);
+	}
+	signal(SIGCHLD, &pt_sigchld); }
 
-static int io_start(int);
-static int iop_dead(int pid, int stat, int td) {
-	if (td<2) log("FATAL: ioprc exited again in < 2 seconds"), bye(1);
-	gui_errq_add(PTE_IOCRASH); 
-	int pid2 = io_start(1); if (pid2<0) log("FATAL: ioprc restart failed"), bye(1);
-	if (pt_constat>0) kill(pt_constat, 9); pt_constat = 0;
-	return pid2;
-}
-
-static int io_start(int re) {
+static int pt_io_start(int re) {
 	char a2[16], *aa = a2; *(int*)aa = killer_fd>0 ? qh4(killer_fd) : 33; a2[4] = 0;
 	*(int*)(a2+8) = qh4(getpid()); a2[12] = 0;   p_close(pt_io_pfd);
 	int pf1,pf3,pid = launch(QENV('b'), "><+>", &pf1,pt_io_pfd,QENV('>'),&pf3, "lf.io",a2,a2+8, (char*)0);
 	if ((pid|pf1|*pt_io_pfd|pf3)<0) return -1;
-	if (!re) pt_reg(PT_IOP, pid, &iop_dead);
 	fflush(stdout); fflush(stderr);
 	close(1), close(2), dup2(pf3, 1), dup2(pf3, 2), close(pf3);
 	set_fd(&pt_cp_m2i, pf1, 0); 
 	return pid;
 }
 
-static int acv_dead(int pid, int stat, int td) {
-	int e, c = 0;
-	if (!WIFEXITED(stat)) e = WIFSIGNALED(stat) ? PTE_ACVSIG : PTE_ACVHMM;
-	else (stat=WEXITSTATUS(stat)) ? (stat==90 ? (e=PTE_ACVZERO,c=1) : (e=PTE_ACVERR)) : (e=0,c=1);
-	if (e) gui_errq_add(e); if (c && pt_acv_cw) gui_closewin(ACV_WIN(pt_acv_cur)); return 0;
+int pt_acv_dead(const char*s) {
+	int e, k, c;
+	if      (*s=='k') 	 e=PTE_ACVSIG,	c=0; 
+	else if (!(k=hex2(s+1))) e=0,		c=1;
+	else if (k==90) 	 e=PTE_ACVZERO, c=1;
+	else			 e=PTE_ACVERR,	c=0;
+	if (e) gui_errq_add(e);    if (c&&pt_acv_cw) gui_closewin(ACV_WIN(pt_acv_cur));    return 0;
 }
 
 static int con_started(const char *s) {
@@ -316,7 +315,6 @@ static int con_started(const char *s) {
 int pt_iw_cmd_sn(int j, const char *s, int n) { int fd = pt_cp_m2iw[j&1]; if (fd<0) return EEE_NOWRK;
 				                int r  = write(fd,s,n); return (r==n) ? 0 : EEE_ERRNO+(r>=0); }
 int pt_iocmd(char *s) {
-	if ((pt_chld_flg & (1<<PT_IOP))) return EEE_NOPRC;
 	int r, l = strlen(s), c = s[l]; s[l] = 10;
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
@@ -330,7 +328,7 @@ int pt_con_op(const char *s) {
 			  return pt_constat = -1, pt_iocmd_sn("c\n", 2);
 		case '2': case '3': if (pt_constat<1) return EEE_STATE; k = 48 - *s; goto kill;
 		case '4': if (pt_constat>0) kill(pt_constat, 9), k = pt_constat = 0;
-			  else if ((k=-pt_constat-2)&~1) return EEE_STATE;
+			  else if ((k=-pt_constat-2)&~1) log("con: -4 in state %d", pt_constat), pt_constat=0;
 			  else pt_constat = -k;
 			  if (dup2(pt_nullfd, 0)<0) gui_errq_add(EEE_ERRNO, "con/-4");
 			  return *pt_con_pfd = -1, pt_iocmd_sn("Z\nc\n", 2+2*k);
@@ -339,19 +337,15 @@ int pt_con_op(const char *s) {
 kill:	return kill(pt_constat, 9)<0 ? EEE_ERRNO : (pt_constat = k, 0);
 }
 
-void pt_reg(int ix, int pid, pt_wfun fun) {
-	if ((unsigned int)ix >= (unsigned int)PT_COUNT) return log("BUG: pt_reg: ix=%d", ix);
-        pt_tab[ix].pid = pid; pt_tab[ix].f = fun;
+int pt_reg_prc(int pid, const char** av, int rprt) {
+	int i = 0; BVFOR_JM(~pt_ptab_bv) { i=j; goto found; }
+	log("ERROR: process table full"); return pid;
+found:  const char * s = av[2*(!strcmp(*av,CFG_XTERM.s) && !memcmp(av[1],"-e",3))];
+	int lmax = 12-!!rprt, l = strlen(s)+1; if (l>lmax) s+=l-lmax, l=lmax;
+	memcpy(pt_ptab[i].s, s, l); pt_ptab[i].s[11] = rprt; pt_ptab_bv |= (1u<<i);
+	if (debug_flags&DFLG_PT) log("reg. prc.: %s %d", pt_ptab[i].s, pid);
+	return pt_ptab[i].pid = pid;
 }
-
-void pt_chld_act() {
-	int k = pt_chld_flg >> 28; if (k) log("exiting on SIG%s", "INT\0HUP"+(k&4)), bye(k);
-	BVFOR_JM(pt_chld_flg) {
-		volatile pt_tab_t * q = pt_tab+j;
-		int t = time(0), pid = (*q->f)(q->pid, q->st, t - q->t);
-		q->t = (q->pid = pid) > 0 ? t : 0;
-	} 
-	pt_chld_flg = 0; }
 
 int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 	int sdl, tdl, pid, op = opw & 255, nwf = opw & 256;
@@ -369,12 +363,12 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 	trg = au_file_name(tdir, tdl, id, a1, a2, "wav\0flac" + (op&4));
 	pt_acv_cw = !nwf && !(~op&3);
 	switch (op&3) {
-		case 0: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg,         (char*)0); break;
-		case 1: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg, a1,     (char*)0); break;
-		case 2: pid = launch(QENV('b'), "(kk", "lf.acv",       src, trg, a1, a2, (char*)0); break;
-		case 3: pid = launch(QENV('b'), "(kk", "lf.acv", "-r", src, trg,         (char*)0); break;
+		case 0: pid = launch(QENV('b'), "9(kk", "lf.acv",       src, trg,         (char*)0); break;
+		case 1: pid = launch(QENV('b'), "9(kk", "lf.acv",       src, trg, a1,     (char*)0); break;
+		case 2: pid = launch(QENV('b'), "9(kk", "lf.acv",       src, trg, a1, a2, (char*)0); break;
+		case 3: pid = launch(QENV('b'), "9(kk", "lf.acv", "-r", src, trg,         (char*)0); break;
 	}
-ret:	return (pid<0) ? EEE_ERRNO : (pt_reg(PT_ACV, pid, &acv_dead), pt_acv_cur = id, 0);
+ret:	return (pid<0) ? EEE_ERRNO : (pt_acv_cur=id, 0);
 }
 
 int pt_show_lic() { return launch(CFG_XTERM.s, "!())", "-e", QENV('v'), (char*)0); }
@@ -389,12 +383,12 @@ void pt_calc_xbv() {
 
 static void pt_samp_drop() { if (pt_samp_buf) munmap(pt_samp_buf, 16<<pt_samp_bits), unlink(tpipe_name('+')),
 					      pt_samp_buf = 0, pt_samp_bits = 0, pt_wrk_cmd("gx\n", 3); }
-static int wrk_dead(int pid, int stat, int td) {
-	if (td<2) log("FATAL: wrk exited again in < 2 seconds"), bye(1);
-	gui_errq_add(PTE_WRKCRASH); 
-	int pid2 = pt_wrk_start(1); if (pid2<0) log("FATAL: wrk restart failed"), bye(1);
-	return pid2;
-}
+
+#define DEADEND(S) gui_errq_add(PTE_##S##CRASH); errtemp_cond(#S "_dead"); int pid; \
+		   if ((pid = pt_##S##_start(1))<0) log("FATAL: %s restart failed", #S), bye(1); return pid
+int pt_wrk_dead() { DEADEND(wrk); }
+int pt_io_dead()  { pt_dlog("\nERROR: ioprc exited, some logs will be lost...\n");
+		    if (pt_constat>0) kill(pt_constat, 9); pt_constat = 0;  DEADEND(io); }
 
 double * pt_samp_shm(int bits) { log("pt_samp_shm: bits=%d", bits);
 	if (bits<=pt_samp_bits) return bits ? pt_samp_buf : (pt_samp_drop(), (double*)0); else pt_samp_drop();
@@ -405,7 +399,7 @@ int pt_wrk_start(int re) {
 	p_close(pt_wrk_pfd);
 	int pf1, pid = launch(QENV('b'), "><p", &pf1, pt_wrk_pfd, "lf.wrk", (char*)0);
 	if ((pid|pf1)<0) return -1;
-	if (re) pt_samp_drop(); else pt_reg(PT_WRK, pid, &wrk_dead);
+	if (re) pt_samp_drop(); 
 	set_fd(&pt_wrk_m2w, pf1, 0); pt_wrk_pid = pid;
 	return pid;
 }
@@ -413,6 +407,11 @@ int pt_wrk_start(int re) {
 int pt_wrk_stop() { return (pt_wrk_pid<=0) ? EEE_STATE :
 	(kill(pt_wrk_pid,9)<0) ? EEE_ERRNO : (pt_wrk_pid = 0); }
 	
+void errtemp_cond(const char *s) {
+	if ((pt_errtemp+=CFG_ERRTEMP_INC.i) > CFG_ERRTEMP_INC.i*CFG_ERRTEMP_LIM.i) {
+		log ("%s: giving up", s); if (debug_flags&DFLG_AOET) abort(); else  bye(1); }
+	else if (debug_flags&DFLG_PT) { log("%s: errtemp=%d", s, pt_errtemp); }}
+
 
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static void ee_msg() {
@@ -444,6 +443,6 @@ const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wr
 	signal(SIGCHLD, &pt_sigchld);
 	for (const char* s = FIFO_LIST; *s; s++) if (mkfifo(tpipe_name(*s), 0600)<0)
 		log("FATAL: failed mkfifo '%c'(%s): %s", *s, tpipe_name(*s), strerror(errno)), exit(1);
-	if (io_start(0) < 0) log("FATAL: io_start failed"), exit(1); 
+	if (pt_io_start(0) < 0) log("FATAL: io_start failed"), exit(1); 
 	if (ee_flg) ee_msg();    return ret;
 }

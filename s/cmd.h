@@ -11,6 +11,7 @@ class CmdTok {
 	protected: char *m_s0, *m_p;
 };
 
+int cmd_report2(int c, const char *s);
 class CmdBuf : public AOBuf {
 	public:
 		friend class CmdTab;
@@ -24,6 +25,7 @@ class CmdBuf : public AOBuf {
 		virtual int vpf(const char * fmt, va_list ap);
 		virtual int sn(const char * s, int n);
 		void init(int fd, int nof, int px = 0, const char * inm = 0, int bs = 4096, int rs = 1024);
+		void init_s(const char * s); // fd/p nof23 pfx eofcmd(l+48,sz) name
 		void cfg(int nof, int rs = 0) { if (nof>=0) m_nof0 = nof; if (rs) m_rsiz = rs; }
 		bool is_gui() { return m_prefix=='~'; }
 		int read_f();
@@ -51,6 +53,7 @@ class CmdBuf : public AOBuf {
 	protected:
 		static int cf_i2p(CmdBuf *p, char *s, int l),
 			   cf_p2i(CmdBuf *p, char *s, int l);
+		void init2(int bs, int rs);
 		int rpl_cp(char *to, const char *s, conv_fun f);
 		char * untok() { return m_c_tok.un(); }
 		int chunk(int len);
@@ -64,12 +67,13 @@ class CmdBuf : public AOBuf {
 		int m_c_nof;
 		int m_nd_var[8];
 
-		char * m_iname;
+		const char * m_iname;
 		int m_try, m_fd, m_nof0, m_prefix,
 		    m_bsiz, m_rsiz, m_sv_M, m_sv_m,
 		    m_rpos, m_cpos, m_lineno, m_errcnt;
 		AReader * m_cont;
-
+		
+		const char * m_eof_cmd; // len1+sz
 		char * m_buf;
 };
 

@@ -20,7 +20,7 @@
 #define DFLG_GUICMD 4
 #define DFLG_VOLTAB 8
 #define DFLG_AUDIO 16
-#define DFLG_PLOT2 32
+#define DFLG_AOET  32
 #define DFLG_EXPR 64
 #define DFLG_TRK  128
 #define DFLG_GUI2 256
@@ -35,7 +35,7 @@
 #define DFLG_FE     0x20000
 #define DFLG_MIDIEV 0x40000
 #define DFLGZ       0x7ffff
-#define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-plot2 40-expr 80-trk "\
+#define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-sel_loop 40-expr 80-trk "\
 		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
 		  "4000-wrap 8000-trkcalc 10000:pt 20000:fe 40000:midiev"
 #define DEBUG_UTXT(J) (debug_utxt_buf + 64*(J))

@@ -9,7 +9,7 @@
 #include "midi.h"
 #include "pt.h"
 
-int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1;
+int glob_flg = GLF_EMPTY | GLF_INI0, debug_flags = 0, sample_rate = 44100, killer_fd = -1, err_temp = 0;
 double sample_length = 1.0/44100.0, natural_bpm = 65.625, natural_bpm_r = 1.0/65.625;
 char zeroblkC[32768], junkbufC[32768], save_file_name[1024], debug_utxt_buf[1024];
 GuiStub gui2;	JobQ jobq;   BufClock clk0;	ASnd snd0;
@@ -17,8 +17,8 @@ GuiStub gui2;	JobQ jobq;   BufClock clk0;	ASnd snd0;
 #define N_SLCMD 6
 #define PFD(J) sl_cmd[J].pfd()
 static CmdBuf sl_cmd[N_SLCMD];
-static int cmd_sc[] = {-1,9,0,0x6f69, -1,9,126,0x697567, -1,1,0,0x6e6f63, -'A',1,0,0, -1,9,0,0x6b7277,
-		       -1,9,0,0x706d70 };
+static const char * cmd_dsc[] = {"/9 2R0\0io", "/9~2R1\0gui", "/1 4_c-4\0con", "A1 ", "/9 2R4\0wrk", 
+				 "/9 3Rp8\0pump"};
 static struct timespec asv_ts;
 
 void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s", v_major, v_minor, pt_hello,
@@ -40,7 +40,7 @@ static void ini(const char ** ppf) {
 	extern void INI_LIST; INI_LIST;
 	CmdBuf::st_init();  jobq.init();  glob_flg ^= (GLF_INI0|GLF_INI1); snd0.set_vol(92); // :)
 	if (CFG_INI_ORDER.i) gui2.start(PFD(1)), rf(ppf); else rf(ppf), gui2.start(PFD(1));
-	for (int i=0,*q=cmd_sc; i<N_SLCMD; i++,q+=4) sl_cmd[i].init(q[0], q[1]<<23, q[2], (char*)(q+3));
+	for (int i=0; i<N_SLCMD; i++) sl_cmd[i].init_s(cmd_dsc[i]);
 	ADirNode *btin = static_cast<ADirNode*>(ANode::lookup_n_q(1)),
 		 *hlp  = static_cast<ADirNode*>(ANode::lookup_n_q(2));
 	gui2.root_expand(); gui2.tree_expand(1, btin); gui2.tree_expand(1, hlp);
@@ -57,11 +57,12 @@ static void sel_loop() {
 		int nfd = 0; FD_ZERO(&rset); FOR_SLC { FD_SET(k, &rset); if (k>=nfd) nfd = k+1; }
 		BVFOR_JM(midi_bv) { int k=midi_fd[j];  FD_SET(k, &rset); if (k>=nfd) nfd = k+1; }
 		tv.tv_sec=0; tv.tv_usec = clk0.sel(nj);
-		int r = select(nfd, &rset, 0, 0, &tv), cf = pt_chld_flg; 
-		if (cf) pt_chld_act(), cf &= 3;
-		if (r>0){ FOR_SLC FD_ISSET(k,&rset) && !((1<<i)&cf) && (clk0.ev2('c',i), sl_cmd[i].read_f());
-			  BVFOR_JM(midi_bv) if (FD_ISSET(midi_fd[j], &rset)) clk0.ev2('M',j), midi_input(j); }
-		else if (r<0) { perror("select"); }
+		int r = select(nfd, &rset, 0, 0, &tv);
+		if (pt_sig_flg) pt_sig_act();
+		if (r<0) { perror("select"); errtemp_cond("sel_loop"); }
+		else if (pt_errtemp -= !!pt_errtemp, r>0) {
+		          FOR_SLC   	    FD_ISSET(k,&rset)	      && (clk0.ev2('c',i), sl_cmd[i].read_f());
+			  BVFOR_JM(midi_bv) FD_ISSET(midi_fd[j],&rset)&& (clk0.ev2('M',j), midi_input(j), 1); }
 		if (gui2.pending()) clk0.ev('G'), *clk0.pa() = gui2.flush_all();
 		if ((nj=jobq.nj())&&clk0.j0()){ while (clk0.j1(jobq.run())); jobq.upd_gui(0),nj=jobq.purge(); }
 		snd0.c_play();

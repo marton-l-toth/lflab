@@ -14,6 +14,7 @@
 #include <cstdarg>
 #include <errno.h>
 
+#include "pt.h"
 #define QWE_UTILC_DEF
 #include "uc0.h"
 #include "uc1.h"
@@ -22,7 +23,6 @@
 #include "errtab.inc"
 #include "cfgtab.inc"
 #include "glob.h"
-#include "pt.h"
 //#include "lwarr.h"
 
 const double smalldiv128[130] = {0.0,0.0,1.0,0.5,0.3333333333333333,0.25,0.2,0.1666666666666667,

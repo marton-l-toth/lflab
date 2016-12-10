@@ -5,13 +5,13 @@
 
 #define D_GUIFUN0(GF,CL,CF) inline void GF(CL *obj) { m_bufp += obj->CF(m_bufp); }
 #define D_GUIFUN1(GF,CL,CF) inline void GF(CL *obj, int x) { m_bufp += obj->CF(m_bufp,x); }
-int mx_c_dump_keys(char*, int), wrap_dump_keytab(char*, unsigned int *, short**);
+int mx_c_dump_keys(char*, int), wrap_dump_keytab(char*, unsigned int *, short**), gui_dead(int);
 struct cfg_ent;
 
 class GuiStub {
 	public:
 		typedef int (*fun_t) (void*, char*, int);
-		static int gui_dead(int pid, int stat, int td);
+		static int gui_dead(int err);
 		GuiStub() : m_pfd(0), m_pid(0), m_inpipe(-1), m_lwi(-1), 
 			    m_errq_n(0), m_bufp(0), m_gnaq_n(0), m_gnaq_t(-9999ll) {}
 		int start(int *pfd = 0);

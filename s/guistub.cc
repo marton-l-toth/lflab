@@ -16,6 +16,7 @@ void gui_errq_add (int x, 	 const char *s) { gui2.errq_add (x,    s); }
 void gui_errq_add2(int x, int y, const char *s) { gui2.errq_add2(x, y, s); }
 void gui_midi(int flg) { gui2.midi(flg); }
 void gui_tlog(int i0, int n) { gui2.c2(9, 'c'); gui2.hex8(i0); gui2.hex8(n); }
+int  gui_dead(int ef) { return gui2.gui_dead(ef); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
 	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
@@ -42,11 +43,8 @@ void GuiStub::errq_cfl() {
 	memcpy(m_bufp, "\tC47$E>?", 8), m_bufp+=7;
 	for (int i=0; i<m_errq_n; i++) hex8(m_errq_v[i]);   m_errq_n = 0; }
 
-int GuiStub::gui_dead(int pid, int stat, int td) {
-	int err = !WIFEXITED(stat) || WEXITSTATUS(stat), tlim = 1+err;
-	if (td<tlim) log("gui exited again in < %d sec., bye", td), bye(1);
-	if (gui2.m_pid!=pid) return log("BUG: unexp. gui_dead() (%d!=%d)", gui2.m_pid, pid), 0;
-	ANode::wi_clear();
+int GuiStub::gui_dead(int err) {
+	errtemp_cond("gui/exit"); ANode::wi_clear();
 	gui2.m_pid = 0; gui2.start(); gui2.root_expand();
 	if (err) gui2.errq_add(PTE_GUICRASH);
 	return gui2.m_pid;
@@ -59,9 +57,8 @@ int GuiStub::start(int * pfd) {
 	cfg_export(&CFG_GUI_SLFOC); cfg_export(&CFG_GUI_QCPU);
 	if ((m_pid = launch(QENV('g'), "!><u", &pfi, m_pfd, (char*)0)) < 0)
 		log("FATAL: %s\n", QENV('g')), bye(1);
-	pt_reg(PT_GUI, m_pid, &gui_dead);
 	m_gf0 = glob_flg;
-	set_fd(&m_inpipe, pfi, 0);
+	set_fd(&m_inpipe, pfi, 0); if (debug_flags&DFLG_PT) log("gui_start:  in:%d out:%d", m_inpipe, *m_pfd);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
 	clk0.tcond(&m_errq_t0);
 	savename(); vol(); xapp_bv(); flush();
@@ -86,12 +83,7 @@ int GuiStub::flush() {
 		if (r<=0) { log("ERROR: gui2/flush: %s", r ? strerror(errno) : "0 bytes written!"); break; } 
 		else if (r>l) { log("ERROR: gui2/flush: %d/%d written!", r, l); break; } 
 	} while ((i += r, l -= r));
-	clear();
-	if (l) {
-		log("ERROR: GUI does not seem to work, type 's<filename>' to save, 'q' to quit (with autosave)");
-		pt_con_op("-1"); return -1;
-	} 
-	return l0;
+	clear(); return l ? (errtemp_cond("write to GUI"), -1) : 0;
 }
 
 void GuiStub::hexs(unsigned const char * s, int k) {

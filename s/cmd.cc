@@ -64,7 +64,8 @@ class CmdTab {
 		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0 - 48;
 					       return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
 		static int c_midi(CmdBuf *p) { return midi_cmd(p->m_c_a0); }
-		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav, c_report,
+		static int c_report(CmdBuf *p) { return cmd_report2(*p->m_c_a0, p->m_c_a0+1); }
+		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav,
 			      c_efw, c_wfw, c_xfw, c_win, c_pfx, c_cont, c_live, c_stat, c_closewin, c_rpl;
 };
 
@@ -86,14 +87,21 @@ char * CmdTok::un() {
 
 void CmdBuf::st_init() { CmdTab::init(); }
 
+void CmdBuf::init2(int bs, int rs) {
+	m_rsiz = rs;   m_buf = (char*)malloc(m_bsiz = bs);   m_lineno = m_rpos = m_cpos = m_try = 0;
+	memset(m_nd_var, 0, 8*sizeof(int));   delete(m_cont); m_cont = 0; }
+
 void CmdBuf::init(int fd, int nof, int px, const char * inm, int bs, int rs) {
 	if (fd>=0) m_fd = fd; else if (fd<-31) m_fd = open(inm = tpipe_name(-fd), O_RDWR|O_APPEND);
-	m_nof0 = nof; m_prefix = px; m_rsiz = rs; m_buf = (char*)malloc(m_bsiz = bs); 
-	m_lineno = m_rpos = m_cpos = m_try = 0;
-	memset(m_nd_var, 0, 8*sizeof(int));
-	m_iname = inm ? strdup(inm) : 0;
-	delete(m_cont); m_cont = 0;
-}
+	m_eof_cmd = 0; m_nof0 = nof; m_prefix = px; m_iname = inm ? strdup(inm) : 0; return init2(bs, rs); }
+
+void CmdBuf::init_s(const char *s) {
+	m_nof0 = (s[1]-48)<<23; m_prefix = s[2] &- (s[2]!=32);
+	m_eof_cmd = s+3; init2(4096, 1024);
+	if (*s<58) { int fd = *s-48; m_iname = s+s[3]-43; if (fd>=0) m_fd = fd; }
+	else if ( (m_fd = open(m_iname=strdup(tpipe_name(*s)), O_RDWR|O_APPEND)) < 0 ) {
+		log("cmd/fifo(%s): %s", m_iname, strerror(errno));
+	}}
 
 int CmdBuf::read_batch(const char * name, int nof1) {
 	Clock clk; clk.reset();
@@ -120,18 +128,16 @@ int CmdBuf::bprep(int siz) {
 }
 
 int CmdBuf::read_f() {
-        int r, len = bprep(m_rsiz);   if (len<1) return GCE_FULLBUF;
+        int r, len = bprep(m_rsiz);   if (len<1) return errtemp_cond("cmdbuf/full"), GCE_FULLBUF;
         if ((r = read(m_fd, m_buf+m_rpos, len))>0) return m_try=0, chunk(r); else ++m_try;
 	if (m_nof0&NOF_EXPEOF) return p_close(&m_fd), 
 		r ? (log("read_f(%s): %s", m_iname, strerror(errno)), GCE_FREAD) : GCE_EOF;
-	log("read_f(): %s(%d): %s (%dx)", m_iname?m_iname:"<unnamed>", m_fd,
-		                          r ? strerror(errno) : "EOF", m_try);
-	if (m_iname) { switch (*m_iname) { // TODO: callback or defaultcmd
-		case 'c': return m_fd=-1, pt_con_op("-4");
-		case 'p': return snd0.pump_op(-1);
-		case '/': if (m_try<6) return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
-		default: break; }}
-	return p_close(&m_fd), r ? GCE_FREAD : GCE_EOF;
+	if (!m_iname) return log("read_f(NULL): %s", r?strerror(errno):"EOF"), GCE_WTF;
+	if (*m_iname=='/' && ++m_try<6) return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
+	if (m_eof_cmd) { char l=m_eof_cmd[0]-47, buf[l]; memcpy(buf, m_eof_cmd+1, l);
+			 if (debug_flags&DFLG_PT) log("eof_cmd=\"%s\"",buf); line(buf); }
+	else if (m_fd>0) p_close(&m_fd); 
+	return r ? GCE_FREAD : GCE_EOF;
 }
 
 int CmdBuf::vpf(const char * fmt, va_list ap) {
@@ -237,6 +243,22 @@ static int fcfg_exe(char *s) {
 	if ((*s&32) && (ec>=0)) gui2.setwin(0x57, 'F'), gui2.fcfg_ex(k);
 	return ec;
 }
+
+int cmd_report2(int c, const char *s) {
+	extern int dot_dead(); // grbox.cc
+	if (debug_flags&DFLG_PT) log("report2: %c(0x%x), \"%s\"", c>31?c:63, c, s);
+	switch(c) {
+		case 'g': pt_calc_xbv(); gui2.xapp_bv();
+			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
+		case 'S': return qstat_op(*s);
+		case 'p': return snd0.pump_op(*s-48);
+		case '0': return pt_io_dead();
+		case '1': return gui_dead(*s-'q');
+		case '4': return pt_wrk_dead();
+		case '8': return dot_dead();
+		case '9': return pt_acv_dead(s);
+		default: return GCE_UREPORT;
+	}}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -347,14 +369,6 @@ int CmdTab::c_cfg(CmdBuf * p) {
 		case 'V': return gui2.ocfg_draw(), 0;
 		case 'W': return gui2.fcfg_draw(), 0;
 		default:  return GCE_UCFG;
-	}}
-
-int CmdTab::c_report(CmdBuf * p) { switch(*p->m_c_a0) {
-		case 'g': pt_calc_xbv(); gui2.xapp_bv();
-			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
-		case 'S': return qstat_op(p->m_c_a0[1]);
-		case 'p': return snd0.pump_op(p->m_c_a0[1]-48);
-		default: return GCE_UREPORT;
 	}}
 
 int CmdTab::c_wav(CmdBuf * p) {

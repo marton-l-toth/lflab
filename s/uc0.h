@@ -42,6 +42,14 @@ void set_fd(int *to, int from, int keep);
 int backup(const char *fn, int k);
 #else
 
+#ifdef QENV
+#define LF_TMPDIR_XP QENV('w')
+#define LAUNCH_RET_XP(P,A,R) pt_reg_prc(P,A,R)
+#else
+#define LF_TMPDIR_XP getenv("LF_TMPDIR")
+#define LAUNCH_RET_XP(P,A,R) (P)
+#endif
+
 volatile char vstring[16];
 int map_errno = 0;
 const char *xapp_env[N_XAPP] = { "LF_XTERM", "LF_X_ED_T", "LF_X_ED_X" };
@@ -100,12 +108,7 @@ void d999(char *p, int v) { int ht = (v*205)>>11, h = (ht*205)>>11;
 const char * tpipe_name(int c) {
         static char path[256];  static int ix = -1;
         if (ix<0) {
-                const char * s =
-#ifdef QENV
-			QENV('t');
-#else
-			getenv("LF_TMPDIR");
-#endif
+                const char * s = LF_TMPDIR_XP;
                 if (!s || !*s || (ix=strlen(s))>248) s="/tmp", ix = 4;
                 memcpy(path, s, ix); memcpy(path+ix, "/_\0", 4); ix++;
         }
@@ -159,7 +162,9 @@ void set_fd(int *to, int from, int keep) { if (*to!=from) *to<0 ? (*to=from)
 #define LAUNCH_DBG //fprintf(stderr, "launch:%s:%d : vararg for '%c'\n", exe, i, k)
 int launch(const char * exe, const char * iocfg, ...) {
         const char *av[256], *s;
-        int k, ff, r, ac = 1, i, nf, fds[64], a0buf[64], a0cp = iocfg[0]=='!' && ++iocfg;
+        int k, ff, r, ac = 1, i, nf, fds[64], a0buf[64], xf = 0;
+	if (*iocfg=='!') ++xf, ++iocfg;
+	if ((unsigned int)((k=*iocfg)-48)<10u) xf+=2*k, ++iocfg;
         for (i=0; i<64; i++) a0buf[i] = 0x45454545;
         va_list ap; va_start(ap, iocfg);
         for (i=0; i<60 && (k=iocfg[i]); i++) { switch(k) {
@@ -173,12 +178,12 @@ int launch(const char * exe, const char * iocfg, ...) {
                           av[i] = va_arg(ap, const char*); if (!av[i]) av[i] = "/dev/null"; continue;
                 default: continue;
         }}
-        av[nf=i] = a0cp ? exe : va_arg(ap, const char*);
+        av[nf=i] = (xf&1) ? exe : va_arg(ap, const char*);
         if (nf>3) av[nf+ac++] = (const char*)a0buf, a0buf[nf-3] = 0;
         while ((av[nf+ac] = va_arg(ap, const char*))) ++ac;
         va_end(ap); r = fork(); if (r) { // parent
 		for (i=0; i<60 && (k=iocfg[i]); i++) if ((k|2)=='>') close(fds[i]);
-		return r; }
+		return LAUNCH_RET_XP(r, av+nf, xf>>1); }
         int md; //child
         for (i=0; i<nf; i++) {
                 if ((unsigned int)(r=(k=iocfg[i])-48)<10u && r<i) {
