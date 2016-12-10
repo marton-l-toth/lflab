@@ -328,7 +328,7 @@ int pt_con_op(const char *s) {
 			  return pt_constat = -1, pt_iocmd_sn("c\n", 2);
 		case '2': case '3': if (pt_constat<1) return EEE_STATE; k = 48 - *s; goto kill;
 		case '4': if (pt_constat>0) kill(pt_constat, 9), k = pt_constat = 0;
-			  else if ((k=-pt_constat-2)&~1) log("con: -4 in state %d", pt_constat), pt_constat=0;
+			  else if ((k=-pt_constat-2)&~1) log("con: -4 in state %d",pt_constat), k=pt_constat=0;
 			  else pt_constat = -k;
 			  if (dup2(pt_nullfd, 0)<0) gui_errq_add(EEE_ERRNO, "con/-4");
 			  return *pt_con_pfd = -1, pt_iocmd_sn("Z\nc\n", 2+2*k);
