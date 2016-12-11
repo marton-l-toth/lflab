@@ -651,7 +651,7 @@ void GraphBoxGen::decr_no(int i, int no) {
 			(*ap&0xffff)==i && (*ap>>16)>=no && (*ap=0xfffc); }}
 
 void GraphBoxGen::notify_nio(BoxGen * bx) {
-	log("gr%d/notify_nio: %d", id(), bx->id());
+	IFDBGX(GRTMP) log("gr%d/notify_nio: %d", id(), bx->id());
 	int nb = n_box();
 	unset_model();
 	for (int i=0; i<nb; i++) {

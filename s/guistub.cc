@@ -30,7 +30,7 @@ void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0)
 void GuiStub::errq_add(int ec0, const char *s) {
 	int ec1 = (ec0==EEE_ERRNO) ? errno : ec0, ec2 = ec1 & 0xffffff;
 	clk0.ev2('E', ec1);
-	if (ec0 && s) log("%s: %s", s, ec0==EEE_ERRNO ? err_str(ec0) : strerror(ec1));
+	if (ec0 && s) log("%s: %s", s, ec0!=EEE_ERRNO ? err_str(ec0) : strerror(ec1));
 	if (!ec0 || ec0==EEE_NOEFF || ec0==RTE_IWCLOSE) return; 
 	for (int v, i=0; i<m_errq_n; i++) if (((v=m_errq_v[i])&0xffffff)==ec2 && v<0x63000000)
 		return (void) (m_errq_v[i] += 0x1000000);

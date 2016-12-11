@@ -3719,7 +3719,7 @@ static void gr_node_geom(gr_dat * dat, int i) {
 
 static void gr_draw_node(cairo_t * cr, gr_dat * dat, int i) {
 	gr_node * nd = dat->node + i;
-	if (!nd->s) { LOG("gr_draw_node: %d empty", i); return; }
+	if (!nd->s) { if (i) LOG("BUG: gr_draw_node (,,%d) empty", i); return; }
 	int j, ni = nd->ni, no = nd->no, x0  = nd->x0,  x1  = nd->x1,
 	       y0 = nd->y0, y1 = nd->y1, y01 = nd->y01, y02 = nd->y02,
 	       x01 = x0 + 3 + FONT_VWID(conf_lbfs_s);
