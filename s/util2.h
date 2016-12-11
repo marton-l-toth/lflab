@@ -37,10 +37,13 @@ class BufClock {
 		inline int f2ns(int nf) { return (nf*m_cf_ns16f+8)>>4; }
 		inline int set_f(int nf) { return set(nf*m_cf_nspf); }
 		inline int add_f(int nf) { return m_t += f2ns(nf); }
-		inline void cls() { ev('x'); m_t = m_cf_half-1; }
+		inline void cls() { ev('x'); m_t = m_cf_half-1; m_pump_jt = 0; }
 		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<4) return (void)ev(65+m_gcnt);
 				m_gcnt=0; gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; ev2('#'); }
 		int wrk(int op, int n = 0);
+		void pump_cfg(int yn);
+		void pump_y(), pump_n();
+		void pump_1() { m_cf_jtmin = 0x7fffffff; }
         protected:
 		inline int rnd5() { int r = m_rnd>31 ? m_rnd : random()|0x40000000; m_rnd=r>>5; return r&31; }
                 inline void jvi() { m_j_ct = m_cf_jst, m_j_cn = m_cf_jsn-1, m_j_max = 0; }
@@ -53,6 +56,7 @@ class BufClock {
                 int m_cf_nspf, m_cf_ns16f, m_cf_fmax;
                 clockid_t m_ty;
                 int m_bits, m_t, m_gcnt, m_g_ix, m_err, m_rnd;
+		int m_pump_jt; // 0:off
 };
 
 // sh0: 0 10sx 110sxx 1110sxxxx 11110sx6 11111sx15

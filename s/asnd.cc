@@ -35,28 +35,26 @@ err1:   *bufsiz = e; return es;
 #define FP4(S,X,Y,Z,W)  fprintf(stderr, S "\n", (X),(Y),(Z),(W))
 static inline int hxd2i(int c) { return 15&(c+9*(c>>6)); }
 static int atoi_h(const char *s) { int r=0; while(*s&80) r=16*r+hxd2i(*(s++)); return r; }
-static int report(int x) { int v=(x<<16)+0xa307052; return write(1, &v, 4), v; }
+static int report(int x) { int v=(x<<16)+0xa307052; return write(1, &v, 4), x; }
 
 int main(int ac, char** av) {
-        if (ac!=5) {int i,j; for(i=1;i<ac;i++) j=atoi(av[i]), FP2("err-%d: %s",j,snd_strerror(-j)); return 0;}
-        //if (ac!=5) return FP1("usage: %s devname flg-nch nf hwbufsiz", *av), 1;
+        if (ac!=5) return FP2("%s: ac=%d (exp.5 (dev flg/nch nf bufsz), BUG)", *av, ac), 1;
         snd_pcm_t * hnd;
         int nc0=atoi_h(av[2]), nf=atoi_h(av[3]), hbsiz = atoi_h(av[4]),
             nc = nc0&255, flg = nc0>>8, rate = 44100;
         const char *nm = av[1], *es = au_op_cfg(&hnd, nm, &hbsiz, &nc, &rate, flg);
         if (es) return FP2("error: %s: %s", es, snd_strerror(hbsiz)), report(9), 1;
         FP4("%s started, #ch=%d, hwbs=%d, rate=%d", *av, nc, hbsiz, rate);
-        int fsiz = 2*nc, asiz = fsiz*nf, errtemp = 0;
-        char buf[asiz];
+        int k, fsiz = 2*nc, asiz = fsiz*nf, errtemp = 0;
+        char buf[asiz]; memset(buf, 0, asiz);
         report(16+nc);
-        while(1) {
-                int k=0;do{int r=read(0,buf+k,asiz-k); if (r<=0) return report(8+!!r); k+=r;} while(k<asiz);
+        for(;;){k=0;do{ int r2,r=snd_pcm_writei(hnd,buf+k*fsiz,nf-k);
+			if (r>0) { k+=r; errtemp -= !!errtemp; continue; }
+                        if (!r) return report(7);
+                        if (errtemp+=16>256) return report(6);
+                        if ((r2=snd_pcm_recover(hnd, r, 1))<0) return report(8); else report(3); } while(k<nf);
+                k=0;do{ int r=read(0,buf+k,asiz-k); if (r<=0) return report(4+!!r); k+=r; } while(k<asiz);
                 report(1);
-                k=0;do{ int r2,r=snd_pcm_writei(hnd,buf+k*fsiz,nf-k);
-                        if (r>0) { k+=r; errtemp -= !!errtemp; continue; }
-                        if (!r) return report(9);
-                        if (errtemp+=16>256) return report(9);
-                        if ((r2=snd_pcm_recover(hnd, r, 1))<0) return report(9); else report(7); } while(k<nf);
         }}
 #else // cplusplus
 
@@ -70,23 +68,33 @@ int main(int ac, char** av) {
 #include "box0.h"
 
 #define IFDBG if (debug_flags&DFLG_AUDIO)
+#define CDEBUG(S) IFDBG debug(S)
 #define SAMP2NS(X) (((X)*m_ns_16f+8)>>4)
 #define ADDSAMP(X) (m_clk_nbuf += SAMP2NS(X))
 static fa_writer fa_wr;
 
-int ASnd::close() { clk0.cls(); if (m_hnd) snd_pcm_close(m_hnd); 
-		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, w(1024), 0; }
+int ASnd::close() { clk0.cls(); p_close(m_pump_pcp), p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
+		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~3, w(1024), 0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
+
+#define FUNCHK(N) if (m_cur_cpf==&cpf_##N) fnm = #N; else
+void ASnd::debug(const char *s) {
+	const char *fnm; FUNCHK(mute) FUNCHK(true) FUNCHK(liar) FUNCHK(pump) fnm = "???";
+	log("au/%s: fun=%s, pump_cmd=%d, ahnd=%p flg=0x%x pump_st=0x%x", 
+			s?s:"debug", fnm, *m_pump_pcp, m_hnd, m_flg, m_pump_st); }
 
 int ASnd::start(int flg, int mxid, int *ppcp) {
 	int n = CFG_AU_TRY_N.i;  if (ppcp) m_pump_pcp = ppcp;
 	if (flg&1) n = (n+1)>>1; else if (mxid>=0) m_mxid = mxid;
+	cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_CMODE.i);
+	if (m_flg&2) return pump_launch(n);
 	double clf = (n<2) ? 1.0 : exp(M_LN10 / (double)(n-1)), sclim = 1e3*(double)CFG_AU_CLKLIM.i;
 	int e=-1, us = 1000 * CFG_AU_TRY_MS.i;   m_flg &= ~2;
+	
 	for (int i=0; i<n; u_sleep(us), i++, sclim*=clf)
 		if ((e=start1(min_i((1<<27)-1, (int)lround(sclim))))>=0) return w(1024), e;
-	return err(e, "start", AUE_START), w(-1), AUE_START; // TODO
+	return err(e, "start", AUE_START), w(-1), 0;
 }
 
 void ASnd::cfg_pre(int spd, int rsrv, int mode) {
@@ -94,30 +102,39 @@ void ASnd::cfg_pre(int spd, int rsrv, int mode) {
 	    bs2 = m_bs2 = (bs*rsrv+50)/100;
 	clk0.bcfg(sample_rate, bs, bs2, (3*bs)>>1);
 	m_flg &= ~3; m_flg |= mode;
-	if (mode) m_hwbs_trg = bs+bs2, m_cur_cpf = (mode&2) ? &cpf_pump : &cpf_liar;
+	if (mode) m_hwbs_trg = bs+bs2, m_cur_cpf = (mode&2) ? &cpf_mute : &cpf_liar;
 	else 	  m_hwbs_trg = bitfill(1024|bs*(500+3*rsrv)/200) + 1, m_cur_cpf = &cpf_true;
 }
 
+int ASnd::pump_launch(int nt) {
+	int aa[5]; aa[0]=qh4(CFG_AU_CHCFG.i)&65535; aa[1]=qh4(m_bs); aa[3]=qh4(m_bs+2*m_bs2); aa[2]=aa[4]=0;
+	int pid = launch(QENV('q'), "!><k", &m_pump_ofd, m_pump_pcp,
+			 CFG_AU_NAME.s, (char*)aa, (char*)(aa+1), (char*)(aa+3), (char*)0);
+	IFDBG log("pump/cp=%d, args: %s %s %s %s", *m_pump_pcp, CFG_AU_NAME.s, (char*)aa, (char*)aa+1, (char*)aa+3);
+	return w(1024), (pid<0) ? EEE_ERRNO : (m_pump_st = 4 + (nt ? 256*nt : m_pump_st&0xff00), 0); }
+
 int ASnd::pump_op(int x) {
+	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("pump_op %d ", x), debug("p/o");
 	if (x==1) return (m_pump_st&7)==2 ? (++m_pump_st,0) : AUE_P_STATE;
-	int k; switch(x) {
-		case 0: k = AUE_P_CRASH; goto down;
-		case 8: k = 0;		 goto down;
-		case 9: k = AUE_P_ERREX; goto down;
-		case 7: return AUE_P_RECOV;
+	int e,k; switch(x) {
+		case 0: e = AUE_P_CRASH; goto down;
+		case 1: m_pump_st |= 1; clk0.pump_1(); return 0;
+		case 4: e = 0;		 goto down;
+		case 5: case 6: case 7: case 8: case 9: e = AUE_P_ERREX; goto down;
+		case 3: return AUE_P_RECOV;
 		default: break; }
 	if ((unsigned int)(x-17)>15u) return AUE_P_WHAT;
-	if (!m_pump_st&4) return AUE_P_STATE;
-	mx_au16_cfg(&m_cfg, m_n_chan=x-16, CFG_AU_CHCFG.s);
-	
-down:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8;  m_pump_st = 0;
-	if (k) start();  return 0;
+	if ((m_pump_st&15)!=4) return AUE_P_STATE; else m_pump_st ^= 7, clk0.pump_1();
+	mx_au16_cfg(&m_cfg, m_n_chan=x-16, CFG_AU_CHCFG.s); m_cur_cpf = &cpf_pump;
+	log("pump process started, #chan=%d", m_n_chan); clk0.pump_cfg(1);
+	return w(1024), 0;
+down:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00; clk0.pump_cfg(0);
+	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e;
 }
 
 int ASnd::start_buf(int tlim) {
 	int wr0=64, lr=m_flg&1; // TODO: config
 	if (m_bufsiz<m_hwbs_trg) return log("alsa/bsiz: ret(%d) < rq(%d)", m_bufsiz, m_hwbs_trg), close(), -1;
-	//if (m_flg&4) return m_cur_cpf=&cpf_pump, clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1), start_pump();
 	if(lr){ m_bs2 = 2*(m_bufsiz-m_bs);
 		clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1); m_cur_cpf = &cpf_liar;
 		int sb1 = 2 * m_bufsiz * m_cfg.nch;
@@ -129,16 +146,12 @@ int ASnd::start_buf(int tlim) {
 
 int ASnd::start1(int sc_lim) {
 	if (m_hnd) close(); clk0.ev('o');
-	if (!(m_flg&2)) cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_CMODE.i);
 	if (CFG_AU_KILL_PA.i) gui2.errq_add(pt_kill_pa(CFG_AU_KILL_PA.i));
-
 	int rate = 44100, chan = CFG_AU_CHCFG.i, bsiz = m_hwbs_trg;
 	const char *es = au_op_cfg(&m_hnd, CFG_AU_NAME.s, &bsiz, &chan, &rate, m_flg&1);
-
 	if (es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), bsiz;
 	m_n_chan = chan; sample_rate = rate; *clk0.pa() = m_bufsiz = bsiz;
 	mx_au16_cfg(&m_cfg, m_n_chan, CFG_AU_CHCFG.s);
-	
 	return start_buf(sc_lim);
 }
 
@@ -171,7 +184,7 @@ int ASnd::play_and_adj(short *buf, int nf, int opt) {
 			return (cs && ((ce|rcnt) || (t0-t1)>(opt&0xfffffff))) ? AUE_CLOCK
 				: (clk0.set_f(m_bufsiz - av1), 0); }
 	if (wr<nf) log("alsa/wr: %d/%d written", wr, nf), gui2.errq_add(wr?AUE_LESSWR:AUE_ZEROWR); // TODO
-	int t3 = clk0.ev('p'), tea = t0-t1, teb = t2-t3, tb1 = clk0.f2ns(m_bufsiz-av1), tb0 = tb1-teb,
+	int t3 = clk0.ev('p'), /*tea = t0-t1,*/ teb = t2-t3, tb1 = clk0.f2ns(m_bufsiz-av1), tb0 = tb1-teb,
 	    taz = clk0.f2ns(m_bufsiz-av0+wr)+t3, ta0 = taz-t0, ta1 = taz-t1;
 	unsigned int *paa = clk0.pa();
 	*clk0.pa(-1) = (unsigned int) (m_bufsiz-av1); 
@@ -192,9 +205,9 @@ void ASnd::cpf_mute(ASnd *p) {
 	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
 
 void ASnd::cpf_pump(ASnd *p) {
-	if (!p->m_pump_st) return; else p->m_pump_st = 0;
-	int nf = p->m_bs, bsc = nf*p->m_cfg.nch;
-	short buf[bsc]; p->play2(buf, nf); write(p->m_pump_ofd, buf, 2*bsc); }
+	if (!(p->m_pump_st&1)) return clk0.pump_n(); else p->m_pump_st &= ~1;
+	int nf = p->m_bs, bsc = nf*p->m_cfg.nch;  clk0.ev2('P', nf); clk0.ev2('w');
+	short buf[bsc]; p->play2(buf, nf); write(p->m_pump_ofd, buf, 2*bsc); clk0.pump_y(); }
 
 void ASnd::cpf_true(ASnd *p) {
 	int nf = clk0.f2play(2); if (!nf) return;
@@ -231,7 +244,9 @@ int ASnd::w(int flg) {
 		char buf[8]; memcpy(buf, "#out: 0", 8); 
 		if (m_n_chan>9) buf[5]='1', buf[6] = 38+m_n_chan; else buf[6] += m_n_chan;
 		gui2.wupd_s('#', buf);
-		if (!m_hnd) { gui2.wupd_s('C', "%%%XXX(no audio output)"); }
+		if (m_flg&2) {  gui2.wupd_s('C', "%%%XXX(off)\0%%%zz%pump \0%%%zz%pu...\0zz%z%%BUG!\0 "
+						 + 6*(m_pump_st&6)); }
+		else if (!m_hnd) { gui2.wupd_s('C', "%%%XXX(no audio output)"); }
 		else {  snd_pcm_info_t * info;
 			if (snd_pcm_info_malloc(&info)<0 || snd_pcm_info(m_hnd, info)<0) {
 				gui2.wupd_s('C', "zz%z%%(getinfo failed)"); }
@@ -244,9 +259,10 @@ int ASnd::w(int flg) {
 	return 0;
 }
 
-int ASnd::cmd(const char *s) { switch(*s) {
-	case 'Y': if (m_hnd) close(); else start();   return 0;
-	case 'R': if (m_hnd) close();      start();   return 0;
+int ASnd::cmd(const char *s) { CDEBUG(s); switch(*s) {
+	case 'Y': if (is_up()) close(); else start(); CDEBUG("Y1");  return 0;
+	case 'R': if (m_flg&2) return (m_pump_st&2) ? m_pump_st|=8, close() : start();
+		  if (m_hnd) close(); return start();
 	case 'W': return w(-1);
 	case 's': cfg_setint(&CFG_AU_SPD,   atoi_h(s+1)); return 0; 
 	case 'r': cfg_setint(&CFG_AU_RSRV,  atoi_h(s+1)); return 0; 
@@ -259,6 +275,7 @@ int ASnd::cmd(const char *s) { switch(*s) {
 	case 'o': cfg_setstr(&CFG_AU_CHCFG, s+1); return w(16);
 	case 'N': cfg_setstr(&CFG_AU_NAME,  s+1); return 0;
 	case 'O': cfg_setstr(&CFG_AU_CHCFG, s+1); return 0;
+	case '?': debug(); return 0;
 	default: return GCE_PARSE; }}
 
 int rawmidi_desc(char *to, int id, int maxlen) {

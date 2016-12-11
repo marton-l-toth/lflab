@@ -6,17 +6,20 @@ typedef struct _snd_pcm snd_pcm_t;
 
 class ASnd {
 	public:
-                ASnd() : m_hnd(0), m_hcp(0), m_swb_siz(0) {}
+                ASnd() : m_hnd(0), m_hcp(0), m_swb_siz(0), m_flg(0), m_pump_st(0), m_pump_ofd(-1) {}
                 void cfg(int mxid);
                 int start(int qre = 0, int mxid = -1, int *ppcp = 0), close();
 		inline void c_play() { (*m_cur_cpf)(this); }
+		inline int flg(int m=-1) const { return m_flg&m; }
 		long long total_played() const { return m_total_played; }
 		void set_vol(int x) { m_cfg.vol = x; }
 		int vol() const { return m_cfg.vol; }
 		int hcp_start(int t), hcp_end(int f = 0);
 		int hcp() const { return m_hcp; }
 		int cmd(const char *s), w(int flg);
-		int pump_op(int x);
+		int pump_op(int x), pump_launch(int nt = 0);
+		int is_up() const { return (m_flg&2) ? m_pump_st&2 : !!m_hnd; }
+		void debug(const char *s = 0);
         protected:
 		static void cpf_mute(ASnd*), cpf_true(ASnd*), cpf_liar(ASnd*), cpf_pump(ASnd*);
 		int start1(int sc_lim), try_start(int n);
@@ -35,8 +38,8 @@ class ASnd {
 		au16w_t m_cfg;
 		char m_hcp_lbl[8];
 		int m_bufsiz, m_n_chan, m_mxid, m_hcp, m_hcp_s0;
-		int m_bs, m_bs2, m_hwbs_trg, m_swb_siz, m_flg; // flg: 1:liar 2:skipbufnear 4:pump
-		int m_pump_st, m_pump_ofd, *m_pump_pcp; // st: 1-rdy2read 2-running 4-wt4up 8:re
+		int m_bs, m_bs2, m_hwbs_trg, m_swb_siz, m_flg; // flg: 1:liar 2:pump
+		int m_pump_st, m_pump_ofd, *m_pump_pcp; // st: 1-rdy2read 2-running 4-wt4up 8:re 256*#try
 		short * m_swb;
 };
 extern ASnd snd0;

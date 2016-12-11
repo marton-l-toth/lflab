@@ -175,7 +175,8 @@ void BufClock::bcfg(int rate, int bs, int bs2, int fmax) {
 
 int BufClock::ev(int c)		{ BCLK0; if(cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), 	   m_t-=dn; }
 int BufClock::ev2(int c, int a) { BCLK0; if(cf) BCLK1(m_err); return *pt()+=dn, BCLKN(c), *pa()=a, m_t-=dn; }
-int BufClock::sel(int zf) { int t = ev('s'); return *pa() = (zf||t<m_cf_stmin) ? 0 : (t-m_cf_empty)>>10; }
+int BufClock::sel(int zf) { 
+	int t = ev('s'); return *pa() = (zf|m_pump_jt) ? !zf<<17 : (t<m_cf_stmin ? 0 : (t-m_cf_empty)>>10); }
 
 int BufClock::j0() { BCLK0; if (cf) BCLK1(m_err);   int r = ((m_t-=dn) >= m_cf_jtmin);
                      return *pt() += dn, BCLKN('J'+32*r), jvi(), r;     }
@@ -183,6 +184,10 @@ int BufClock::j0() { BCLK0; if (cf) BCLK1(m_err);   int r = ((m_t-=dn) >= m_cf_j
 int BufClock::jwr(int cf) { return *pt() += (m_cf_jst-m_j_ct),
                                    *pa() = m_j_max+(m_cf_jsn-1-m_j_cn), BCLKN('J'+32*cf), jvi(), cf; }
 
+void BufClock::pump_y(){int t=ev('p'); add(m_cf_full-t); *pa()=(m_cf_empty-t); m_cf_jtmin=m_cf_half; gcond();}
+void BufClock::pump_n(){int t=ev2('P',0); m_cf_jtmin = t-(m_pump_jt>>3); }
+void BufClock::pump_cfg(int yn) { if (yn) m_cf_jtmin = 0x7fffffff, m_pump_jt = m_cf_half-m_cf_empty, set(0);
+				  else    m_cf_jtmin = m_cf_half,  m_pump_jt = 0; }
 int BufClock::j1(int cont) {
         BCLK0; int qstp = ((cont-1)|(m_t-dn-m_cf_jtmin)), qwr = (--m_j_cn)|(m_j_ct-dn);
         if (!(cf | ((qstp|qwr)&0x80000000))) { m_t -= dn; BCLKJ(1); }
