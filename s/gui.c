@@ -836,7 +836,7 @@ static int ww_rev_lu(char * to, ww_t * ww);
 static gboolean ww_debug(ww_t * ww, int btn) {
 	topwin * tw = ww->top;
 	char buf[1024]; buf[ww_rev_lu(buf, ww)] = 0;
-	LOG("ww_debug: twid=0x%x, wwix=0x%x, rlu=\"%s\"", tw->id, ww->ix, buf);
+	LOG("ww_debug: tw: %x$%c, wwix=0x%x, rlu=\"%s\"", tw->id, tw->cl->ch, ww->ix, buf);
 	return TRUE;
 }
 

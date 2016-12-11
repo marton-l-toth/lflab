@@ -72,10 +72,11 @@
 003f V`.t_rec.k.0`b$wE35e.9
 08a6 V`.t_rec.k.0`b$wE32c1
 030c m:x
-047a V000007$.mc1
-0b53 m:main config
-0a7f V000057$FKc1
-0f32 m:wav
+047a V000007$.wc1
+0b53 m:misc config
+00ff V000037$kBc9
+00ff V000037$kBc1
+00ff V000037$kBc1
 302c V`.t_rec.trk`b$tRc1
 0468 V000007$.Wc1
 03d0 V`.t_rec.k.0`9$##k10302
@@ -142,8 +143,7 @@
 0100 V`.t_rec.k.b`b$wE21e.5
 0100 V`.t_rec.k.b`b$wE21e1.5
 0100 V`.t_rec.k.b`b$wE04c1
-2ad3 V000057$FKc1
-0618 m:flac
+2ad3 V000037$kBc1
 098b V`.t_rec.k.b`b$wY0Ac1
 0b1c V`.t_rec.k.b`b$wY0Cc1
 08c3 V`.t_rec.k.b`b$wY0Bc1
@@ -159,10 +159,9 @@
 090f Y`.t_rec.k.0`B$w
 05d8 Y`.t_rec.k.b`B$w
 1868 Y`.t_rec.k.1`B$w
-0ad3 V000057$FKc1
-055a m:ask
+0100 V000037$kBc9
 0200 V000007$.2c9
 0200 V000057$F>c1
-0f8c V000007$.mc1
+0f8c V000007$.wc1
 0a7b m:console
 
