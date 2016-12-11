@@ -353,9 +353,8 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 	if ((sdl = CFG_AO_DIR.i )) sdir = CFG_AO_DIR.s;  else sdl = QENVL('t'), sdir = QENV('t');
 	if ((tdl = CFG_WAV_DIR.i)) tdir = CFG_WAV_DIR.s; else tdl = QENVL('h'), tdir = QENV('h');
 	switch(op) {
+		case 0xd: if (unlink(au_file_name(sdir,sdl,id,0,0,"a20"))<0) return EEE_ERRNO; // else FT
 		case 0xf: return nwf ? 0 : (gui_closewin(ACV_WIN(id)), 0);
-		case 0xd: pid = launch("/bin/rm", "!(kk", au_file_name(sdir,sdl,id,0,0,"a20"), (char*)0);
-			  pt_acv_cw = !nwf; goto ret;
 		case 0xe: log("pt_acv_op: 0x0e -- why here?"); return GCE_ROUTE;
 		default:  if (op>7) return GCE_PARSE; else break;
 	}
