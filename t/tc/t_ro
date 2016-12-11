@@ -1,7 +1,7 @@
 # exp. res: errors: 5xRO, root, 6xRO, root, 6xRO, btin, 7xRO (27 total)
 ?L N250 m200 e100 c250 Z250 g250 k250
 0000 ^_Sn63
-0000 V000007$.mc1
+0000 V000007$.wc1
 0892 m:error list
 0100 N`.`2$<`.!b`
 0100 N`.!b`2$<`.!b.?`

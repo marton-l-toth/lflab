@@ -9,6 +9,7 @@ function oops() {
 }
 
 function run1() {
+	echo "_>>>>>>>>>>>>>>>> $TCDIR/$1 <<<<<<<<<<<<<<<<" >>$LF_TMPROOT/lf.*/A 
 	"$TOOL" >>$LF_TMPROOT/lf.*/A <$TCDIR/$1
 }
 
@@ -24,15 +25,17 @@ LF_TMPROOT="$(readlink -f /run/shm)"
 [[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /tmp)"
 echo "tdir=\"$TDIR\" launch=\"$LAUNCH\""
 $LAUNCH &
-sleep 1; he "configure audio"
+sleep 1; he "configure audio, chk 'about' link"
+kill -9 $(ps -afe | grep 'lflab/lf\.lic' | awk '{print $2}')
 run1 t_0
 he "write wav(2,2) and flac(all)"
 ls -ltr "$HOME" | tail -3
-echo '^V57$F_02c1' >> $LF_TMPROOT/lf.*/A
+echo '^V57$F_00c1' >> $LF_TMPROOT/lf.*/A
 he "change aodir"
 echo '^V57$F~c1' >> $LF_TMPROOT/lf.*/A
 sleep 0.5; AODIR="$(grep WAV_DIR $HOME/.lflab/lf.ini | cut '-d"' -f2)"
 [[ -z "$AODIR" ]] && oops "LF_WAV_DIR undefined/empty, did you set it?"
+echo '^Y57$F' >> $LF_TMPROOT/lf.*/A
 run1 t_rec
 sleep .5
 echo "found AODIR: \"$AODIR\""; ls -l "$AODIR"

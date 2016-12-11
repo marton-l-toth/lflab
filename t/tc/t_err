@@ -3,7 +3,7 @@
 #          used 2*nonemp/d  (23 total)
 ?L N250 m200 e100 c250 Z250 g250 k250
 0000 ^_Sn63
-0000 V000007$.mc1
+0000 V000007$.wc1
 0892 m:error list
 05cf V000047$ENc4
 013f V000047$ENc4
