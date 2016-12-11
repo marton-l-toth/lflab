@@ -439,13 +439,11 @@ This help text describes the main window (title "lf").
 kussb+ - kill all sounds (not the same as mute, cf. below)
 unplot - restart gnuplot (close all gnuplot windows)
 [LR] - left-cl: show tree window (on top) right-cl: window menu
-++ - main menu (here you can open the console, show the
-pole-zero diagram for the last filter, open various config
-windows, write logs, and exit)
+++ - main menu (exit, restart, write log/config; SIGKILL exits
+when the program hangs, and with SIGABRT you get a core file)
 CPU meter: green-OK, yellow-high load, red-danger grey-muted
-CPU meter should run about 1 dashed line / sec, depending
-on the speed setting.
-(if stopped or very fast then something doesn't work...)
+CPU meter should run about 1 dashed line / sec, depending on
+audio speed setting. (if stopped/very fast there is a problem)
 save - save file ("save as" is in the file menu in tree window)
 rec - start/stop recording (see auconv link below)
 ==> 1.tree
@@ -459,46 +457,36 @@ At the bottom of the main window, the "version" label can also
 be clicked and have keyboard focus (black on yellow when it has
 focus) -- key press/release events are routed to:
 ==> 4.virtual device
-Note: main window is configured to be "always on top" whenever
+note1: main window is configured to be "always on top" whenever
 the window manager permits it. This has a side effect: when you
 open a small window (e.g. wrap/play and input windows), it may 
 "hide" behind the main window.
+note2: keeping keyb. focus on "version" label is easier when
+==> 1.misc config -- slider focus is turned off(0) here
 {{{2.pulseaudio}}}
-Disclaimer: I have only tried with pulseaudio 2.0 using a
-more-or-less default configuration. If you know better, please
-dot not hesitate to tell me:
-@@@
-It seems that pulseaudio timing behaviour (at least when used
-through the ALSA snd_pcm_ interface) depends on whether zero or
-non-zero sample values are written to the PCM interface. This
-completely breaks the clock adjustments in this program, so
-please use a hardware device. (ALSA SW mixer works, although
-with a longer latency than HW devices). 
+lflab works best when given exclusive access to the hardware
+audio device. It is possible to use lflab with PulseAudio/ALSA
+SW mixer/etc (typically the "default" device), but slower speed
+and more reserve buffer is recommended, and maybe "pump" clock
+mode has to be used.
+==> 1.audio -- you can change settings here
+In exclusive mode (devices hw:*,*) you can quickly release the
+device by ctrl+right-clicking on the CPU meter. If pulseaudio
+is running in autospawn mode, and you have some PA app running,
+PA will grab the device in a few seconds.
 ---
-LFLAB will open the HW device for exclusive use, but this
-should not cause much trouble -- a simple ctrl+right-click on
-the CPU meter, and the device is released. If pulseaudio is
-in autospawn mode (default), and you have some PA app running
-(like pavucontrol) PA will grab the device in a few seconds.
----
-Because exclusive open only works when PA is not running, the
-"kill PA" option is provided for convenience, which forcibly
-stops PA on start/unmute, and hopefully grabs the device before
-it starts again (so you don't have to turn autospawn off).
-This only works when PA is configured in a per-user mode (which
-is the default and recommended PA configuration). On most
-systems "-9" is safe (immediate stop of process), but on some 
-machines closing the device too abruptly can cause problems.
+Because the HW device can only be reopened when PA is not
+running, the "kill PA" option is provided for convenience.
+If "-9" is on the "killall -9 pulseaudio" command is started,
+otherwise the (nicer) "pulseaudio -k".
 {{{1.audio}}}
-If you are running LFLAB on this machine for the first time,
+If you are running lflab on this machine for the first time,
 you should configure the audio because the default settings are
 not likely to work, especially if you have PulseAudio:
 ==> 2.pulseaudio
 The device name "default" typically means a SW mixer, and
 HW mixers are called "hw:x" or "plughw:w", sometimes having
-sub-devices. If your device name is not listed, you can also
-edit the text field below -- the menu button (like for channel
-config) is only for convenience.
+sub-devices. You can choose from a menu or edit the text field.
 ---
 Channel config: for most systems, "lr" works perfectly well,
 but you might have more then two outputs ("s" means sum,
@@ -513,13 +501,16 @@ response, but more risk of (very unpleasant) buffer underrun.
 ---
 "try" and "t/w" say how many times the opening of the audio
 device is attempted, and how many msecs. to wait in between.
-In most cases clock mode can be left unchanged ("retBS").
+---
+Clock mode: In general the default "avail" is OK, with some
+cards "nonbl" is better, and with SW mixer you might need the
+otherwise inferior "pump". Sorry but this is trial and error.
 ---
 "kill PA" means to forcibly stop pulseaudio (see link above).
 You can restart the audio from this window, applying settings.
 (roughly equivalent to ctrl+right-clicking the CPU meter twice)
 There is only one config file, so "save" is the same as in:
-==> 1.misc config
+==> 1.misc config -- also set clock error limit here
 {{{1.text}}}
 You can add small text windows (like this one) to document your
 boxes, and also create text-only objects in the object tree
@@ -559,9 +550,23 @@ overwritten with MIDI key press speed (only for real MIDI keys,
 since the PC keyboard does not report speed) for the duration of
 the event handling), and #254 is reserved for future use.
 {{{1.misc config}}}
-In this window you can configure various parameters, all of
-which are integers (left-click:increment right-click:decrement
-shift-cl./ctrl-cl:incr/decr. more)
+In this window (win.menu) you can configure various parameters,
+all of which are integers. You can change values by clicking on
+the number buttons: left-click increments right-cl. decrements,
+shift-cl./ctrl-cl:incr/decr. more.
+---
+Most of the changes take effect immediately; some (start order,
+clock type) only after restart (only if settings are saved),
+some after GUI restart (slider focus, quick CPU meter).
+---
+All these settings (and those in other config windows) can also
+be changed by editing the lf.ini file (in .lflab under your
+home dir.), or from command line (run "lflab -h" for details).
+---
+If something goes wrong with the config options, you can
+- quit without saving config and restart
+- restore the config file from a backup (lf--*.ini)
+- or you can delete the lf.ini file, resetting all to defaults.
 ---
 There is only one config file, so "saveCfg" saves all other
 config parameters (audio, path, midi) as well.
