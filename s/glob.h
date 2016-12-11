@@ -39,6 +39,7 @@
 		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
 		  "4000-wrap 8000-trkcalc 10000:pt 20000:fe 40000:midiev"
 #define DEBUG_UTXT(J) (debug_utxt_buf + 64*(J))
+#define IFDBGX(F) if (debug_flags&DFLG_##F)
 extern int glob_flg;
 extern int debug_flags;
 extern int sample_rate;

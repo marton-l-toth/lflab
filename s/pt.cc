@@ -319,7 +319,7 @@ int pt_iocmd(char *s) {
 	return r = pt_iocmd_sn(s, l+1), s[l] = c, r; }
 
 int pt_con_op(const char *s) { 
-	if (debug_flags&DFLG_PT) log("pt_con_op(%s)", str0(s));
+	IFDBGX(PT) log("pt_con_op(%s)", str0(s));
 	if (!s) return (pt_constat || !CFG_AUTOCON.i) ? 0 : (pt_constat = -1, pt_iocmd_sn("c\n", 2));
 	if (*s!='-') return con_started(s);
 	int k; switch(s[1]) {
@@ -343,7 +343,7 @@ int pt_reg_prc(int pid, const char** av, int rprt) {
 found:  const char * s = av[2*(!strcmp(*av,CFG_XTERM.s) && !memcmp(av[1],"-e",3))];
 	int lmax = 12-!!rprt, l = strlen(s)+1; if (l>lmax) s+=l-lmax, l=lmax;
 	memcpy(pt_ptab[i].s, s, l); pt_ptab[i].s[11] = rprt; pt_ptab_bv |= (1u<<i);
-	if (debug_flags&DFLG_PT) log("reg. prc.: %s %d", pt_ptab[i].s, pid);
+	IFDBGX(PT) log("reg. prc.: %s %d", pt_ptab[i].s, pid);
 	return pt_ptab[i].pid = pid;
 }
 
@@ -408,8 +408,8 @@ int pt_wrk_stop() { return (pt_wrk_pid<=0) ? EEE_STATE :
 	
 void errtemp_cond(const char *s) {
 	if ((pt_errtemp+=CFG_ERRTEMP_INC.i) > CFG_ERRTEMP_INC.i*CFG_ERRTEMP_LIM.i) {
-		log ("%s: giving up", s); if (debug_flags&DFLG_AOET) abort(); else  bye(1); }
-	else if (debug_flags&DFLG_PT) { log("%s: errtemp=%d", s, pt_errtemp); }}
+		log ("%s: giving up", s); IFDBGX(AOET) abort(); else  bye(1); }
+	else IFDBGX(PT) { log("%s: errtemp=%d", s, pt_errtemp); }}
 
 
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln

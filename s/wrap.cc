@@ -890,7 +890,7 @@ int WrapAutoVol::save2(SvArg * p) {
 			cost[2] = b91_cost2(difftab, total);	
 	if (DBGCV) c2 = clk.reset();
         int ty = cost[1]<cost[2] ? cost[1]<cost[0] : 2*(cost[2]<cost[0]);
-        if (debug_flags & DFLG_VOLTAB) log("voltab_cost(%d): %d %d %d --> %d", p->cn->id(), cost[0], cost[1], cost[2], ty);
+        IFDBGX(VOLTAB) log("voltab_cost(%d): %d %d %d --> %d", p->cn->id(), cost[0], cost[1], cost[2], ty);
         B91Writer wr; wr.put_short_tpn(ty, difftab, total);
         int l = wr.n_bytes();
         char * s = wr.get_str();
@@ -2004,7 +2004,7 @@ CH(vt){	if (s[1] > 'q') return p->av_guiconf(s[1], s+2);
 	WrapSOB * sob = SOB_RWP(p,sob); int ec = 0;
 	switch(s[1]) {
 		case 'D': sob->m_avol.set(0); break;
-		case ':': if (debug_flags&DFLG_VOLTAB) log("vt-conf: #%x", p->m_node->id());
+		case ':': IFDBGX(VOLTAB) log("vt-conf: #%x", p->m_node->id());
 			  ec = sob->avol_rw()->parse_dim(s+2); break;
 		default:  return BXE_UCMD;
 	}

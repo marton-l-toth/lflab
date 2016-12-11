@@ -93,7 +93,7 @@ void calc_run1(CalcStkOp *p, double *px, double *py, CalcXF * xf) {
 	env.px = px; env.py0 = py; env.sp0 = calc_sp1 + 1; env.xf = xf;
 	run1_e(p, &env);
 	if (env.ny) memcpy(py, env.sp0+env.nt, env.ny*sizeof(double));
-	if (debug_flags & DFLG_EXPR) {
+	IFDBGX(EXPR) {
 		fprintf(stderr, " (run1 nt:%d ny:%d stk:%d) ", env.nt, env.ny, (int)(calc_sp1 - env.sp0 + 1));
 		fflush(stderr);
 	}

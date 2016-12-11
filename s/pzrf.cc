@@ -151,7 +151,7 @@ int SPZFInst::calc(int inflg, double** inb, double** outb, int n) {
 	if (!inflg) { double x = in[0]; if (fabs(x)<1e-270) {in = zeroblkD;}
 		      else { in = p; for (int i=0; i<n; i++) p[i] = x;     } }
 	for (int i=0; i<m; i++) { PZF_1(i, (p[j] = y)); in = p; }
-	if (debug_flags & DFLG_RFINST) rf_debug(n);    		return 1;
+	IFDBGX(RFINST) rf_debug(n);    		return 1;
 }
 
 int PPZFInst::calc(int inflg, double** inb, double** outb, int n) {
@@ -167,7 +167,7 @@ int PPZFInst::calc(int inflg, double** inb, double** outb, int n) {
 	{PZF_1( 0 , tbuf[j]=y);}; for (int i=1; i<m-1; i++) {PZF_1(i, tbuf[j]+=y);} 
 	{PZF_1(m-1, p[j]=tbuf[j]+y);} return 1; goto done;
 notmp:  {PZF_1(0, p[j]=y);} for (int i=1; i<m; i++) { PZF_1(i, p[j]+=y); }
-done:   if (debug_flags & DFLG_RFINST) rf_debug(n);    		return 1;
+done:   IFDBGX(RFINST) rf_debug(n);    		return 1;
 }
 
 static void half_zero(RECF_ABItem * to, double fq0, double bw1, double c = 1.0) {

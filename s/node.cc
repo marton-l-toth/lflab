@@ -95,7 +95,7 @@ class TBoxNode : public ABoxNode {
 			if (!pwl) return 0;
 			ANode *g1 = trk_bkm_find(m_box, INT_MAX),
 			      *w0 = trk_bkm_find(m_box, 0); 
-			if (debug_flags&DFLG_TRK) log("tb/snl: w0=%p g1=%p pwl=%p", w0, g1, pwl);
+			IFDBGX(TRK) log("tb/snl: w0=%p g1=%p pwl=%p", w0, g1, pwl);
 			g1->m_next = *pwl; *pwl = w0; return 0;
 		}
 		virtual void debug(int flg);
@@ -505,7 +505,7 @@ int ANode::sv_cre(int flg) {
 		int ty = pp[i]->cl_id(); if (ty=='_') return NDE_BTCOPY;
                 if ( ((buf[1] = ty)&120) != 64 && i ) return NDE_USVCONT;
                 pp[i]->m_visitor = vis; pp[i]->m_winflg |= WF_SVNC; 
-		if (debug_flags & DFLG_SAVE) log("svnc_flg set: 0x%x", pp[i]->m_id); 
+		IFDBGX(SAVE) log("svnc_flg set: 0x%x", pp[i]->m_id); 
                 int l = pp[i]->get_name(buf+2); out->sn(buf, l+2); r += l + 2;
         }
         if (!(flg&1)) ++r, out->sn("\n", 1);
@@ -586,7 +586,7 @@ int ADirNode::ccmd(CmdBuf * cb) {
 }
 
 int ADirNode::save1() {
-	if (debug_flags & DFLG_SAVE) sv_dump1("dir");
+	IFDBGX(SAVE) sv_dump1("dir");
 	char * pst = &m0_sv.st;
 	if (*pst || (!perm(DF_SAVE) && !(m0_sv.flg&SVF_COPY))) return m0_sv.nxup(1);
 	int ec = 0; ANode * snl = sn_list(&m0_sv.wl);
@@ -1048,7 +1048,7 @@ void ABoxNode::del2() {
 int ABoxNode::save1() {
 	SvArg * p = &m0_sv;
 	if (!p->st && m_visitor==p->vis) return p->cn = (p->st = !m_next) ? m_up : m_next, 1;
-	if (debug_flags & DFLG_SAVE) sv_dump1("box");
+	IFDBGX(SAVE) sv_dump1("box");
 	int ec, r = 1, wf = p->flg & SVF_WRAP;
 	BoxEdge * eg = 0; ANode * snl;
 
@@ -1057,15 +1057,15 @@ int ABoxNode::save1() {
 		case 1:goto s1;case 3:goto s3;case 5:goto s5;default:return NDE_WTF; }}
 	m_visitor = p->vis; m_winflg &= 0x1fffffff; m_winflg |= p->st << 29;
 	if (!wf) { for (eg = m_ef0; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg; }
-s5:	CHKERR(sv_cre()); m_winflg |= WF_SVNC; if (debug_flags & DFLG_SAVE) log("svnc_flg set1: 0x%x", m_id); 
+s5:	CHKERR(sv_cre()); m_winflg |= WF_SVNC; IFDBGX(SAVE) log("svnc_flg set1: 0x%x", m_id); 
 	p->st = 8; p->st2 = 0; CHKERR(save_sob()); return r;
 s3:	if ((snl = sn_list(&m0_sv.wl))) log("BUG: unexp. non-wrap subbox 0x%x, skipped", snl->id()); // TODO
 	p->st = 1;
 s1:	if ((ec=m_box->save2(&m0_sv)) < 0) return ec; else r += ec;
-	if (debug_flags & DFLG_SAVE) log("bxsv/s1: 0x%x: from: %d, nx:%p", m_id, m_winflg & WF_SVFR, m_next);
+	IFDBGX(SAVE) log("bxsv/s1: 0x%x: from: %d, nx:%p", m_id, m_winflg & WF_SVFR, m_next);
 	if (!(m_winflg & WF_SVFR)) return m0_sv.nxup(r);
 	for (eg = m_et0->fr_n; eg; eg = eg->fr_n) if (eg->to->is_save_trg()) goto edg;
-	if (debug_flags & DFLG_SAVE) log("bxsv/s1: 0x%x: ret 0x%p", m_id, m_et0->fr);
+	IFDBGX(SAVE) log("bxsv/s1: 0x%x: ret 0x%p", m_id, m_et0->fr);
 	p->cn = m_et0->fr; p->st = 5; return r;
 edg:	Node::eg_mv_to0(eg); p->st = 2; p->cn = eg->to; return r + 5;
 }
@@ -1080,7 +1080,7 @@ int ABoxNode::sv_wr_backref() {
 
 int ABoxNode::save_sob() {
 	char * ps = &m0_sv.st;
-	if (debug_flags & DFLG_SAVE) log("save_sob: id=0x%x, st=%d", id(), *ps);
+	IFDBGX(SAVE) log("save_sob: id=0x%x, st=%d", id(), *ps);
 	if (m0_sv.st2<0) ++*ps, m0_sv.st2=0;
 	if (*ps>15) return m_box->save_sob(&m0_sv);
 	switch(*ps) {
@@ -1310,11 +1310,11 @@ int TBoxNode::add(ANode * that, const char * nm, int i, int j) {
 		return TKE_NOROOM;
 iok:    ;}
 	ANode *pv = nx->cth()->pv;
-	if (nx==that || pv==that) { if (debug_flags&DFLG_TRK) log("trkadd/lmv");
+	if (nx==that || pv==that) { IFDBGX(TRK) log("trkadd/lmv");
 				    trk_bkm_rm (m_box, that);
 			  	    if (wf)trk_cond_pm(m_box, that, '-');
 				    that->m_u24.t.i = i; that->m_u24.t.j = j; TRK_CO1(that, "lmv"); }
-	else { if  (debug_flags&DFLG_TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
+	else { IFDBGX(TRK) log("trkadd/rm?"); RMTHAT; do_ins(that, i, j, nx); }
 	trk_bkm_add(m_box, that); if (wf)trk_cond_pm(m_box, that, '+');
 	TRK_CO1(that, "add"); return 0;
 }
@@ -1426,7 +1426,7 @@ int Node::parse_target(CmdBuf * cb, char ** ppname, ANode** ppto) {
 int Node::obj_help(int cl) { 
 	ANode * nd = ANode::lookup_n_q(4);
 	const char * s = 0;
-	if (debug_flags & DFLG_GUICMD) log("obj_help: 0x%x", cl);
+	IFDBGX(GUICMD) log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
 		case 'D': nd = ANode::lookup_n_q(5), s = "object tree"; break;

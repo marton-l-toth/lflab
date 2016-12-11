@@ -89,7 +89,7 @@ void JobQ::upd_gui(bool force) {
 
 void JobQ::upd_gui_1p(JobQ::ent_t * p) {
 	int k = p->plttwwii, ni = p->nid;
-	if (debug_flags & DFLG_JQ) log("upd_gui_1p: plttwwii=0x%x, nid=0x%x, st=0x%x", k, ni, p->st);
+	IFDBGX(JQ) log("upd_gui_1p: plttwwii=0x%x, nid=0x%x, st=0x%x", k, ni, p->st);
 	if (!(k&0xff00) || ni<0) return;
 	int kl = (k>>24)&15, wi = k&255, oid = ni<8 ? 16*kl+23 : 16*ni+kl;
 	if (!Node::chkwin(oid)) return;

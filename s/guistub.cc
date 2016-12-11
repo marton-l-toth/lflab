@@ -58,7 +58,7 @@ int GuiStub::start(int * pfd) {
 	if ((m_pid = launch(QENV('g'), "!><u", &pfi, m_pfd, (char*)0)) < 0)
 		log("FATAL: %s\n", QENV('g')), bye(1);
 	m_gf0 = glob_flg;
-	set_fd(&m_inpipe, pfi, 0); if (debug_flags&DFLG_PT) log("gui_start:  in:%d out:%d", m_inpipe, *m_pfd);
+	set_fd(&m_inpipe, pfi, 0); IFDBGX(PT) log("gui_start:  in:%d out:%d", m_inpipe, *m_pfd);
 	clear(); pf("\tW7$.Vtv%d.%02d\tv%d.%02d", v_major, v_minor, v_major, v_minor);
 	clk0.tcond(&m_errq_t0);
 	savename(); vol(); xapp_bv(); flush();

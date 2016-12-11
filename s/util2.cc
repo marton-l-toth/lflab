@@ -200,7 +200,7 @@ int BufClock::wrk(int op, int n) {
 	ev('T'); if (n<=0) n = (m_buf[m_ix_msk-1]) ? 0x7fffffff : (m_ix&m_ix_msk);
 	if ((n&=~1)>(int)(m_ix_msk-1023)) n = m_ix_msk - 1023;
 	*pa() = n; int i0 = (m_ix - n) & m_ix_msk;
-	if (debug_flags&DFLG_AUDIO) log("clk/tlog-cp: op=%d, i0=%d, n=%d", op, i0 ,n);
+	IFDBGX(AUDIO) log("clk/tlog-cp: op=%d, i0=%d, n=%d", op, i0 ,n);
 	int buf[6]; buf[0] = (op&1) ? 0x30540000+(CFG_TLOG_BACKUP.i<<24) : 0x74670000;
 	buf[1] = qh4(i0>>16); buf[2] = qh4(i0&65535);
 	buf[3] = qh4(n>>16); buf[4] = qh4(n&65535); buf[5] = 10;

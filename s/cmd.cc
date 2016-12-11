@@ -135,7 +135,7 @@ int CmdBuf::read_f() {
 	if (!m_iname) return log("read_f(NULL): %s", r?strerror(errno):"EOF"), GCE_WTF;
 	if (*m_iname=='/' && ++m_try<6) return (close(m_fd), m_fd=open(m_iname,O_RDWR))<0 ? EEE_ERRNO : 0;
 	if (m_eof_cmd) { char l=m_eof_cmd[0]-47, buf[l]; memcpy(buf, m_eof_cmd+1, l);
-			 if (debug_flags&DFLG_PT) log("eof_cmd=\"%s\"",buf); line(buf); }
+			 IFDBGX(PT) log("eof_cmd=\"%s\"",buf); line(buf); }
 	else if (m_fd>0) p_close(&m_fd); 
 	return r ? GCE_FREAD : GCE_EOF;
 }
@@ -377,7 +377,7 @@ int CmdTab::c_wav(CmdBuf * p) {
 	if ((op|4)==4){ if ((s1=p->tok())) { while (*s1==32) ++s1; if (!*s1) s1 = 0; } 
 		 	if ((s2=p->tok())) { while (*s2==32) ++s2; if (!*s2) s2 = 0; } 
 			op += s1 ? (1+!!s2) : 2*(s2 && (s1="0")); }
-	log("c_wav 0x%x 0x%x '%s' '%s'", id, op, s1?s1:"NULL", s2?s2:"NULL");
+	IFDBGX(PT) log("c_wav 0x%x 0x%x '%s' '%s'", id, op, s1?s1:"NULL", s2?s2:"NULL");
 	return pt_acv_op(id, op, s1, s2);
 }
 

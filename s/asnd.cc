@@ -67,7 +67,7 @@ int main(int ac, char** av) {
 #include "pt.h"
 #include "box0.h"
 
-#define IFDBG if (debug_flags&DFLG_AUDIO)
+#define IFDBG IFDBGX(AUDIO)
 #define CDEBUG(S) IFDBG debug(S)
 #define SAMP2NS(X) (((X)*m_ns_16f+8)>>4)
 #define ADDSAMP(X) (m_clk_nbuf += SAMP2NS(X))

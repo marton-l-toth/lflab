@@ -24,8 +24,8 @@ void wrtfun_1_##nm (double *q, double *x, int n) { for(int i=0;i<n;x[i++]*=*q,(u
 void wrtfun_2_##nm (double *q, double *x, double *y, int n) { \
 	for(int i=0; i<n; x[i]*=*q, y[i]*=*q, (uex), i++); }
 #define TFUN_S (1-2*(ud&1))
-#define MXLOG if (debug_flags & DFLG_MX) log
-#define MXLOGN if (debug_flags & DFLG_MX) log_n
+#define MXLOG IFDBGX(MX) log
+#define MXLOGN IFDBGX(MX) log_n
 #define QLOGV(S) ((debug_flags & DFLG_MX) ? log(S) : (void)0)
 
 #define MXIARG(V,I,C) MxItem * V = mx_ptr(I); \
@@ -423,8 +423,7 @@ MxItem * MxItem::m_ffind(int ni, double *arg, int force, int up) {
 					 (k > r->u.f.tlim) && (r->u.f.tlim = k)), r;
 	if (!force || m_x8>=120) return 0;
 	r = mx_alloc('f', m_id); r->u.f.abflg = 0; r->u.f.bx[0] = r->u.f.bx[1] = 0;
-	if (debug_flags & DFLG_MX) { 
-		log_n("m_ffind/new:"); for (int i=0; i<ni+1; i++) log_n(" %.15g", arg[i]); log(""); }
+	IFDBGX(MX) { log_n("m_ffind/new:"); for (int i=0; i<ni+1; i++) log_n(" %.15g", arg[i]); log(""); }
 	r->u.f.tlim = sec2samp(arg[0]); r->u.f.vlim = arg[1]; r->u.f.up = up;
 	r->u.f.in.ini(arg+1, ni); r->m_pv = r->m_nx = r->m_id; r->u.f.mdl = u.m.m;
 	if ((k=m_x8-lo)) memmove(u.m.fi+lo+1, u.m.fi+lo, 2*k);
@@ -640,8 +639,7 @@ int mx_r_isemp(int ix) { return mx_ptr(ix)->r_isemp(); }
 
 // arg: tlim vlim x[1] ... x[ni-1]
 int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel) {
-	if (debug_flags & DFLG_MX) {
-		log_n("mx_add_filter(%d):",trgi); for (int i=0; i<ni+1; i++) log_n(" %.15g", arg[i]); }
+	IFDBGX(MX) { log_n("mx_add_filter(%d):",trgi); for (int i=0; i<ni+1; i++) log_n(" %.15g", arg[i]); }
 	MXIARG(rnod, trgi, r);
 	MxItem *mnod = rnod->r_mfind(mdl, 1); if (!mnod) return MXE_RFULL;
 	MxItem *fnod = mnod->m_ffind(ni, arg, 1, trgi);
@@ -653,7 +651,7 @@ int mx_add_filter(int trgi, BoxModel * mdl, int ni, double * arg, int osel) {
 int mx_add_box(int trgi, BoxInst * bxi, const char * updnnino, const double * arg, int ocf,int delay,int tlim){
 	if (trgi & ~65535) return MXE_WRONGID;
 	MxItem *up = mx_ptr(trgi); 
-	if (debug_flags & DFLG_MX) { log_n("mx_add_box(%d):",trgi); for (int i=0; i<updnnino[2]+6; i++)
+	IFDBGX(MX) { log_n("mx_add_box(%d):",trgi); for (int i=0; i<updnnino[2]+6; i++)
 		log_n(" %.15g", arg[i]); log(""); }
 	MxItem *old0 = mx_ptr(up->m_nx), *rn = mx_alloc('b', trgi, old0->m_id);
 	rn->u.b.bx = bxi; rn->u.b.up = trgi;

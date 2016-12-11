@@ -130,7 +130,7 @@ int Dot::start() {
 
 void Dot::flush() {
 	static char * t_dot = 0;
-	if (debug_flags & DFLG_GRTMP) {
+	IFDBGX(GRTMP) {
 		if (!t_dot) t_dot = (char*)malloc(QENVL('w')+8), memcpy(t_dot, QENV('w'), QENVL('w')),
 								  memcpy(t_dot+QENVL('w'), "/gr.dot", 8);
 		int fd = creat(t_dot, 0644);

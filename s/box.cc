@@ -41,7 +41,7 @@ int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb
 void BoxModel::debug0() { log_n("%p,%d", this, this?refcount:0); }
 void BoxModel::unref(BoxModel *p) {
 	if (p && !--p->refcount) {
-		if (debug_flags&DFLG_MODELDEL) log("model_del: %p",p); delete(p); }}
+		IFDBGX(MODELDEL) log("model_del: %p",p); delete(p); }}
 
      BoxGen::~BoxGen()    { unset_model(); }
 void BoxGen::spec_debug() { log("no class-specific debug info"); }
