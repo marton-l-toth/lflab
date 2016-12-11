@@ -39,7 +39,7 @@ class ASnd {
 		char m_hcp_lbl[8];
 		int m_bufsiz, m_n_chan, m_mxid, m_hcp, m_hcp_s0;
 		int m_bs, m_bs2, m_hwbs_trg, m_swb_siz, m_flg; // flg: 1:liar 2:pump
-		int m_pump_st, m_pump_ofd, *m_pump_pcp; // st: 1-rdy2read 2-running 4-wt4up 8:re 256*#try
+		int m_pump_st, m_pump_ofd, m_pump_et, *m_pump_pcp; // st: 1-r2r 2-runn 4-wt4up 8:re 256*#try
 		short * m_swb;
 };
 extern ASnd snd0;

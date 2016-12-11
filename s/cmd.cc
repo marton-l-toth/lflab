@@ -195,7 +195,7 @@ int CmdBuf::fdok(int ec, int ty) {
 void CmdBuf::show_error(int ec) {
 	// TODO: NOF_FGUI, NDE_CONFIRM
 	char * s0 = untok(); if (!s0) s0 = m_c_a0 - 1;
-	log("%s: %d: \"%s\": %s (%d)", m_iname, m_lineno, s0, err_str(ec), ec);
+	log("%s:%d: \"%s\": %s(%d)", m_iname, m_lineno, s0, err_str(ec), ec);
 }
 
 int CmdBuf::cf_p2i(CmdBuf *p, char *q, int l) {
@@ -246,7 +246,7 @@ static int fcfg_exe(char *s) {
 
 int cmd_report2(int c, const char *s) {
 	extern int dot_dead(); // grbox.cc
-	if (debug_flags&DFLG_PT) log("report2: %c(0x%x), \"%s\"", c>31?c:63, c, s);
+	if ((debug_flags&DFLG_PT) && (c!='p'||*s-49||s[1])) log("report2: %c(0x%x), \"%s\"", c>31?c:63, c, s);
 	switch(c) {
 		case 'g': pt_calc_xbv(); gui2.xapp_bv();
 			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;

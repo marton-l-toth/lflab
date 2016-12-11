@@ -73,7 +73,7 @@ int main(int ac, char** av) {
 #define ADDSAMP(X) (m_clk_nbuf += SAMP2NS(X))
 static fa_writer fa_wr;
 
-int ASnd::close() { clk0.cls(); p_close(m_pump_pcp), p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
+int ASnd::close() { clk0.cls(); p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
 		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~3, w(1024), 0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
@@ -85,7 +85,7 @@ void ASnd::debug(const char *s) {
 			s?s:"debug", fnm, *m_pump_pcp, m_hnd, m_flg, m_pump_st); }
 
 int ASnd::start(int flg, int mxid, int *ppcp) {
-	int n = CFG_AU_TRY_N.i;  if (ppcp) m_pump_pcp = ppcp;
+	int n = CFG_AU_TRY_N.i;  if (ppcp) m_pump_pcp = ppcp, m_pump_et = 0;
 	if (flg&1) n = (n+1)>>1; else if (mxid>=0) m_mxid = mxid;
 	cfg_pre(CFG_AU_SPD.i, CFG_AU_RSRV.i, CFG_AU_CMODE.i);
 	if (m_flg&2) return pump_launch(n);
@@ -115,20 +115,23 @@ int ASnd::pump_launch(int nt) {
 
 int ASnd::pump_op(int x) {
 	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("pump_op %d ", x), debug("p/o");
-	if (x==1) return (m_pump_st&7)==2 ? (++m_pump_st,0) : AUE_P_STATE;
+	if (x==1) return (m_pump_st&1) ? AUE_P_STATE : (++m_pump_st,clk0.pump_1(),0);
 	int e,k; switch(x) {
 		case 0: e = AUE_P_CRASH; goto down;
 		case 1: m_pump_st |= 1; clk0.pump_1(); return 0;
-		case 4: e = 0;		 goto down;
+		case 4: e = 0;		 goto down0;
 		case 5: case 6: case 7: case 8: case 9: e = AUE_P_ERREX; goto down;
 		case 3: return AUE_P_RECOV;
 		default: break; }
 	if ((unsigned int)(x-17)>15u) return AUE_P_WHAT;
-	if ((m_pump_st&15)!=4) return AUE_P_STATE; else m_pump_st ^= 7, clk0.pump_1();
+	if ((m_pump_st&7)!=4) return AUE_P_STATE; else m_pump_st = 3, clk0.pump_1();
 	mx_au16_cfg(&m_cfg, m_n_chan=x-16, CFG_AU_CHCFG.s); m_cur_cpf = &cpf_pump;
 	log("pump process started, #chan=%d", m_n_chan); clk0.pump_cfg(1);
 	return w(1024), 0;
-down:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00; clk0.pump_cfg(0);
+down:	IFDBG log("pump/dn: et=%d", m_pump_et); 
+	if ((m_pump_et+=32) < 999) gui_errq_add(AUE_P_RE), m_pump_st |= 8; else m_pump_et = 0;
+down0:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00;
+	clk0.pump_cfg(0); m_cur_cpf = &cpf_mute;
 	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e;
 }
 
@@ -205,7 +208,7 @@ void ASnd::cpf_mute(ASnd *p) {
 	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
 
 void ASnd::cpf_pump(ASnd *p) {
-	if (!(p->m_pump_st&1)) return clk0.pump_n(); else p->m_pump_st &= ~1;
+	if (!(p->m_pump_st&1)) return clk0.pump_n(); else p->m_pump_st &= ~1, p->m_pump_et -= !!p->m_pump_et;
 	int nf = p->m_bs, bsc = nf*p->m_cfg.nch;  clk0.ev2('P', nf); clk0.ev2('w');
 	short buf[bsc]; p->play2(buf, nf); write(p->m_pump_ofd, buf, 2*bsc); clk0.pump_y(); }
 
