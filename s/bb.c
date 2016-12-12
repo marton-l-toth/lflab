@@ -365,12 +365,16 @@ static void ino_bye(int j) { unsigned int m = 1u<<j, k = !(m&ino_bv);
 			     if (k|(dflg&2)) LOG("BUG:ino_bye: %d"+4*!k, j);
 			     ino_bv &= ~m; unlink(ino_nm(0,j)); unlink(ino_nm(1,j)); }
 
+static int mkdir_1(const char *s, int mode) {
+	if (mkdir(s, mode)>=0) return 0; else if (errno!=EEXIST) return -1;
+	struct stat buf; return -(stat(s, &buf)<0 || !S_ISDIR(buf.st_mode)); }
+
 static void ino_ini() {
 	int l = wrkdir_l;
 	memcpy(ino_inm+ 1, wrkdir, l); memcpy(ino_inm+ 1+l, "/ds/00000.txt",14);
 	memcpy(ino_inm+41, wrkdir, l); memcpy(ino_inm+41+l, "/d0/00000.txt",14);
 	ino_inm[l+4] = ino_inm[l+44] = 0; 
-	if (mkdir(ino_inm+1,0700)<0 || mkdir(ino_inm+41,0700)<0 || (ino_fd=inotify_init1(IN_CLOEXEC))<0 ||
+	if (mkdir_1(ino_inm+1,0700) || mkdir_1(ino_inm+41,0700) || (ino_fd=inotify_init1(IN_CLOEXEC))<0 ||
 	    inotify_add_watch(ino_fd, ino_inm+1, IN_CLOSE_WRITE)<0) 
 		return ino_fd=-1, LOG("ino_ini: %s", strerror(errno));
 	ino_inm[l+4] = ino_inm[l+44] = '/';
@@ -380,7 +384,7 @@ static void ino_ini() {
 #define SERRC(X) (close(fd), (void) write(1, "_E" #X "\n", 5))
 static void ino_add(int id, int edx, char * txt, int len) {
 	if (dflg&2) LOG("ino_add: id=0x%x edx=%d, txt=\"%s\"", id, edx, txt);
-	if (ino_fd<0) return SERR(15);
+	if (ino_fd<0) return LOG("ino_fd=%d (init failed?)",ino_fd), SERR(17);
 	if (ino_find(ino_oid, id)>=0) return SERR(16);
 	BVFOR_JMC(~ino_bv) goto found;
 	return LOG("dsc-edit table full (32)");
