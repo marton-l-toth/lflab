@@ -17,7 +17,7 @@
 
 #define DFLG_RFINST 1
 #define DFLG_MODELDEL 2
-#define DFLG_GUICMD 4
+#define DFLG_CMDECHO 4
 #define DFLG_VOLTAB 8
 #define DFLG_AUDIO 16
 #define DFLG_AOET  32

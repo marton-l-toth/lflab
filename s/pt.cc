@@ -367,7 +367,7 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 		case 2: pid = launch(QENV('b'), "9(kk", "lf.acv",       src, trg, a1, a2, (char*)0); break;
 		case 3: pid = launch(QENV('b'), "9(kk", "lf.acv", "-r", src, trg,         (char*)0); break;
 	}
-ret:	return (pid<0) ? EEE_ERRNO : (pt_acv_cur=id, 0);
+        return (pid<0) ? EEE_ERRNO : (pt_acv_cur=id, 0);
 }
 
 int pt_show_lic() { return launch(CFG_XTERM.s, "!())", "-e", QENV('v'), (char*)0); }

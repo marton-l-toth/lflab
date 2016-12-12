@@ -168,7 +168,7 @@ done:   if (s==c0) m_cpos = m_rpos = 0; else m_cpos = c0 - m_buf, m_rpos = s - m
 }
 
 int CmdBuf::line(char * s) {
-	if ( (debug_flags&DFLG_GUICMD) && is_gui()) log("gui: %s", s);
+	if ((debug_flags&DFLG_CMDECHO)) log("%s:%d: \"%s\"", m_iname, m_lineno, s);
 	m_c_nof = m_nof0;
 	int ec, flg; CmdTab::ent_t * pe;
 start: 	pe = CmdTab::ent(*s); ec = 0; flg = pe->c;

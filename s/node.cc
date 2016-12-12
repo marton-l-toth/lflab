@@ -1426,7 +1426,7 @@ int Node::parse_target(CmdBuf * cb, char ** ppname, ANode** ppto) {
 int Node::obj_help(int cl) { 
 	ANode * nd = ANode::lookup_n_q(4);
 	const char * s = 0;
-	IFDBGX(GUICMD) log("obj_help: 0x%x", cl);
+	IFDBGX(CMDECHO) log("obj_help: 0x%x", cl);
 	switch(cl) {
 		case 'C': s = "clipboard"; break;
 		case 'D': nd = ANode::lookup_n_q(5), s = "object tree"; break;
