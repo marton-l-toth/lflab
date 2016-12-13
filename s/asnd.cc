@@ -106,11 +106,11 @@ void ASnd::cfg_pre(int spd, int rsrv, int mode) {
 	else 	  m_hwbs_trg = bitfill(1024|bs*(500+3*rsrv)/200) + 1, m_cur_cpf = &cpf_true;
 }
 
+#define AUPUMP_ARGL CFG_AU_NAME.s, (char*)aa, (char*)(aa+1), (char*)(aa+3)
 int ASnd::pump_launch(int nt) {
-	int aa[5]; aa[0]=qh4(CFG_AU_CHCFG.i)&65535; aa[1]=qh4(m_bs); aa[3]=qh4(m_bs+2*m_bs2); aa[2]=aa[4]=0;
-	int pid = launch(QENV('q'), "!><k", &m_pump_ofd, m_pump_pcp,
-			 CFG_AU_NAME.s, (char*)aa, (char*)(aa+1), (char*)(aa+3), (char*)0);
-	IFDBG log("pump/cp=%d, args: %s %s %s %s", *m_pump_pcp, CFG_AU_NAME.s, (char*)aa, (char*)aa+1, (char*)aa+3);
+	int aa[5]; aa[0]=qh4(CFG_AU_CHCFG.i<<8)&65535; aa[1]=qh4(m_bs); aa[3]=qh4(m_bs+2*m_bs2); aa[2]=aa[4]=0;
+	int pid = launch(QENV('q'), "!><k", &m_pump_ofd, m_pump_pcp, AUPUMP_ARGL, (char*)0);
+	IFDBG log("pump/cp=%d, args: %s %s %s %s", *m_pump_pcp, AUPUMP_ARGL);
 	return w(1024), (pid<0) ? EEE_ERRNO : (m_pump_st = 4 + (nt ? 256*nt : m_pump_st&0xff00), 0); }
 
 int ASnd::pump_op(int x) {
