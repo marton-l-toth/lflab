@@ -1,4 +1,5 @@
 lflab v0.6
+lflab is free software WITH ABSOLUTELY NO WARRANY. see LICENSE for details.
 
 quicktest.sh was run in the following environments:
 lflab-0.6-0-amd64.deb: Debian 7 on Dell I17R, ALC283(builtin), MAYA44USB
