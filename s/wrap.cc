@@ -259,8 +259,8 @@ class WrapSOB : public SOB {
 class SWrapTab : public SOB {
 	public: 
 		SOBDEF_64(SWrapTab);
-		SWrapTab(int arg) : SOB(arg) { memset(cc,0,8); memcpy(ix, i8tab, 8); ce[0]=ce[1]=0; }
-		SWrapTab(const SWrapTab * that, int arg) : SOB(arg) {          		memcpy(cc,that->cc,8);
+		SWrapTab(int arg) : SOB(arg),iif(0) { memset(cc,0,8); memcpy(ix, i8tab, 8); ce[0]=ce[1]=0; }
+		SWrapTab(const SWrapTab * that, int arg) : SOB(arg), iif(that->iif) {   memcpy(cc,that->cc,8);
 			for (int i=0;i<2;i++) ce[i]= (double*)ANode::cp64(that->ce[i]); memcpy(ix,that->ix,8);}
 		void ini_default(int k) { }
 		~SWrapTab() { ANode::f64c(ce[0]); ANode::f64c(ce[1]); }
