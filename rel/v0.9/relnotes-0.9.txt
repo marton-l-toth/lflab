@@ -1,0 +1,46 @@
+lflab v0.9
+lflab is free software WITH ABSOLUTELY NO WARRANY. see LICENSE for details.
+
+quicktest.sh was run in the following environments:
+(warning, the next 5 lines contain a lot of (registered) trademarks)
+lflab-0.9-0-amd64.deb   : Debian 7 on Dell I17R, ALC283, MAYA44USB
+lflab-0.9-0-i386.deb	: Linux Mint 17.3 (VirtualBox), virtual HW dev.
+lflab-0.9-0.x86_64.rpm  : openSUSE Leap 42.1 (VirtualBox), PulseAudio
+lflab-0.9-0.i686.rpm    : Fedora 23 (VirtualBox), PulseAudio
+MIDI input was tested using KORG devices on Dell nb. and a Debian 8 desktop.
+The semi-auto test on VMs only have a testcase for virtual MIDI device.
+
+Features:
+- generic MIDI input device support (see help for details)
+- short description for boxes/clipboards, text-only objects in tree
+- graph editor: replace box (on/off button)
+- plotting (w. gnuplot): zoom, toggle graphs; FFT speedup
+- new arithmetic (stateless) boxes
+- new quick time-varying filters (.!b.filt.v)
+- histogram box (for statistics e.g. noise distribution)
+- constant non-integer delay filter (1st ord. allpass)
+- track editor: "play" repeats last play/loop cmd.
+- audio/clock: pump mode (for SW mixers esp. PulseAudio)
+- audio/clock: more config options, more detailed logs
+- various cpu usage/stability improvements
+- more examples, description for some examples
+
+Fixes:
+- eliminate unnecessary autosaves
+- all config (except devel/test) visible/changeable on GUI
+- graph editor: feedback conn. kept when # of inputs increased
+- graph editor: check to prevent adding of invalid objects
+- iterated filter: fix for scale/multiply mode
+- equalizer filter: fix for amp=+-1.0
+- shadow wrap: fix random int-mode bitvec. when copying
+- a lot of "crash" and "fails to redraw" bugfixes
+
+Known problems:
+- still no tree-delete
+- no versioning for lf.ini files, error messages after upgrade
+- many examples are without description
+
+Note: the "COPYING" file was changed to be identical with the file
+"LICENSE". The two differences are a new link to the FSF website,
+and different notation for examples. In the terms&conditions part
+not a single letter was changed.
