@@ -52,7 +52,7 @@ int main(int ac, char** av) {
 			if (r>0) { k+=r; errtemp -= !!errtemp; continue; }
                         if (!r) return report(7);
                         if (errtemp+=16>256) return report(6);
-                        if ((r2=snd_pcm_recover(hnd, r, 1))<0) return report(8); else report(3); } while(k<nf);
+                        if ((r2=snd_pcm_recover(hnd, r, 1))<0) return report(5); else report(3); } while(k<nf);
                 k=0;do{ int r=read(0,buf+k,asiz-k); if (r<=0) return report(4+!!r); k+=r; } while(k<asiz);
                 report(1);
         }}
@@ -117,10 +117,10 @@ int ASnd::pump_op(int x) {
 	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("pump_op %d ", x), debug("p/o");
 	if (x==1) return (m_pump_st&1) ? AUE_P_STATE : (++m_pump_st,clk0.pump_1(),0);
 	int e,k; switch(x) {
-		case 0: e = AUE_P_CRASH; goto down;
+		case 0: case 8: e = AUE_P_CRASH; goto down;
 		case 1: m_pump_st |= 1; clk0.pump_1(); return 0;
 		case 4: e = 0;		 goto down0;
-		case 5: case 6: case 7: case 8: case 9: e = AUE_P_ERREX; goto down;
+		case 5: case 6: case 7: case 9: e = AUE_P_ERREX; goto down;
 		case 3: return AUE_P_RECOV;
 		default: break; }
 	if ((unsigned int)(x-17)>15u) return AUE_P_WHAT;
@@ -129,7 +129,7 @@ int ASnd::pump_op(int x) {
 	log("pump process started, #chan=%d", m_n_chan); clk0.pump_cfg(1);
 	return w(1024), 0;
 down:	IFDBG log("pump/dn: et=%d", m_pump_et); 
-	if ((m_pump_et+=32) < 999) gui_errq_add(AUE_P_RE), m_pump_st |= 8; else m_pump_et = 0;
+	if (!(x&7)) { if ((m_pump_et+=32) < 999) gui_errq_add(AUE_P_RE), m_pump_st |= 8; else m_pump_et = 0; }
 down0:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00;
 	clk0.pump_cfg(0); m_cur_cpf = &cpf_mute;
 	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e;
