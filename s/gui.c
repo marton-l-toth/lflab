@@ -223,7 +223,7 @@ static topwin ot_etc[256];
 static int expand_cmd_flg = 1;
 
 static int conf_lbh = 18, conf_lbfh = 15, conf_lbfs = 15, conf_lbfh_s = 12, conf_lbfs_s = 12;
-static int conf_nomwin = 0, conf_SLFOC = 0, conf_QCPU = 0;
+static int conf_nomwin = 0, conf_SLFOC = 0, conf_QCPU = 0, conf_F_YN = 1;
 static int conf_portwid;
 
 static int dflg = 0;
@@ -1012,7 +1012,7 @@ static void choo_open(choo_t * q) {
 		gtk_file_filter_add_pattern(ffilt, "*"); gtk_file_chooser_add_filter(fc, ffilt); }
 	g_signal_connect (q->pg, "response", G_CALLBACK(choo_resp), (gpointer)q);
 	g_signal_connect (q->pg, "destroy", G_CALLBACK(choo_bye), (gpointer)q);
-	gtk_file_chooser_set_do_overwrite_confirmation(fc, TRUE);
+	gtk_file_chooser_set_do_overwrite_confirmation(fc, conf_F_YN ? TRUE : FALSE);
 	if (!memcmp(q->title, "save", 4)) gtk_file_chooser_set_current_folder(fc, getenv("HOME"));
 	gtk_widget_show(GTK_WIDGET(fc));
 }
@@ -5080,7 +5080,7 @@ int main(int ac, char **av) {
 	cltab_init(); txtm_init(); choo_init(); pf_buf[0] = '~';
 	gtk_init (&ac, &av);
 	const char * s = getenv("LF_NOMWIN"); conf_nomwin = s && *s && (*s|32)-'n';
-	IMP(SLFOC); IMP(QCPU);
+	IMP(SLFOC); IMP(QCPU); IMP(F_YN);
 	const char * rcfn = getenv("LF_GTKRC"); if (!rcfn) rcfn = "lf.gtk.rc";
 	char rch[20];
 	int r, fd = open(rcfn, O_RDONLY);

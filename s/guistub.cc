@@ -54,7 +54,7 @@ int GuiStub::start(int * pfd) {
         if (m_pid) return log("gui2 already started: pid %d", m_pid), PTE_WTF;
 	if (pfd) m_pfd = pfd; else if (!m_pfd) bug("gui start without pfd");
 	int pfi;  p_close(m_pfd);
-	cfg_export(&CFG_GUI_SLFOC); cfg_export(&CFG_GUI_QCPU);
+	cfg_export(&CFG_GUI_SLFOC); cfg_export(&CFG_GUI_QCPU); cfg_export(&CFG_GUI_F_YN);
 	if ((m_pid = launch(QENV('g'), "!><u", &pfi, m_pfd, (char*)0)) < 0)
 		log("FATAL: %s\n", QENV('g')), bye(1);
 	m_gf0 = glob_flg;
