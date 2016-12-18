@@ -6,8 +6,8 @@
 #include "guistub.h"
 #include "mx.h"
 #include "pt.h"
-#include "asnd.h"
 #include "cfgtab.inc"
+#include "asnd.h"
 #include "midi.h"
 #include "util2.h"
 

@@ -2,23 +2,27 @@
 #include "job.h"
 #include "guistub.h"
 #include "glob.h"
+#include "cfgtab.inc"
 #include "asnd.h"
 
 Job * JobQ::job(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ? 0  : m_ent[j].p; }
 int   JobQ::jst(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ?1016: m_ent[j].st; }
+int  JobQ::wake(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ? JQE_LU : (m_ent[j].st&=1023); }
 
 void JobQ::init() { 
 	m_nj = 0; m_ent_bv = 0u; m_last_upd = -999999; m_upd_t = 11025;
-	for (int i=0; i<32; i++) m_ent[i].jid = 0xfe0 + i; }
+	for (int i=0; i<32; i++) m_ent[i].jid = 0xfe0 + i;
+	m_jlfun[0] = &asnd_mkjob; for (int i=1; i<16; i++) m_jlfun[i] = &jl_dummy;
+}
 
 int JobQ::launch(ANode * nd, int ix, char * arg) {
 	int i = __builtin_ffs(~m_ent_bv) - 1;
 	if ((i | (31-m_nj)) < 0) return JQE_FULL;
 	ent_t * p = m_ent + i;
-	int ji0 = p->jid, ji = (ji0+32) & 4095;
-	p->p   = 0;  p->nid = nd->id(); p->st = 0; p->xst = 9999;
-	p->jid = ji; p->i4f = ix & 15; p->plttwwii = 0x60000000;
-	int ec = nd->start_job_2(p, arg);
+	int ji0 = p->jid, ji = (ji0+32) & 4095, i4 = ix&15;
+	p->p   = 0; p->st = 0; p->xst = 9999; p->jid = ji; p->i4f = i4;
+	int ec = nd ? (p->nid = nd->id(), nd->start_job_2(p, arg))
+		    : (p->nid = -1	, (*m_jlfun[i4]) (p, arg));
 	if (ec<0) return p->jid = ji0, ec;
 	int j    = m_nj++,
 	    prio = (p->plttwwii >> 23) & 224;
@@ -71,11 +75,8 @@ bool JobQ::run() {
 
 bool JobQ::need_upd() {
 	if (snd0.total_played() >= m_last_upd + m_upd_t) return true;
-	int j;
-	for (unsigned int m = m_ent_bv; (j=__builtin_ffs(m)-1) >= 0; m &= ~(1u<<j)) {
-		if (m_ent[j].xst==m_ent[j].st) continue;
-		if (m_ent[j].xst==9999 || m_ent[j].st > 1004) return true;
-	}
+	BVFOR_JM(m_ent_bv) { if (m_ent[j].nid<0 || m_ent[j].xst==m_ent[j].st) continue;
+			     if (m_ent[j].xst==9999 || m_ent[j].st > 1004) return true; }
 	return false; 
 }
 

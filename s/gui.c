@@ -218,7 +218,7 @@ static chtab tw_clch, ww_clch;
 static obidtab  oi_box, oi_dir, oi_etc;
 static ob_dir ot_dir[256];
 static ob_box ot_box[256];
-static topwin ot_etc[256];
+static topwin ot_etc[256]; // 7:main 17:LR 27:midi 37:misc 47:err 57:path 67:au0 77:pz 87:au1
 
 static int expand_cmd_flg = 1;
 
@@ -1132,9 +1132,9 @@ menu_t menutab[] = { {'?',0,0,0,0,NULL,NULL},
 {'.',12,0,12,4, "flush log   write tlog  save config ------------exit(autosv)restart(asv)restart GUI "
 		"------------exit w/o a/srestart-noASSIGABRT     SIGKILL     ",
 		"*f  _@1 c>  ####$!q0$!q2$!q ####$!q1$!q3#%$6#%$9"},
-{0,  11,0,12,4, "[obj. tree] filter disp.console     error list  ------------"
-		"audio configpath config midi config misc config ------------show tlog   ",
-		"$/  _F  _c-1_E  ####A0W cW  mW  cV  ####_@  "},
+{0,  12,0,12,4, "[obj. tree] filter disp.console     error list  ------------"
+		"audio configaux.audio c.path config midi config misc config ------------show tlog   ",
+		"$/  _F  _c-1_E  ####A0W A1W cW  mW  cV  ####_@  "},
 {'/',9, 0,7,1, "folder clipbrdinstr. shadow graph  iter.f.calc   track  text   ","DCwsgicth"},
 {0,  9, 0,8,5, "load    save    save as --------load libsave lib--------exit+AS rstrt+AS",
 	          "$!f<Ws    $!f>W#####lW   $!fLW#####$!q0 $!q2 "},
@@ -1667,15 +1667,24 @@ static void dabmp_draw(ww_t * ww, cairo_t * cr2) {
 
 	if (!state && q[2]!=0x80000100) state=1, CMD("Rg");
 	int fg, bg, rf = -!!(q[9]&0xf8000000), gf = -!(q[3]&0xf8000000);
-	if (cpu_austat) fg = (rf&0xcc0000)+(gf&0xcc00)+0x333333, bg = (rf&0x330000)+(gf&0x3300)+0x1a1a1a;
-	else fg=0x999999, bg = 0;
+	switch(cpu_austat) {
+		case 0: fg = 0x999999, bg = 0; break;
+		case 2: fg = 0x7f7fff, bg = 0; break;
+		case 1: fg= (rf&0xcc0000)+(gf&0xcc00)+0x333333, bg= (rf&0x330000)+(gf&0x3300)+0x1a1a1a; break;
+		case 3: fg= (rf&0xbb0000)+(gf&0x00bb)+0x444444, bg= 0; break;
+		default: fg = 0xffff00, bg = 0xff0000; break; }
 	int i, j, k, x, xg = fg^bg;
 	for (i=0,k=32; i<38; i++) for (j=0,x=q[i]; j<32; j++,k++,x>>=1) cpu_rgb[k] = bg ^ (xg &- (x&1));
 	cairo_set_source_surface (cr2, cpu_surf, 0.0, 0.0); cairo_paint(cr2); 
 }
 
 static void dabmp_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
-	widg_defcmd(ww, b9==9 ? "A0Y" : "#hello"); }
+	if ((unsigned int)(b9-1)>8u) return LOG("BUG: dabmp_clk: b9=%d", b9);
+	int len; char buf[8]; buf[0]='~'; buf[1]='A';
+	if (b9<4) buf[2]=63-b9, len=3;
+	else if (!((b9-7)&~2)) buf[2]=51-(b9>>1), buf[3] = 'Y', len=4;
+	buf[len++] = 10; write(1, buf, len);
+}
 
 static void dabmp_skel(struct _ww_t * ww, const char **pp) {
 	unsigned int * q = (unsigned int *) cpu_bmp;
@@ -1710,7 +1719,7 @@ static void tlog_cmd(const char * h16) {
 	for (i=2; i<=n; i+=2) {
 		int v, c = q[i]&127, t = (q[i]>>7)&0x7fffff;
 		if ((c|33)!='q') { if (lt>=0) (c=='K') ? (lt=-1,nf=0) : (lt+=t); continue; }
-		cpu_austat = 1 & ~c;
+		cpu_austat = (cpu_austat&2) | (1 & ~c);
 		if (!(c&32)) {  if (lt>=0) { CLOG("tlog: unexp %c",c); } nf = q[i+1]; lt = t|-!nf; continue; }
 		if (lt<0 || !nf) { CLOG("tlog: unexp '%c' (0x%x)", c<32?63:c, c); v = 0; lt=-1; nf=0; }
 		else { v = ((51 * lt) / nf)>>8; lt = -1; nf = 0; if (v>maxv) maxv = v; }
@@ -4289,7 +4298,7 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 	static const char col0[] = "wav-dir\0atmpdir\0xterm\0\0\0editorT\0editorX\0"
 		"homedir\0userdir\0tmp.dir\0instdir\0workdir";
 	static const char *d[5], *v[5] = {"HOME", "LF_USERDIR", "LF_TMPROOT", "LF_DIR", "LF_TMPDIR"};
-	if (!d[0]) { int i,l; char *s; for (i=0; i<5; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>"; }
+	if (!d[0]) { int i; for (i=0; i<5; i++) if (!(d[i] = getenv(v[i]))) d[i] = "<<BUG!!!>>"; }
 	const char *ws="[" FCFL_D(w) FCFL_D(k) FCFL_X(0) FCFL_X(1) FCFL_X(2)
 			   FCFL_I FCFL_I FCFL_I FCFL_I FCFL_I 
 			   "(3{B~saveCfg$c>}{B_misc$cV}{B_audio$A0W}{B_midi$mW}{B_?$$?})]";
@@ -4303,10 +4312,11 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio config ///////////////////////////////////////////////
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
-	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163A0s}{!rrsv$1faA0r}{!ttry$114A0t}{!wt/w$1faA0w}"
-	"[{B_?$$?}{M_name:$A0n|_01}{en10$A0N}{M_chan.c:$A0o|S2}{eo10$A0O}{L##out: 0}({L_clk:}3{Mc$A0c|S1})"
-	"(3{Y0kill PA$A00}{Y1-9$A01}){B_restart$A0R}{B_saveCfg$_K}])]";
-	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "audio", 6);
+	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163As}{!rrsv$1faAr}{!ttry$114At}{!wt/w$1faAw}"
+	"[{B_?$$?}{M_name:$An|_01}{en10$AN}{M_chan.c:$Ao|S2}{eo10$AO}{L##out: 0}(3{YB2^x$AB}{Mc$Ac|S1})"
+	"(3{Y0kill PA$A0}{Y1-9$A1})(3{B_stop$AZ}{B_start$AR}){B_saveCfg$_K}])]";
+	int af = (tw->id!=0x67); tw->cmdp_len=1; tw->cmdpref[0] = '0' + af;
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "m.audio\0a.audio"+8*af, 8);
 	else gtk_window_present(GTK_WINDOW(tw->w)); 
 }
 
@@ -4952,6 +4962,7 @@ static void cmd1(char * str) {
 		case 'x': if ((unsigned int)(i = *s-48) >= (unsigned int)N_XAPP) LOG("x: i=%d",i);
 			  else xapp_bv[i] = atoi_h(s+1);
 			  return;
+		case 'b': cpu_austat = (cpu_austat&1) + hxd2i(*s); return;
 		default:LOG("unknown cmd 0x%x",*str); return;
 	}
 }

@@ -2,9 +2,9 @@
 #include "mx.h"
 #include "cmd.h"
 #include "guistub.h"
+#include "cfgtab.inc"
 #include "asnd.h"
 #include "util2.h"
-#include "cfgtab.inc"
 
 #define TR_SEL_ID (bxw_rawptr[0].i[1])
 #define TR_SEL_XY (bxw_rawptr[1].i)
@@ -360,7 +360,7 @@ int TrackGen::play(int op, int pos) {
 	double v[12]; v[0] = v[1] = 1.0; v[2] = v[5] = 0.0; v[3] = 10.0; v[4] = 1e-5;
 	v[6] = 0.1 * (double)m_bp10m; v[9] = (op&1) ? 0.0 : 9999.0;
 	v[7] = v[10] = (double)pos; v[8] = v[11] = (op==1) ? 53000.0 : (double)(pos+(op>>1));
-	int bi = mx_add_box(0, m_m.mk_box(), "-A\x06\x02", v, 0x402); 
+	int bi = mx_add_box(glob_flg&1, m_m.mk_box(), "-A\x06\x02", v, 0x402); 
 	return (bi<0) ? bi : mx_c_add(m_mxctl, bi, 1);
 }
 

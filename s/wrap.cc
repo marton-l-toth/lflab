@@ -1755,11 +1755,11 @@ int DWrapGen::sl_bv() {
 
 #define TXD_GET(T,C,S) BVFOR_JM(flg&255) x = vs[nv++], T[j] = (flg&(256<<j)) ? \
 	(x=((flg&WRF_IADJT)?x+(double)S[j]:x)*div1tab[(int)C->grdim[j]], x<0.0?0.0:(x>1.0?1.0:x)) : x
-int DWrapGen::add2mx_txdlv(int trg, int flg, int dly, int lim, const double *vs) {
+int DWrapGen::add2mx_txdlv(int trg0, int flg, int dly, int lim, const double *vs) {
 	if (!m_sfbx[0]) return EEE_NOEFF;
 	double x, in[36], v11[11];
 	int ni, no, nv = 0, ncf = (flg|=pflg()) & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0),
-	    trf = !(flg&WRF_NOREC) && !trg && trk_rec_trg;
+	    trf = !(flg&WRF_NOREC) && !trg0 && trk_rec_trg, trg = trg0 + (!trg0&glob_flg);
 	WrapSOB * sob = m_sob.ro(); 
 	TXD_GET(v11, sob->m_core.ro(), m_xys6);
 	sob->prep11(v11, flg | (768^(v0f<<9)), m_xys6);

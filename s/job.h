@@ -3,9 +3,12 @@
 
 class Job; class CmdBuf; class ANode;
 
+struct jobq_ent_t { Job * p; int nid; short st, xst, jid, i4f; int plttwwii; };
 class JobQ {
         public: 
-		typedef struct { Job * p; int nid; short st, xst, jid, i4f; int plttwwii; } ent_t;
+		typedef jobq_ent_t ent_t;
+		typedef int (*jlfun_t)(ent_t *, char*);
+		static int jl_dummy(ent_t * e, char* a) { return JQE_UNDEF; }		
 		void init();
 		int nj() const { return m_nj; }
 		Job *  job(ANode * nd, int ix);
@@ -14,6 +17,7 @@ class JobQ {
 		bool run();
 		void upd_gui(bool force = false);
 		void upd_gui_1(ANode * nd, int ix) { if ((ix=lu(nd,ix))>=0) upd_gui_1p(m_ent+ix); }
+		int wake(ANode * nd, int ix);
 		int kill(ANode * nd, int ix, int ec = JQE_KILL) { return kill5(lu(nd,ix), ec); }
 		int purge();
 		int cmd(ANode * nd, int ix, char * arg);
@@ -30,6 +34,7 @@ class JobQ {
 		unsigned int m_ent_bv;
 		long long m_last_upd;
 		int m_upd_t;
+		jlfun_t m_jlfun[16];
 };
 
 class Job {

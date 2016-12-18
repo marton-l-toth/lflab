@@ -13,9 +13,9 @@
 #include "pzrf.h"
 #include "guistub.h"
 #include "mx.h"
+#include "cfgtab.inc"
 #include "asnd.h"
 #include "midi.h"
-#include "cfgtab.inc"
 
 #define CMD_NODE(T) T##Node* nd = dynamic_cast<T##Node*>(p->m_c_node); if (!nd) return GCE_EX##T
 
@@ -61,8 +61,8 @@ class CmdTab {
 		static int c_iofw(CmdBuf * p) { if(*p->m_c_a0=='f')fflush(stderr); return pt_iocmd(p->m_c_a0);}
 		static int c_wkfw(CmdBuf * p) { char*s = p->m_c_a0; int r, l = strlen(s);  s[l] = 10;
 						r = pt_wrk_cmd(s, l+1); s[l] = 0; return r; }
-		static int c_snd(CmdBuf * p) { int k = *p->m_c_a0 - 48;
-					       return k ? GCE_PARSE : snd0.cmd(p->m_c_a0+1); }
+		static int c_snd(CmdBuf * p) { const char *s = p->m_c_a0; int k = *s-48;
+					       return (k&~1) ? asnd_gcmd(s) : snd01[k].cmd(s+1); }
 		static int c_midi(CmdBuf *p) { return midi_cmd(p->m_c_a0); }
 		static int c_report(CmdBuf *p) { return cmd_report2(*p->m_c_a0, p->m_c_a0+1); }
 		static dfun_t c_cre, c_vol, c_job, c_cfg, c_lib, c_misc, c_nadm, c_tree, c_wav,
@@ -252,6 +252,7 @@ int cmd_report2(int c, const char *s) {
 			  glob_flg |= GLF_GUIOK; log("gui says hi"); return 0;
 		case 'S': return qstat_op(*s);
 		case 'p': return snd0.pump_op(*s-48);
+		case 'q': return snd1.apmp_op(*s-48);
 		case '0': return pt_io_dead();
 		case '1': return gui_dead(*s-'q');
 		case '4': return pt_wrk_dead();
