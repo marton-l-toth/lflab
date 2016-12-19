@@ -1682,7 +1682,8 @@ static void dabmp_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton 
 	if ((unsigned int)(b9-1)>8u) return LOG("BUG: dabmp_clk: b9=%d", b9);
 	int len; char buf[8]; buf[0]='~'; buf[1]='A';
 	if (b9<4) buf[2]=63-b9, len=3;
-	else if (!((b9-7)&~2)) buf[2]=51-(b9>>1), buf[3] = 'Y', len=4;
+	else if (!((b9-7)&~2)) buf[2]=52-(b9>>1), buf[3] = 'Y', len=4;
+	else return LOG("dabmp_clk(%d) -- nothing happens", b9);
 	buf[len++] = 10; write(1, buf, len);
 }
 
@@ -4232,7 +4233,7 @@ GtkWidget * midi_vbl (struct _ww_t * ww, int ix) {
 	if (ix==31) { rw2=parse_w_s(ww->top,
 		"({L099}{L1c8d8$##}3{C2200$$zzz%%zvirtual device >>}0{V3[focus]}{B4rls$mVz})"); }
 	else {LN_TEMPL(zz,0,"({L099}{B1c8d8$m_o}3{C2200,(none)}0{B3up$m_X-}{B4dn$m_X+}{B5rls$m_z})",0);rw2=rw;}
-	int x, i0 = VB_WBASE(ww) + 6*ix;  topwin * tw = ww->top;
+	int i0 = VB_WBASE(ww) + 6*ix;  topwin * tw = ww->top;
 	d59(DALBL_TXT(widg_qp(tw, i0)), ix); memcpy(DALBL_TXT(widg_qp(tw, i0+1)),"----",4);
 	return rw2;
 }
@@ -4881,7 +4882,7 @@ static void cmd_ob(int c0, int id, char * arg) {
 		default: break;
 	}
 	topwin * tw; ww_t * ww;
-	if (!(tw = tw_lookup(id))) { if ((dflg&DF_CWLU)|((id-0x57)&~16)) LOG("%c: lookup(0x%x) failed",c0,id);
+	if (!(tw = tw_lookup(id))) { if ((dflg&DF_CWLU)|((id-0x57)&~48)) LOG("%c: lookup(0x%x) failed",c0,id);
 				     return;}
 	if (!*arg) { LOG("%c: missing twclass", c0); return; }
 	if (*arg!='?' && *arg!=tw->cl->ch) {
