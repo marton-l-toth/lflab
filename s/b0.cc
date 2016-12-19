@@ -177,6 +177,29 @@ WVBOX1(SawTWave, x+x-1.0, 1.0);
 WVBOX2(GPlsTrain, gpt_f(x, yp[i&ymsk]), 1.0);
 WVBOX2(SqWave, (x<yp[i&ymsk]) ? 1.0 : 0.0, 1.0);
 
+//? {{{!._fib}}}
+//? Fibonacci series generator
+//? in0: index of first (out0) Fibonacci-number (rounded)
+//? out[0] ... out[n-1]: fib(round(in0)) ... fib(round(in0)+n-1)
+//? ---
+//? input is expected to be constant
+class FibBox : public BoxInst {
+	public: FibBox(int m) : m_arg(m), m_p(0) {}
+		virtual ~FibBox() { free(m_p); }
+		virtual int calc(int inflg, double** inb, double** outb, int n);
+	protected: int m_arg; double * m_p;
+};
+
+int FibBox::calc(int inflg, double** inb, double** outb, int n) {
+	if (!n) return 0;  int m = m_arg;
+	if (!m_p) { m_p = (double*)malloc(8*m);  int k = (int)lround(**inb);
+		    int z, x = 1, y = 1;
+		    for (int j=0; j<k; j++) z=y, y+=x, x=z;
+		    for (int j=0; j<m; j++) outb[j][0] = m_p[j] = (double)x, z=y, y+=x, x=z; }
+	else	  { for (int j=0; j<m; j++) outb[j][0] = m_p[j]; }
+	return 0;
+}
+
 //? {{{!._nz}}}
 //? Simple noise generator
 //? ty - noise type
@@ -441,7 +464,8 @@ void b_map_init(ANode * rn) {
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
-	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat");
+	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat"),
+	      *fi = qmk_dir(mc, "fib");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
 	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_3", "*i*o*", "kkk%%%", "x", "x");
 	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
@@ -463,5 +487,7 @@ void b_b0_init(ANode * rn) {
 	char nm[16]; memcpy(nm, "debug01", 8); qmb_arg_t qa = QMB_ARG1(DebugBox);
 	qmk_box(db, nm, qa, 1, 1, 33, "dbg", "R*1", "zz%z%%");
 	for (int i=2; i<31; i++) nm[5] = 48+i/10, nm[6] = 48+i%10, qmk_box(db,nm,qa,i,i,i,"dbg","1");
+	memcpy(nm, "fib01", 6); qa = QMB_ARG1(FibBox);
+	for (int i=1; i<31; i++) nm[3] = 48+i/10, nm[4] = 48+i%10, qmk_box(fi,nm,qa,i,1,i+32,"fib","");
 	sel_ini(qmk_dir(mc, "sel"));
 }

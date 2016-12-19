@@ -61,11 +61,14 @@ static const double minifilt9[177] = { 1.0,
 //? {{{!._spF}}}
 //? echo filter (sparse recursive filter) / comb filter
 //? in: filter input
-//? fq1: base freq.
+//? fq1: base freq. (*)
 //? [fi]: list of FIR mini-filters (-15...15 each)
 //? 0:none +:low-p -:high-p. even: symmetric odd: assym.
 //? t<i>, c<i>: time, constant
 //? t>=0: input-t, t<0: output-t
+//? ---
+//? (*) if fq1 is negative, times are in samples, and multiplied
+//? by -fq1 (fq1 = -1.0 is raw samples mode)
 class SparseRF : public BoxInst {
 	public:
 		SparseRF(int nxy) : m_nxy(nxy), m_px(0), m_xc(0) {}
@@ -80,7 +83,7 @@ class SparseRF : public BoxInst {
 // in fq1 cfg t1 c1 ... tn cn dmp
 void SparseRF::ini(double** p) {
 	int dmpf, nxy = m_nxy, n_xy1 = 0, siz;
-	double tmul = (double)sample_rate / p[0][0];
+	double f1=**p, tmul = f1<0 ? -f1 : (double)sample_rate / f1;
 	NAN_UNPK_8(mf, p[1], 0);
 	double dmpc = p[2*nxy+2][0], 
 	       dmp1 = (dmpf = (fabs(dmpc)>1e-100)) ? exp(dmpc *= -sample_length) : 1.0;
