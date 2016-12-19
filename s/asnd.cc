@@ -339,7 +339,7 @@ int asnd_gcmd(const char *s) {
 		case '>': glob_flg |=  1; goto astat;
 		default: return GCE_PARSE;
 	}
-astat:  gui2.sn("\tb0 \tb1"+4*(glob_flg&1), 4); return 0;
+astat:  gui2.sn("\tb0 \tb1"+4*(glob_flg&1), 3); return 0;
 }
 
 int rawmidi_desc(char *to, int id, int maxlen) {
