@@ -133,6 +133,8 @@ FUN1_BOX(Ar1_1p_1m, (1.0+x)/(1.0-x))
 FUN1_BOX(Ar1_1m_1p, (1.0-x)/(1.0+x))
 FUN1_BOX(Ar1Sec2Samp, x*(double)sample_rate)
 FUN1_BOX(Ar1Samp2Sec, x*sample_length)
+FUN1_BOX(Ar1Prime17, (double)next_prime17((int)ceil(x)))
+FUN1_BOX(Ar1Fib7s,   fib7s((int)lround(x)))
 
 class CalcBoxGen : public BoxGen {
 	public: 
@@ -270,6 +272,8 @@ void b_ar_init(ANode * rn) {
 	qmk_box(f1, "1-x/1+x",  QMB_ARG0(Ar1_1m_1p),   0, 1, 33, "a1", "1");
 	qmk_box(f1, "sec2samp", QMB_ARG0(Ar1Sec2Samp), 0, 1, 33, "a1", "1");
 	qmk_box(f1, "samp2sec", QMB_ARG0(Ar1Samp2Sec), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "prime17",  QMB_ARG0(Ar1Prime17),  0, 1, 33, "a1", "1");
+	qmk_box(f1, "fib7s",    QMB_ARG0(Ar1Fib7s),    0, 1, 33, "a1", "1");
 	qmk_box(mx, "xmix", QMB_ARG0(CrossMix), 0, 3, 33, "xmx", "i*R*1", "x$y$t", "qqq%%q");
 	qmk_box(mx, "mix2", QMB_ARG1(SMix), 2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
 	qmk_box(mx, "mix3", QMB_ARG1(SMix), 3, 6, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3");

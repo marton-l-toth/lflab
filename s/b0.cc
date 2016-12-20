@@ -29,6 +29,27 @@ int NM::calc(int inflg, double ** inb, double ** outb, int n)
 	else { double d=mul*p[0]; for (int i=0; i<n; i++) q[i]=(X), x+=d, x>MUL && (x-=MUL); }\
 	m_phs = x; return 1; }
 
+#define LSBOX(NM) class NM : public BoxInst { \
+	public: NM(int x) : m_x(x), m_p(0) {}  \
+		virtual ~NM() { free(m_p); }    \
+	protected: int m_x, m_y; double * m_p;   \
+		void calc2(double *q, double **inb, int n); }; \
+class NM##O : public NM { \
+	public: NM##O(int m) : NM(m) {} \
+		virtual int calc(int inflg, double** inb, double** outb, int n) { \
+			if (!n) return 0; if (!m_p) calc2(m_p=(double*)malloc(8*m_x), inb, m_x); \
+			for (int m=m_x, j=0; j<m; j++) outb[j][0] = m_p[j]; return 0; }}; \
+class NM##T : public NM { \
+	public: NM##T() : NM(0) {} \
+		virtual int calc(int inflg, double** inb, double** outb, int n) { \
+			if (!n) return 0; if (!m_p) m_y = ivlim((int)lround(**inb),0,1024), \
+						    calc2(m_p=(double*)malloc(8*m_y), inb+1, m_y); \
+			double *q = *outb; int k = m_y-m_x; \
+			return (k>=n) ? 	 (memcpy(q, m_p+m_x, 8*n), m_x+=n, 1) \
+			      	      : ((k>0) ? (memcpy(q, m_p+m_x, 8*k), m_x+=k, memset(q+k,0, 8*(n-k)), 1) \
+					       : (*q=0.0, 0)); }}; \
+void NM::calc2(double *q, double **inb, int n)
+
 //? {{{!._0}}}
 //? this box has no inputs, and outputs constant zero.
 //? {{{!._2}}}
@@ -179,27 +200,25 @@ WVBOX2(SqWave, (x<yp[i&ymsk]) ? 1.0 : 0.0, 1.0);
 
 //? {{{!._fib}}}
 //? Fibonacci series generator
-//? in0: index of first (out0) Fibonacci-number (rounded)
-//? out[0] ... out[n-1]: fib(round(in0)) ... fib(round(in0)+n-1)
+//? i0: index of first (out0) Fibonacci-number (rounded)
+//? out0 ... out<n-1>: fib(round(in0)) ... fib(round(in0)+n-1)
 //? ---
 //? input is expected to be constant
-class FibBox : public BoxInst {
-	public: FibBox(int m) : m_arg(m), m_p(0) {}
-		virtual ~FibBox() { free(m_p); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
-	protected: int m_arg; double * m_p;
-};
+LSBOX(FibBox) { for (int j=0,k=(int)lround(**inb); j<n; j++) q[j] = fib7s(j+k); }
 
-int FibBox::calc(int inflg, double** inb, double** outb, int n) {
-	if (!n) return 0;  int m = m_arg;
-	if (!m_p) { m_p = (double*)malloc(8*m);  int k = (int)lround(**inb);
-		    int z, x = 1, y = 1;
-		    for (int j=0; j<k; j++) z=y, y+=x, x=z;
-		    for (int j=0; j<m; j++) outb[j][0] = m_p[j] = (double)x, z=y, y+=x, x=z; }
-	else	  { for (int j=0; j<m; j++) outb[j][0] = m_p[j]; }
-	return 0;
-}
-
+//? {{{!._pri}}}
+//? Outputs prime numbers
+//? p0: start (out0 will be next prime)
+//? mdif: minimal diff. between primes (at least 1)
+//? mmul: min. multipler between primes
+//? out0 ... out<n-1>: prime numbers
+//? ---
+//? input is expected to be constant
+//? primes found only up to 131101
+LSBOX(PriBox) { int i = next_prime17((int)lround(**inb)), id = max_i(1, (int)lround(inb[1][0]));
+		double x, xm = (int)lround(inb[2][0]);
+		for (int j=0; j<n; j++) q[j] = x = (double)i,
+					i = next_prime17(max_i(i+id, (int)lround(x*xm))); }
 //? {{{!._nz}}}
 //? Simple noise generator
 //? ty - noise type
@@ -462,10 +481,16 @@ void b_map_init(ANode * rn) {
 	for (int i=3; i<=9; i++) ++nm[6], qmk_box(rn, nm, qa, i, 3*i+1, i, "m01x", "1");
 }
 
+static void ls_init(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
+	rn = qmk_dir(rn, nm0);
+	int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
+	memcpy(nm+l, "*",  2); qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm);
+	memcpy(nm+l, "01", 3); qmk_box(rn, nm, qaO, 1, ni,   33, nm0, "i*R1", inm+4);
+ 	for (int i=2; i<31; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qaO,i,ni,i+32,nm0,"1"); }
+
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
-	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat"),
-	      *fi = qmk_dir(mc, "fib");
+	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
 	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_3", "*i*o*", "kkk%%%", "x", "x");
 	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
@@ -487,7 +512,7 @@ void b_b0_init(ANode * rn) {
 	char nm[16]; memcpy(nm, "debug01", 8); qmb_arg_t qa = QMB_ARG1(DebugBox);
 	qmk_box(db, nm, qa, 1, 1, 33, "dbg", "R*1", "zz%z%%");
 	for (int i=2; i<31; i++) nm[5] = 48+i/10, nm[6] = 48+i%10, qmk_box(db,nm,qa,i,i,i,"dbg","1");
-	memcpy(nm, "fib01", 6); qa = QMB_ARG1(FibBox);
-	for (int i=1; i<31; i++) nm[3] = 48+i/10, nm[4] = 48+i%10, qmk_box(fi,nm,qa,i,1,i+32,"fib","");
+	ls_init(mc, QMB_ARG1(FibBoxO), QMB_ARG0(FibBoxT), "fib", 1, "siz$i0");
+	ls_init(mc, QMB_ARG1(PriBoxO), QMB_ARG0(PriBoxT), "pri", 3, "siz$p0$mdif$mmul");
 	sel_ini(qmk_dir(mc, "sel"));
 }
