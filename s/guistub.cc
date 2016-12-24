@@ -218,3 +218,7 @@ void GuiStub::savename() {
 	setwin( 7,'.'); wupd_c0('N','t'); sn(rgb, 6); sz(sb); 
 	setwin(23,'/'); wupd_c0('1','t'); sn(rgb, 6); sz(sp);
 }
+
+void GuiStub::gn_start(int i, BoxGen * bx, int ni, int no) {
+	wupd_c0('g', 'n'); c4(i_to_b32((i+1)>>5), i_to_b32((i+1)&31), i_to_b32(ni), i_to_b32(no));
+	if (bx) sn(bx->v_rgb(), 6), nname(bx->node()), c1(36); else sn("zz%z%%!BUG!$", 12); }

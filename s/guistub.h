@@ -105,6 +105,7 @@ class GuiStub {
 		void savename();
 		void vol();
 		int gna_add2q(int id) { return (m_gnaq_n>15) ? 0 : (m_gnaq_id[m_gnaq_n++]=id, 256); }
+		void gn_start(int i, BoxGen * bx, int ni, int no);
 	protected:
 		int *m_pfd, m_pid, m_inpipe, m_gf0;
 		int m_cwt, m_lwi, m_cwi;

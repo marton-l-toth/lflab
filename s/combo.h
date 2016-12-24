@@ -40,4 +40,25 @@ class FeedbackBoxInst : public BoxInst {
 		int * m_tjb;
 };
 
+class Dot {
+        public:
+                static Dot * sg();
+                static int dot_dead();
+                Dot() : m_pid(0), m_pipe(-1), m_n(0), m_nids(0) {}
+                int start();
+                bool active() const { return !!m_pid; }
+                void ghead(int tid, int tt, int wid, int wix, int seq, int nn, int ne);
+                void gnode(int ix, int ni, int no, int w);
+                void gedge(int n0, int o0, int n1, int i1);
+                void gend();
+        protected:
+                void flush();
+                static Dot * m0_sg;
+                int m_pid;
+                int m_pipe;
+                char m_buf[16384];
+                int m_n;
+                char * m_nids;
+};
+
 #endif // __qwe_combo_h__

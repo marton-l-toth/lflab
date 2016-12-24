@@ -1,5 +1,3 @@
-#include <fcntl.h>
-
 #include "util.h"
 #include "combo.h"
 #include "guistub.h"
@@ -15,27 +13,6 @@ class GRBX_Node {
                 BoxGen* box;
                 int ni, no;
                 int *iarg, *oarg;
-};
-
-class Dot {
-        public: 
-                static Dot * sg();
-		static int dot_dead();
-                Dot() : m_pid(0), m_pipe(-1), m_n(0), m_nids(0) {}
-                int start();
-                bool active() const { return !!m_pid; }
-                void ghead(int tid, int tt, int wid, int wix, int seq, int nn, int ne);
-                void gnode(int ix, int ni, int no, int w);
-                void gedge(int n0, int o0, int n1, int i1);
-                void gend();
-        protected:
-                void flush();
-		static Dot * m0_sg;
-                int m_pid;
-                int m_pipe;
-                char m_buf[16384];
-                int m_n;
-                char * m_nids;
 };
 
 class GraphBoxGen : public BoxGen {
@@ -108,100 +85,6 @@ class GraphBoxGen : public BoxGen {
                 double m_guitmp;
 		char m_op; // 0:ins 1:repl
 };
-
-Dot * Dot::m0_sg = 0;
-Dot * Dot::sg() {
-	if (!m0_sg) (m0_sg = new Dot()) -> start();
-	return m0_sg; }
-
-int Dot::dot_dead() {
-	errtemp_cond("dot_dead");
-	if (!m0_sg) log("BUG: unexp. dot_dead() (!sg) ");
-	else close(m0_sg->m_pipe), m0_sg->m_pid = 0, delete(m0_sg), m0_sg = 0;
-	return 0;
-}
-
-int Dot::start() {
-        if (m_pid>0) { log("dot already started: pid %d", m_pid); return -3; }
-	const char * path = "dot"; // TODO: config(?)
-	m_pid = launch(path, "!8>Tt", &m_pipe, "-Tplain-ext", (char*)0);
-	return (m_pid<0) ? (log("failed to start %s (ret: %d, ue: %s)\n", path,m_pid,strerror(errno)), -1) : 0;
-}
-
-void Dot::flush() {
-	static char * t_dot = 0;
-	IFDBGX(GRTMP) {
-		if (!t_dot) t_dot = (char*)malloc(QENVL('w')+8), memcpy(t_dot, QENV('w'), QENVL('w')),
-								  memcpy(t_dot+QENVL('w'), "/gr.dot", 8);
-		int fd = creat(t_dot, 0644);
-		if (fd<0) perror(t_dot);
-		else write(fd, m_buf, m_n), close(fd);
-	}
-	write(m_pipe, m_buf, m_n); m_n = 0;
-}
-
-void Dot::ghead(int tid, int tt, int wid, int wix, int seq, int nn, int ne) {
-	if (m_n) { log("dot/ghead: n=%d, dropped", m_n); }
-	char * p = m_buf;
-	memcpy(p, "graph qw { node [shape=rectangle]; C", 36); p += 36;
-	p += hx5(p, tid); *(p++) = '_';
-	HEX2(p, tt); HEX2(p, wid);
-	if (wix<0) p[0] = p[1] = 'z', p += 2; else HEX2(p, wix);
-	*(p++)='_'; HEX2(p,seq); *(p++)='_'; p+=hx5(p, nn); *(p++)='_'; p+=hx5(p, ne);
-	memcpy(p, " }\ndigraph lofasz { node [shape=record]; edge[arrowhead=none,arrowtail=none]\n", 77);
-	m_n = (p - m_buf) + 77;
-	m_nids = new char[4*nn];
-}
-
-void Dot::gnode(int ix, int ni, int no, int w) {
-	char * p = m_buf + m_n; *(p++) = 'b';
-	p[0] = i_to_b32((ix>>5)&31); p[1] = i_to_b32(ix&31);
-	p[2] = i_to_b32(ni); p[3] = i_to_b32(no);
-	memcpy(m_nids + 4*ix, p, 4); p+=4;
-	memcpy(p, " [label=\"", 9); p+=9;
-	int i;
-	if (w==-1) {
-		for (i=0; i<ni; i++) {
-			if (i) *(p++) = '|';
-			p[0]='<'; p[1]='i'; p[2] = i_to_b32(i);
-			memcpy(p+3, ">mml\\nmml", 9); p += 12;
-		}
-	} else if (w==-2) {
-		for (i=0; i<no; i++) {
-			if (i) *(p++) = '|';
-			p[0]='<'; p[1]='o'; p[2] = i_to_b32(i);
-			memcpy(p+3, ">mml", 4); p += 7;
-		}
-	} else {
-		*(p++) = '{';
-		for (i=0; i<ni; i++) {
-			p[0] = '|'-!i; p[1] = '<'; p[2] = 'i';
-			p[3] = i_to_b32(i);
-			memcpy(p+4, ">mml", 4); p += 8;
-		}
-		if (ni) p[0]='}', p[1]='|', p+=2;
-		p += lorem(p, w); *(p++) = 'l'; *(p++) = '|';
-		for (i=0; i<no; i++) {
-			p[0] = '|' - !i;
-			p[1]='<'; p[2]='o'; p[3] = i_to_b32(i);
-			memcpy(p+4, ">mml", 4); p += 8;
-		}
-		p[0] = p[1] = '}'; p += 2;
-	}
-	memcpy(p, "\"]\n", 3); m_n = (p+3) - m_buf;
-}
-
-void Dot::gedge(int n0, int o0, int n1, int i1) {
-	char * p = m_buf + m_n; 
-	p[0] = 'b'; memcpy(p+1, m_nids+4*n0, 4); p[5]=':';
-	p[6]='o'; p[7] = i_to_b32(o0); memcpy(p+8, "->b", 3);
-	memcpy(p+11, m_nids+4*n1, 4); p[15]=':'; p[16]='i'; p[17] = i_to_b32(i1);
-	p[18] = '\n'; m_n += 19;
-}
-
-void Dot::gend() { 
-	m_buf[m_n++]='}'; m_buf[m_n++]='\n'; flush(); 
-	delete[](m_nids); m_nids = 0; }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -390,19 +273,10 @@ void GraphBoxGen::to_dot(int seq, int ne) {
 
 void GraphBoxGen::draw_node(int i) {
 	GRBX_Node * nd; int ni, no; char buf[8];
-	ABoxNode * bnd = 0;
-	if (i<0) nd = 0, ni = 0, no = m_n_in;
-	else nd = m_nodes[i], ni = nd->ni, no = nd->no;
-	gui2.setwin(w_oid(), 'g');
-	gui2.wupd_0('g', "n"); 
-	gui2.c2(i_to_b32((i+1)>>5), i_to_b32((i+1)&31));
-	gui2.c2(i_to_b32(ni), i_to_b32(no));
-	if (nd && nd->box) {
-		gui2.sn(nd->box->v_rgb(), 6);
-		gui2.nname(bnd = nd->box->node()); gui2.c1(36);
-	} else {
-		gui2.sn("zz%z%%!BUG!$", 12);
-	}
+	ABoxNode * bnd; BoxGen * bx;
+	if (i<0) nd = 0, ni = 0, no = m_n_in, bx = 0, bnd = 0;
+	else nd = m_nodes[i], ni = nd->ni, no = nd->no, bx = nd->box, bnd = bx ? bx->node() : 0;
+	gui2.setwin(w_oid(), 'g'); gui2.gn_start(i, bx, ni, no);
 	for (int j=0; j<ni; j++) {
 		int ag = nd->iarg[j], ag1 = ag&0xffff, ag2=ag>>16;
 		if (ag1==0xfffc) gui2.hdbl(m_con[ag2]);
@@ -411,7 +285,7 @@ void GraphBoxGen::draw_node(int i) {
 		gui2.c1(36);
 	}
 	if (bnd) for (int j=0; j<no; j++) gui2.ionm(bnd, 1, j), gui2.c1(36);
-	else     for (int j=0; j<no; j++) gui2.sn(buf, inm_2(buf, j)), gui2.c1(36);
+	else	 for (int j=0; j<no; j++) gui2.sn(buf, inm_2(buf, j)), gui2.c1(36);
 }
 
 void GraphBoxGen::box_window() {
