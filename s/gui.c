@@ -4315,7 +4315,7 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 static void acfg_skel (struct _topwin * tw, char * arg) {
 	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163As}{!rrsv$1faAr}{!ttry$114At}{!wt/w$1faAw}"
 	"[{B_?$$?}{M_name:$An|_01}{en10$AN}{M_chan.c:$Ao|S2}{eo10$AO}{L##out: 0}(3{YB2^x$AB}{Mc$Ac|S1})"
-	"(3{Y0kill PA$A0}{Y1-9$A1})(3{B_stop$AZ}{B_start$AR}){B_saveCfg$_K}])]";
+	"(3{Y0kill PA$A0}{Y1-9$A1})(3{B_stop$AZ}{B_start$AR}){B_saveCfg$~c>}])]";
 	int af = (tw->id!=0x67); tw->cmdp_len=1; tw->cmdpref[0] = '0' + af;
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws), memcpy(tw->title, "m.audio\0a.audio"+8*af, 8);
 	else gtk_window_present(GTK_WINDOW(tw->w)); 
