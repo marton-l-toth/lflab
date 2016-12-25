@@ -13,7 +13,7 @@
 
 class ComboBoxModel : public BoxModel {
         public: 
-                ComboBoxModel(int nb, int nc, int nt, int nio);
+                ComboBoxModel(int nb, const ConStore * cs, int nt, int nio);
                 virtual ~ComboBoxModel();
 		virtual BoxInst * mk_box();
 		inline void dsc_nio(int i, int o) { *(eob++) = i, *(eob++) = o; }
@@ -21,7 +21,8 @@ class ComboBoxModel : public BoxModel {
 			(t&2) ? dsc_nio(3-t, j) : dsc_nio(2+((t-1)&n_cb)+(j>>5), j&31); }
 		void dump() {} // TODO 
 		int n_bx, n_cb, n_t, niof;
-		double *pcon, ***pppcon;
+		ConStore * pcs;
+		double ***pppcon;
 		BoxModel ** boxm;
 		unsigned char *iolist, *eob;
 };

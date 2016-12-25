@@ -72,18 +72,19 @@ int FeedbackBoxInst::calc2(int inflg, double** inb, double** outb, int i0, int n
 	return n;
 }
 
-ComboBoxModel::ComboBoxModel(int nb, int nc, int nt, int nio) : n_bx(nb), n_cb((nc+31)>>5), n_t(nt) {
-	int opc = 8*nc, oppc = opc + nc*sizeof(double*), obm = oppc + n_cb*sizeof(double**),
+ComboBoxModel::ComboBoxModel(int nb, const ConStore * cs, int nt, int nio) : n_bx(nb), n_t(nt) {
+	int nc = cs->n(), cs_siz = cs->siz(); n_cb = (nc+63)>>5;
+	int oppc = cs_siz + nc*sizeof(double*), obm = oppc + n_cb*sizeof(double**),
 	    odsc = obm + nb*sizeof(BoxModel*), blksiz = odsc + 2*(nb+nio);
-	char * blk = (char*) malloc(blksiz);
-	pcon = (double*)blk; pppcon = (double***)(blk+oppc); boxm = (BoxModel**)(blk+obm); 
+	char * blk = (char*) malloc(blksiz); 
+	pcs = cs->cp(blk); pppcon = (double***)(blk+oppc); boxm = (BoxModel**)(blk+obm); 
 	iolist = eob = (unsigned char*)blk+odsc;
-	double **ppcon = (double**)(blk+opc);
-	for (int i=0; i<nc; i++) ppcon[i] = pcon + i;
-	for (int i=0; i<n_cb; i++) pppcon[i] = ppcon + 32*i;
+	double **ppcon = (double**)(blk+cs_siz);
+	for (int i=0; i<nc; i++) ppcon[i] = pcs->p(i+32);
+	*pppcon = pstat_con; for (int i=1; i<n_cb; i++) pppcon[i] = ppcon + 32*(i-1);
 }
 
-ComboBoxModel::~ComboBoxModel() { free(pcon); }
+ComboBoxModel::~ComboBoxModel() { free(pcs); }
 
 BoxInst * ComboBoxModel::mk_box() {
 	ComboBoxInst * cb = new ComboBoxInst(this); // log("combo: niof = 0x%x", niof);

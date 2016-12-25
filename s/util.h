@@ -114,4 +114,21 @@ class Scale01 {
 		double m_t0, m_t1, m_sg;
 };
 
+extern double stat_con[32], *pstat_con[32];
+class ConStore {
+        public: 
+                ConStore() : m_a(0), m_n(0), m_fh(-1), m_p(0) {}
+                ~ConStore() { free(m_p); }
+                int siz() const { return ((sizeof(ConStore)+7)&~7) + 8*m_n; }
+		int n() const { return m_n; }
+                ConStore * cp(char *to) const;
+                int add(double x);
+                void rm(int j);
+                double  v(int j) const { return j-=32, (j<0?stat_con+32:m_p)[j]; }
+                double *p(int j) const { return j-=32, (j<0?stat_con+32:m_p)+j ; }
+        protected:
+                short m_a, m_n, m_fh, m_rsrv;
+                double * m_p;
+};
+
 #endif // __qwe_util_h__

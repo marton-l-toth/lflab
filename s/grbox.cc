@@ -3,6 +3,7 @@
 #include "guistub.h"
 #include "cmd.h"
 #include "glob.h"
+#include "util.h"
 #include "util2.h"
 #include "pt.h"
 
@@ -47,7 +48,7 @@ class GraphBoxGen : public BoxGen {
                 int conn(int tgtbox, int tgtix, int srcbox, int srcix, double v=0.0);
                 void write_dot(FILE * fp);
                 GRBX_Node** get_nodes() { return m_nodes.p(); }
-                double get_con(int i) { return m_con[i]; }
+                double get_con(int i) { return m_cs.v(i); }
 		void w_rpflg() { gui2.setwin(w_oid(), 'g'); gui2.wupd_i1('r', m_op); }
                 void shuffle();
                 void to_dot(int seq, int ne);
@@ -59,8 +60,6 @@ class GraphBoxGen : public BoxGen {
 
                 void dump_model();
                 void reconn(int pos, int i0, rcf_t fun);
-                int add_con(double x);
-                void del_con(int i);
                 void reorder(int * ix);
                 bool top_ord(bool rnd = false);
                 void debug();
@@ -77,8 +76,7 @@ class GraphBoxGen : public BoxGen {
                 int onm_2(char*q,int i){ int k=i-n_out();return k<0 ? get_ionm(q,1,i) : lb3(q,k&1,k>>1); }
 		int lb3(char*q,int t,int j){ return *(q++)="!><"[t], j<10 ? (*q=48+j,2):(*q=49,q[1]=38+j,3);}
                 LWArr<GRBX_Node*> m_nodes;
-                LWArr<double> m_con;
-                int m_con_fh;
+		ConStore m_cs;
                 int m_n_in, m_n_out, m_n_fb;
                 short m_dot_seq;
                 short m_sel[3];
@@ -97,8 +95,8 @@ GRBX_Node::GRBX_Node(BoxGen* bx, int k) : box(bx), iarg(0) {
 	oarg = iarg + ni;
 }
 
-GraphBoxGen::GraphBoxGen(ABoxNode * nd) : BoxGen(nd), m_con_fh(-1), m_n_in(0), m_n_out(1), m_n_fb(0),
-	m_dot_seq(0), m_guitmp(0.0), m_op(0) { m_nodes.add(new GRBX_Node(0,1)); m_con.add(0.0); }
+GraphBoxGen::GraphBoxGen(ABoxNode * nd) : BoxGen(nd), m_n_in(0), m_n_out(1), m_n_fb(0),
+	m_dot_seq(0), m_guitmp(0.0), m_op(0) { m_nodes.add(new GRBX_Node(0,1)); }
 
 GraphBoxGen::~GraphBoxGen() {
 	for (int i=0; i<n_box(); i++) 
@@ -179,31 +177,10 @@ int GraphBoxGen::cp_box(int pos) {
 	for (int i=0; i<p->ni; i++) {
 		int k = p0->iarg[i];
 		p->iarg[i] = ((k&0xffff)!=0xfffc || k==0xfffc) ? k
-			: 0xfffc + (add_con(m_con[k>>16])<<16);
+			: 0xfffc + (m_cs.add(m_cs.v(k>>16))<<16);
 	}
 	reconn(pos, pos, rcf_ins);
 	return 0;
-}
-
-
-int GraphBoxGen::add_con(double x)
-{
-	int i;
-	if (m_con_fh<0) {
-		i=m_con.n();
-		m_con.add(x);
-	} else {
-		i=m_con_fh;
-		m_con_fh = (int) m_con[i];
-		m_con[i] = x;
-	}
-	return i;
-}
-
-void GraphBoxGen::del_con(int i)
-{
-	m_con[i] = (double)m_con_fh;
-	m_con_fh = i;
 }
 
 int GraphBoxGen::conn(int tgtbox, int tgtix, int srcbox, int srcix, double v) {
@@ -221,8 +198,7 @@ int GraphBoxGen::conn(int tgtbox, int tgtix, int srcbox, int srcix, double v) {
 			r = (srcix<<16) + 0xfffe;
 			break;
 		case -2:
-			r = 0xfffc;
-			if (v!=0.0) r += add_con(v)<<16;
+			r = 0xfffc + (m_cs.add(v)<<16); break;
 			break;
 		default:
 			if (srcix>=m_nodes[srcbox]->no) return BXE_IDX;
@@ -232,7 +208,7 @@ int GraphBoxGen::conn(int tgtbox, int tgtix, int srcbox, int srcix, double v) {
 	int sav = *ap;
 	*ap = r;
 	if (srcbox < tgtbox || top_ord()) {
-		if ((sav & 0xffff)==0xfffc && sav!=0xfffc) del_con(sav>>16);
+		if ((sav & 0xffff)==0xfffc) m_cs.rm(sav>>16);
 		unset_model(); return BCR_WIN;
 	} else { *ap = sav; return BXE_ACYC; }}
 
@@ -279,7 +255,7 @@ void GraphBoxGen::draw_node(int i) {
 	gui2.setwin(w_oid(), 'g'); gui2.gn_start(i, bx, ni, no);
 	for (int j=0; j<ni; j++) {
 		int ag = nd->iarg[j], ag1 = ag&0xffff, ag2=ag>>16;
-		if (ag1==0xfffc) gui2.hdbl(m_con[ag2]);
+		if (ag1==0xfffc) gui2.hdbl(m_cs.v(ag2));
 		else gui2.b32n( 0xc0000 + 32*(ag1&0x3ff) + ag2, 4 );
 		if (bnd) gui2.ionm(bnd, 0, j); else gui2.sn(buf, onm_2(buf, j));
 		gui2.c1(36);
@@ -388,7 +364,7 @@ bool GraphBoxGen::top_ord(bool rnd) {
 
 void GraphBoxGen::upd_con(int i, int j) {
 	int k = m_nodes[i]->iarg[j]; if ((k&0xffff)!=0xfffc) return;
-	double v = m_con[k>>16];
+	double v = m_cs.v(k>>16);
 	gui2.setwin(w_oid(), 'g'); gui2.wupd_c0('g', '#'); 
 	gui2.b32n(i+1, 2); gui2.c1(i_to_b32(j)); gui2.hdbl(v);
 }
@@ -421,7 +397,7 @@ void GraphBoxGen::sel3(int t, int i, int j) {
 	gui2.wupd_0('g', "+0\0+1\0+2\0"+3*t); gui2.b32n(32*((i+1)&1023)+j, 3);
 	if (t) return;
 	int k = m_nodes[i]->iarg[j];
-	if ((k&0xffff)==0xfffc) gui2.wupd_d('x', m_guitmp = m_con[k>>16]);
+	if ((k&0xffff)==0xfffc) gui2.wupd_d('x', m_guitmp = m_cs.v(k>>16));
 	else gui2.wupd_s('x', ""), m_guitmp = 0.0;
 }
 
@@ -436,7 +412,7 @@ void GraphBoxGen::set_model() {
 		else if (*(q = m_nodes[ag&0xffff]->oarg+(ag>>16))==0xffff) *q = cur;
 		else cparg.add(*q, cur), free_tbuf.add(cur);
 	}
-	int n_iot = cparg.n(), n_cp = n_iot>>1, ncon = m_con.n();
+	int n_iot = cparg.n(), n_cp = n_iot>>1;
 	for (int i=nb-1; i>=0; i--) { // set oargs / alloc tmps
 		GRBX_Node * nd = m_nodes[i]; 
 		int ni = nd->ni, no = nd->no, perm = nd->box->io_alias_perm();
@@ -448,9 +424,8 @@ void GraphBoxGen::set_model() {
 							   : ((n_tmp++)<<16) + 0xffff;
 		if(!perm) for(int c,j=0;j<nd->no;j++) if(((c=nd->oarg[j])&0xfffd)==0xfffd) free_tbuf.add(c); 
 	}
-	ComboBoxModel * mdl = new ComboBoxModel(nb+n_cp, ncon, n_tmp, n_iot);	m_model = mdl;
+	ComboBoxModel * mdl = new ComboBoxModel(nb+n_cp, &m_cs, n_tmp, n_iot);	m_model = mdl;
 	mdl->niof = 65536*n_in() + 256*n_out() + m_n_fb;
-	memcpy(mdl->pcon, m_con.p(), 8*ncon);
 	for (int i=0; i<nb; i++) {
 		GRBX_Node * nd = m_nodes[i];
 		BoxModel::ref(mdl->boxm[i] = nd->box->model());
@@ -506,7 +481,7 @@ int GraphBoxGen::save2(SvArg * sv) {
 			int r, ag = nd->iarg[j];
 			switch(ag&0xffff) {
 				case 0xfffc:
-					CHKERR(xprintf(f, "X$+%d:%d=%s\n", i, j, dbl2str_s(0, m_con[ag>>16])));
+					CHKERR(xprintf(f, "X$+%d:%d=%s\n", i, j, dbl2str_s(0,m_cs.v(ag>>16))));
 					break;
 				case 0xfffe:
 					CHKERR(xprintf(f, "X$+%d:%d<%d\n", i, j, ag>>16));
