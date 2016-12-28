@@ -21,7 +21,7 @@ class GraphBoxGen : public BoxGen {
                 friend void graph_init();
                 GraphBoxGen(ABoxNode * nd);
                 ~GraphBoxGen();
-                virtual void set_model();
+                virtual void set_mdl();
                 virtual int n_in() const { return m_n_in - m_n_fb; }
                 virtual int n_out() const { return m_n_out - 2*m_n_fb; }
                 virtual const char * cl_name() { return "graph"; }
@@ -91,7 +91,7 @@ GRBX_Node::GRBX_Node(BoxGen* bx, int k) : box(bx), iarg(0) {
 	else ni = k, no = 0;
 	int n = ni + no; if (!n) return;
 	iarg = new int[ni+no];
-	for (int i=0; i<ni; i++) iarg[i]=0xfffc;
+	for (int i=0; i<ni; i++) iarg[i]=0x5fffc;
 	oarg = iarg + ni;
 }
 
@@ -401,7 +401,7 @@ void GraphBoxGen::sel3(int t, int i, int j) {
 	else gui2.wupd_s('x', ""), m_guitmp = 0.0;
 }
 
-void GraphBoxGen::set_model() {
+void GraphBoxGen::set_mdl() {
 	LWArr<int> free_tbuf, cparg;
 	int nb = n_box(), n_tmp = 1;
 	for (int i=0; i<=nb; i++) for (int j=0,n=m_nodes[i]->no; j<n; j++) m_nodes[i]->oarg[j] = 0xffff;
@@ -424,19 +424,20 @@ void GraphBoxGen::set_model() {
 							   : ((n_tmp++)<<16) + 0xffff;
 		if(!perm) for(int c,j=0;j<nd->no;j++) if(((c=nd->oarg[j])&0xfffd)==0xfffd) free_tbuf.add(c); 
 	}
-	ComboBoxModel * mdl = new ComboBoxModel(nb+n_cp, &m_cs, n_tmp, n_iot);	m_model = mdl;
-	mdl->niof = 65536*n_in() + 256*n_out() + m_n_fb;
+	int nb2 = nb+n_cp, nc = m_cs.n(), n_cb = (nc+63)>>5, s1 = (nc+n_cb+nb2)*sizeof(void*) + 2*(nb2+n_iot);
+	ComboBoxModel * mdl = m_mdlp.mkc1<ComboBoxModel>(&m_cs, s1, nb2);
+	mdl->n_t = n_tmp; mdl->niof = 65536*n_in() + 256*n_out() + m_n_fb;
 	for (int i=0; i<nb; i++) {
 		GRBX_Node * nd = m_nodes[i];
-		BoxModel::ref(mdl->boxm[i] = nd->box->model());
+		BoxModel::ref(mdl->boxm[i] = nd->box->rawmp());
 		mdl->dsc_nio(nd->ni, nd->no);
 		for (int ag,ty,j=0; j<nd->ni; j++)
 			mdl->dsc_arg( (ty=((ag=nd->iarg[j])&0xffff))>0xfffb ? ag :
 					m_nodes[ty]->oarg[ag>>16] );
 		for (int j=0; j<nd->no; j++) mdl->dsc_arg(nd->oarg[j]);
 	}
-	BoxModel *cpm = box_bookmark[3]->model(), **mpp = mdl->boxm + nb;
-	for (int i=0; i<n_cp; i++) mpp[i] = cpm, mdl->dsc_nio(1,1),
+	BoxModel *cpm = box_bookmark[3]->rawmp(), **mpp = mdl->boxm + nb;
+	for (int i=0; i<n_cp; i++) BoxModel::ref(mpp[i]=cpm), mdl->dsc_nio(1,1),
 				   mdl->dsc_arg(cparg[2*i]), mdl->dsc_arg(cparg[2*i+1]);
 	int d0=2*(nb+n_cp+n_iot), d1=mdl->eob-mdl->iolist; if (d0!=d1) bug("gr/model: %d!=%d", d0, d1);
 }
@@ -445,7 +446,7 @@ void GraphBoxGen::debug() {
 	int nb = n_box();
 	char buf[1025];
 	log("-----GR_debug: %d boxes:",nb);
-	if (!m_model) set_model();
+	ComboBoxModel * mp = dynamic_cast<ComboBoxModel*> (rawmp());
 	for (int i=0; i<=nb; i++) {
 		char * p = buf;
 		GRBX_Node * gn = m_nodes[i];
@@ -462,7 +463,7 @@ void GraphBoxGen::debug() {
 		}
 		log("%02d.%s(%02d) > in:%s out:%s",i,name,oid,buf,p);
 	}
-	dynamic_cast<ComboBoxModel*> (model()) -> dump();
+	mp -> dump();
 }
 
 int GraphBoxGen::save2(SvArg * sv) {

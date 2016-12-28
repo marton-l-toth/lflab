@@ -162,14 +162,13 @@ class CalcBoxGen : public BoxGen {
 		void upd_xyz(int c, int n);
 		void upd_line(int t, int i, int flg); // 1:ent
 	protected:
-		void set_model();
+		virtual void set_mdl();
 		CalcEL m_l;
 };
 
 class CalcBoxModel : public BoxModel {
         public: 
-		CalcBoxModel(CalcStkOp * oopp, int nnxx) : op(oopp), nx(nnxx) {}
-                virtual ~CalcBoxModel() { if (op) delete[] (op); }
+		CalcBoxModel(char * oopp, int nnxx) : op((CalcStkOp*)oopp), nx(nnxx) {}
 		virtual BoxInst * mk_box();
 		CalcStkOp * op; int nx;
 };
@@ -215,7 +214,8 @@ int CalcBoxGen::cmd(CmdBuf* cb) {
 			return BXE_UCMD;
 	}}
 
-void CalcBoxGen::set_model() { m_model = new CalcBoxModel(m_l.code(), m_l.nx('x')); }
+void CalcBoxGen::set_mdl() { CalcBoxModel * mo = m_mdlp.mk1<CalcBoxModel> (m_l.code_len(), m_l.nx('x'));
+			     m_l.code(mo->op); }
 
 int CalcBoxGen::save2(SvArg * sv) {
 	BXSV2_HEAD;

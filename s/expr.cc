@@ -783,43 +783,24 @@ void CalcExpr::set(const char * s)
 	return;
 }
 
-void CalcExpr::add_main(LWArr<CalcStkOp>* to, int aux_ix)
-{
-	CalcStkOp * p;
-	if (m_ec) {
-		if (m_pop) return;
-		p = to->add(); p->f = FT_CON; p->xj.x = 0.0; return;
-	}
-	if (m_i_aux.n()) p=to->add(), p->f=FT_AUX, p->i = aux_ix+1-to->n();
-	int nt = to->n(), nf = m_i_main.n();
-	to->resize(nt+nf);
-	memcpy(to->p(nt), m_i_main.p(), nf*sizeof(CalcStkOp));
-	if (m_pop) p=to->add(), p->f=FT_POP1; 
+int CalcExpr::add_main(CalcStkOp* q, int ixdif) {
+	if (m_ec) return m_pop ? 0 : (q->f = FT_CON, q->xj.x = 0.0, 1);
+	int r = m_i_aux.n() ? (q->f=FT_AUX, q->i=ixdif, 1) : 0;
+	int nf = m_i_main.n(); memcpy(q+r, m_i_main.p(), nf*sizeof(CalcStkOp)); r+=nf;
+	return m_pop ? (q[r].f=FT_POP1, r+1) : r;
 }
 
-void CalcExpr::add_aux(LWArr<CalcStkOp>* to) {
-	int n = m_i_aux.n(); if (!n || m_ec) return;
-	int i = to->n(); to->resize(i+n);
-	memcpy(to->p(i), m_i_aux.p(), n*sizeof(CalcStkOp));
-}
+int CalcExpr::add_aux(CalcStkOp* q) {
+	int n = m_i_aux.n(); return (!n|m_ec) ? 0 : (memcpy(q, m_i_aux.p(), n*sizeof(CalcStkOp)), n); }
 
-CalcStkOp * CalcEL::code() {
+void CalcEL::code(CalcStkOp * to) {
 	int nm = len_m(), na = len_a();
-	LWArr<CalcStkOp> ret; ret.resize(nm+na); ret.resize(0);
-	LWArr<CalcStkOp> aux;
-	CalcStkOp * p = ret.add();
-	p->f = FT_ENV; p->i = m_ny; p->xj.j[0] = m_nz;
-	int n = m_el.n(), ai = nm;
-	for (int i=0; i<n; i++) {
-		m_el[i] -> add_main(&ret, ai);
-		m_el[i] -> add_aux(&aux);
-		ai += m_el[i] -> n_aux();
-	}
-	p = ret.add(); p->f = ft_end;
-	if (ret.n()!=nm) bug("cEL/code: main(%d) != exp_main(%d)", ret.n(), nm);
-	if (aux.n()!=na) bug("cEL/code: aux(%d) != exp_aux(%d)", aux.n(), na);
-	ret.resize(nm+na); memcpy(ret.p(nm), aux.p(), na*sizeof(CalcStkOp));
-	return ret.forget();
+	to->f = FT_ENV; to->i = m_ny; to->xj.j[0] = m_nz;
+	int n = m_el.n(), ai = nm, mi = 1;
+	for (int i=0; i<n; i++) mi += m_el[i]->add_main(to+mi,ai-mi),  ai += m_el[i]->add_aux(to+ai);
+	to[mi++].f = ft_end;
+	if (mi!=nm) bug("cEL/code: main(%d) != exp_main(%d)", mi, nm);
+	if (ai-nm!=na) bug("cEL/code: aux (%d) != exp_aux (%d)", ai-nm, na);
 }
 
 void CalcExpr::dump(FILE *f)
@@ -881,8 +862,7 @@ void CalcEL::dump(FILE *f)
 		if (j>=m_nz) (j-=m_nz)<m_np ? (c='p') : (j-=m_np, c='y');
 		fprintf(f,"%c%d: ",c,j); m_el[i]->dump(f);
 	}
-	int nc = code_len();
-	CalcStkOp * cod = nc ? code() : 0;
-	if (cod) { dump_ops(f,"code:", cod, nc); delete[](cod); fputc('\n',f); }
+	int nc = code_len() / sizeof(CalcStkOp);
+	if (nc) { CalcStkOp cod[nc]; code(cod); dump_ops(f,"code:", cod, nc); fputc('\n',f); }
 	else { fprintf(f,"no code\n"); }
 }

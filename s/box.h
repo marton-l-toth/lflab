@@ -17,9 +17,11 @@ class BoxGen {
 	public:
 		friend void boxg_init();
 		inline static ABoxNode* node0(const BoxGen *p) { return p?p->m_node:0; }
-		BoxGen() : m_model(0), m_node(0) {}
-		BoxGen(ABoxNode * nd) : m_model(0), m_node(nd) {}
-		virtual ~BoxGen();
+		BoxGen() : m_node(0) {}
+		BoxGen(BoxModel *md) : m_mdlp(md) {}
+		BoxGen(ABoxNode *nd) : m_node(nd) {}
+		BoxGen(ABoxNode *nd, BoxModel *md) : m_node(nd), m_mdlp(md) {}
+		virtual ~BoxGen() {}
 		virtual int n_in() const = 0;
 		virtual int n_out() const = 0;
 		virtual int in_mask() { return 0; }
@@ -54,33 +56,33 @@ class BoxGen {
 		void set_node(ABoxNode* p) { m_node = p; }
 		int set_title(char * to, int wid);
 		int titlecmd_arg(char * to, int wid);
-		BoxModel * model0() const { return m_model; }
-		BoxModel * model() { if (!m_model) set_model(); return m_model; } // \/ TODO: fix model-ref
-		inline void unset_model() { if (m_model) { /*BoxModel::unref(m_model);*/ m_model = 0; m_node->unset_model_rec(); }}
-		inline bool unset_model_1() { return m_model && (m_model=0, 1); }
-		BoxInst * mk_box() { if (!m_model) set_model();
-			return m_model ? m_model -> mk_box() : 0; }
+		ModelPtr model()   { if (!m_mdlp.nz()) set_mdl(); return m_mdlp; }
+		BoxModel * rawmp() { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.rawmp(); }
+		inline void unset_model() { if (m_mdlp.nz()) { m_mdlp.z1(); m_node->unset_model_rec(); }}
+		inline bool unset_model_1() { return m_mdlp.nz() && (m_mdlp.z1(), 1); }
+		BoxInst * mk_box() { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.mk_box(); }
 		void doc_window(int id4 = 13);
 		inline int wnfl(int m = 2048) { return m_node->winflg(m); }
+		inline void debug_m() { m_mdlp.debug(); }
 	protected:
 		TAB7_DECL(iolbl, const char*);
-		virtual void set_model() = 0; // only called when (m_model == 0)
+		virtual void set_mdl() = 0;
 		int set_boxp(BoxGen ** pp, BoxGen * to);
-		BoxModel * m_model;
 		ABoxNode * m_node;
+		ModelPtr m_mdlp;
 };
 
 class PrimBoxGen: public BoxGen {
 	public:
 		PrimBoxGen(BoxModel * m, int ni, int no, const char * cl);
 		PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl);
-		virtual void set_model() { bug("prim.box/set_model"); }
                 virtual int n_in() const;
                 virtual int n_out() const;
 		virtual bool io_alias_perm() const;
                 virtual const char * cl_name() { return m_cl; }
 		virtual void box_window();
 	protected:
+		virtual void set_mdl() { bug("prim.box/set_model"); }
 		char m_ni, m_no, m_cl[6],
 		     m_mdl_spc[24]; // TODO
 };

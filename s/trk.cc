@@ -78,7 +78,6 @@ class TrackGen : public BoxGen {
 		virtual int n_out() const { return 2; }
 		virtual bool io_alias_perm() const { return true; }
 		virtual const char* cl_name() { return "trk"; }
-		virtual void set_model() { bug("track/setmodel called"); }
 		virtual void box_window();
 		virtual void wdat_cons(sthg * bxw_rawptr);
 		virtual int save2(SvArg * sv);
@@ -92,7 +91,9 @@ class TrackGen : public BoxGen {
 		int cond_pm(ANode* nd, int pm);
 		void gna_reg(int *pix, int reg);
 		void w_gna();
+		void sane(int j) { m_m.sane(j); }
 	protected:
+		virtual void set_mdl() { bug("track/setmodel called"); }
 		void grab_gsel(sthg *bxw_rawptr){ trgp_node=m_node; trgp_j=TR_SEL_XY[0]; trgp_i=TR_SEL_XY[1]; }
 		void sel0w(sthg *bxw_rawptr, int i, int j) {
 			TR_SEL_XY[0]=j; TR_SEL_XY[1]=i; grab_gsel(bxw_rawptr); }
@@ -282,9 +283,9 @@ int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
 
 /////////////////////////////////////
 
-TrackGen::TrackGen(ABoxNode *nd, ANode *g0, ANode *g1) : BoxGen(nd), m_m(nd,g0,g1), m_drq_g(0), 
+TrackGen::TrackGen(ABoxNode *nd, ANode *g0, ANode *g1) : BoxGen(nd,&m_m), m_m(nd,g0,g1), m_drq_g(0), 
 	m_bp10m(600), m_mxctl(0), m_gnaf(0), m_pl_op(1), m_pl_pos(0) {
-	m_model = &m_m; memcpy(m_gwfr, TRK_DEF_GWFR, 4); m_div[0] = 3; memset(m_div+1, 0, 255); }
+	memcpy(m_gwfr, TRK_DEF_GWFR, 4); m_div[0] = 3; memset(m_div+1, 0, 255); }
 
 int TrackGen::gui_h4(int * to) {
 	int k, n = 0;
@@ -513,7 +514,7 @@ ANode * trk_bkm_find(BoxGen * abx, int j) { return static_cast<TrackGen*>(abx)->
 void trk_bkm_add(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_add(nd); }
 void trk_bkm_rm(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_rm(nd); }
 int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*>(abx)->cond_pm(nd, pm); }
-void trk_sane(BoxGen * abx, int j) { static_cast<TrackModel*>(abx->model())->sane(j); }
+void trk_sane(BoxGen * abx, int j) { static_cast<TrackGen*>(abx)->sane(j); }
 
 int trk_cut_time(BoxGen *bx, int t) {
 	ABoxNode *p = bx->node(); if (!p->is_wrap() || p->cth()->ct!='t') return TKE_INVCUT;

@@ -13,7 +13,7 @@
 
 class ComboBoxModel : public BoxModel {
         public: 
-                ComboBoxModel(int nb, const ConStore * cs, int nt, int nio);
+                ComboBoxModel(ConStore * cs, char * q, int nb);
                 virtual ~ComboBoxModel();
 		virtual BoxInst * mk_box();
 		inline void dsc_nio(int i, int o) { *(eob++) = i, *(eob++) = o; }

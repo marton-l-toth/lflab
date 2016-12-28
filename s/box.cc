@@ -11,9 +11,10 @@ class HelpBoxGen : public BoxGen {
 		virtual int n_in() const { return 0; }
 		virtual int n_out() const { return 0; }
                 virtual bool io_alias_perm() const { bug("hlp: io_alias_perm() called"); return 0; }
-                virtual void set_model() { bug("hlp: set_model() called"); }
 		virtual const char * cl_name() { return "help"; }
 		virtual void box_window() { return doc_window(11); }
+	protected:
+                virtual void set_mdl() { bug("hlp: set_model() called"); }
 };
 
 BoxGen * box_bookmark[8];
@@ -39,16 +40,13 @@ int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb
 }
 
 void BoxModel::debug0() { log_n("%p,%d", this, this?refcount:0); }
-void BoxModel::unref(BoxModel *p) {
-	if (p && !--p->refcount) {
-		IFDBGX(MODELDEL) log("model_del: %p",p); delete(p); }}
+void BoxModel::del(BoxModel *p) { IFDBGX(MODELDEL) log("model_del: %p",p); p->~BoxModel(); free(p); }
 
-     BoxGen::~BoxGen()    { unset_model(); }
 void BoxGen::spec_debug() { log("no class-specific debug info"); }
 void BoxGen::box_window() { log("BUG: undefined box_window() p:%p, #%x", m_node, m_node?m_node->id():-1); }
 void BoxGen::doc_window(int id4) { 
 	m_node->winflg_or(1<<id4); gui2.cre(w_oid(id4), 'D', ""); gui2.bn_dsc(m_node); gui2.own_title(); 
-	gui2.wupd_c0('+','M'); gui2.hex4(id4==13?0x3c0:(m_model?0x33f:0x21)); }
+	gui2.wupd_c0('+','M'); gui2.hex4(id4==13?0x3c0:(m_mdlp.nz()?0x33f:0x21)); }
 
 int BoxGen::set_boxp(BoxGen ** pp, BoxGen * to) {
 	int ec = 0; if (to && (ec=Node::conn(m_node, to->node())) < 0) return ec;
@@ -56,17 +54,38 @@ int BoxGen::set_boxp(BoxGen ** pp, BoxGen * to) {
 	*pp = to; return ec;
 }
 
-PrimBoxGen::PrimBoxGen(BoxModel * mdl, int ni, int no, const char * cl) : m_ni(ni), m_no(no) { 
-	m_model = mdl; m_cl[0] = '_'; cl += (*cl=='_');
+PrimBoxGen::PrimBoxGen(BoxModel * mdl, int ni, int no, const char * cl) : BoxGen(mdl), m_ni(ni), m_no(no) { 
+	m_cl[0] = '_'; cl += (*cl=='_');
 	int i; for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0;  }
 
-PrimBoxGen::PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl) : m_ni(ni), m_no(no) { 
-	m_model = (*qa)(m_mdl_spc, k); m_cl[0] = '_'; cl += (*cl=='_');
-	int i; for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0;  }
+PrimBoxGen::PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl) 
+	: BoxGen((*qa)(m_mdl_spc, k)), m_ni(ni), m_no(no) { 
+		m_cl[0] = '_'; cl += (*cl=='_'); int i;
+		for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0; }
 
 void PrimBoxGen::box_window() { doc_window(11); if (this==box_bookmark[2]) pt_show_lic(); }
 int  PrimBoxGen::n_in() const { return m_ni; }
 int  PrimBoxGen::n_out() const { return m_no&31; }
 bool PrimBoxGen::io_alias_perm() const { return !!(m_no&32); }
 
+double stat_con[32] = {-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,
+                       .1,.2,.3,.4,.5,.6,.7,.8,.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6};
+double *pstat_con[32];
+
+ConStore * ConStore::cp(char * to) const {
+        ConStore * r = (ConStore*)to; memcpy(r, this, sizeof(ConStore));
+        if (m_n) memcpy(r->m_p = (double*)(to+((sizeof(ConStore)+7)&~7)), m_p, 8*m_n);
+        return r; }
+
+void ConStore::rm(int j) { if ((j-=32) >=0 ) m_p[j] = (double)m_fh, m_fh = j; }
+
+int ConStore::add(double x) {
+        int j = ((int)x + 5)&15;       if (stat_con[j]==x) return j;
+        j = (((int)(10.0*x)-1)&15)+16; if (stat_con[j]==x) return j;
+        if (m_fh>=0) return j=m_fh, m_fh=(int)m_p[j], m_p[j]=x, j+32;
+        if (m_a==m_n) m_p = (double*)(m_p ? realloc(m_p, 8*(m_a*=2)) : malloc(8*(m_a=8)));
+        m_p[j=m_n++] = x; return j+32;
+}
+
 int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); return 0; }
+void dat_init() { for (int i=0; i<32; i++) pstat_con[i] = stat_con+i; }

@@ -9,6 +9,7 @@
 // first, some includes
 
 #include <math.h>
+#include <stdlib.h>
 
 #include "../box0.h" // needed for all primitive boxes
 #include "../pzrf.h" // only if you want to make pole/zero filters

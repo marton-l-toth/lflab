@@ -409,7 +409,7 @@ class AWrapGen : public BoxGen {
 		virtual bool io_alias_perm() const { bug("wr: io_alias_perm() called"); return 0; }
 		virtual int df_ui_ix() const { return 2; }
 		virtual int mini(char * to);
-		virtual void set_model() { bug("wr: set_model() called"); }
+		virtual void set_mdl() { bug("wr: set_model() called"); }
 		virtual int mxc_notify(int k,int f){ if(k>63) w_gr_xyk(k&63,(k>>6)-1,f); if(f&64) m_mxctl=0;
 						     return 0; }
 		virtual int ifflg() const { return BIF_QCP; }
@@ -1766,7 +1766,7 @@ int DWrapGen::add2mx_txdlv(int trg0, int flg, int dly, int lim, const double *vs
 	if (m_sfbx[1]) {
 		sob->v(in, v11, 64, ncf + (ni=(m_bflg>>12)&31) + 1);
 		int ocf = 0x7c01; // TODO (?)
-		if ((trg = mx_add_filter(trg, m_sfbx[1]->model(), ni, in, ocf)) < 0) return trg;
+		if ((trg = mx_add_filter(trg, m_sfbx[1]->rawmp(), ni, in, ocf)) < 0) return trg;
 	}
 	char udio[4], *uds = sob->m_scl[0].ro()->updn; udio[0] = uds[0]; udio[1] = uds[1];
 	udio[2] = ni = (m_bflg>>2)&31; 

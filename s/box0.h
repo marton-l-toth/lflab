@@ -3,7 +3,7 @@
 
 #include <new>
 
-class ANode; class ABoxNode; class BoxModel;
+class ANode; class ABoxNode; class BoxModel; class BoxGen;
 extern int sample_rate; extern double sample_length;
 
 typedef BoxModel * (*qmb_arg_t) (char *, int);
@@ -55,8 +55,9 @@ class BoxInst {
 
 class BoxModel {
         public:
-                static void   ref(BoxModel *p) { p && ++p->refcount; }
-                static void unref(BoxModel *p);
+		static void del(BoxModel *p);
+                static inline void   ref   (BoxModel *p) { if (p)    ++p->refcount; }
+                static inline void unref   (BoxModel *p) { if (p && !--p->refcount) del(p); }
                 BoxModel() : refcount(1) {}
                 BoxModel(int rc) : refcount(rc) {}
                 virtual ~BoxModel() {}
@@ -64,6 +65,52 @@ class BoxModel {
                 void debug0();
         private:
                 int refcount;
+};
+
+extern double stat_con[32], *pstat_con[32];
+class ConStore {
+        public:
+                ConStore() : m_a(0), m_n(0), m_fh(-1), m_p(0) {}
+                ~ConStore() { free(m_p); }
+                int siz() const { return ((sizeof(ConStore)+7)&~7) + 8*m_n; }
+                int n() const { return m_n; }
+                ConStore * cp(char *to) const;
+                int add(double x);
+                void rm(int j);
+                double  v(int j) const { return j-=32, (j<0?stat_con+32:m_p)[j]; }
+                double *p(int j) const { return j-=32, (j<0?stat_con+32:m_p)+j ; }
+        protected:
+                short m_a, m_n, m_fh, m_rsrv;
+                double * m_p;
+};
+
+class ModelPtr {
+	public:
+		ModelPtr() : m_p(0) {}
+		ModelPtr(const ModelPtr& rhs) : m_p(rhs.m_p) { BoxModel::ref(m_p); }
+		ModelPtr(BoxModel *p)	      : m_p(p)	     { BoxModel::ref(m_p); }
+		~ModelPtr() { BoxModel::unref(m_p); }
+		inline void ini_r(BoxModel *p) { BoxModel::ref(m_p=p); }
+		inline void ini_p(ModelPtr  q) { BoxModel::ref(m_p=q.m_p); }
+		inline BoxModel * rawmp() { return m_p; }
+		template <class M> M* mk0(int x) { M * r = new (malloc(sizeof(M))) M(x); m_p=r; return r; }
+		template <class M> M* mk1(int s1, int x) { 
+			int s0 = (sizeof(M)+7)&~7; char *q = (char*)malloc(s0+s1);
+			M *r = new (q) M(q+s0, x); m_p = r; return r; }
+		template <class M> M* mk2(int s1, int s2, int x) {
+			int s0 = (sizeof(M)+7)&~7, s01 = s0+((s1+7)&~7);
+			char *q = (char*)malloc(s01+s2); M *r = new (q) M(q+s0,q+s01,x); m_p=r; return r; }
+		template <class M> M* mkc1(const ConStore * cs, int s1, int x) { 
+			int s0 = (sizeof(M)+7)&~7, s0c = s0 + cs->siz(); char *q = (char*)malloc(s0c + s1);
+			M *r = new (q) M(cs->cp(q+s0), q+s0c, x); m_p=r; return r; }
+		void z()  { if (m_p) BoxModel::unref(m_p), m_p = 0; }
+		void z1() {          BoxModel::unref(m_p), m_p = 0; }
+		bool nz() const { return !!m_p; }
+		void debug() { if (m_p) m_p->debug0(); }
+		BoxInst * mk_box() { return m_p->mk_box(); }
+	private:
+		void mk(BoxGen *b);
+		BoxModel * m_p;
 };
 
 template <class BXI> class Pr0BoxModel : public BoxModel {

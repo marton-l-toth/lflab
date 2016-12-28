@@ -1233,7 +1233,7 @@ int ABoxNode::show_dsc(int flg) {
 
 void ABoxNode::ab_debug(int flg) {
 	char nm[24]; nm[get_name(nm)] = 0;
-	log_n(" ("); m_box->model0()->debug0(); log_n(")"); if (!flg) return; 
+	log_n(" ("); m_box->debug_m(); log_n(")"); if (!flg) return; 
 	a_debug(); if (!(flg&1)) goto d2;
 	log("box=%p, box_cl=\"%s\"", m_box, m_box->cl_name()); 
 	// TODO: minidir

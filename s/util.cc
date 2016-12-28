@@ -742,22 +742,3 @@ int coward(const char * fn) {
 				&& memcmp(buf, "_V0.4\n::F:RC", 12);
 	close(fd); return r;
 }
-
-double stat_con[32] = {-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,
-	               .1,.2,.3,.4,.5,.6,.7,.8,.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6};
-double *pstat_con[32];
-ConStore * ConStore::cp(char * to) const {
-	ConStore * r = (ConStore*)to; memcpy(r, this, sizeof(ConStore));
-	if (m_n) memcpy(r->m_p = (double*)(to+((sizeof(ConStore)+7)&~7)), m_p, 8*m_n);
-	return r; }
-
-void ConStore::rm(int j) { if ((j-=32) >=0 ) m_p[j] = (double)m_fh, m_fh = j; }
-
-int ConStore::add(double x) {
-	int j = ((int)x + 5)&15;       if (stat_con[j]==x) return j;
-	j = (((int)(10.0*x)-1)&15)+16; if (stat_con[j]==x) return j;
-	if (m_fh>=0) return j=m_fh, m_fh=(int)m_p[j], m_p[j]=x, j+32;
-	if (m_a==m_n) m_p = (double*)(m_p ? realloc(m_p, 8*(m_a*=2)) : malloc(8*(m_a=8)));
-	m_p[j=m_n++] = x; return j+32;
-}
-void dat_init() { for (int i=0; i<32; i++) pstat_con[i] = stat_con+i; }

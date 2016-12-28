@@ -52,8 +52,8 @@ class CalcExpr {
 		void set(const char * s);
 		int n_main() { return m_ec ? !m_pop : m_i_main.n() + m_pop + !!m_i_aux.n(); }
 		int n_aux()  { return m_ec ? 0 : m_i_aux.n(); }
-		void add_main(LWArr<CalcStkOp>* to, int aux_ix);
-		void add_aux (LWArr<CalcStkOp>* to);
+		int add_main(CalcStkOp* q, int ixdif);
+		int add_aux (CalcStkOp* q);
 		int xmax() { return m_xmax; }
 		int ymax() { return m_ymax; }
 		int zmax() { return m_zmax; }
@@ -87,8 +87,8 @@ class CalcEL {
 		CalcExpr * ex(int i) { return (0<=i && i<m_el.n()) ? m_el[i] : 0; }
 		CalcExpr * ex2(int ty, int i) { return ex(eix(ty,i)); }
 		void set_nx(int n) { m_nx = n; for (int i=0; i<m_el.n(); i++) m_el[i]->vconf(n,-1,-1); }
-		int code_len() { return len_m() + len_a(); }
-		CalcStkOp * code();
+		int code_len() { return sizeof(CalcStkOp) * (len_m() + len_a()); }
+		void code(CalcStkOp * to);
 		int xf_flg() { int r = 0; for (int i=0; i<m_el.n(); i++) r|=m_el[i]->xf_flg(); return r; }
 		void dump(FILE *f);
 		bool set_l(int ty, int n);

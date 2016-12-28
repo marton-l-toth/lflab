@@ -26,6 +26,11 @@ void wrtfun_2_##nm (double *q, double *x, double *y, int n) { \
 #define TFUN_S (1-2*(ud&1))
 #define MXLOG IFDBGX(MX) log
 #define MXLOGN IFDBGX(MX) log_n
+#ifdef MEMDEBUG
+#define MXLOGM MXLOG
+#else
+#define MXLOGM if(0) log
+#endif
 #define QLOGV(S) ((debug_flags & DFLG_MX) ? log(S) : (void)0)
 
 #define MXIARG(V,I,C) MxItem * V = mx_ptr(I); \
@@ -189,10 +194,11 @@ static MxItem * mx_newblk() {
 
 static inline MxItem * mx_alloc(char ty, unsigned short pv=0, unsigned short nx=0) {
 	MxItem * p = mx_fptr ? mx_fptr : mx_newblk();
-	MXLOG("mx_alloc: %p (0x%x, %c)", p, p->m_id, ty);
+	MXLOGM("mx_alloc: %p (0x%x, %c)", p, p->m_id, ty);
 	return mx_fptr = p->u.nxfr, p->m_ty = ty, p->m_pv = pv, p->m_nx = nx, p; }
 
-static inline void mx_free(MxItem *p) { MXLOG("mx_free: %p (0x%x, %c)", p, p->m_id, p->m_ty); p->m_ty = 0; p->u.nxfr = mx_fptr; mx_fptr = p; }
+static inline void mx_free(MxItem *p) { MXLOGM("mx_free: %p (0x%x, %c)", p, p->m_id, p->m_ty);
+					p->m_ty = 0; p->u.nxfr = mx_fptr; mx_fptr = p; }
 static inline MxItem * mx_ptr(int i) { return mx_ptab[(i>>7)&511] + (i&127); }
 
 void MxInP::ini(const double *p, int n) {
@@ -408,7 +414,7 @@ MxItem * MxItem::r_mfind(BoxModel * mdl, int force) {
 		if (cur<ref) hi=md-1; else lo=md+1;
 	}
 	if (!force || m_x8>=120) return 0;
-	r = mx_alloc('m', m_id); r->m_x8 = 0; r->u.m.m = mdl;
+	r = mx_alloc('m', m_id); r->m_x8 = 0; BoxModel::ref(r->u.m.m = mdl);
 	if ((k=m_x8-lo)) memmove(u.r.mi+lo+1, u.r.mi+lo, 2*k);
 	u.r.mi[lo] = r->m_id; ++m_x8;
 	return r;
@@ -470,7 +476,7 @@ void MxItem::r2_clear() {
 	for (int i=0, n=m_x8; i<n; i++) {
 		MxItem * pm = mx_ptr(u.r.mi[i]);
 		for (int j=0, m=pm->m_x8; j<m; j++) mx_fdel(mx_ptr(pm->u.m.fi[j])); 
-		mx_free(pm); // TODO: model unref
+		BoxModel::unref(pm->u.m.m), mx_free(pm);
 	} m_x8 = 0; }
 
 #define MXR_ZERO (f ? (memset(to0,0,8*n), (f>1) ? (memset(to1,0,8*n),2) : 1) : 0)
@@ -490,7 +496,7 @@ int MxItem::r_calc(double *to0, double *to1, int n, int f) {
 			else if (nf!=j) pm->u.m.fi[nf++] = fi;
 			else ++nf;
 		}
-		if (!(pm->m_x8 = nf)) mx_free(pm); // TODO: model unref
+		if (!(pm->m_x8 = nf)) BoxModel::unref(pm->u.m.m), mx_free(pm);
 		else if (nfm!=i) u.r.mi[nfm++] = mi;
 		else nfm++;
 	}
