@@ -90,8 +90,7 @@ class ModelPtr {
 		ModelPtr(const ModelPtr& rhs) : m_p(rhs.m_p) { BoxModel::ref(m_p); }
 		ModelPtr(BoxModel *p)	      : m_p(p)	     { BoxModel::ref(m_p); }
 		~ModelPtr() { BoxModel::unref(m_p); }
-		inline void ini_r(BoxModel *p) { BoxModel::ref(m_p=p); }
-		inline void ini_p(ModelPtr  q) { BoxModel::ref(m_p=q.m_p); }
+		inline void cp_to(ModelPtr *pp) { BoxModel::ref(pp->m_p = m_p); }
 		inline BoxModel * rawmp() { return m_p; }
 		template <class M> M* mk0(int x) { M * r = new (malloc(sizeof(M))) M(x); m_p=r; return r; }
 		template <class M> M* mk1(int s1, int x) { 
@@ -108,6 +107,7 @@ class ModelPtr {
 		bool nz() const { return !!m_p; }
 		void debug() { if (m_p) m_p->debug0(); }
 		BoxInst * mk_box() { return m_p->mk_box(); }
+		inline void mk_boxv(BoxInst** to, int n) { for (int i=0; i<n; i++) to[i] = m_p->mk_box(); }
 	private:
 		void mk(BoxGen *b);
 		BoxModel * m_p;

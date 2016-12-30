@@ -24,7 +24,7 @@ class ItBoxInst : public BoxInst {
 
 class ItBoxModel : public BoxModel {
         public: ItBoxModel(int _) {}
-		virtual BoxInst * mk_box() { return new ItBoxInst(box1m, flg); }
+		virtual BoxInst * mk_box() { log("b1m/mk=%p", box1m.rawmp()); return new ItBoxInst(box1m, flg); }
                 ModelPtr box1m;
 		int flg;
 };
@@ -58,15 +58,14 @@ class ItBoxGen : public BoxGen {
 
 void ItBoxGen::set_mdl() {
 	ItBoxModel *mo = m_mdlp.mk0<ItBoxModel>(0);
-	if (m_bx1) mo->box1m.ini_p(m_bx1->model()), mo->flg=mflg(); else mo->box1m.ini_r(0), mo->flg=0; }
-	
+	if (m_bx1) m_bx1->mdl_cpto(&mo->box1m), mo->flg=mflg(); else mo->flg=0; }
 
 // in i(1)...i(skip) x(0)...x(nx) i(skip+1)...i(ni1-1)
 
-int ItBoxInst::ini(double **par) {
-	int n = m_n = m_b1m.nz() ? ivlim((int)lround(**par), 0, 1024) : 0;  if (!n) return 0;
+int ItBoxInst::ini(double **par) { log("b1m/ii=%p", m_b1m.rawmp());
+	int n = m_n = m_b1m.nz() ? ivlim((int)lround(**par), 0, 1024) : 0; if (!n) return 0;
 	m_ppbx = (BoxInst**) malloc(n*sizeof(BoxInst*));
-	for (int i=0; i<n; i++) m_ppbx[i] = m_b1m.mk_box();
+	m_b1m.mk_boxv(m_ppbx, n);
 	int sc = m_flg & 0x1e0; if (!sc) return n; else sc >>= 5;
 	double v0 = par[1][0], v1 = (m_flg&IBF_REL) ? v0*par[2][0] : par[2][0];
 	m_zvec = (double*)malloc(8*n);
@@ -140,6 +139,7 @@ void ItBoxGen::upd_window(int flg) {
 	if (flg&16) gui2.wupd_i1('r', m_flg&1);
 }
 
+#undef CH
 #define CH(X) BXCMD_H(ItBoxGen, X)
 
 CH(bx1){ ANode * nd = 0; BoxGen * bx = 0;

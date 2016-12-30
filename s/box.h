@@ -56,11 +56,12 @@ class BoxGen {
 		void set_node(ABoxNode* p) { m_node = p; }
 		int set_title(char * to, int wid);
 		int titlecmd_arg(char * to, int wid);
-		ModelPtr model()   { if (!m_mdlp.nz()) set_mdl(); return m_mdlp; }
-		BoxModel * rawmp() { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.rawmp(); }
+		ModelPtr model()   	    { if (!m_mdlp.nz()) set_mdl(); return m_mdlp; }
+		BoxModel * rawmp() 	    { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.rawmp(); }
+		BoxInst * mk_box()          { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.mk_box(); }
+		void mdl_cpto(ModelPtr *pp) { if (!m_mdlp.nz()) set_mdl(); 	  m_mdlp.cp_to(pp); }
 		inline void unset_model() { if (m_mdlp.nz()) { m_mdlp.z1(); m_node->unset_model_rec(); }}
 		inline bool unset_model_1() { return m_mdlp.nz() && (m_mdlp.z1(), 1); }
-		BoxInst * mk_box() { if (!m_mdlp.nz()) set_mdl(); return m_mdlp.mk_box(); }
 		void doc_window(int id4 = 13);
 		inline int wnfl(int m = 2048) { return m_node->winflg(m); }
 		inline void debug_m() { m_mdlp.debug(); }
