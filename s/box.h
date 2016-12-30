@@ -88,6 +88,4 @@ class PrimBoxGen: public BoxGen {
 		     m_mdl_spc[24]; // TODO
 };
 
-extern BoxGen * box_bookmark[8];
-
 #endif // __qwe_box_h__

@@ -17,7 +17,7 @@ class HelpBoxGen : public BoxGen {
                 virtual void set_mdl() { bug("hlp: set_model() called"); }
 };
 
-BoxGen * box_bookmark[8];
+BoxGen * box_bookmark[10];
 int box_mxc_notify(BoxGen *p, int ky, int flg) { return p->mxc_notify(ky, flg); }
 
 void BoxInst::rmcon(int flg, double **pp, int n) { BVFOR_JM(flg) {
@@ -88,4 +88,6 @@ int ConStore::add(double x) {
 }
 
 int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); return 0; }
+void reg_bn(ANode * nd, int i) { BoxGen **qq = box_bookmark+i; 
+				 if (*qq) log("BUG: duplicate box_bkm: %s", nd->s_name()); *qq = nd->box0(); }
 void dat_init() { for (int i=0; i<32; i++) pstat_con[i] = stat_con+i; }

@@ -5,6 +5,7 @@
 
 class ANode; class ABoxNode; class BoxModel; class BoxGen;
 extern int sample_rate; extern double sample_length;
+extern BoxGen * box_bookmark[10];
 
 typedef BoxModel * (*qmb_arg_t) (char *, int);
 ANode * qmk_dir(ANode * up, const char * nm);
@@ -17,6 +18,7 @@ const char * iolbl_name(int ty, int ix);
 void bug(const char *, ...);
 void log(const char *, ...);
 int nan_unpk(char * to8, int * to32, long long xl, int flg);
+void reg_bn(ANode * nd, int i);
 inline static int sec2samp(double x) { return (int)lround((double)sample_rate * x); }
 inline static double att2mul(double x) { return exp(-sample_length*x); }
 

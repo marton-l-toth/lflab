@@ -1726,11 +1726,10 @@ ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no
 		                                           const char * cl, const char * fmt, ...) {
 	BoxGen * bx = new (ANode::a64()) PrimBoxGen(qa, k, ni, no, cl+=(*cl=='_'));
 	ANode * ret = 0; ABoxNode * bnd = 0;
-	if ((*cl&120)==48 && cl[1]<48) { BoxGen** qq = box_bookmark + (*cl&7);
-				         if (*qq) log("BUG: duplicate box_bookmark: %s", nm); *qq = bx; }
 	int ec = Node::mk(&ret, up, nm, '_', NOF_STRICT|NOF_FORCE, 0, bx);
-	if (ec<0 || !ret) qmk_fail("box", up, nm, ec); else bnd = static_cast<ABoxNode*>(ret);
-	if (!fmt || !*fmt) return ret;
+	if (ec<0 || !ret) qmk_fail("box", up, nm, ec);
+	if ((*cl&120)==48 && cl[1]<48) reg_bn(ret, *cl&7);
+	if (!fmt || !*fmt) return ret; else bnd = static_cast<ABoxNode*>(ret);
 	va_list vl; va_start(vl, fmt);
 	double dv[30];
 	int trg = 'r';

@@ -500,14 +500,13 @@ void b_map_init(ANode * rn) {
 #define LS_DIR(R,NM,NI,IN) ls_dir(R, QMB_ARG1(NM##BoxO), QMB_ARG0(NM##BoxT), #NM, NI, IN)
 static ANode * ls_dir(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
 	rn = qmk_dir(rn, nm0);  int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
-	memcpy(nm+l, "*",  2); qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm);
 	memcpy(nm+l, "01", 3); qmk_box(rn, nm, qaO, 1, ni,   33, nm0, "i*R1", inm+4);
  	for (int i=2; i<26; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qaO,i,ni,i+32,nm0,"1"); 
-	return rn; }
+	return memcpy(nm+l, "*",  2), qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm); }
 
 static void ls_ini(ANode *rn) {
-	LS_DIR(rn, Fib, 1, "siz$i0");		LS_DIR(rn, Sxy, 3, "siz$x0$x1$scl");
-	LS_DIR(rn, Pri, 3, "siz$p0$mdif$mmul"); LS_DIR(rn, Sxm, 3, "siz$x0$xm$scl");  }
+	LS_DIR(rn, Fib, 1, "siz$i0");		reg_bn(LS_DIR(rn, Sxy, 3, "siz$x0$x1$scl"), 8);
+	LS_DIR(rn, Pri, 3, "siz$p0$mdif$mmul"); reg_bn(LS_DIR(rn, Sxm, 3, "siz$x0$xm$scl"), 9); }
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
