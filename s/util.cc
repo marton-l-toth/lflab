@@ -724,6 +724,28 @@ double Scale01::f(double x) { double z; switch(m_ty) {
                 default: return 0.0;
 }}
 
+#define SVLOOP(X) for (int i=1; i<n-1; i++) y += z, q[i]=(X); return
+void Scale01::vec(double *q, double x0, double x1, int n, int ty) {
+	if(n<4){switch(n) {
+		case 1: q[0] = f0(x0,x1,ty,.5); return;
+		case 2: q[0] = x0, q[1] = x1;   return;
+		case 3: q[0] = x0, q[1] = f0(x0,x1,ty,.5); q[2] = x1; return;
+		default: return; }}
+	q[0] = x0; q[n-1] = x1;   if ( ((1<<(ty+3))&34) && x0<0.0 ) x0=-x0, x1=-x1, ty+=ty;
+	double y, z, d = (1.0/(double)(n-1));
+	switch(ty) {
+		case -4: y = 1.0/sqrt(x0), z=d*(1.0/sqrt(x1)-y); SVLOOP(-1.0/(y*y));
+		case -3: y = 1.0/cbrt(x0), z=d*(1.0/cbrt(x1)-y); SVLOOP(1.0/(y*y*y));
+		case -2: y = 1.0/sqrt(x0), z=d*(1.0/sqrt(x1)-y); SVLOOP(1.0/(y*y));
+		case -1: y = 1.0/x0, 	   z=d*(1.0/x1 - y);	 SVLOOP(1.0/y);
+		case  0: y = x0; z = pow(x1/x0, d); for (int i=1; i<n-1; i++) q[i] = (y*=z); return; 
+		case  1: y = x0; z = d*(x1-x0);		   SVLOOP(y);
+		case  2: y = sqrt(x0); z = d*(sqrt(x1)-y); SVLOOP(y*y);
+		case  3: y = cbrt(x0); z = d*(cbrt(x1)-y); SVLOOP(y*y*y);
+		case  4: y = sqrt(x0); z = d*(sqrt(x1)-y); SVLOOP(-y*y);
+		default: for (int i=1; i<n-1; i++) q[i] = NAN; return;
+	}}
+
 // file util
 int is_asv_name(const char *s) { // /.../__asv.lf /.../__asv--x.lf
 	int c, l = strlen(s);   const char * as = QENV('a');

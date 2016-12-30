@@ -96,6 +96,7 @@ int qstat_chk0(AReader ** ppr, const char *s);
 class Scale01 {
 	public:
 		static double f0(double v0, double v1, int ty, double x);
+		static void vec(double *q, double x0, double x1, int n, int ty);
 		Scale01() : m_ty(1), m_v0(0.0), m_v1(1.0), m_t0(0.0), m_t1(1.0) {}
 		int ty() { return m_ty; }
 		int ty_c() { return "CQhl-qc"[m_ty+3]; }
