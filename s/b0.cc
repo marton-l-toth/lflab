@@ -481,12 +481,17 @@ void b_map_init(ANode * rn) {
 	for (int i=3; i<=9; i++) ++nm[6], qmk_box(rn, nm, qa, i, 3*i+1, i, "m01x", "1");
 }
 
-static void ls_init(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
-	rn = qmk_dir(rn, nm0);
-	int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
+static ANode * ls_dir(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
+	rn = qmk_dir(rn, nm0);  int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
 	memcpy(nm+l, "*",  2); qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm);
 	memcpy(nm+l, "01", 3); qmk_box(rn, nm, qaO, 1, ni,   33, nm0, "i*R1", inm+4);
- 	for (int i=2; i<31; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qaO,i,ni,i+32,nm0,"1"); }
+ 	for (int i=2; i<26; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qaO,i,ni,i+32,nm0,"1"); 
+	return rn; }
+
+static void ls_ini(ANode *rn) {
+	ls_dir(rn, QMB_ARG1(FibBoxO), QMB_ARG0(FibBoxT), "fib", 1, "siz$i0");
+	ls_dir(rn, QMB_ARG1(PriBoxO), QMB_ARG0(PriBoxT), "pri", 3, "siz$p0$mdif$mmul");
+}
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
@@ -512,7 +517,5 @@ void b_b0_init(ANode * rn) {
 	char nm[16]; memcpy(nm, "debug01", 8); qmb_arg_t qa = QMB_ARG1(DebugBox);
 	qmk_box(db, nm, qa, 1, 1, 33, "dbg", "R*1", "zz%z%%");
 	for (int i=2; i<31; i++) nm[5] = 48+i/10, nm[6] = 48+i%10, qmk_box(db,nm,qa,i,i,i,"dbg","1");
-	ls_init(mc, QMB_ARG1(FibBoxO), QMB_ARG0(FibBoxT), "fib", 1, "siz$i0");
-	ls_init(mc, QMB_ARG1(PriBoxO), QMB_ARG0(PriBoxT), "pri", 3, "siz$p0$mdif$mmul");
-	sel_ini(qmk_dir(mc, "sel"));
+	ls_ini(qmk_dir(rn, "ls")); sel_ini(qmk_dir(mc, "sel"));
 }
