@@ -198,7 +198,7 @@ WVBOX1(SawTWave, x+x-1.0, 1.0);
 WVBOX2(GPlsTrain, gpt_f(x, yp[i&ymsk]), 1.0);
 WVBOX2(SqWave, (x<yp[i&ymsk]) ? 1.0 : 0.0, 1.0);
 
-//? {{{!._fib}}}
+//? {{{!._Fib}}}
 //? Fibonacci series generator
 //? i0: index of first (out0) Fibonacci-number (rounded)
 //? out0 ... out<n-1>: fib(round(in0)) ... fib(round(in0)+n-1)
@@ -206,7 +206,7 @@ WVBOX2(SqWave, (x<yp[i&ymsk]) ? 1.0 : 0.0, 1.0);
 //? input is expected to be constant
 LSBOX(FibBox) { for (int j=0,k=(int)lround(**inb); j<n; j++) q[j] = fib7s(j+k); }
 
-//? {{{!._pri}}}
+//? {{{!._Pri}}}
 //? Outputs prime numbers
 //? p0: start (out0 will be next prime)
 //? mdif: minimal diff. between primes (at least 1)
@@ -219,6 +219,22 @@ LSBOX(PriBox) { int i = next_prime17((int)lround(**inb)), id = max_i(1, (int)lro
 		double x, xm = (int)lround(inb[2][0]);
 		for (int j=0; j<n; j++) q[j] = x = (double)i,
 					i = next_prime17(max_i(i+id, (int)lround(x*xm))); }
+
+//? {{{!._Sxy}}}
+//? scale/list box
+//? Generates a (lin/log/quad etc.) scale from x0 to x1 
+//? scl: scale type (-3...3, rev.cub,rev.sq,hrm,log,lin,sq,cub)
+//? ==> .!b.map.map01 -- scl explained here
+//? inputs are expected to be constant
+//? {{{!._Sxm}}}
+//? scale/list box
+//? Generates a (lin/log/quad etc.) scale from x0 to x0*xm
+//? scl: scale type (-3...3, rev.cub,rev.sq,hrm,log,lin,sq,cub)
+//? ==> .!b.map.map01 -- scl explained here
+//? inputs are expected to be constant
+LSBOX(SxyBox) { Scale01::vec(q, inb[0][0], inb[1][0],		n, ivlim((int)lround(inb[2][0]),-3,3)); }
+LSBOX(SxmBox) { Scale01::vec(q, inb[0][0], inb[0][0]*inb[1][0], n, ivlim((int)lround(inb[2][0]),-3,3)); }
+
 //? {{{!._nz}}}
 //? Simple noise generator
 //? ty - noise type
@@ -481,6 +497,7 @@ void b_map_init(ANode * rn) {
 	for (int i=3; i<=9; i++) ++nm[6], qmk_box(rn, nm, qa, i, 3*i+1, i, "m01x", "1");
 }
 
+#define LS_DIR(R,NM,NI,IN) ls_dir(R, QMB_ARG1(NM##BoxO), QMB_ARG0(NM##BoxT), #NM, NI, IN)
 static ANode * ls_dir(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
 	rn = qmk_dir(rn, nm0);  int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
 	memcpy(nm+l, "*",  2); qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm);
@@ -489,9 +506,8 @@ static ANode * ls_dir(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, 
 	return rn; }
 
 static void ls_ini(ANode *rn) {
-	ls_dir(rn, QMB_ARG1(FibBoxO), QMB_ARG0(FibBoxT), "fib", 1, "siz$i0");
-	ls_dir(rn, QMB_ARG1(PriBoxO), QMB_ARG0(PriBoxT), "pri", 3, "siz$p0$mdif$mmul");
-}
+	LS_DIR(rn, Fib, 1, "siz$i0");		LS_DIR(rn, Sxy, 3, "siz$x0$x1$scl");
+	LS_DIR(rn, Pri, 3, "siz$p0$mdif$mmul"); LS_DIR(rn, Sxm, 3, "siz$x0$xm$scl");  }
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
