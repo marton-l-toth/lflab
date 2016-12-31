@@ -1444,7 +1444,7 @@ int Node::obj_help(int cl) {
 	return nd->draw_window(16);
 }
 
-sbfun_t setbox_wrap, setbox_shwr, setbox_shtg, setbox_graph, setbox_calc, setbox_it, setbox_hlp;
+sbfun_t setbox_wrap, setbox_shwr, setbox_shtg, setbox_graph, setbox_calc, setbox_cfi, setbox_hlp;
 
 int Node::sb_btin(ABoxNode * nd, BoxGen * bx) { (nd->m_box = bx) -> set_node(nd); return 0; }
 int Node::sb_trk (ABoxNode * nd, BoxGen * bx) {
@@ -1475,7 +1475,7 @@ int Node::mk(ANode ** rr, ANode * up, const char * name, int ty, int i, int j, B
 		case 's': sbf = setbox_shwr;  goto lb;
 		case 'g': sbf = setbox_graph; goto lb;
 		case 'c': sbf = setbox_calc;  goto lb;
-		case 'i': sbf = setbox_it;    goto lb;
+		case 'i': sbf = setbox_cfi;   goto lb;
 		case 'h': sbf = setbox_hlp;   goto lb;
 		case '_': sbf = sb_btin;      goto lb;
 		case 'S': sbf = setbox_shtg; ty='s';  goto lb;
