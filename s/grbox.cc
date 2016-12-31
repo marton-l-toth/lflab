@@ -117,16 +117,16 @@ void GraphBoxGen::rcf_ins(int *p, int pos, int ix) {
 }
 void GraphBoxGen::rcf_cut(int *p, int pos, int ix) { 
 	int k = *p&0xffff;
-	if (k==pos) *p = 0xfffc;
+	if (k==pos) *p = 0x5fffc;
 	else if (k>pos && k<0xfff0) --(*p);
 }
 void GraphBoxGen::rcf_xcg(int *p, int pos, int ix) {
 	int k = *p&0xffff;
-	if (k==pos) ix==pos ? (*p=0xfffc) : ++(*p);
+	if (k==pos) ix==pos ? (*p=0x5fffc) : ++(*p);
 	else if (k==pos+1) --(*p);
 }
 void GraphBoxGen::rcf_nin(int *p, int pos, int ix) {
-	if ((*p&0xffff)==0xfffe && (*p>>16) >= pos) *p=0xfffc;
+	if ((*p&0xffff)==0xfffe && (*p>>16) >= pos) *p=0x5fffc;
 }
 void GraphBoxGen::rcf_fb(int *p, int pos, int ix) { // pos: old<<16 + new
 	if ((*p&0xffff)==0xfffe && *p >= (pos&0x7fff0000)) *p += (pos<<16) - (pos&0x7fff0000); }
@@ -159,7 +159,7 @@ int GraphBoxGen::rplc_box(int pos, BoxGen * bx) {
 	int ec = set_boxp(&gnd->box, bx); if (ec<0) return ec;
 	int ni2 = bx->n_in(), no2 = bx->n_out(), *iarg2 = new int[ni2+no2];
 	memcpy(iarg2, gnd->iarg, 4*min_i(gnd->ni, ni2));
-	for (int i=gnd->ni; i<ni2; i++) iarg2[i] = 0xfffc;
+	for (int i=gnd->ni; i<ni2; i++) iarg2[i] = 0x5fffc;
 	if (no2 < gnd->no) decr_no(pos, no2);
 	gnd->ni = ni2; gnd->no = no2; 
 	delete[](gnd->iarg); gnd->oarg = (gnd->iarg = iarg2) + ni2;
@@ -176,7 +176,7 @@ int GraphBoxGen::cp_box(int pos) {
 	GRBX_Node * p = m_nodes[pos], *p0 = m_nodes[pos+1];
 	for (int i=0; i<p->ni; i++) {
 		int k = p0->iarg[i];
-		p->iarg[i] = ((k&0xffff)!=0xfffc || k==0xfffc) ? k
+		p->iarg[i] = ((k&0xffff)!=0xfffc || k<0x20fffc) ? k
 			: 0xfffc + (m_cs.add(m_cs.v(k>>16))<<16);
 	}
 	reconn(pos, pos, rcf_ins);
@@ -293,7 +293,7 @@ int GraphBoxGen::set_n_out(int n) {
 	int* p = n ? new int[n] : 0;
 	int n_cp = n<m_n_out ? n : m_n_out;
 	if (n_cp) memcpy(p, obn->iarg, n_cp*sizeof(int));
-	for (int i=m_n_out; i<n; i++) p[i] = 0xfffc;
+	for (int i=m_n_out; i<n; i++) p[i] = 0x5fffc;
 	if (obn->iarg) delete[](obn->iarg);
 	obn->iarg = p;
 	m_n_out = obn->ni = n;
@@ -498,7 +498,7 @@ void GraphBoxGen::decr_no(int i, int no) {
 	for (int j=i+1, nb = n_box(); j<=nb; j++) {
 		GRBX_Node * q = m_nodes[j];
 		for (int k=0,*ap=q->iarg; k<q->ni; k++,ap++) 
-			(*ap&0xffff)==i && (*ap>>16)>=no && (*ap=0xfffc); }}
+			(*ap&0xffff)==i && (*ap>>16)>=no && (*ap=0x5fffc); }}
 
 void GraphBoxGen::notify_nio(BoxGen * bx) {
 	IFDBGX(GRTMP) log("gr%d/notify_nio: %d", id(), bx->id());
@@ -512,7 +512,7 @@ void GraphBoxGen::notify_nio(BoxGen * bx) {
 		if (no<p->no) decr_no(i, no);
 		int cp=min_i(ni,p->ni), *av=new int[ni+no];
 		if (cp) memcpy(av, p->iarg, cp*sizeof(int));
-		for (int j=cp; j<ni; j++) av[j] = 0xfffc;
+		for (int j=cp; j<ni; j++) av[j] = 0x5fffc;
 		delete[] (p->iarg); p->iarg = av;
 		p->oarg = av + ni; p->ni = ni; p->no = no;
 	}
