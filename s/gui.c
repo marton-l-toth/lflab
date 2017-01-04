@@ -229,7 +229,7 @@ static int conf_portwid;
 static int dflg = 0;
 static const char * dflg_s = "1:node_expand 2:node_collapse 4:closewin 8:oi_del 10:wrap 20:boxconf 40:track\n"
 			     "80:lookuperr-0x[56]7 100:graph 200:widg 400:menu 800:rec 1000:choo 2000:vblu\n"
-			     "4000:keycode";
+			     "4000:keycode 8000:cmd";
 // general
 #define MYPRINTF(NM, L)             			\
 void NM(const char * fmt, ...) {      			 \
@@ -4383,10 +4383,9 @@ static void calc_skel (struct _topwin * tw, char * arg) {
 ///////////////// iter. box //////////////////////////////////////////////////
 
 static void itb_skel (struct _topwin * tw, char * arg) {
-	const char * str = "[" TW_TOPH
-		"({M0[$Xb|_03}{M1B$Xb|_013}{M2]$Xb|_023}3{C3280$1$eeeeee333333(...bx1...)})"
-		"({L_scale:}{Ms$Xs|i0}{Yrz1=z0zr$Xr})]";
-	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
+	const char * str = "[" TW_TOPH "({L_he}{L_hoo})3{ggX}]";
+	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str),
+			gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 300);
 }
 
 ///////////////// clipboard //////////////////////////////////////////////////
@@ -4912,6 +4911,7 @@ static void debug_wid(int fs) {
 }
 
 static void cmd1(char * str) {
+	if ((dflg&0x8000)&&*str!='c') LOG("cmd1: \"%s\"", str);
 	int i, t, k = *str;
 	char * s = str + 1;
 	if ((unsigned int)(k-65) < 26u) {

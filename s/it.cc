@@ -49,7 +49,9 @@ class CFIBoxGen : public BoxGen {
                 virtual void set_mdl();
 		int set_ni(int n);
 		void set_nif(int n), set_nic(int n), set_noc(int n);
-                void w(int flg) { log("cfi/todo..."); }
+                void w(int flg);
+		void w_gr(), w_i1(int x), w_gn(int ix, BoxGen*bx, int ni, int no, unsigned char *dsc);
+		int gr_el(unsigned char *to);
                 int set_fb(BoxGen * bx), set_cb(BoxGen * bx);
 		int set_fb_2(BoxGen * bx, int ni);
 		void rm_fb();
@@ -59,7 +61,7 @@ class CFIBoxGen : public BoxGen {
 				     : (m_flg<<15) + 1; }
 		void dsc_debug(const char * head, const unsigned char *p, int n);
                 BoxGen *m_fbx, *m_cbx;
-                unsigned char m_ni, m_flg, m_nif, m_nic, m_noc, m_f09, m_fin[30], m_cin[30];
+                unsigned char m_ni, m_flg, m_nif, m_nic, m_noc, m_f09, m_dseq, m_fin[30], m_cin[30];
                 ConStore m_cs;
 };
 
@@ -106,8 +108,8 @@ int CFIBoxInst::calc(int inflg, double** inb, double** outb, int n) {
         return of;
 }
 
-CFIBoxGen::CFIBoxGen(ABoxNode *nd) : BoxGen(nd), m_fbx(0),m_cbx(0), m_ni(1),m_nif(1),m_nic(0),m_noc(0),m_f09(0)
-	{ m_fin[0]=70; }
+CFIBoxGen::CFIBoxGen(ABoxNode *nd) : BoxGen(nd), m_fbx(0),m_cbx(0), m_ni(1),m_nif(1),m_nic(0),m_noc(0),
+	m_f09(0), m_dseq(0) { m_fin[0]=70; }
 
 void CFIBoxGen::set_mdl() {
 	int nic = m_nic, nif = m_nif;
@@ -165,6 +167,53 @@ int CFIBoxGen::upd09() {
 void CFIBoxGen::notify_nio(BoxGen * bx) {
 	int ec; if (bx==m_fbx && (ec=set_fb(bx))<0) gui_errq_add(ec, "cfi/nio");
 	if (bx==m_cbx) set_cb(bx); }
+
+void CFIBoxGen::w_i1(int x) {
+	static const int lbl[4] = {0xc7fc0, 0, 0xc33a0, 0xc3e40};
+	int x6=x&63, x2=x>>6; if (x2==1) gui2.hdbl(m_cs.v(x6)); else gui2.b32n(lbl[x2]+x6,4); }
+
+int CFIBoxGen::gr_el(unsigned char *to) {
+	unsigned char *q = to; int x, x2, k = 64*(1+!!m_cbx), k2 = k+64*!!m_fbx;
+	if ((x2=(x=m_fin[0])>>6)!=1) *q = x&31, q[1]=k2+1, q+=2;
+	if (m_cbx) { for (int i=0;i<m_nic;i++) if ((x2=(x=m_cin[i])>>6)!=1) *q=      (x&31), q[1]=64+i, q+=2;}
+	if (m_fbx) { for (int i=1;i<m_nif;i++) if ((x2=(x=m_fin[i])>>6)!=1) *q=32*x2+(x&31), q[1]=k +i, q+=2;}
+	return ((q-to)>>1) + ( m_fbx ? (q[0]=0, q[1]=q[2]=k, q[3] = k2, 2) : (q[0]=0, q[1]=k2, 1) );
+}
+
+void CFIBoxGen::w_gn(int ix, BoxGen*bx, int ni, int no, unsigned char *dsc) {
+	ABoxNode * bnd = bx->node(); gui2.gn_start(ix, bx, ni, no); 
+	for (int j=0; j<ni; j++) w_i1(dsc[j]), gui2.ionm(bnd, 0, j), gui2.c1(36);
+	for (int j=0; j<no; j++) gui2.ionm(bnd, 1, j), gui2.c1(36);   }
+
+void CFIBoxGen::w_gr() {
+	int sq = (++m_dseq) & 255, nb0 = !!m_fbx + !!m_cbx, ni = m_ni;
+	unsigned char el[128]; int ecnt = gr_el(el);
+	gui2.wupd_0('g', "i"); gui2.hexn(sq, 2); gui2.c4('_',48,48,50+nb0);
+	gui2.c3('_',48,48); gui2.hexn(ecnt, 2);
+	gui2.gn_start(-1, 0, 0, ni); for (int j=0; j<ni; j++) gui2.ionm(m_node, 0, j), gui2.c1(36);
+	if (m_cbx) w_gn(0,       m_cbx, m_nic, m_noc, m_cin);
+	if (m_fbx) w_gn(!!m_cbx, m_fbx, m_nif, 1,     m_fin);
+	gui2.gn_start(nb0, 0, 2, 0); w_i1(m_fbx ? 192 : 0); gui2.sn("out$",  4);
+				     w_i1(m_fin[0]); 	    gui2.sn("(#b)$", 5);
+	gui2.wupd_0('g', "z");
+	Dot * to = Dot::sg();
+	if (!to->active()) return log("gr/to_dot: error: dot not running!");
+	to->ghead(16*m_node->id()+11, 'i', 'g', -1, sq, nb0+2, ecnt);
+	to->gnode(0, 0, m_ni, -2);
+	if (m_cbx) to->gnode(1,		m_nic, m_noc, text_wid16(m_cbx->node()->s_name()) >> 5);
+	if (m_fbx) to->gnode(1+!!m_cbx, m_nif, 1,     text_wid16(m_fbx->node()->s_name()) >> 5);
+	to->gnode(nb0+1, 2, 0, -1);
+	for (int i=0; i<ecnt; i++) to->gedge(el[2*i]>>6, el[2*i]&31, el[2*i+1]>>6, el[2*i+1]&31);
+	to->gend();
+}
+
+void CFIBoxGen::w(int flg) {
+	int wf = m_node->winflg(); if (!((wf|flg)&2048)) return;
+	if (wf&2048) gui2.setwin(w_oid(), 'i'); else gui2.cre(w_oid(), 'i');
+	if (flg&1) gui2.own_title();
+	if (flg&2) w_gr();
+	// TODO
+}
 
 void CFIBoxGen::dsc_debug(const char * head, const unsigned char *p, int n) {
 	char buf[1024],*q=buf; for (int x,i=0; i<n; i++) { switch ((x=p[i])>>6) {
