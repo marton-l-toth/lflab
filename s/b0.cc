@@ -216,7 +216,7 @@ LSBOX(FibBox) { for (int j=0,k=(int)lround(**inb); j<n; j++) q[j] = fib7s(j+k); 
 //? input is expected to be constant
 //? primes found only up to 131101
 LSBOX(PriBox) { int i = next_prime17((int)lround(**inb)), id = max_i(1, (int)lround(inb[1][0]));
-		double x, xm = (int)lround(inb[2][0]);
+		double x, xm = inb[2][0];
 		for (int j=0; j<n; j++) q[j] = x = (double)i,
 					i = next_prime17(max_i(i+id, (int)lround(x*xm))); }
 
