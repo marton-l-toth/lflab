@@ -201,6 +201,7 @@ void GuiStub::fcfg_ex(int k) { wupd_s(k+48, (&CFG_XTERM+k)->s); }
 void GuiStub::ocfg_draw() { cre(0x37, 'k'); for (const char *s = CFG_IVSUM; *s; s++) ocfg_l(*s); }
 void GuiStub::ocfg_l(int c) { wupd_i(c, cfg_tab[c-48].i); }
 void GuiStub::xapp_bv() { for (int k,i=0; i<N_XAPP; i++) if ((k=pt_xapp_bv[i])) c3(9, 'x', 48+i), hex8(k); }
+void GuiStub::grc(int i, int j, double v) { wupd_c0('g', '#'); b32n(i, 2); c1(i_to_b32(j)); hdbl(v); }
 
 void GuiStub::fcfg_draw() {
 	cre(0x57, 'F');

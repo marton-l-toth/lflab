@@ -4072,13 +4072,12 @@ static void dagraph_skel(struct _ww_t * ww, const char **pp) {
 	get_tok(ww->cmd, 16, pp, 0);
 }
 
+#define GRW_CONN "{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}"
+#define ANON_SEL3(NM,CMD,E51) "{M_[$" CMD "|_03}{M_" #NM "$" CMD "|_0" #E51 "3}{M_]$" CMD "|_023}"
 static void graph_skel (struct _topwin * tw, char * arg) {
 	const char *s = arg, *str = 
-	"[" TW_TOPH
-	"({8i#in$2X<}{8o#out$2X>}{8f#fb$2X@}"
-	"{Yrrplc$Xr}{M0[$XB%g|_03}{M1sl$XB%g|_013}{M2]$XB%g|_023}"
-	"{B_--->$XG%g+}{B_==$XG%g=}{ex25$XG%gv}3{__}0{BXX$XG%gX}{Ms++$X|g0})"
-	"3{ggX}]";
+		"[" TW_TOPH   "({8i#in$2X<}{8o#out$2X>}{8f#fb$2X@}{Yrrplc$Xr}" 
+		    		ANON_SEL3(sl,"XB%g",1) GRW_CONN "3{__}0{BXX$XG%gX}{Ms++$X|g0})" "3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str);
 	if (s && *s) daclb_set(widg_lu1_pc(tw, '.'), &s, 1);
 	if (!tw->state) gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 400);
@@ -4383,7 +4382,8 @@ static void calc_skel (struct _topwin * tw, char * arg) {
 ///////////////// iter. box //////////////////////////////////////////////////
 
 static void itb_skel (struct _topwin * tw, char * arg) {
-	const char * str = "[" TW_TOPH "({L_he}{L_hoo})3{ggX}]";
+	const char * str = "[" TW_TOPH "(" ANON_SEL3(filt, "XF%g", 1) "{8i#in$2Xi}" 
+			       ANON_SEL3(ctrl, "XC%g", 5) "3{__}0" GRW_CONN ")3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str),
 			gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 300);
 }

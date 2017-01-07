@@ -235,6 +235,8 @@ BXE_FILTRM   filter removed due to invalid input/output count
 BXE_NOOUT    this object cannot be used as a box
 BXE_WLGDONE  wrap linegrp done (BUG)
 BXE_ZPLOT    plot is all zeroes -- refusing to open window
+BXE_ITINV    iter: connection not allowed (see help)
+BXE_ITNONE   iter: non-existing i/o port (BUG)
 BXE_SORRY    sorry not yet implemented (box)
 QSE_BUG      plot quick stat: wrong status (BUG)
 QSE_DIF      plot quick stat mismatch (TEST CASE FAIL)

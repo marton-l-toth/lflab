@@ -10,6 +10,7 @@
 #define AX_TY_JUNK 0x5000
 #define AX_TY_MASK 0x7000
 #define AX_IX_MASK 0x0fff
+#define SEQCHK if (hex2(s+1) != (p->m_dseq&255)) return BXE_GSEQ
 
 class ComboBoxModel : public BoxModel {
         public: 

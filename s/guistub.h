@@ -101,6 +101,7 @@ class GuiStub {
 		void fcfg_ex(int k);
 		void fcfg_draw();
 		void xapp_bv();
+		void grc(int i, int j, double v);
 		void ocfg_l(int c), ocfg_draw();
 		void savename();
 		void vol();

@@ -78,7 +78,7 @@ class GraphBoxGen : public BoxGen {
                 LWArr<GRBX_Node*> m_nodes;
 		ConStore m_cs;
                 int m_n_in, m_n_out, m_n_fb;
-                short m_dot_seq;
+                short m_dseq;
                 short m_sel[3];
                 double m_guitmp;
 		char m_op; // 0:ins 1:repl
@@ -96,7 +96,7 @@ GRBX_Node::GRBX_Node(BoxGen* bx, int k) : box(bx), iarg(0) {
 }
 
 GraphBoxGen::GraphBoxGen(ABoxNode * nd) : BoxGen(nd), m_n_in(0), m_n_out(1), m_n_fb(0),
-	m_dot_seq(0), m_guitmp(0.0), m_op(0) { m_nodes.add(new GRBX_Node(0,1)); }
+	m_dseq(0), m_guitmp(0.0), m_op(0) { m_nodes.add(new GRBX_Node(0,1)); }
 
 GraphBoxGen::~GraphBoxGen() {
 	for (int i=0; i<n_box(); i++) 
@@ -266,7 +266,7 @@ void GraphBoxGen::draw_node(int i) {
 
 void GraphBoxGen::box_window() {
 	int nb = n_box(), ne = n_edg();
-	int sq = (++m_dot_seq) & 255;
+	int sq = (++m_dseq) & 255;
 	gui2.cre(w_oid(), 'g'); gui2.own_title();
 	gui2.wupd_0('g', "i"); gui2.hexn(sq, 2); gui2.c1('_');
 	gui2.hexn(nb+2, 3); gui2.c1('_'); gui2.hexn(ne, 4);
@@ -362,13 +362,8 @@ bool GraphBoxGen::top_ord(bool rnd) {
 	return true;
 }
 
-void GraphBoxGen::upd_con(int i, int j) {
-	int k = m_nodes[i]->iarg[j]; if ((k&0xffff)!=0xfffc) return;
-	double v = m_cs.v(k>>16);
-	gui2.setwin(w_oid(), 'g'); gui2.wupd_c0('g', '#'); 
-	gui2.b32n(i+1, 2); gui2.c1(i_to_b32(j)); gui2.hdbl(v);
-}
-
+void GraphBoxGen::upd_con(int i, int j) { int k = m_nodes[i]->iarg[j]; if ((k&0xffff)==0xfffc) 
+					  	gui2.setwin(w_oid(), 'g'), gui2.grc(i+1, j, m_cs.v(k>>16)); }
 void GraphBoxGen::uinm1(int j) {
 	BoxGen * bx = m_nodes[j]->box;  if (!bx) return;
 	int ni = m_nodes[j]->ni, *p = m_nodes[j]->iarg;
@@ -542,27 +537,22 @@ CH(conn){ int t_b, t_i, s_b, s_i, scix = 0;
 
 CH(ibx) { int k = s[1]=='z' ? p->n_box() : atoi(s+1);
 	  char * path = cb->tok(); if (!path) return BXE_NOARG;
-	  ANode * nd; if (!(nd = cb->lookup(path))) return BXE_ARGLU;
-	  BoxGen* bx; if (!(bx = nd->box0())) return BXE_ARGNBX;
+	  BoxGen* bx; if (!(bx = cb->lookup_b(path))) return BXE_ARGLU;
 	  return p->add_box(k, bx); }
 
-CH(gnd) { if (hex2(s+1) != (p->m_dot_seq&255)) return BXE_GSEQ;
-	  ANode * nd = cb->lookup(s+3); if (!nd) return BXE_ARGLU;
-	  BoxGen * bx; if (!(bx = nd->box0())) return BXE_ARGNBX;
+CH(gnd) { SEQCHK; BoxGen * bx = cb->lookup_b(s+3); if (!bx) return BXE_ARGLU;
 	  if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
 	  return (p->m_op && p->m_sel[1]>=0) ? p->rplc_box(p->sel_ix(1), bx) : p->add_box(p->n_box(), bx); }
 
-CH(ck) {  if (hex2(s+1) != (p->m_dot_seq&255)) return BXE_GSEQ;
-	  int i = 32*b32_to_i(s[3]) + b32_to_i(s[4]),
-	      t = (s[5]==42) ? 1 : 2*(s[5]>79), j = (s[5]-16)&31;
+CH(ck) {  SEQCHK; int i = 32*b32_to_i(s[3]) + b32_to_i(s[4]),
+	  	      t = (s[5]==42) ? 1 : 2*(s[5]>79), j = (s[5]-16)&31;
 	  if (*s=='1') return p->sel3(t, i, j), 0;
 	  if (t==1 && i<p->n_box()) return p->m_nodes[i]->box->node()->draw_window(16), 0;
 	  return EEE_NOEFF;  }
 
 CH(rpl){  p->m_op = s[1]&1;  if (p->wnfl()) p->w_rpflg(); return 0; }
 
-CH(g2) {if (hex2(s+1) != (p->m_dot_seq&255)) return BXE_GSEQ;
-	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
+CH(g2) {SEQCHK; if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
 	short * sel = p->m_sel;
 	int i, j, ec;
 	switch (*(s+=3)) {
