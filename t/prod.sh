@@ -2,7 +2,7 @@
 SDIR="$PWD"
 PDIR="$HOME/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
-OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
+OPTARG="-fno-exceptions -O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
         case "$1" in
                 "")   cond="" ;;
