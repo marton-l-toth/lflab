@@ -1157,7 +1157,7 @@ TDIV_MENU_LN
 {'S', 1, 0,1,1, "?", "#" },
 {0,   3, 1,5,1, "availnonblpump ", "012"},
 {0,   7, 0,4,4, "lr  rl  lrc clr lrcclrlrzzlr", "lr  rl  lrc clr lrcclrlrzzlr"},
-{'i', 9, 1,3,1, "conask/cu/sq1/xloglinsq cu ", "012345678"},
+{'i', 3, 0,6,3, "[gui*]setrgbsetlbl", "U3 U1 U2 "},
 {'g', 4, 0,9,2, "[shuffle]rgb:sel  inlbl:selinlbl:all", "s UrUiUI"},
 {'P', 9, 1,2,1, "[]t1t2F1FLFRf1fLfR", "|@L`dhptx"},
 {-1,0,0,0,0,NULL,NULL} };
@@ -4383,7 +4383,7 @@ static void calc_skel (struct _topwin * tw, char * arg) {
 
 static void itb_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[" TW_TOPH "(" ANON_SEL3(filt, "XF%g", 1) "{8i#in$2Xi}" 
-			       ANON_SEL3(ctrl, "XC%g", 5) "3{__}0" GRW_CONN ")3{ggX}]";
+			       ANON_SEL3(ctrl, "XC%g", 5) "3{__}0" GRW_CONN "{Ms++$X|i0})3{ggX}]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, str),
 			gtk_window_set_default_size(GTK_WINDOW(tw->w), 300, 300);
 }

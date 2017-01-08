@@ -48,7 +48,7 @@ class CFIBoxGen : public BoxGen {
         protected:
 		static void in_chk(unsigned char *p, int n, int ty, int lim);
                 BXCMD_DECL(CFIBoxGen) c_b09, c_s09, c_r09, c_ni, c_ck, c_gc, c_gf, c_gx, c_sc, c_sf,
-				      c_cnn, c_val;
+				      c_cnn, c_val, c_ui;
                 virtual void set_mdl();
 		inline int cf() const { return 2*!!m_fbx + !!m_cbx; }
 		inline int w2l(int i) { return x2x(i,  0); }
@@ -69,6 +69,7 @@ class CFIBoxGen : public BoxGen {
 		int upd09();
 		int iosel(int i, int j);
 		unsigned char * ijp(int i, int j);
+		void au_rgb(), au_lbl();
 		int cf_win(int j) { return ((m_cbx&&!j) ? m_cbx : m_fbx?m_fbx:this)->node()->draw_window(16); }
                 int foif() const { log("foif: m_nif=%d m_nic=%d m_noc=%d", m_nif, m_nic, m_noc);
 			return m_fbx ? (m_fbx->io_alias_perm()<<30) + (m_flg<<15) + 1024*m_noc + 32*m_nic+m_nif
@@ -82,7 +83,7 @@ class CFIBoxGen : public BoxGen {
 };
 
 BoxInst * CFIBoxModel::mk_box() { return new CFIBoxInst(this); }
-CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); free(m_blk); for (int i=0;i<m_nr;i++) delete (m_ppbx[i]); }
+CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); for (int i=0;i<m_nr;i++) delete (m_ppbx[i]); free(m_blk); }
 
 int CFIBoxInst::ini(double** inb) {
         CFIBoxModel *mo=m_m; if (!mo->fm.nz()) return m_nr = 0;
@@ -101,7 +102,7 @@ int CFIBoxInst::ini(double** inb) {
         BVFOR_JM(((1<<nci)-1)^mo->ivck_bv[3]) tci[j] = inb[(int)cdsc[j]];
         double *ppco[nco]; for (int j=0; j<nco; j++) ppco[j] = junkbuf;
 	IFDBGX(EXPR) log("ff=0x%x nco=%d bv[2]=0x%x", ff, nco, mo->ivck_bv[2]);
-        BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ppco[k] = in1[j] = pco+k*nr;
+        BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ppco[k] = in1[j] = pco+k*nr; if (k>=nco) bug("k(%d)>nco(%d)",k,nco);
 				   IFDBGX(EXPR) log("bv[2]: j=%d k=%d",j,k); }
         BoxInst * cb = mo->cm.mk_box();
         int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); delete(cb); if (cret<0) return cret;
@@ -188,14 +189,15 @@ chg:	return unset_model(), set_nic(ni), set_noc(no), BCR_WIN;
 }
 
 int CFIBoxGen::upd09() {
-	int ec, sc = m_f09 & 15, nif = m_nif;
-	log("upd09: %s -- f9=0x%x, nif=%d", m_node->path255(), m_f09, nif);
-	if (!sc) { m_ni=nif+1; m_xin[0]=1; for (int i=1; i<nif; i++) m_fin[i] = i+1; unset_model(); return 0; }
+	int nxi, ec, sc = m_f09 & 15, nif = m_nif;
+	IFDBGX(EXPR) log("upd09: %s -- f9=0x%x, nif=%d", m_node->path255(), m_f09, nif);
+	if (!sc) { m_ni=nif+1; m_xin[0]=1; for (int i=1; i<nif; i++) m_fin[i] = i+1; goto done; }
 	if ((ec=set_cb(box_bookmark[8+(m_f09>>4)])) < 0) return ec;
-	int nxi = 3+(sc==1);
+	nxi = 3+(sc==1);
 	m_xin[0] = 1; for (int i=1; i<nif-1; i++) m_fin[i] = i+nxi; m_fin[nif-1] = 128;
 	for (int i=0; i<3; i++) m_cin[i] = i+1; m_cin[3] = sc + (sc==1 ? 3 : 64);
-	m_ni = nif + nxi - 1; unset_model(); return BCR_NIO|BCR_WIN;
+	m_ni = nif + nxi - 1; 
+done:   unset_model(); au_rgb(); au_lbl(); return BCR_NIO|BCR_WIN;
 }
 
 void CFIBoxGen::notify_nio(BoxGen * bx) {
@@ -285,6 +287,18 @@ void CFIBoxGen::w(int flg) {
 	if (flg&8) gui2.wupd_i('i', m_ni);
 }
 
+void CFIBoxGen::au_rgb() {
+	if (m_fbx && (m_node->set_ui_rgb(m_fbx->v_rgb()), wnfl())) gui2.setwin(w_oid(),'i'), gui2.own_title();}
+
+#define COND_LBL(K, S) if ((k=(K))<30) m_node->set_ui_lbl(0, k, (S))
+void CFIBoxGen::au_lbl() {
+	char nm[8]; int k;
+	for (int j=1; j<m_nif; j++) COND_LBL(m_fin[j], (nm[m_fbx->get_ionm(nm, 0, j)]=0, nm)); 
+	for (int j=0; j<m_nic; j++) COND_LBL(m_cin[j], (nm[m_cbx->get_ionm(nm, 0, j)]=0, nm)); 
+	COND_LBL(m_xin[0], "(#b)");
+	if (wnfl()) w(2);
+}
+
 void CFIBoxGen::dsc_debug(const char * head, const unsigned char *p, int n) {
 	char buf[1024],*q=buf; for (int x,i=0; i<n; i++) { switch ((x=p[i])>>6) {
 		case 0:  q += sprintf(q, " i%d", x&63); break;
@@ -313,6 +327,7 @@ CH(sf){         BoxGen * bx = cb->lookup_b(s+1); return bx ? p->set_fb(bx) : BXE
 CH(ni){ int k = p->m_ni; intv_cmd(&k, s+1, 1, 30); return p->set_ni(k); }
 CH(cnn){return p->conn(s[1]&3, b32_to_i(s[2]), s[3]&3, b32_to_i(s[4])); }
 CH(val){return p->scon(s[1]&3, b32_to_i(s[2]), atof(s+3), 1); }
+CH(ui){ if (s[1]&1) p->au_rgb(); if (s[1]&2) p->au_lbl();  return 0; }
 	
 CH(ck){ SEQCHK; int k = 2*(*s-'1') + (s[5]==42);
 	return !k ? p->iosel(s[4], s[5]) : (k==5) ? p->cf_win(s[4]-48) : EEE_NOEFF; }
@@ -325,7 +340,7 @@ CH(gx){ SEQCHK; int i8=p->m_sel[0], o8=p->m_sel[1], ii=i8>>6, ij=i8&31; switch(s
 
 BXCMD_DEF(CFIBoxGen) { {8192+'\\',0}, {'b',c_b09}, {'s',c_s09}, {'r',c_r09}, {'1'|256,c_ck}, {'3'|256,c_ck},
 	{'G',c_gx}, {'C',c_gc}, {'F',c_gf}, {'i',c_ni}, {'+',c_cnn}, {'=',c_val}, {'c',c_sc}, {'f',c_sf},
-	{0,0} };
+	{'U',c_ui}, {0,0} };
 
 int setbox_cfi(ABoxNode * nd, BoxGen * _) { nd->m_box = new CFIBoxGen(nd); return 1; }
 void itb_init() { CFIBoxGen::cmd_init(); }
