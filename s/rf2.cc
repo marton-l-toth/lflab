@@ -69,19 +69,25 @@ static const double minifilt9[177] = { 1.0,
 //? ---
 //? (*) if fq1 is negative, times are in samples, and multiplied
 //? by -fq1 (fq1 = -1.0 is raw samples mode)
+#define SPFUN_LS c10,c11,c12,c13,c19,c20,c21,c22,c23,c29,c30,c31,c32,c33,c39,c90,c91,c92,c93,c99
+class SparseRF; typedef int (comb_fun_dt)(SparseRF*, int, double*, double**, double*, int),
+      			    (*comb_fun_t)(SparseRF*, int, double*, double**, double*, int);
 class SparseRF : public BoxInst {
 	public:
-		SparseRF(int nxy) : m_nxy(nxy), m_px(0), m_xc(0) {}
+		SparseRF(int nxy) : m_nxy(nxy), m_px(0), m_xc(0), m_fun(&cii) {}
 		virtual ~SparseRF() { free(m_px); free(m_xc); }
 		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
+		static comb_fun_dt cii, c00, SPFUN_LS;
 		void ini(double ** ap);
 		int m_nxy, m_nx, m_ny, m_siz, m_t, *m_xt, *m_yt;
 		double *m_px, *m_py, *m_xc, *m_yc;
+		comb_fun_t m_fun;
 };
 
 // in fq1 cfg t1 c1 ... tn cn dmp
 void SparseRF::ini(double** p) {
+	static comb_fun_t ftab[25] = {c00,c00,c00,c00,c00, SPFUN_LS};
 	int dmpf, nxy = m_nxy, n_xy1 = 0, siz;
 	double f1=**p, tmul = f1<0 ? -f1 : (double)sample_rate / f1;
 	NAN_UNPK_8(mf, p[1], 0);
@@ -110,22 +116,59 @@ void SparseRF::ini(double** p) {
 	m_px = (double*)malloc(16*siz); m_py = m_px + siz; m_t = 0; m_siz = siz;
 	for (int i=siz-tlim; i<siz; i++) m_px[i] = 0.0;
 	for (int i=siz-tlim; i<siz; i++) m_py[i] = 0.0;
+	m_fun = ftab[5*min_i(m_nx, 4)+min_i(m_ny,4)];
 }
 
 int SparseRF::calc(int inflg, double** inb, double** outb, int n) {
-	if (!m_px) { if (n) ini(inb+1); else return 1; }
-	double x, *in, *out = *outb; int iim;
-	if (inflg&1) in = inb[0], iim = -1; else x = inb[0][0], in = &x, iim = 0;
-	int m = m_siz-1, t = m_t;
-	for (int k,i=0; i<n; i++, t++) {
-		m_px[k = t&m] = in[i&iim];
-		double v = 0.0;
-		for (int j=0; j<m_nx; j++) v += m_xc[j] * m_px[(t-m_xt[j]) & m];
-		for (int j=0; j<m_ny; j++) v += m_yc[j] * m_py[(t-m_yt[j]) & m];
-		m_py[k] = out[i] = CUT300(v);
-	}
-	m_t = t & m; return 1;
+	static double x; double *in = inb[0], *out = outb[0]; int iif;
+	if ( !(iif = -(inflg&1)) ) x = *in, in = &x;
+	return (*m_fun)(this, iif, in, inb, out, n);
 }
+
+int SparseRF::c00(SparseRF *p, int iim, double *in, double **inb, double *out, int n) { *out=0.0; return 0; }
+int SparseRF::cii(SparseRF *p, int iim, double *in, double **inb, double *out, int n) {
+	return !n ? 1 : (p->ini(inb+1), (*p->m_fun)(p, iim, in, 0, out, n)); }
+
+#define SPCI(Z,J) Z##t##J = p->m_##Z##t[J]
+#define SPCD(Z,J) Z##c##J = p->m_##Z##c[J]
+#define SPC0Y0
+#define SPC0X1 int SPCI(x,0);			  double SPCD(x,0);
+#define SPC0Y1 int SPCI(y,0);			  double SPCD(y,0);
+#define SPC0X2 int SPCI(x,0),SPCI(x,1);		  double SPCD(x,0),SPCD(x,1);
+#define SPC0Y2 int SPCI(y,0),SPCI(y,1);		  double SPCD(y,0),SPCD(y,1);
+#define SPC0X3 int SPCI(x,0),SPCI(x,1),SPCI(x,2); double SPCD(x,0),SPCD(x,1),SPCD(x,2);
+#define SPC0Y3 int SPCI(y,0),SPCI(y,1),SPCI(y,2); double SPCD(y,0),SPCD(y,1),SPCD(y,2);
+#define SPC0X9 int nx = p->m_nx, *xt = p->m_xt; double *xc = p->m_xc;
+#define SPC0Y9 int ny = p->m_ny, *yt = p->m_yt; double *yc = p->m_yc;
+#define SPCP(Z,J) Z##c##J * p##Z[(t-Z##t##J)&m]
+#define SPC1Y0
+#define SPC1X1 v =  SPCP(x,0);
+#define SPC1Y1 v += SPCP(y,0);
+#define SPC1X2 v =  SPCP(x,0) + SPCP(x,1);
+#define SPC1Y2 v += SPCP(y,0) + SPCP(y,1);
+#define SPC1X3 v =  SPCP(x,0) + SPCP(x,1) + SPCP(x,2);
+#define SPC1Y3 v += SPCP(y,0) + SPCP(y,1) + SPCP(y,2);
+#define SPC1X9 v =  0.0; for (int j=0; j<nx; j++) v += xc[j] * px[(t-xt[j]) & m];
+#define SPC1Y9		 for (int j=0; j<ny; j++) v += yc[j] * py[(t-yt[j]) & m];
+
+#define SPCDEF(I,J) int SparseRF::c##I##J(SparseRF *p, int iim, double*in, double**inb, double*q, int n) { \
+	int t = p->m_t, m = p->m_siz-1;  p->m_t += n; double *px = p->m_px, *py = p->m_py;  SPC0X##I SPC0Y##J \
+	for (int k,i=0; i<n; i++, t++) { px[k=t&m] = in[i&iim]; \
+					 double SPC1X##I SPC1Y##J q[i]=py[k]=CUT300(v); } return 1; }
+
+SPCDEF(1,0) SPCDEF(1,1) SPCDEF(1,2) SPCDEF(1,3) SPCDEF(1,9)
+SPCDEF(2,0) SPCDEF(2,1) SPCDEF(2,2) SPCDEF(2,3) SPCDEF(2,9)
+SPCDEF(3,0) SPCDEF(3,1) SPCDEF(3,2) SPCDEF(3,3) SPCDEF(3,9)
+SPCDEF(9,0) SPCDEF(9,1) SPCDEF(9,2) SPCDEF(9,3) SPCDEF(9,9)
+
+//? {{{!._nacF}}}
+//? normalised accumulator filter
+//? in:filter input
+//? md: mode (0:lp, 1:lp*, 2:hp, 3:hp*) *:1-sample-delay
+//? dmp: dampening 
+//? rpt: repeat count
+//? sprd: dmp spread: (1.0-spr)*dmp ... (1.0+spr)*dmp
+//? dmp can be non-constant
 
 #define ACCLOOP(X) for (int i=0; i<n; i++) (X); break
 #define ACCLOOPZ(X) for (int i=0; i<n; i++) (X), q[i] = z; break;
@@ -151,15 +194,6 @@ int SparseRF::calc(int inflg, double** inb, double** outb, int n) {
 
 ACC_CALC(acc_calc_d, att2mul)
 ACC_CALC(acc_calc_m, )
-
-//? {{{!._nacF}}}
-//? normalised accumulator filter
-//? in:filter input
-//? md: mode (0:lp, 1:lp*, 2:hp, 3:hp*) *:1-sample-delay
-//? dmp: dampening 
-//? rpt: repeat count
-//? sprd: dmp spread: (1.0-spr)*dmp ... (1.0+spr)*dmp
-//? dmp can be non-constant
 
 class NAccFilt : public BoxInst {
 	public:
