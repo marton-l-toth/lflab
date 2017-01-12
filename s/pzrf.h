@@ -34,29 +34,28 @@ class RECF_PZItem {
 			double c, zr, zi, pr, pi;
 };
  
-struct RECF_ABItem { double a0, a1, a2, b1, b2; };
-struct RECF_BQState { double    x1, x2, y1, y2; };
+struct RECF_ABXY { double x21[2], y21[2], rsrv, a0, a1, a2, b1, b2; };
 
 void pzrf_show_last();
 double fq_warp(double fq);
 double fq_warp2(double fq2);
-void rfpz_transform(RECF_ABItem * to, RECF_PZItem * pz, int n, int flg = 1);
+void rfpz_transform(RECF_ABXY * to, RECF_PZItem * pz, int n, int flg = 1);
 
 class PZFInst : public BoxInst {
 	public: 
-		PZFInst() : m_n_bq(0), m_ab(0), m_bqs(0), m_t(0), m_damp(0.0) {}
-		~PZFInst() { if (m_bqs) { delete[](m_ab); delete[](m_bqs); } }
+		PZFInst() : m_n_bq(-1), m_t(0), m_damp(0.0), m_blk(0) {}
+		virtual ~PZFInst();
 	protected:
 		virtual int mk_filter(double ** inb) = 0;
-		inline void set_n(int n) { m_ab = new RECF_ABItem[m_n_bq = n]; }
+		void set_n(int n);
 		int ini(double ** inb);
 		void damp();
 		void rf_debug(int n);
-		int m_n_bq;
-		RECF_ABItem * m_ab;
-		RECF_BQState * m_bqs;
-		int m_t;
+
+		int m_n_bq, m_t;
 		double m_damp;
+		char * m_blk;
+		RECF_ABXY * m_ab;
 };
 
 class SPZFInst: public PZFInst { public: virtual int calc(int inflg, double** inb, double** outb, int n); };

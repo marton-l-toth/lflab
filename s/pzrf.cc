@@ -7,6 +7,7 @@
 #include "glob.h"
 #include "guistub.h"
 #include "cmd.h"
+#include "cfgtab.inc"
 
 double RECF_PZItem::eval1(double re, double im) {
 	double v = 1.0;
@@ -43,9 +44,10 @@ void fq_warp_ir2(double *pr, double *pi, double *p2) {
 static void rfpz_store(RECF_PZItem * pz, int n) {
 	if (lpz_p) delete[](lpz_p); lpz_p = pz; lpz_n = n; }
 
-void rfpz_transform(RECF_ABItem * to, RECF_PZItem * pz, int n, int flg) {
+void rfpz_transform(RECF_ABXY * to, RECF_PZItem * pz, int n, int flg) {
 	if (flg&1) { rfpz_store(pz,n); }
 	for (int i=0; i<n; i++) {
+		memset(to+i, 0, 32);
 		double pr=pz[i].pr, pi=pz[i].pi;
 		double zr=pz[i].zr, zi=pz[i].zi;
 		double c = pz[i].c;
@@ -80,7 +82,8 @@ void rfpz_transform(RECF_ABItem * to, RECF_PZItem * pz, int n, int flg) {
 			to[i].a1 = to[i].a2 = 0.0;
 			to[i].b1 = to[i].b2 = 0.0;
 		}
-	}
+	} 
+	if (!(flg&1)) free(pz);
 }
 
 static double get_recrad() {
@@ -109,56 +112,91 @@ void pzrf_show_last() {
 	gui2.cre(0x77, 'P'); gui2.wupd('P'); gui2.sn(buf, len);
 }
 
+PZFInst::~PZFInst() { free(m_blk); }
+void PZFInst::set_n(int n) { char *p = (m_blk = (char*)malloc(n*sizeof(RECF_ABXY)+15));
+			     m_n_bq = n; m_ab = (RECF_ABXY*)(p + (-((long)p) & 15)); }
 void PZFInst::damp() {
 	if (!m_n_bq || m_damp<1e-14 || m_damp>1e20) return;
-	double d = exp(-m_damp * sample_length);
-	double dd = d*d;
-	for (int i=0; i<m_n_bq; i++) 
-		m_ab[i].b1*=d, m_ab[i].b2*=dd, m_ab[i].a1*=d, m_ab[i].a2*=dd;
+	double d = exp(-m_damp * sample_length), dd = d*d;
+	for (int i=0; i<m_n_bq; i++) m_ab[i].b1*=d, m_ab[i].b2*=dd, m_ab[i].a1*=d, m_ab[i].a2*=dd;
 }
 
-int PZFInst::ini(double ** inb) {
-	int r = mk_filter(inb+1); if (r<0) return r; else damp();
-	m_bqs = new RECF_BQState[m_n_bq];
-	for (int i=0; i<m_n_bq; i++) m_bqs[i].x1 = m_bqs[i].x2 = m_bqs[i].y1 = m_bqs[i].y2 = 0.0;
-	return 0;
-}
+int PZFInst::ini(double ** inb) { int r = mk_filter(inb+1); if (r>=0) damp(); return r; }
 
-#define PZF_1(I,X) \
-	double x1 = m_bqs[I].x1, x2 = m_bqs[I].x2, \
-	       y1 = m_bqs[I].y1, y2 = m_bqs[I].y2, \
-	       a0 = m_ab[I].a0, a1 = m_ab[I].a1, a2 = m_ab[I].a2, \
-	                        b1 = m_ab[I].b1, b2 = m_ab[I].b2; \
-	for (int j=0; j<n; j++) {				   \
-		double y = a0*in[j] + a1*x1 + a2*x2 + b1*y1 + b2*y2;\
-		x2 = x1; x1 = in[j]; y2 = y1; y1 = y; (X);	  } \
-	m_bqs[I].x1 = CUT300(x1); m_bqs[I].x2 = CUT300(x2);	    \
-	m_bqs[I].y1 = CUT300(y1); m_bqs[I].y2 = CUT300(y2)
 
 void PZFInst::rf_debug(int n) {
-	m_t += n;
-	if (m_t < sample_rate) return; else m_t -= sample_rate;
+	m_t += n; if (m_t < sample_rate) return; else m_t -= sample_rate;
 	log_n("rf_debug:"); int m = m_n_bq;
-	for (int i=0; i<m; i++) log_n(" (%g %g %g %g)", m_bqs[i].x1, m_bqs[i].x2, m_bqs[i].y1, m_bqs[i].y2);
+	for (int i=0; i<m; i++) log_n(" (%g %g %g %g)", m_ab[i].x21[1], m_ab[i].x21[0], 
+							m_ab[i].y21[1], m_ab[i].y21[0]);
 	log("");
 }
 
+#define PZF_CI(X){double x=in[0]; if(fabs(x)<1e-270){in=zeroblkD+(X);} else{in=p;for(int i=0;i<n;i++) p[i]=x;}}
+#define PZF0(ZX) int m=m_n_bq; if (m<1) {do{if(m){ int r=ini(inb); if(r<0)return r; if ((m=m_n_bq)) break; \
+					  	   return (ZX); }}while(0); }
+#define PZF_II0 { RECF_ABXY *s=m_ab, *sl=s+m; do
+#define PZF_II1 while(++s < sl); }
+#define PZF_COL(Q,P) { double z = *(P); PZF_II0 { \
+	double x1=s->x21[1], y1=s->y21[1], y = z*s->a0 + x1*s->a1 + *s->x21*s->a2 + y1*s->b1 + *s->y21*s->b2; \
+	*s->x21=x1, s->x21[1]=z, *s->y21=y1, z=s->y21[1]=y; } PZF_II1 *(Q) = z; }
+
+#define PZF_1(I,X) \
+        RECF_ABXY * vv = m_ab + (I); \
+        double x1 = vv->x21[1], x2 = vv->x21[0],                y1 = vv->y21[1], y2 = vv->y21[0], \
+               a0 = vv->a0,     a1 = vv->a1,     a2 = vv->a2,   b1 = vv->b1,     b2 = vv->b2;     \
+        for (int j=0; j<n; j++) {                                  \
+                double y = a0*in[j] + a1*x1 + a2*x2 + b1*y1 + b2*y2;\
+                x2 = x1; x1 = in[j]; y2 = y1; y1 = y; (X);        } \
+        vv->x21[0]=CUT300(x2); vv->x21[1]=CUT300(x1); vv->y21[0]=CUT300(y2); vv->y21[1]=CUT300(y1);
+
+#ifdef __SSE2__
+#include <emmintrin.h>
+#define PZF_LDC(Z,J) Z##J##J = _mm_load_pd1(&s->Z##J)
+#define ADD2 _mm_add_pd
+#define MUL2 _mm_mul_pd
+
 int SPZFInst::calc(int inflg, double** inb, double** outb, int n) {
-	int r; if (!m_bqs && (r=ini(inb))<0) return r;
-	inflg &= 1; int m = m_n_bq;
-	double *in = inb[0], *p = outb[0];
-	if (m<1) return BOX_CP0;
-	if (!inflg) { double x = in[0]; if (fabs(x)<1e-270) {in = zeroblkD;}
-		      else { in = p; for (int i=0; i<n; i++) p[i] = x;     } }
+	PZF0(BOX_CP0);
+	double *in0, *in = inb[0], *p = outb[0];
+	switch ( (((long)p>>1)&4) + 2*(inflg&1) + ((n>10)&CFG_DEVEL.i)) {
+		case 0: case 4: PZF_CI(0) 
+		case 2: case 6: for (int i=0; i<m; i++) { PZF_1(i, (p[j]=y)); in = p; } return 1;
+		case 1: PZF_CI(0); goto even; 
+		case 5: PZF_CI(1); goto odd;
+		case 3: if (  (long)in&8 ) memcpy(p,in,8*n), in=p;goto even;
+		case 7: if (!((long)in&8)) memcpy(p,in,8*n), in=p; goto odd;
+		default:break;
+	}
+odd:	PZF_COL(p,in); --n; ++p; ++in;
+even:   --n; in0 = in; PZF_II0 {
+		__m128d PZF_LDC(a,0), PZF_LDC(a,1), PZF_LDC(a,2), PZF_LDC(b,1), PZF_LDC(b,2),
+			x21 = _mm_load_pd(s->x21), y21 = _mm_load_pd(s->y21);
+		int j=0; do {
+			__m128d p01=_mm_load_pd (in+j), 
+				t21=ADD2(ADD2(MUL2(a00,p01), MUL2(a22,x21)),
+				    	 ADD2(MUL2(b22,y21), MUL2(a11,_mm_shuffle_pd(x21,p01,1))));
+			t21 = ADD2(t21, MUL2(b11, _mm_shuffle_pd(y21, _mm_setzero_pd(), 1))); x21 = p01; \
+			_mm_store_pd(p+j, y21=ADD2(t21, MUL2(b11, _mm_shuffle_pd(_mm_setzero_pd(), t21, 0))));
+		} while ((j+=2)<n);
+		_mm_store_pd(s->x21, x21); _mm_store_pd(s->y21, y21); in = p;
+	} PZF_II1
+	if (!(n&1)) PZF_COL(p+n, in0+n);
+	return 1;
+}
+#else // __SSE2__
+int SPZFInst::calc(int inflg, double** inb, double** outb, int n) {
+	PZF0(BOX_CP0);
+	double *in = inb[0], *p = outb[0]; if (!(inflg&1)) PZF_CI(0)
 	for (int i=0; i<m; i++) { PZF_1(i, (p[j] = y)); in = p; }
 	IFDBGX(RFINST) rf_debug(n);    		return 1;
 }
+#endif // __SSE2__
 
 int PPZFInst::calc(int inflg, double** inb, double** outb, int n) {
-	int r; if (!m_bqs && (r=ini(inb))<0) return r;
-	inflg &= 1; int m = m_n_bq;
+	PZF0((**outb=0.0, 0)); inflg &= 1;
 	double *in = inb[0], *p = outb[0];
-	if (m<2) { if (m<1) return **outb=0.0, 0; PZF_1(0, (p[j]=y)); return 1; }
+	if (m==1) { if (!(inflg&1)) PZF_CI(0) PZF_1(0, (p[j]=y)); return 1; }
 	int cif = (!inflg && fabs(*in)>1e-270), xtf = (in==p);
 	double tbuf[(cif|xtf)?n:1];
 	if (cif) { double x = *in; in = tbuf; for (int j=0; j<n; j++) tbuf[j] = x; goto notmp; }
@@ -170,7 +208,8 @@ notmp:  {PZF_1(0, p[j]=y);} for (int i=1; i<m; i++) { PZF_1(i, p[j]+=y); }
 done:   IFDBGX(RFINST) rf_debug(n);    		return 1;
 }
 
-static void half_zero(RECF_ABItem * to, double fq0, double bw1, double c = 1.0) {
+static void half_zero(RECF_ABXY * to, double fq0, double bw1, double c = 1.0) {
+	memset(to, 0, 32);
 	double fq = fq_warp(fq0), bw = bw1 * fq, cf = cos(fq),
 	       r  = 1.0 - 3.0*bw, rr = r*r, rcf = r*cf, k = (1.0 - 2.0*rcf + rr) / (2.0 - 2.0*cf);
 	to->a0 = c*(1.0-k);	to->a1 = (c+c)*(k-r)*cf;	to->a2 = c*(rr-k);
@@ -268,7 +307,7 @@ QUICK_PPZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
 
 #define CHECK_NPZ(nm) if (npz[1]>npz[0]) return log("mkf/%s: cowardly refusing"\
 	" to create filter with #z(%d) > #p(%d)", #nm, npz[1], npz[0]), RTE_FZZZ; \
-	m_ab = new RECF_ABItem[*npz]; RECF_PZItem *p, *pzi = new RECF_PZItem[*npz]
+	set_n(*npz); RECF_PZItem *p, *pzi = new RECF_PZItem[*npz]
 
 #define CHECK_NPZ_2(nm) \
 	if (np!=npz[0]) return log("mkf/%s: BUG: wrong num of poles(exp:%d got:%d)", #nm, npz[0],np),RTE_BUG;\
