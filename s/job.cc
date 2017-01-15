@@ -5,9 +5,11 @@
 #include "cfgtab.inc"
 #include "asnd.h"
 
-Job * JobQ::job(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ? 0  : m_ent[j].p; }
-int   JobQ::jst(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ?1016: m_ent[j].st; }
-int  JobQ::wake(ANode * nd, int ix) { int j = lu(nd,ix); return j<0 ? JQE_LU : (m_ent[j].st&=1023); }
+#define JF_LU(E,X) int j = lu(nd, ix); return j<0 ? (E) : (X)
+Job* JobQ::job (ANode * nd, int ix)	   { JF_LU(0,	 m_ent[j].p); }
+int  JobQ::jst (ANode * nd, int ix) 	   { JF_LU(1016, m_ent[j].st); }
+int  JobQ::wake(ANode * nd, int ix, int k) { JF_LU(j,    m_ent[k].st &= ~(1024<<(k&3))); }
+int  JobQ::kill(ANode * nd, int ix, int e) { JF_LU(j,    kill_j(j, e)); }
 
 void JobQ::init() { 
 	m_nj = 0; m_ent_bv = 0u; m_last_upd = -999999; m_upd_t = 11025;
@@ -18,7 +20,7 @@ void JobQ::init() {
 int JobQ::launch(ANode * nd, int ix, char * arg) {
 	int i = __builtin_ffs(~m_ent_bv) - 1;
 	if ((i | (31-m_nj)) < 0) return JQE_FULL;
-	ent_t * p = m_ent + i;
+	ent_t * p = m_ent + i; m_upd_flg = 1;
 	int ji0 = p->jid, ji = (ji0+32) & 4095, i4 = ix&15;
 	p->p   = 0; p->st = 0; p->xst = 9999; p->jid = ji; p->i4f = i4;
 	int ec = nd ? (p->nid = nd->id(), nd->start_job_2(p, arg))
@@ -32,20 +34,20 @@ int JobQ::launch(ANode * nd, int ix, char * arg) {
 	return ji;
 }
 
-int JobQ::kill5(int j, int ec) {
+
+int JobQ::kill_j(int j, int ec) { ent_t *p = m_ent+j; j = (p->p && (p->st&1023)<1005); m_upd_flg = 1;
+				  return j ? (p->p->abort(), p->st = ec&1023, 0) : EEE_NOEFF; }
+
+int JobQ::kill5(int j) {
 	if (j<0) return 0; else j &= 31;
-	ent_t * p = m_ent + j;
-	if (p->p && (p->st&1023)<1005) p->p->abort(), p->st = ec&1023; 
-	if (p->p) delete(p->p), p->p = 0;
-	if (p->nid>=0) ANode::lookup_n_q(p->nid)->set_job_result(p->i4f, p->st),
-		       jobq.upd_gui_1p(m_ent), p->nid = -1;
-	p->jid |= 4096;
-	return 1;
+	ent_t *p = m_ent+j; if (p->p) delete(p->p), p->p = 0;
+	if (p->nid>=0) ANode::lookup_n_q(p->nid)->set_job_result(p->i4f, p->st), p->nid = -1;
+	p->jid |= 4096; return 1;
 }
 
 int JobQ::lu(ANode * nd, int ix) {
 	int j, k;
-	if (!nd) return j = ix&31, k = m_ent[j].jid, (ix&4096 ? k<4096 : k==ix) ? j : JQE_LU;
+	if (!nd) return j = ix&31, k = m_ent[j].jid, (ix>4095 ? k<4096 : k==ix) ? j : JQE_LU;
 	if (!nd->winflg(WF_JOBF)) return JQE_LU;
 	return j = nd->winflg(WF_JOB5) >> 24, (ix<0 || (m_ent[j].i4f&7)==ix) ? j : JQE_LU;
 }
@@ -53,11 +55,11 @@ int JobQ::lu(ANode * nd, int ix) {
 int JobQ::cmd(ANode * nd, int ix, char * arg) {
 	if (*arg=='+') return nd ? nd->start_job(ix, arg+1) : JQE_PARSE;
 	int j = lu(nd, ix);
-	if (*arg=='-') return kill5(j); 
+	if (*arg=='-') return j<0 ? JQE_LU : kill_j(j, JQE_KILL); 
 	if (j<0) return j;
 	Job * jp = m_ent[j].p; if (!jp) return JQE_ZOMBIE;
 	int ec = jp->cmd(arg); if (ec<32767) return ec;
-	if (((m_ent[j].st = ec&32767) & 1023) > 1004) kill5(j);
+	if (((m_ent[j].st = ec&32767) & 1023) > 1004) m_upd_flg = 1;
 	return ec;
 }
 
@@ -66,23 +68,16 @@ bool JobQ::run() {
 		ent_t * p = m_ent + (j = m_px[i]&31);
 		if (p->st>1004) continue;
 		int ec = p->p->run1();
-		if (ec<0) return p->st = ec<-19 ? 1019 : ec&1023, kill5(j), 1;
-		if ((ec&1023) > 1004)  return    p->st = ec&1023, kill5(j), 1;
+		if (ec<0) return p->st = ec<-19 ? 1019 : ec&1023, m_upd_flg = 1;
+		if ((ec&1023) > 1004)  return    p->st = ec&1023, m_upd_flg = 1;
 		return p->st = ec & 32767, 1;
 	}
 	return 0;
 }
 
-bool JobQ::need_upd() {
-	if (snd0.total_played() >= m_last_upd + m_upd_t) return true;
-	BVFOR_JM(m_ent_bv) { if (m_ent[j].nid<0 || m_ent[j].xst==m_ent[j].st) continue;
-			     if (m_ent[j].xst==9999 || m_ent[j].st > 1004) return true; }
-	return false; 
-}
-
-void JobQ::upd_gui(bool force) {
-	if (!force && !need_upd()) return;
-	m_last_upd = snd0.total_played();
+void JobQ::upd_gui(int force) {
+	if (!(force | m_upd_flg) && snd0.total_played() < m_last_upd+m_upd_t) return;
+	m_last_upd = snd0.total_played(); m_upd_flg = 0;
 	for (int i=0; i<m_nj; i++) {
 		ent_t * p = m_ent + (m_px[i] & 31);
 		if (force || p->xst!=p->st) upd_gui_1p(p);
@@ -99,12 +94,11 @@ void JobQ::upd_gui_1p(JobQ::ent_t * p) {
 }
 
 int JobQ::purge() {
-	int j, i1=0; for (int i0=0; i0<m_nj; i0++) {
-		ent_t * p = m_ent + (j = m_px[i0] & 31);
-		if ((p->st&1023)<1005) m_px[i1++] = m_px[i0];
-		else kill5(j), m_ent_bv &= ~(1u << j);
-	}
-	return (m_nj = i1);
+	int j, i1=0, naj = 0;
+	for (int x,i0=0; i0<m_nj; i0++){ ent_t * p = m_ent + (j = m_px[i0] & 31);
+					 if (((x=p->st)&1023)<1005) m_px[i1++] = m_px[i0], naj+=(x<1005);
+					 else kill5(j), m_ent_bv &= ~(1u << j);	}
+	return m_nj = i1, naj;
 }
 
 void JobQ::debug() {
@@ -113,5 +107,4 @@ void JobQ::debug() {
 		log("%02d: (%c) jid 0x%x, nid 0x%x, st:%d, xst:%d",
 				i, 45-2*!!(m_ent_bv&(1u<<i)), m_ent[i].jid,
 				m_ent[i].nid, m_ent[i].st, m_ent[i].xst);
-
 }

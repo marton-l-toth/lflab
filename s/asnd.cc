@@ -91,8 +91,9 @@ int asnd_mkjob(jobq_ent_t * ent, char * arg) {
 
 static fa_writer fa_wr;
 
-int ASnd::close() { if (!m_flg&32) clk0.cls(); p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
-		    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~7, w(1024), 0; }
+int ASnd::close() { if (m_flg&32) jobq.kill(0,m_aux_jid), m_aux_jid=-1;  else clk0.cls();
+                    p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
+                    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~7, w(1024), 0; }
 int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
 					      if (ec) gui2.errq_add(ec); return k; }
 
@@ -137,7 +138,8 @@ int ASnd::pump_launch(int nt, int flg) {
 
 int ASnd::apmp_op(int x) {
 	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("apmp_op %d ", x), debug("p/o");
-	if (x==1) return ((m_pump_st&1)|(m_aux_jid<0)) ? AUE_Q_STATE : (++m_pump_st, jobq.wake(0, m_aux_jid));
+	if (x==1) return ((m_pump_st&1)|(m_aux_jid<0)) ? (AUE_Q_STATE &- (m_pump_st&1))
+						       : (++m_pump_st, jobq.wake(0,m_aux_jid,0));
 	int e,k; switch(x) {
 		case 0: case 8: e = AUE_Q_CRASH; goto down;
 		case 4: 	e = 0;		 goto down0;

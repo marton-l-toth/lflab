@@ -15,17 +15,19 @@ class JobQ {
 		int    jst(ANode * nd, int ix);
 		int launch(ANode * nd, int ix, char * arg);
 		bool run();
-		void upd_gui(bool force = false);
+		void upd_gui(int force = 0);
 		void upd_gui_1(ANode * nd, int ix) { if ((ix=lu(nd,ix))>=0) upd_gui_1p(m_ent+ix); }
-		int wake(ANode * nd, int ix);
-		int kill(ANode * nd, int ix, int ec = JQE_KILL) { return kill5(lu(nd,ix), ec); }
+		int wake(ANode * nd, int ix, int k);
+		int kill(ANode * nd, int ix, int ec = JQE_KILL);
+		int unblock(ANode * nd, int ix);
 		int purge();
 		int cmd(ANode * nd, int ix, char * arg);
 		void set_upd_t(int nsamp) { m_upd_t = nsamp; }
 		void debug();
         protected:
 		int lu(ANode * nd, int ix);
-		int kill5(int j, int ec = JQE_KILL);
+		int kill_j(int j, int ec);
+		int kill5(int j);
 		void upd_gui_1p(ent_t * p);
 		bool need_upd();
 		unsigned char m_px[32];
@@ -33,7 +35,7 @@ class JobQ {
 		int m_nj;
 		unsigned int m_ent_bv;
 		long long m_last_upd;
-		int m_upd_t;
+		int m_upd_t, m_upd_flg;
 		jlfun_t m_jlfun[16];
 };
 
