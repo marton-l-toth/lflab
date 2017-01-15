@@ -421,7 +421,7 @@ class AWrapGen : public BoxGen {
 		typedef int (acmd_t) (AWrapGen *, const char *, CmdBuf *);
 		static int slf_conv(int k);
 		static acmd_t c_c2k, c_cut, c_gcl, c_gmd, c_gr, c_ky, c_pl, c_stp, c_tf, c_wav, c_win, c_rvt,
-			      c_xfd, c_flg;
+			      c_xfd, c_flg, c_spt;
 		virtual int show_tab_2(sthg * bxw_rawptr, int i) = 0;
 		virtual int wlg(sthg * bxw_rawptr, int ix, int flg) = 0;
 		virtual void w_col0() = 0;
@@ -1718,10 +1718,25 @@ CH(rvt){ANode * nd = cb->lookup(s+1); if (!nd) return BXE_ARGLU;
 	if (nd->cl_id()!='s') return NDE_EXPWRAPS; 
 	return cb->perm(nd, DF_EDBOX) ? STC_BOX(nd, SWrap)->set_trg(p) : NDE_PERM; }
 
+CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) return BXE_PARSE;
+	int mxi = -1, t = clk0.ev2('%'), tm=INT_MAX, tM=-1, ts = 0;
+	double m=0.0,  buf[2*nj];
+	for (int k=0; k<nk; k++) {
+		if (mxi>0) mx_del(mxi); if ((mxi = p->mx1(WRF_MONO))<0) return mxi;
+		for (int i=0; i<ni; i++) {
+			if ((r = mx_calc(mxi, buf, buf+nj, nj, 0))<0) return mx_del(mxi), r;
+			for (int j=0, n=r*nj; j<n; j++) { double x = fabs(buf[j]); if (x>m) m=x; }}
+		int t2 = clk0.ev2('%'), tc = t - t2;  t = t2;
+		if (tc<tm) tm=tc; if (tc>tM) tM = tc; ts += tc;
+	}
+	 clk0.ev2(';');
+	log("tm=%d tM=%d tA=%d max=%.15g", tm, tM, (ts+(nk>>1))/nk, m); mx_del(mxi); return 0;
+}
+
 #define AW_CTAB {'+'+256, (cmd_t)c_c2k}, {'P'+256, (cmd_t)c_pl }, {'t', (cmd_t)c_tf}, {'x', (cmd_t)c_xfd}, \
 	        {'W'+256, (cmd_t)c_win}, {'A'+256, (cmd_t)c_wav}, {'#', (cmd_t)c_gr}, {'T', (cmd_t)c_cut}, \
 	        {'.'+256, (cmd_t)c_stp}, {'G'+256, (cmd_t)c_gcl}, {'k', (cmd_t)c_ky}, {'m', (cmd_t)c_gmd}, \
-		{'<'+256, (cmd_t)c_rvt},                                              {'F', (cmd_t)c_flg}
+		{'<'+256, (cmd_t)c_rvt}, {'%'+256, (cmd_t)c_spt},                     {'F', (cmd_t)c_flg}
 
 /////// box (wr) ////////////////////////////////////////////////////////////
 
