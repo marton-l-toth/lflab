@@ -96,6 +96,8 @@ static double get_recrad() {
 	return r;
 }
 
+static void paraconj(RECF_PZItem*p,int n) {for(RECF_PZItem*q=p+n;p<q;p++) p->zr=-p->pr, p->zi=p->pi, p->c=1.0;}
+
 void pzrf_show_last() {
 	double scl = 372.48 / get_recrad();
 	char buf[8*lpz_n];
@@ -455,6 +457,7 @@ QUICK_PZFILT(ChebF) {
 			ang -= step;
 		}
 	}
+	if (np_skip<0) paraconj(pzn, np);
 	rfpz_transform(m_ab, pzn, np, wf+1); return 0;
 }
 
@@ -518,6 +521,7 @@ QUICK_PZFILT(ArcRF) {
 	       pfq[16], zfq[16], pss[16], psv[16], zss[16], zsv[16];
 	Scale01 pzsc[4], psc[16], zsc[16];
 	for (int j,i=0; i<4; i++) j=i+2*(i>>1), pzsc[i].set_all(inb[j+3][0], inb[j+5][0], sfun_x[i+(i>>1)]);
+	int pcf = (nzero_x[0]<0) && (nzero_x[0]=0, 1);
 	for (int n1, n2, i=0; i<nls; i++) {
 		ptot += (n1=npole_x[i]); pflg |= !!n1 << (15-i);
 		ztot += (n2=nzero_x[i]); zflg |= !!n2 << (15-i);
@@ -546,7 +550,7 @@ norm:		pzi[pix].c = 1.0 / pzi[pix].eval1(0.0, nfq); --pix;
 	}}
 	if (pix != -1) log("ArcRF BUG!!: pix = %d (exp. -1)", pix);
 	m_damp = inb[14][0];
-	set_n(ptot); rfpz_transform(m_ab, pzi, ptot); return 0;
+	set_n(ptot); if (pcf) paraconj(pzi, ptot); rfpz_transform(m_ab, pzi, ptot); return 0;
 }
 
 static void bq_init(ANode * rn) {
