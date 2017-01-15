@@ -354,13 +354,15 @@ class QSReader : public AReader {
 		char * m_buf;
 };
 
-void log_sn(const char * pref, const char * str, int len) {
+void log_sn(const char * pref, const char * str, int len, int exnl) {
 	int k, l0 = pref ? strlen(pref) : 0, l2 = l0+len+1, cf = l2>2048, l3 = cf?2048:l2;
-	char buf[l3], *q = buf+l0; memcpy(buf, pref, l0);
+	char buf[l3+8*exnl], *q = buf+l0; memcpy(buf, pref, l0);
 	if (cf) k = l2 - 2025, memcpy(q, str, 1536), sprintf(q+1536, " [%05d", k),
 		memcpy(q+1543, " bytes skipped] ", 16), memcpy(q+1559, str+1536+k, 489); 
 	else	memcpy(q, str, len);
-	buf[l3-1] = 10; write(2, buf, l3);
+	if (exnl) { if (buf[l3-2]==10) --l3; else memcpy(buf+l3-1,"[no \\n]\n",8), l3+=7; }
+	else      { buf[l3-1] = 10; }
+	write(2, buf, l3);
 }
 
 void log  (const char *f,...) { va_list a; va_start(a,f); vfprintf(stderr,f,a); putc(10,stderr); va_end(a); }

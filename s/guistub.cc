@@ -77,7 +77,7 @@ int GuiStub::flush() {
 	for (int c,j=0; j<l; j++) if ((unsigned int)((c=m_buf0[j])-32)>94u && ((c-9)&254)) 
 		++nx, uec = m_buf0[j], m_buf0[j] = 63;
 	if ( (nx && (log("BUG: gui2/flush: %d invalid chars (last:0x%x), replaced with '?'", nx, uec),1)) ||
-	     ((debug_flags & DFLG_GUI2) && (l!=19 || m_buf0[1]!='c')) ) log_sn(">G>", m_buf0, l);
+	     ((debug_flags & DFLG_GUI2) && (l!=19 || m_buf0[1]!='c')) ) log_sn(">G>", m_buf0, l, 1);
 	do {
 		r = write(m_inpipe, m_buf0 + i, l);
 		if (r<=0) { log("ERROR: gui2/flush: %s", r ? strerror(errno) : "0 bytes written!"); break; } 
