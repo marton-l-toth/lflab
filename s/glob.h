@@ -41,7 +41,7 @@
 #define DEBUG_UTXT(J) (debug_utxt_buf + 64*(J))
 #define IFDBGX(F) if (debug_flags&DFLG_##F)
 extern int glob_flg;
-extern int debug_flags;
+extern int debug_flags, zero_sec;
 extern int sample_rate;
 extern double sample_length, natural_bpm, natural_bpm_r;
 extern int killer_fd;

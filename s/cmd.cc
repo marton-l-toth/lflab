@@ -383,6 +383,7 @@ int CmdTab::c_wav(CmdBuf * p) {
 }
 
 int CmdTab::c_misc(CmdBuf * p) {
+	extern void gwn_debug(int step);
 	int i,j; char *s = p->m_c_a0; switch(*s) {
 		case 'F': pzrf_show_last(); return 0;
 		case ':': p->m_nof0 = p->m_c_nof; return 0;
@@ -416,6 +417,7 @@ int CmdTab::c_misc(CmdBuf * p) {
 		case 'D': return (j=s[1]) ? (strncpy(DEBUG_UTXT(hxd2i(j)), s+2, 63), 0) : GCE_PARSE;
 		case '>': return log("_> %s", s+1), 0;
 		case '@': return clk0.wrk(s[1]);
+		case '#': return gwn_debug(atoi(s+1)), 0;
 		default: return GCE_UMISC;
 	}}
 

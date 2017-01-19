@@ -426,7 +426,7 @@ static void ee_msg() {
 }
 
 const char ** pt_init(int ac, char ** av, int *pfd_io, int *pfd_con, int *pfd_wrk) {
-	gettimeofday(&tv_zero, 0);
+	gettimeofday(&tv_zero, 0); zero_sec = tv_zero.tv_sec;
 	struct rlimit cl; cl.rlim_cur=cl.rlim_max=1<<28; setrlimit(RLIMIT_CORE, &cl);
 	FPU_INI; vstring_set(v_major, v_minor);  signal(SIGPIPE, SIG_IGN);
 	pt_con_pfd = pfd_con; pt_io_pfd = pfd_io; pt_wrk_pfd = pfd_wrk;
