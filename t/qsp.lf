@@ -1,0 +1,20 @@
+# lflab save file
+_V0.9
+:TN.$F
+C.!b.[]$wr
+X$G6000000Ib
+X$b.!b.noise.nz0
+C.!b.[]$wc
+X$i20=1409.32978028411
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i60=0.5
+X$i61=1e-05
+X$i41=-50
+X$i42=10
+X$i43=0.29
+X$i44=1
+X$G6000000Ib
+X$b.!b.imp.^1
+X$>.!b.filt.=cheb

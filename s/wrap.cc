@@ -1718,6 +1718,7 @@ CH(rvt){ANode * nd = cb->lookup(s+1); if (!nd) return BXE_ARGLU;
 	if (nd->cl_id()!='s') return NDE_EXPWRAPS; 
 	return cb->perm(nd, DF_EDBOX) ? STC_BOX(nd, SWrap)->set_trg(p) : NDE_PERM; }
 
+#define DDIV(X,Y) ((double)(X)/(double)(Y))
 CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) return BXE_PARSE;
 	int mxi = -1, t = clk0.ev2('%'), tm=INT_MAX, tM=-1, ts = 0;
 	double m=0.0,  buf[2*nj];
@@ -1729,8 +1730,9 @@ CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) ret
 		int t2 = clk0.ev2('%'), tc = t - t2;  t = t2;
 		if (tc<tm) tm=tc; if (tc>tM) tM = tc; ts += tc;
 	}
-	 clk0.ev2(';');
-	log("tm=%d tM=%d tA=%d max=%.15g", tm, tM, (ts+(nk>>1))/nk, m); mx_del(mxi); return 0;
+	clk0.ev2(';'); int ij = nk * ni;
+	log("perfstat: tm=%g tM=%g tA=%g max=%.15g", DDIV(tm,ij), DDIV(tM,ij), DDIV(ts,ij*nk), m);
+	mx_del(mxi); return 0;
 }
 
 #define AW_CTAB {'+'+256, (cmd_t)c_c2k}, {'P'+256, (cmd_t)c_pl }, {'t', (cmd_t)c_tf}, {'x', (cmd_t)c_xfd}, \

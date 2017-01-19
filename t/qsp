@@ -1,0 +1,13 @@
+#!/bin/bash
+SFILE=$(readlink -f $0).lf
+x="$1"; shift
+if [[ -z "$x" ]]; then exec $HOME/lf $* $SFILE; fi
+TFILE=/dev/shm/spt$$.lf
+echo -e "X.!b.[].$x\$%100 300 147\n_#\nq!" > $TFILE
+$HOME/lf $* / $SFILE $TFILE
+cnt="x"
+while ! grep 'perfstat:' $HOME/.lflab/lf.log; do
+	sleep 0.05;
+	cnt=x$cnt; if [[ $cnt == "xxxxxxxxxxxxxxxxxxxx" ]]; then echo "not found"; exit 1; fi
+done
+exec rm $TFILE
