@@ -1,0 +1,5 @@
+#!/bin/bash
+SFILE=$(readlink -f $0).c
+BFILE=/dev/shm/nzar.$$
+EXPR="$1"; shift;
+gcc -O2 -lm "-DEXPR=$EXPR" -o $BFILE $SFILE && (time $BFILE $*; rm $BFILE)

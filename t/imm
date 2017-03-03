@@ -6,7 +6,7 @@ tmpf=/tmp/imm-$$
  echo "#include <math.h>"
  echo "#include <limits.h>"
  echo "#include <errno.h>"
- echo "int main() { int i,j,k; double x,y,z; char *p,*q,*r; "
+ echo "int main() { int i,j,k; long ii, jj, kk; double x,y,z; char *p,*q,*r; "
  echo "return printf(\"%$1\\n\", ($2)), 0; }" ) > $tmpf.c
 #echo "---"; cat $tmpf.c; echo "---"
 (cc -o $tmpf.b $tmpf.c -lm && $tmpf.b) || cat $tmpf.c

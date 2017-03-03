@@ -1,9 +1,22 @@
 #!/bin/bash
 SFILE=$(readlink -f $0).lf
+res="300 147"
+case "$1" in
+	"-1") res="100 441"; shift;;
+	"-2") res="175 252"; shift;;
+	"-3") res="300 147"; shift;;
+	"-4") res="490 90"; shift;;
+	"-5") res="900 49"; shift;;
+	"-6") res="1575 28"; shift;;
+	"-7") res="2940 15"; shift;;
+	"-8") res="4410 10"; shift;;
+	"-9") res="8820 5"; shift;;
+	*) ;;
+esac
 x="$1"; shift
 if [[ -z "$x" ]]; then exec $HOME/lf $* $SFILE; fi
 TFILE=/dev/shm/spt$$.lf
-echo -e "X.!b.[].$x\$%100 300 147\n_#\nq!" > $TFILE
+echo -e "X.!b.[].$x\$%100 $res\n_#\nq!" > $TFILE
 $HOME/lf $* / $SFILE $TFILE
 cnt="x"
 while ! grep 'perfstat:' $HOME/.lflab/lf.log; do
