@@ -1730,7 +1730,7 @@ CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) ret
 		int t2 = clk0.ev2('%'), tc = t - t2;  t = t2;
 		if (tc<tm) tm=tc; if (tc>tM) tM = tc; ts += tc;
 	}
-	clk0.ev2(';'); int ij = nk * ni;
+	clk0.ev2(';'); int ij = ni * nj;
 	log("perfstat: tm=%g tM=%g tA=%g max=%.15g", DDIV(tm,ij), DDIV(tM,ij), DDIV(ts,ij*nk), m);
 	mx_del(mxi); return 0;
 }
