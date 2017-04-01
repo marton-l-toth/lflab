@@ -1,196 +1,264 @@
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "nz.h"
+
 #include "glob.h"
+#include "cfgtab.inc"
+#include "util.h"
+#include "box0.h"
+#include "distr.h"
 
-#define NZGB 7
-static double divpts[129] = {
-0.0,0.00177486136336095,0.00354981218576197,0.00532503143037788,0.00710069822279239,0.00887699197759647,
-0.0106540925254837,0.0124321802410763,0.0142114361717174,0.0159920421674704,0.0177741810125668,
-0.0195580365585536,0.0213437938593926,0.0231316393087741,0.0249217607799136,0.0267143477681104,
-0.0285095915363538,0.0303076852642789,0.0321088242007799,0.0339132058206074,0.0357210299852891,
-0.0375324991087279,0.0393478183278528,0.0411671956787144,0.0429908422784388,0.0448189725134781,
-0.0466518042346192,0.0484895589592411,0.05033246208134,0.052180743089875,0.0540346357960209,
-0.0558943785699553,0.0577602145878462,0.0596323920897549,0.0615111646492153,0.0633967914553076,
-0.0652895376081007,0.0671896744284037,0.0690974797828351,0.0710132384252957,0.0729372423560146,
-0.0748697911994269,0.0768111926022446,0.0787617626531887,0.0807218263259707,0.0826917179472444,
-0.0846717816913903,0.0866623721041566,0.0886638546573518,0.0906766063369793,0.0927010162674127,
-0.0947374863744475,0.0967864320903217,0.0988482831040836,0.100923484161004,0.103012495915082,
-0.105115795839077,0.107233879196952,0.10936726008408,0.111516472541113,0.113682071748023,
-0.115864635305504,0.118064764611654,0.120283086342767,0.122520254047956,0.12477694986847,
-0.12705388639375,0.129351808667664,0.131671496359938,0.134013766119565,0.136379474128998,0.138769518880265,
-0.141184844196752,0.143626442527465,0.146095358544019,0.148592693074634,0.151119607414033,0.153677328053459,
-0.156267151881278,0.158890451911817,0.16154868360855,0.164243391877595,0.166976218819101,0.16974891233777,
-0.172563335729935,0.175421478383799,0.178325467752331,0.181277582785674,0.18428026904279,0.187336155741733,
-0.190448075056031,0.193619084023164,0.196852489502846,0.200151876710912,0.203521141963796,0.20696453040428,
-0.21048667964931,0.214092670514977,0.217788086245888,0.221579082024098,0.225472466981219,0.229475801520236,
-0.233597513517888,0.237847037990487,0.242234986159776,0.24677335168629,0.251475764343689,0.256357804882,
-0.261437399712891,0.266735321024276,0.272275828055423,0.278087500231326,0.28420433543561,0.290667221538737,
-0.297525944406742,0.304841985271995,0.312692510915287,0.321176222295754,0.330422203262448,0.340603818163979,
-0.351961538175002,0.364842534915935,0.379774190860012,0.397613016389257,0.419883453025696,0.449684875926625,
-0.494798582564708,0.584003173991606,0.99999999999997};
+struct vzent_t { int iacc,rsrv; double x0, xu, yu; };
+struct vzdat_t { dfun1_t f; vzent_t e[256]; };
 
-#define NZG (1<<NZGB)
+rnd_dsc_t rnd_dsc[] = { // data gen. by ../t/nzar.c
+	{0.001774861363360951, 'g', 0}, // x1:0.9999999999999704 iacc:0.958538
+	{0.0005035812084291209, 'e', 8}, // x1:0.9999999999999536 iacc:0.948282
+	{0.0002482277951613336, 'E', 9}, // x1:0.9999999999999356 iacc:0.971488
+	{0.00618528540070983, 'c', 10}, // x1:0.9999999999999991 iacc:0.981215
+	{0.004236443289877119, 'h', 11}, // x1:0.9999999999999996 iacc:0.969821
+};
 
-//static double divpts[33] = {   0.0, 0.00752119373899836,0.0150491979445374, 0.0225976953249547,
-//         0.0301805926584789, 0.0378122020923033, 0.0455074352696795, 0.0532820172644446,
-//         0.0611527285765055, 0.0691376853377064, 0.0772566706091478, 0.0855315335468761,
-//         0.0939866787762359, 0.102649676324104,  0.111552034133378,  0.120730192477159,
-//         0.130226825691108,  0.140092576898522,  0.150388415032167,  0.161188906866031,
-//         0.172586870221355,  0.184700176146081,  0.197682014725453,  0.211736979953816,
-//         0.227147426800969,  0.2443190828995,    0.263865537029438,  0.286779013127202,
-//         0.314818117067482,  0.351544376555854,  0.405873479341178,  0.510820679386546, 1.0 };
+static uint64_t xoro_glob[2];
+static int seed_glob;
+static int iacc_ny[2];
 
-double divptsx[33] = { 0.0, 0.00217093382031652, 0.00441859982834941, 0.00674856892484449,
-        0.00916703747595322, 0.0116809240880007, 0.0142979857682489, 0.017026958307811,
-        0.019877727186392, 0.0228615372893915, 0.0259912524692444, 0.0292816798076564,
-        0.0327499788486178, 0.0364161838537321, 0.0403038785099428, 0.0444410794721183,
-        0.0488614109067238, 0.0536056923279233, 0.0587241260785742, 0.0642793760652808,
-        0.0703510080153575, 0.0770420762329545, 0.0844892204077339, 0.0928787540455465,
-        0.102473517456856, 0.11366030822135, 0.127039790208231, 0.143613108166267,
-        0.16521902355074, 0.19574755744358, 0.245502923888483, 0.355802952884758, 1.0};
+// contains code from Sebastiano Vigna (Univ. of Milan)
+// see his original code (public domain) at http://xoroshiro.di.unimi.it/
 
-static const double nz_1mul = 1.0 / (double)(1u<<31u);
-static const double nz_2mul = 1.0 / (double)(1u<<30u);
-static const double nz_3mul = 1.0 / (double)(0x2ffffe);
-static const double nz_xmul = 1.0 / (65536.0*65536.0*32768.0*32768.0);
-static const double nz_ymul = 1.0 / (32768.0*32768.0*32768.0*32768.0);
-static const double nz_qmul[2] = {.999999999/(32767.0*32767.0*32767.0*32767.0),
-      	                         -.999999999/(32767.0*32767.0*32767.0*32767.0) };
-static const double nz_hmul[2] = {.999999999/(32767.0*32767.0*32767.0*32767.0*32767.0*32767.0),
-      	                         -.999999999/(32767.0*32767.0*32767.0*32767.0*32767.0*32767.0) };
-typedef struct { int iacc,rsrv; double x0, xu, y0, yu; } zgent_t;
-static zgent_t zgent[2<<NZGB];
-static zgent_t zgentx[64];
-
-static inline double f(double x) { return exp(-16.0*x*x); }
-static inline double fx(double x) { return exp(-16.0*fabs(x)); }
-
-static struct random_data r_dat; static char r_buf[256];
- 
-void nz_init() {
-	initstate_r(zero_sec, r_buf, 245, &r_dat);
-	double xmul = 1.0/(double)((1u<<31u)), ymul = 1.0/(double)((1<<(30-NZGB)));
-	for (int i=0; i<NZG; i++) {
-		zgent_t * p = zgent + i;
-		p->x0 = divpts[i]; p->xu = xmul * (divpts[i+1]-p->x0); p->x0 += .5*p->xu;
-		p[NZG].x0 = - p->x0; p[NZG].xu = - p->xu;
-		p[NZG].yu = p->yu = ymul * (f(p->x0));
-		p[NZG].iacc = p->iacc = (int)lround(f(divpts[i+1]) / p->yu);
-	}
-	for (int i=0; i<32; i++) {
-		zgent_t * p = zgentx + i;
-		p->x0 = divptsx[i]; p->xu = xmul * (divptsx[i+1]-p->x0); p->x0 += .5*p->xu;
-		p[32].x0 = - p->x0; p[32].xu = - p->xu;
-		p[32].yu = p->yu = ymul * (fx(p->x0));
-		p[32].iacc = p->iacc = (int)lround(fx(divptsx[i+1]) / p->yu);
-	}
+static uint64_t splitmix64(uint64_t *p) {
+	uint64_t z = (*p += UINT64_C(0x9E3779B97F4A7C15));
+	z = (z ^ (z >> 30)) * UINT64_C(0xBF58476D1CE4E5B9);
+	z = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
+	return z ^ (z >> 31);
 }
 
-static int iacc_ny[2];
-void mk_gwn(double * to, int n) {
-        int i=0; while (i<n) {
-		int xi, yi; random_r(&r_dat, &xi); random_r(&r_dat, &yi);
-                int k = yi>>(30-NZGB);
-                yi &= ( (1<<(30-NZGB)) - 1);
-                zgent_t * zp = zgent + k;
-                double x = zp->x0 + (double)(xi) * zp->xu;
-		if(
-#ifdef NZ_DEBUG
-		(k=(yi<zp->iacc), ++iacc_ny[k], k)
-#else
-                (yi<zp->iacc)
-#endif
-				|| (double)yi * zp->yu < f(x)) to[i++] = x;
-        }}
+static inline uint64_t rotl(const uint64_t x, int k) { return (x << k) | (x >> (64 - k)); }
+
+#define XORO_STEP(X0) (s1^=s0, (X0), s0=rotl(s0,55)^s1^(s1<<14), s1=rotl(s1,36))
+void xoro_jump(uint64_t *s) {
+        uint64_t x0 = 0, x1 = 0, s0 = s[0], s1 = s[1];
+        for (uint64_t m, j = 0xbeac0467eba5facb; j; j>>=1) m=-(j&1), x1^=(s1&m), XORO_STEP(x0^=s0&m);
+        for (uint64_t m, j = 0xd86b048b86aa9922; j; j>>=1) m=-(j&1), x1^=(s1&m), XORO_STEP(x0^=s0&m);
+        s[0] = x0; s[1] = x1;
+}
+
+void xoro_s64(uint64_t *s, int k) {
+	uint64_t s1 = (uint64_t)k;
+	splitmix64(&s1); s[0] = splitmix64(&s1); s[1] = splitmix64(&s1); 
+}
 
 void gwn_debug(int step) {
-	int n = iacc_ny[0], y = iacc_ny[1], tot = n+y; double prc = 100.0 / (double)tot;
+	int n = iacc_ny[0], y = iacc_ny[1], tot = n+y; if (!tot) return;
+	double prc = 100.0 / (double)tot;
 	log("perfstat: iacc: tot:%d y:%d(%g%%) n:%d(%g%%)", tot, y, prc*(double)y,
 								 n, prc*(double)n); }
 
-static void mk_exp(double * to, int n) {
-        int i=0; while (i<n) {
-                int xi = random(), yi = random();
-                int k = yi>>25; yi &= 0x1ffffff;
-                zgent_t * zp = zgentx + k;
-                double x = zp->x0 + (double)(xi) * zp->xu;
-                if ((yi<zp->iacc) || (double)yi * zp->yu < fx(x)) to[i++] = x;
-        }}
+//? {{{!._nz}}}
+//? Simple noise generator
+//? ty - noise type
+//? sd - random seed
+//? ---
+//? type: 0:normal(Gaussian) 1:linear 2:2*lin 3:3*lin 4:lin^2
+//? 5:lin^3 6:lin^4 7:lin^6 8:exponential (signed) 
+//? 9: exp. (unsigned) 10:half-circle 11:(x^2-1)^2
+//? ---
+//? seed: rounded to integer, <0 and NaN values are reserved
+//? 1...2147483647 gives a reproducible (*) random output
+//? 0 gives the default random seed, configurable only from
+//? command line with -rseed and -rstep (see lflab -h)
+//? ---
+//? (*) for "sample-discarding" generators (0,8,9,10,11) very
+//? small rounding differences may lead to altered output data.
+//? (insertion/deletion of a few samples)
 
-static void mk_uexp(double * to, int n) {
-        int i=0; while (i<n) {
-                int xi = random(), yi = random();
-                int k = yi>>26; yi &= 0x1ffffff;
-                zgent_t * zp = zgentx + k;
-                double x = zp->x0 + (double)(xi) * zp->xu;
-                if ((yi<zp->iacc) || (double)yi * zp->yu < fx(x)) to[i++] = x;
-        }}
+class NZ0Box : public BoxInst {
+	public: static void mk_dsc(int ix, int ty, double ar);
+		NZ0Box() : m_psc(sc_ini) {}
+		void ini(const double *pty, const double *psd);
+		CALC_TODO;
+	protected:
+		static scf_t sc_ini, sc_vz, sc_x1, sc_x2a, sc_x3a,
+			     sc_x2m, sc_x3m, sc_x4m, sc_x6m;
+		static void* m0_dsctab[16];
+		static const sc_t m0_sftab[16];
+		uint64_t m_xoro[2];
+		void * m_dsc;
+};
 
-static void mk_1x31(double *to, int n) {
-        for (int k,i=0; i<n; i++) k=random(), k += k-0x7fffffff, to[i] = nz_1mul * (double)k; }
+class NZ0Buf {
+	public:
+		NZ0Buf() : m_pv(m_v), m_ix(15) {}
+		inline void ini(const double *pty, const double *psd) { m_b.ini(pty,psd); }
+		inline double v() { return (m_ix<15) ? m_v[++m_ix]
+						     : (m_b.calc(0,0,&m_pv,16), m_v[m_ix=0]); }
+	protected:
+		NZ0Box m_b;
+		double m_v[16], *m_pv;
+		int m_ix;
+};
 
-static void mk_2x31(double *to, int n) {
-        for (int k,i=0; i<n; i++) k=random()-0x7fffffff, k += random(), to[i] = nz_1mul * (double)k; }
+//? {{{!._nz2}}}
+//? Two simple noise generators, multiplied
+//? ty1, ty2 - noise types
+//? sd1, sd2 - seed values
+//? ==> .!b.noise.nz0 -- details for simple noise gen.
 
-static void mk_3x20(double *to, int n) {
-        for (int k,x,y,i=0; i<n; i++) {
-                x=random(); y=random(); k = (unsigned int)(x+y) >> 11u;
-                k += (x&1023) + 1024*(y&1023); k += k - 0x2ffffd;
-                to[i] = nz_3mul * (double)k;
-        }}
+class NZ0x2Box : public BoxInst {
+	public: NZ0x2Box() : m_psc(sc0) {}
+		CALC_TODO;
+	protected:
+		static scf_t sc0, sc1;
+		NZ0Box m_b0, m_b1;
+};
 
-static void mk_mul2(double *to, int n) {
-        for (int x,y,i=0; i<n; i++) {
-                x=random(); y=random();
-                x += (x-0x7fffffff); y += (y-0x7fffffff);
-                to[i] = nz_xmul * (double)x * (double)y;
-        }}
+//? {{{!._rpt}}}
+//? Randomized pulse train
+//? fq1 - base fq
+//? fnz - fq noise -- fq is fq1 * (1.0 + fnz*nz1())
+//? vnz - vol noise -- imp vol is (1.0 - vnz) + vnz*nz2()
+//? rsrv - reserved for future use
+//? ty1,ty2,sd1,sd2 - parameters to nz1() and nz2()
+//? ==> .!b.noise.nz0 -- details for simple noise gen.
 
-static void mk_mul3(double *to, int n) {
-        for (int x,y,z,i=0; i<n; i++) {
-                x=random(); y=random(); z = 1024*(x&1023) + (y&1023);
-                x>>=10; x&=~1; x-=0xfffff;
-                y>>=10; y&=~1; y-=0xfffff;
-                z += z - 0xfffff;
-                to[i] = nz_ymul * (double)x * (double)y * (double)z;
-        }}
+class RndPt : public BoxInst {
+	public: RndPt() : m_psc(sc0), m_acc(1.00000001) {}
+		CALC_TODO;
+	protected:
+		static scf_t sc0, sc1;
+		NZ0Buf m_b0, m_b1;
+		double m_acc, m_fmul;
+};
 
-static void mk_mul4(double *to, int n) {
-        for (int x,y,z,v,i=0; i<n; i++) {
-                x=random(); y=random();
-                z = (x&32767) * (y&32767);
-                v = (x>>16) * (y>>16);
-                to[i] = nz_qmul[((x^y)>>15)&1] * (double)z * (double)v;
-        }}
-
-static void mk_mul6(double *to, int n) {
-        for (int x,y,z,i=0; i<n; i++) {
-                x=random(); y=random(); z=random();
-		int sg = ((x^y^z)>>15) & 1;
-		x = (x&32767) * (x>>16);
-		y = (y&32767) * (y>>16);
-		z = (z&32767) * (z>>16);
-                to[i] = nz_hmul[sg] * (double)x * (double)y * (double)z;
-        }}
-
-int rndbits(int * st2, int n) {
-	int r = 0;
-	if (n > st2[1]) n -= st2[1], r = *st2<<n, *st2 = random(), st2[1] = 31;
-	r += *st2 & ((1<<n)-1), *st2 >>= n, st2[1] -= n; return r;
+void NZ0Box::ini(const double *pty, const double *psd) {
+	int ty = (int)lround(*pty) & 15, seed = (int)lround(*psd);
+	if      (seed)		 xoro_s64(m_xoro, seed);
+	else if (CFG_RND_STEP.i) xoro_s64(m_xoro, seed_glob++);
+	else  memcpy(m_xoro, xoro_glob, 16), xoro_jump(xoro_glob);
+	m_dsc = m0_dsctab[ty];  m_psc = m0_sftab [ty];
 }
 
-int nz_bv_c(unsigned int * to, double v, int n) {
-	int r = 0, hl = (int)(lround(v * 1048576.0)), hl5 = hl >> 15;
-	int n2 = (n+31) >> 5; memset(to, 0, 4*n2);
-	int rs[2]; rs[0] = rs[1] = 0;
+BX_SCALC(NZ0Box::sc_ini) { SCALC_BXI(NZ0Box); bxi->ini(inb[0],inb[1]); return (bxi->m_psc)(bxi,0,0,outb,n); }
+
+#define NZ0_START SCALC_BXI(NZ0Box); uint64_t r, s0 = bxi->m_xoro[0], s1 = bxi->m_xoro[1]; double *to = *outb
+#define NZ0_END   bxi->m_xoro[0] = s0; bxi->m_xoro[1] = s1; return 1
+
+BX_SCALC(NZ0Box::sc_vz) {
+	NZ0_START, *tol = to+n;
+	const vzdat_t *dsc = (const vzdat_t*)bxi->m_dsc;
+	const vzent_t *z0 = dsc->e;  dfun1_t fp = dsc->f;
+	for(;;){r = s0 + s1;
+		int k = (r>>56); const vzent_t * z = z0 + k;
+		int xi, yi; // xi = (int)(r>>25) & 0x7fffffff, yi = r&0x1ffffff;
+		XORO_STEP((xi = (int)(r>>25) & 0x7fffffff, yi = r&0x1ffffff));
+		double x = z->x0 + (double)xi*z->xu;
+		if ((
+#ifdef NZ_DEBUG
+		(k=(yi<z->iacc), ++iacc_ny[k], k)
+#else
+                (yi<z->iacc)
+#endif
+				|| (double)yi * z->yu < (*fp)(x)) && (*to=x,++to>=tol)) break;
+        }
+	NZ0_END;
+}
+
+#define I52_TO_D(X,E) (r>>=12, r|=(0x3ff0000000000001L+((int64_t)(E)<<52)), memcpy(&(X), &r, 8))
+#define XORO_STEP_2D(X,E,X0) (r = s0+s1, XORO_STEP(I52_TO_D(X,E)), (X)+=(X0))
+
+BX_SCALC(NZ0Box::sc_x1) {
+	NZ0_START;
+	for (int i=0; i<n; i++) XORO_STEP_2D(to[i], 1, -3.0);
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x2a) {
+	NZ0_START, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 0, -3.0), XORO_STEP_2D(to[i], 0, z);
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x3a) {
+	NZ0_START, y, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -9.0), XORO_STEP_2D(y, 0, z),
+				XORO_STEP_2D(z, 1,    y), to[i] = .3333333333333333 * z;
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x2m) {
+	NZ0_START, y, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -3.0), XORO_STEP_2D(y, 1, -3.0), to[i] = y*z;
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x3m) {
+	NZ0_START, y, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -3.0), XORO_STEP_2D(y, 1, -3.0), z*=y,
+				XORO_STEP_2D(y, 1, -3.0), to[i] = y*z;
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x4m) {
+	NZ0_START, y, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -3.0),       XORO_STEP_2D(y, 1, -3.0), z*=y,
+				XORO_STEP_2D(y, 1, -3.0), z*=y, XORO_STEP_2D(y, 1, -3.0), to[i] = y*z;
+	NZ0_END;  }
+
+BX_SCALC(NZ0Box::sc_x6m) {
+	NZ0_START, y, z;
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -3.0),       XORO_STEP_2D(y, 1, -3.0), z*=y,
+				XORO_STEP_2D(y, 1, -3.0), z*=y, XORO_STEP_2D(y, 1, -3.0), z*=y,
+				XORO_STEP_2D(y, 1, -3.0), z*=y, XORO_STEP_2D(y, 1, -3.0), to[i] = y*z;
+	NZ0_END;  }
+
+const BoxInst::sc_t NZ0Box::m0_sftab[16] = { sc_vz, sc_x1, sc_x2a, sc_x3a, sc_x2m, sc_x3m, sc_x4m, sc_x6m,
+	sc_vz, sc_vz, sc_vz, sc_vz, sc_x1, sc_x1, sc_x1, sc_x1 };
+void * NZ0Box::m0_dsctab[16];
+
+void NZ0Box::mk_dsc(int ix, int ty, double ar) {
+	static const double xmul = 1.0/(double)((1u<<31u)), ymul = 1.0/(double)(1<<25);
+	DISTR_NF(ty); double x0, x1 = 0.0;
+	vzdat_t * zd = (vzdat_t*)(m0_dsctab[ix] = nf_alloc(sizeof(vzdat_t)));  zd->f = f; 
 	for (int i=0; i<n; i++) {
-		int k0 = rndbits(rs,5), k = k0 - hl5;
-		unsigned int m = (unsigned int) (k ? k>>6 : ((k0<<15) + rndbits(rs,15) - hl) >> 31);
-		r -= (int) m; to[i>>5] |= (m & (1u << (i&31u))); }
-	return r;
+		x0 = x1; x1 += ar / (*f)(x0);
+		vzent_t * p = zd->e + i;
+		p->xu = xmul*(x1-x0); p->x0 = x0 + .5*p->xu;
+		p->yu = ymul * (*f)(p->x0);
+		p->iacc = (int)lround( (*f)(x1) / p->yu );
+	}
+	if (ty&32) { for (int i=0; i<n; i++) {
+		vzent_t *p = zd->e+i, *q = p+n;
+		memcpy(q, p, n); q->x0 = -q->x0; q->xu = -q->xu;
+	}}}
+
+BX_SCALC(NZ0x2Box::sc1) { 
+	SCALC_BXI(NZ0x2Box); double tmp[n], *q0 = *outb, *q1 = tmp;
+	bxi->m_b0.calc(0, 0, &q0, n);
+	bxi->m_b1.calc(0, 0, &q1, n);  for (int i=0; i<n; i++) q0[i] *= q1[i];  return 1;  }
+
+BX_SCALC(NZ0x2Box::sc0) { 
+	SCALC_BXI(NZ0x2Box); bxi->m_b0.ini(inb[0], inb[2]); bxi->m_b1.ini(inb[1], inb[3]);
+	return (*(bxi->m_psc = &sc1)) (bxi, inflg, inb, outb, n);  }
+
+#define RNDPT1 (v = vnzp[i&vnzmsk], v=1.0-v+v*bxi->m_b0.v(), \
+		fmul = sample_length*(1.0+bxi->m_b1.v()*fnzp[i&fnzmsk]))
+BX_SCALC(RndPt::sc1) {
+	SCALC_BXI(RndPt);
+        int i; double d, fq, v, *fqp = *inb, *q = *outb, fmul = bxi->m_fmul, acc = bxi->m_acc;
+        PREP_INPUT(fnz, 1); PREP_INPUT(vnz, 2);
+        if (inflg&1) for (i=0; i<n; i++) q[i] = acc<1.0 ? 0.0 : (RNDPT1, acc-=1.0, v), acc += fqp[i]*fmul;
+	else for (i=0,fq=*fqp,d=fq*fmul; i<n; i++) q[i] = acc<1.0 ? 0.0 : (d=fq*RNDPT1, acc-=1.0, v), acc+=d;
+        bxi->m_fmul = fmul; bxi->m_acc = acc;
+        return 1;
 }
 
-nz_fun0_t nz_fun0[NZ_N_FUN0] = {mk_gwn, mk_1x31, mk_2x31, mk_3x20, mk_mul2, mk_mul3, mk_mul4, mk_mul6, mk_exp, mk_uexp } ;
+BX_SCALC(RndPt::sc0) {
+	SCALC_BXI(RndPt); bxi->m_b0.ini(inb[4], inb[6]); bxi->m_b1.ini(inb[5], inb[7]);
+	return (*(bxi->m_psc = &sc1)) (bxi, inflg, inb, outb, n);  }
 
+void b_noise_init(ANode *rn) {
+	int seed = CFG_RND_SEED.i; if (!seed) seed = zero_sec;
+	xoro_s64(xoro_glob, seed);
+	for (int i=0; i<ASIZ(rnd_dsc); i++)
+		NZ0Box::mk_dsc(rnd_dsc[i].ix, rnd_dsc[i].ty, rnd_dsc[i].ar);
+	qmk_box(rn, "nz0", QMB_ARG0(NZ0Box), 0, 2, 33, "nz", "i*o*R*1", "ty$sd", "out", "zzzOOO");
+	qmk_box(rn, "nz0*2", QMB_ARG0(NZ0x2Box), 0, 4, 33, "nz2", "1i*", "ty1$ty2$sd1$sd2");
+	qmk_box(rn, "rnd-pt", QMB_ARG0(RndPt), 0, 8, 33, "rpt", "i*o*R*", "fq1$fnz$vnz$rsrv$ty1$ty2$sd1$sd2",
+			"out", "z%%OOO");
+}

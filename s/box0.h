@@ -46,8 +46,14 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 #define PREP_INPUT(NM, I) double * NM##p, NM##v; int NM##msk = (inflg&(1<<(I))) ? \
 	(NM##p = inb[I], -1) : (NM##p = &NM##v, NM##v = *inb[I], 0)
 
+#define BX_SCALC(F) int F(BoxInst * abxi, int inflg, double** inb, double** outb, int n)
+#define SCALC_BXI(T) T* bxi = static_cast<T*>(abxi)
+#define CALC_TODO virtual int calc(int inflg, double** inb, double** outb, int n) { \
+	return (*m_psc)(this, inflg, inb, outb, n); }      sc_t m_psc
 class BoxInst {
         public:
+		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
+		typedef int(scf_t)(BoxInst*, int, double**, double**, int);
 		static void rmcon(int flg, double **pp, int n); 
                 virtual int calc(int inflg, double** inb, double** outb, int n) = 0;
                 virtual bool done() const { return false; };

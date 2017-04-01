@@ -38,6 +38,7 @@
 #define DFLG_HELP "1:recfilt-state 2:model-del 4:guicmd 8:voltab 10:audio 20-sel_loop 40-expr 80-trk "\
 		  "100-gui2 200:save 400:mixer 800:jobq 1000:graph(>workdir) 2000:midi-rw(ini only) "\
 		  "4000-wrap 8000-trkcalc 10000:pt 20000:fe 40000:midiev"
+#define MAX31 0x7fffffff
 #define DEBUG_UTXT(J) (debug_utxt_buf + 64*(J))
 #define IFDBGX(F) if (debug_flags&DFLG_##F)
 extern int glob_flg;

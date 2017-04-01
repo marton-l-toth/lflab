@@ -4,14 +4,14 @@ SRC1 = main.cc node.cc util.cc cmd.cc box.cc util2.cc asnd.cc job.cc mx.cc pt.cc
 INC1 = glob.h  node.h  util.h  cmd.h  box.h  util2.h  asnd.h  job.h  mx.h  pt.h  midi.h
 OBJ1 = main.o  node.o  util.o  cmd.o  box.o  util2.o  asnd.o  job.o  mx.o  pt.o  midi.o
 
-SRC2 = expr.cc wrap.cc nz.cc guistub.cc combo.cc pzrf.cc trk.cc
-INC2 = expr.h  wrap.h  nz.h  guistub.h  combo.h  pzrf.h  trk.h
-OBJ2 = expr.o  wrap.o  nz.o  guistub.o  combo.o  pzrf.o  trk.o
+SRC2 = expr.cc wrap.cc guistub.cc combo.cc pzrf.cc trk.cc
+INC2 = expr.h  wrap.h  guistub.h  combo.h  pzrf.h  trk.h
+OBJ2 = expr.o  wrap.o  guistub.o  combo.o  pzrf.o  trk.o
 
-SRC3 = rf2.cc fe.cc arbox.cc grbox.cc it.cc in.cc b0.cc v.cc
-OBJ3 = rf2.o  fe.o  arbox.o  grbox.o  it.o  in.o  b0.o  v.o 
+SRC3 = nz.cc rf2.cc fe.cc arbox.cc grbox.cc it.cc in.cc b0.cc v.cc
+OBJ3 = nz.o  rf2.o  fe.o  arbox.o  grbox.o  it.o  in.o  b0.o  v.o 
 
-INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h
+INCX = aobuf.h lwarr.h uc0.h uc1.h tab7.h box0.h contrib.h distr.h
 
 SRCC = $(shell c/upd_contrib.sh cc c/)
 OBJC = $(shell c/upd_contrib.sh o  co/)

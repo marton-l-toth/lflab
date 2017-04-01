@@ -52,6 +52,8 @@ AX_TRY_MS   |k|50         |10  |250  |aartt |millisecs. to wait between aux audi
 AX_KILL_PA  |k|0          |0   |3    |akpa  |pulseaudio/aux: 0-don't kill 1-sig15 3-sig9
 AX_CMODE    |k|2          |2   |2    |aacm  |aux.audio/clock mode: 0-avail 1-nonblock 2-pump proc.
 AX_BFILL    |k|0          |0   |1    |aabbf |round up hw bufsiz to next power of 2 (aux)
+RND_SEED    |k|0          |0   |MAX31|rseed |random seed (0: time)
+RND_STEP    |k|0          |0   |1    |rstep |noise box init: 0:jump(2^64)  1:seed incr.
 _1_NOEX     |k|0          |0   |1    |n     |skip default example tree (.!e)
 _H1         |k|0          |0   |1    |h     |show help
 _H2         |k|0          |0   |1    |?     |show help

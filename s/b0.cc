@@ -1,7 +1,6 @@
 #include "util.h"
 #include "box0.h"
 #include "glob.h"
-#include "nz.h"
 #include "cfgtab.inc"
 
 #define IMPBOX(NM,NA,NT) class NM : public BoxInst { \
@@ -235,71 +234,6 @@ LSBOX(PriBox) { int i = next_prime17((int)lround(**inb)), id = max_i(1, (int)lro
 LSBOX(SxyBox) { Scale01::vec(q, inb[0][0], inb[1][0],		n, ivlim((int)lround(inb[2][0]),-3,3)); }
 LSBOX(SxmBox) { Scale01::vec(q, inb[0][0], inb[0][0]*inb[1][0], n, ivlim((int)lround(inb[2][0]),-3,3)); }
 
-//? {{{!._nz}}}
-//? Simple noise generator
-//? ty - noise type
-//? 0:normal(Gaussian) 1:linear 2:2*lin 3:3*lin 4:lin^2 5:lin^3
-//? 6:lin^4 7:lin^6 8:exponential (signed) 9: exp. (unsigned)
-//? {{{!._nz2}}}
-//? Two simple noise generators, multiplied
-//? ty1, ty2 - noise types
-//? 0:normal(Gaussian) 1:linear 2:2*lin 3:3*lin 4:lin^2 5:lin^3
-//? 6:lin^4 7:lin^6 8:exponential (signed) 9: exp. (unsigned)
-
-class NZ0Box : public BoxInst {
-	public: NZ0Box() : m_fun(0) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
-	protected: nz_fun0_t m_fun; 
-};
-
-class NZ0m2Box : public BoxInst {
-	public: NZ0m2Box() : m_fun1(0), m_fun2(0) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
-	protected: nz_fun0_t m_fun1, m_fun2; 
-};
-
-int NZ0Box::calc(int inflg, double** inb, double** outb, int n) {
-	if (!m_fun) { int k = (int)lround(**inb);
-		      m_fun = nz_fun0[(unsigned int)k < NZ_N_FUN0 ? k : 0]; }
-	(*m_fun)(*outb, n); return 1; }
-
-int NZ0m2Box::calc(int inflg, double** inb, double** outb, int n) {
-	if (!m_fun1) {
-		int k = (int)lround(**inb), m = (int)lround(*inb[1]);
-		m_fun1 = nz_fun0[(unsigned int)k < NZ_N_FUN0 ? k : 0];
-		m_fun2 = nz_fun0[(unsigned int)m < NZ_N_FUN0 ? m : 0];
-	}
-	double tbuf[n], *q = *outb;
-	(*m_fun1)(q, n); (*m_fun2)(tbuf, n);
-	for (int i=0; i<n; i++) q[i] *= tbuf[i]; return 1;
-}
-
-//? {{{!._rpt}}}
-//? Randomized pulse train
-//? fq1 - base fq
-//? fnz - fq noise -- fq is fq1 * (1.0 + fnz*gwn())
-//? vnz - vol noise -- imp vol is (1.0 - vnz) + vnz*gwn()
-//? (gwn() is approx. Gaussian white noise (-1.0 ... 1.0) )
-
-class RndPt : public BoxInst {
-	public: RndPt() : m_acc(1.00000001) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
-	protected: double m_acc, m_fmul;
-};
-
-int RndPt::calc(int inflg, double** inb, double** outb, int n) {
-	int i; double d, fq, v, *fqp = *inb, *q = *outb, rnd[2], fmul = m_fmul, acc = m_acc;
-	PREP_INPUT(fnz, 1); PREP_INPUT(vnz, 2);
-	if (inflg&1) for (i=0; i<n; i++) q[i] = (acc<1.0) ? 0.0 : (mk_gwn(rnd, 2), v = vnzp[i&vnzmsk],
-			   v = 1.0-v+v*rnd[0], fmul = sample_length*(1.0+rnd[1]*fnzp[i&fnzmsk]), acc-=1.0, v),
-			acc += fqp[i] * fmul;
-	else for (i=0,fq=*fqp,d=fq*m_fmul; i<n; i++) q[i] = (acc<1.0) ? 0.0 : (mk_gwn(rnd,2),
-			    v = vnzp[i&vnzmsk], v = 1.0-v+v*rnd[0],
-			    d = fq*(fmul=sample_length*(1.0+rnd[1]*fnzp[i&fnzmsk])), acc-=1.0, v), acc += d;
-	m_fmul = fmul; m_acc = acc;
-	return 1;
-}
-
 STATELESS_BOX_1(DebugBox) { 
 	log_n("debug_box[%d]: n=%d", m_arg, n);
 	for (int i=0,m=1; i<m_arg; i++,m+=m) {
@@ -510,14 +444,11 @@ static void ls_ini(ANode *rn) {
 
 void b_b0_init(ANode * rn) {
 	ANode *mc = qmk_dir(rn, "misc"),  *wv = qmk_dir(rn, "wave"),  *im = qmk_dir(rn, "imp"), 
-	      *nz = qmk_dir(rn, "noise"), *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat");
+	      *db = qmk_dir(rn, "debug"), *st = qmk_dir(rn, "stat");
 	qmk_box(mc, "zero", QMB_ARG0(ZeroBox), 0, 0, 33, "_0", "*o*", "HHH%%%", "0.0");
 	qmk_box(mc, "copy", QMB_ARG0(CopyBox), 0, 1, 33, "_3", "*i*o*", "kkk%%%", "x", "x");
 	qmk_box(mc, "map01", QMB_ARG0(Map01Box), 0, 4, 33, "m01", "*i*o*", "kkk%%%", "x$y0$y1$scl", "y");//old
 	qmk_box(mc, "rqosc", QMB_ARG0(RQOsc), 0, 5, 33, "rqo", "*i*", "k%k0%0", "f0$f1$dmp$vlim$samp");
-	qmk_box(nz, "nz0", QMB_ARG0(NZ0Box), 0, 1, 33, "nz", "i*o*R*1", "ty", "out", "zzzOOO");
-	qmk_box(nz, "nz0*2", QMB_ARG0(NZ0m2Box), 0, 2, 33, "nz2", "1i*", "ty1$ty2"); 
-	qmk_box(nz, "rnd-pt", QMB_ARG0(RndPt), 0, 3, 33, "rpt", "i*o*R*", "fq1$fnz$vnz", "out", "z%%OOO");
 	qmk_box(wv, "~pt",   QMB_ARG0(PulseTrain), 0, 2, 33, "w", "*i*R1", "z%%%%d", "fq$phs");
 	qmk_box(wv, "~saw",  QMB_ARG0(SawTWave), 0, 2, 33, "w", "1+R2", "zz%");
 	qmk_box(wv, "~saw01",QMB_ARG0(Saw01Wave), 0, 2, 33, "w", "2");
