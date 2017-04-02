@@ -179,7 +179,7 @@ BX_SCALC(NZ0Box::sc_x2a) {
 
 BX_SCALC(NZ0Box::sc_x3a) {
 	NZ0_START, y, z;
-	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -9.0), XORO_STEP_2D(y, 0, z),
+	for (int i=0; i<n; i++) XORO_STEP_2D(z, 1, -9.0), XORO_STEP_2D(y, 1, z),
 				XORO_STEP_2D(z, 1,    y), to[i] = .3333333333333333 * z;
 	NZ0_END;  }
 
