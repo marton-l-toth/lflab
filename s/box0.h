@@ -1,7 +1,7 @@
 #ifndef __qwe_box0_h__
 #define __qwe_box0_h__
 
-#include <new>
+inline void* operator new(size_t, void* p) { return p; }
 
 class ANode; class ABoxNode; class BoxModel; class BoxGen;
 extern int sample_rate; extern double sample_length;

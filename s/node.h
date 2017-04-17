@@ -1,7 +1,6 @@
 #ifndef __qwe_node_h__
 #define __qwe_node_h__
 
-#include <new>
 #include "util.h"
 #include "tab7.h"
 #include "glob.h"
