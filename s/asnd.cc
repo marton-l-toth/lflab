@@ -1,7 +1,7 @@
 #include <alsa/asoundlib.h>
 
 #define CHK1(X,S) if ((e=(X))<0) { es=(S); goto err2; }
-inline int bitfill(int x) { return x|=(x>>16), x|=(x>>8), x|=(x>>4), x|=(x>>2), x|(x>>1); }
+inline int bitfill2(int x) { return x|=(x>>16), x|=(x>>8), x|=(x>>4), x|=(x>>2), x|(x>>1); }
 static const char* au_op_cfg(snd_pcm_t ** pp_h, const char *nm, int *bufsiz, int *nchan, int *srate, int flg) {
         snd_pcm_hw_params_t *hwpar = 0; // flg: 1-nonblock 
         unsigned int rate = *srate, nc = *nchan; 
@@ -19,7 +19,7 @@ static const char* au_op_cfg(snd_pcm_t ** pp_h, const char *nm, int *bufsiz, int
 
         while(     snd_pcm_hw_params_set_buffer_size_near(*pp_h, hwpar, &bs), 
 	      (e = snd_pcm_hw_params(*pp_h, hwpar))<0) { fprintf(stderr,"bs=%d FAIL\n", (int)bs);
-		if ((bs2 = bitfill(bs2)+1)>65536) { es="bs/setpar"; goto err2; } else { bs=bs2; }}
+		if ((bs2 = bitfill2(bs2)+1)>65536) { es="bs/setpar"; goto err2; } else { bs=bs2; }}
         CHK1(snd_pcm_hw_params_get_channels(hwpar, &nc), "get_nchan");
         CHK1(snd_pcm_hw_params_get_rate(hwpar, &rate, &x), "get_rate");
         CHK1(snd_pcm_hw_params_get_buffer_size(hwpar, &bs), "get_bufsiz");

@@ -30,6 +30,7 @@ inline char * nf_alloc(int x) { extern int nfa_siz; extern char *nfa_cur, *nf_al
 extern int sample_rate; extern double sample_length;
 extern const double smalldiv128[130], fib7s_tab[128];
 
+inline int bitfill(int x) { return x|=(x>>16), x|=(x>>8), x|=(x>>4), x|=(x>>2), x|(x>>1); }
 int next_prime17(int k);
 inline double fib7s(int n) { return fib7s_tab[n&127]; }
 int approx_cmp(double x, double y);
