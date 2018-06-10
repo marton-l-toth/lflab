@@ -6,3 +6,4 @@
 :sy match string /`\.[^`]*`/
 :sy match string /^<.*$/
 :sy match string /^^<.*$/
+:sy match PreProc /^#\(.*\\\n\)*.*/
