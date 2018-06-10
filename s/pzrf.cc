@@ -45,7 +45,7 @@ static void rfpz_store(RECF_PZItem * pz, int n) {
 	if (lpz_p) delete[](lpz_p); lpz_p = pz; lpz_n = n; }
 
 void rfpz_transform(RECF_ABXY * to, RECF_PZItem * pz, int n, int flg) {
-	if (flg&1) { rfpz_store(pz,n); }
+	int stf = flg&(n>0); if (stf) rfpz_store(pz,n);
 	for (int i=0; i<n; i++) {
 		memset(to+i, 0, 32);
 		double pr=pz[i].pr, pi=pz[i].pi;
@@ -82,8 +82,8 @@ void rfpz_transform(RECF_ABXY * to, RECF_PZItem * pz, int n, int flg) {
 			to[i].a1 = to[i].a2 = 0.0;
 			to[i].b1 = to[i].b2 = 0.0;
 		}
-	} 
-	if (!(flg&1)) free(pz);
+	}
+	if (!stf) delete[](pz);
 }
 
 static double get_recrad() {
