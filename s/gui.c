@@ -1537,11 +1537,10 @@ static gboolean da_draw(GtkWidget *w, GdkEventExpose *ev, gpointer p) {
 
 static void draw_now(ww_t * ww, int wid, int heig) {
 	cairo_t * cr = gdk_cairo_create(gtk_widget_get_window(ww->w));
-	cairo_rectangle_int_t rct; rct.x=rct.y=0; rct.width=wid; rct.height=heig;
-	cairo_region_t * rg = cairo_region_create_rectangle(&rct);
-	gdk_cairo_region (cr, rg);
+	GdkRectangle rct; rct.x=rct.y=0; rct.width=wid; rct.height=heig;
+	gdk_cairo_rectangle (cr, &rct);
 	ww->arg[0].p = cr; (*ww->cl->cmd)(ww, NULL);
-	cairo_destroy(cr); cairo_region_destroy(rg);
+	cairo_destroy(cr);
 }
 
 static void debug_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton * ev) {
@@ -2140,7 +2139,7 @@ static const char * fmts[] = {"%d","%01d","%02d","%03d","%04d","%05d","%06d","%0
 static int cnt_neg(char *to, int j, int v) {
 	static const char *ls[] = {"27--nxpvupdnltrt"};
 	if ((unsigned int)j >= (unsigned int)(sizeof(ls)/sizeof(char*))) return to[0]=to[1]='?', 2;
-	char *s = ls[j];  int w=s[0]-48, n=s[1]-48;   if ((v=~v&255)>=n)  return to[0]=      '?', 1;
+	const char *s = ls[j];  int w=s[0]-48, n=s[1]-48;   if ((v=~v&255)>=n)  return to[0]=      '?', 1;
 	return memcpy(to, s+2+w*v, w), w;
 }
 
@@ -2288,8 +2287,8 @@ static void dacntvs_skel(struct _ww_t * ww, const char **pp) {
 	int nfs = (ty&1) ? DACNT_VNFS(zpad) : 0;
 	int wid2, wid = tx_len(conf_lbfs_s, DACNT_LBL(ww));
 	int heig = FONT_HEIG(conf_lbfs_s) + 4;
-	(ty&1) && (heig += 1+FONT_HEIG(nfs)) && (wid2 = FONT_NWID(nfs)*zpad) > wid && (wid = wid2);
-	(ty&2) && (heig += 1+FONT_HEIG(conf_lbfs)) && (wid2=tx_len(conf_lbfs,"W"))>wid && (wid = wid2);
+	if ((ty&1) && (heig += 1+FONT_HEIG(nfs))       && (wid2=FONT_NWID(nfs)*zpad)   > wid) wid = wid2;
+	if ((ty&2) && (heig += 1+FONT_HEIG(conf_lbfs)) && (wid2=tx_len(conf_lbfs,"W")) > wid) wid = wid2;
 	DACNT_ARG(ww) |= zpad | (wid<<4) | (ty<<12) | (k<<24);
 	da_skel(ww, wid+4+(ty&4), heig);
 	double step = 1.0 / (double) k;
@@ -2497,7 +2496,8 @@ static void wrap_skel (struct _topwin * tw, char * arg) {
 #define GRID_WH1(W) int wid1 = GRID_SX(W) = (DA_W(W)-5) / GRID_X(W), \
 			hgt1 = GRID_SY(W) = (DA_H(W)-5) / GRID_Y(W); \
 		    if (wid1<1 || hgt1<1) return; \
-		    double w1d = (double)wid1, h1d = (double)hgt1; \
+		    double w1d UNUSED = (double)wid1; \
+		    double h1d UNUSED = (double)hgt1; \
 		    int x00 = GRID_X0(ww), y00 = GRID_Y0(ww)
 #define GRID_KEY(W,X,Y) (((gr_keytab_t*)(W)->etc)->xy2k[51*(Y)+(X)])
 		    
@@ -2804,8 +2804,8 @@ static int tc_f24(tc_t * tc, int ix) {
 	p->b.nx = tc->t24_f; memcpy(p->b.s, "BUG", 4);  return k; }
 
 static trk_24 * tc_a24(tc_t * tc, unsigned short * to) {
-	trk_24 * r = tc_p24(tc, ((*to=tc->t24_f)||(*to=tc_mk_b3k(tc))||(tc->flg|=TCF_OOM),*to));
-	if (*to) tc->t24_f = r->b.nx;     return r; }
+	if (!((*to=tc->t24_f)||(*to=tc_mk_b3k(tc)))) tc->flg|=TCF_OOM;
+	trk_24 * r = tc_p24(tc, *to);   if (*to) tc->t24_f = r->b.nx;  return r; }
 
 static void tc_vw_cmd(tc_t * tc) { CMD("X#%x$V%c%c$%x$%x",
 		tc->nid, tc->y0a+48, tc->y1a+48, tc->x0a, tc->x1a); }
@@ -3412,7 +3412,7 @@ static void tc_set_gd(tc_t * tc, int gd) {
 	if (gd==tc->gwfr[0]) return;
 	unsigned int dbv0 = TC_GD(tc)->d, dbv = tdiv_gd[tc->gwfr[0]=gd].d;
 	int j, ppb = tc->gwfr[1]; 
-	le40320(gd, ppb) || tc_find_ppb(tc,j=tdiv_gd[ppb].j,1) || tc_find_ppb(tc,j,-1);
+	(void)( le40320(gd, ppb) || tc_find_ppb(tc,j=tdiv_gd[ppb].j,1) || tc_find_ppb(tc,j,-1) );
 	trk_upd_wgd(tc->ww, 2);
 	if (dbv0 & ~dbv) tc_upd255(tc, (dbv&(1u<<tc->div[0])) ? 2 : (tc->div[0]=tc_ddef(gd), 3) );
 }
@@ -3512,7 +3512,7 @@ static void ttrk_skel (struct _topwin * tw, char * arg) { const char * str =
 
 #define HFUN(L,R) inline static int hfun##L(const char *s, int m) {        \
         unsigned int r = 0; while (*s) r = (r<<L) + (r>>R) + *(s++);        \
-        (m<65536) && (r^=(r>>16), m<256) && (r^=(r>>8), m<16) && (r^=(r>>4));\
+        if ((m<65536) && (r^=(r>>16), m<256) && (r^=(r>>8), m<16)) r^=(r>>4);\
         return m & (int)r; }
 HFUN(3,29) 
 HFUN(5,27)

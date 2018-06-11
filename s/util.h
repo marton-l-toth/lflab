@@ -20,7 +20,7 @@
 const double c0_freq = 16.35159783128737;
 
 void log(const char * fmt, ...);
-void bug(const char * fmt, ...);
+void bug(const char * fmt, ...) __attribute__ ((noreturn));
 
 char * bigblk(int n);
 char * alloc_32k();
@@ -37,8 +37,6 @@ int approx_cmp(double x, double y);
 int approx_cmp_v(const double *x, const double *y, int n);
 double ipow(double x, int k); // k>=0
 inline double ipows(double x, int k) { return k<0 ? ipow(1.0/x, -k) : ipow(x, k); }
-void bug(const char * fmt, ...);
-void log(const char * fmt, ...);
 void log_n(const char * fmt, ...);
 void log_sn(const char * pref, const char * s, int l, int exnl = 0);
 int u_sleep(int x);

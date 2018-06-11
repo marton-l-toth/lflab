@@ -17,26 +17,26 @@ STATELESS_BOX_0(Ar2BoxAD) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] + *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = x+q[i]; return 1; }
-	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+q[i]; return 1; }}}
+	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+q[i]; return 1; }}} // no
 STATELESS_BOX_0(Ar2BoxSB) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] - *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]-y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = x-q[i]; return 1; }
-	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]-q[i]; return 1; }}}
+	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]-q[i]; return 1; }}} // no
 STATELESS_BOX_0(Ar2BoxML) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] * *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; if (fabs(y)<1e-280) return *o=0.0, 0; 
 					      for (int i=0;i<n;i++) o[i] = p[i]*y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; if (fabs(x)<1e-280) return *o=0.0, 0; 
 					      for (int i=0;i<n;i++) o[i] = x*q[i]; return 1; }
-	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]*q[i]; return 1; }}}
+	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]*q[i]; return 1; }}} // no
 STATELESS_BOX_0(Ar2BoxDV) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] / *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; if (fabs(y)<1e-280) return *o=1.0/0.0, 0; else y = 1.0/y;
 					      for (int i=0;i<n;i++) o[i] = p[i]*y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; if (fabs(x)<1e-280) return *o=0.0, 0; 
 					      for (int i=0;i<n;i++) o[i] = x/q[i]; return 1; }
-	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]/q[i]; return 1; }}}
+	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]/q[i]; return 1; }}} // no
 
 //? {{{!._asp}}}
 //? split input to integer + fraction parts (stateless box)
@@ -75,7 +75,7 @@ STATELESS_BOX_0(CrossMix) {
 			for (int i=0; i<n; i++) to[i] = (1.0-r[i])*x + r[i]*q[i];  return 1;
 		case 7: p=inb[0], q=inb[1], r=inb[2]; 
 			for (int i=0; i<n; i++) to[i] = p[i]*(1.0-r[i]) + q[i]*r[i]; return 1;
-	}}
+	}} // no it doesn't
 
 //? {{{!._smx}}}
 //? mixer, output is a1*b1 + a2*b2 + ... + a<n>*b<n>

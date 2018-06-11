@@ -4,6 +4,7 @@
 #define FIFO_LIST "ptuxmskACT"
 #define N_XAPP 3
 #define ASIZ(A) ((int)(sizeof(A) / sizeof(A[0])))
+#define UNUSED __attribute__((unused))
 
 static inline int    min_i(int    x, int    y) { return x<y ? x : y; }
 static inline double min_d(double x, double y) { return x<y ? x : y; }

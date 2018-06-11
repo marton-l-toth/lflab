@@ -15,7 +15,7 @@ ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no
 #define QMB_ARG1(CL) (&Pr1BoxModel<CL >::cons_wrap)
 
 const char * iolbl_name(int ty, int ix);
-void bug(const char *, ...);
+void bug(const char *, ...) __attribute__ ((noreturn));
 void log(const char *, ...);
 int nan_unpk(char * to8, int * to32, long long xl, int flg);
 void reg_bn(ANode * nd, int i);

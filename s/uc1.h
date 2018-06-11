@@ -130,13 +130,13 @@ char * doub2hx(char *s, double x) {
    s 1 1 0 6*8
    s 1 1 1 8*6    */
 
-static long long nan_pkdat[16] = {
+static long long nan_pkdat[16] UNUSED = {
         0x7ff947e000000000, 0x7ff9580000000020, 0x7ff9000000000017, 0x7ffc000000000010,
         0x7ffd00000000000c, 0x7ff9c00000000009, 0x7ffe000000000008, 0x7ffa000000000007,
         0x7fff000000000006, 0x7ff9e00000000005, 0x7ff9480000000004, 0x7ff9700000000004,
         0x7ff9560000000003, 0x7ff9540000000003, 0x7ff9500000000003, 0x7ff9a00000000003 };
 
-static unsigned long long nan_dflt2[2] = {0x7ff8000000000000, 0xfff8000000000000};
+static unsigned long long nan_dflt2[2] UNUSED = {0x7ff8000000000000, 0xfff8000000000000};
 
 #define NAN_2x23 0x7ff9000000000000
 #define NAN_LBL  0x7ff9400000000000

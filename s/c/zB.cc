@@ -73,7 +73,7 @@ STATELESS_BOX_0(ZBAdd) {
 		case 0: return **outb = *inb[0] + *inb[1], 0;
 		case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+y; return 1; }
 		case 2: { double x=*inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = x+q[i]; return 1; }
-		case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+q[i]; return 1; }}}
+		case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+q[i]; return 1; }}}//no
 
 // Primitive boxes have no configurable static properties, they can only be configured via inputs.
 // If you want to implement a box with a variable number of inputs/outputs, the only possibility
