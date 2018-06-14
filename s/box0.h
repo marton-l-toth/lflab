@@ -127,7 +127,6 @@ class ModelPtr {
 		BoxInst * mk_box() { return m_p->mk_box(); }
 		inline void mk_boxv(BoxInst** to, int n) { for (int i=0; i<n; i++) to[i] = m_p->mk_box(); }
 	private:
-		void mk(BoxGen *b);
 		BoxModel * m_p;
 };
 

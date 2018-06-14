@@ -47,7 +47,7 @@ class CmdBuf : public AOBuf {
 		int cperm(int f) { return perm(m_c_node, f); }
 		ANode * lookup(const char * s) { return Node::lookup_cb(this, s); }
 		BoxGen * lookup_b(const char * s) { ANode *nd = Node::lookup_cb(this, s); 
-					return nd&&nd->is_box() ? static_cast<ABoxNode*>(nd)->box() : 0; }
+					return nd&&nd->isABox() ? static_cast<ABoxNode*>(nd)->box() : 0; }
   		ANode * var(int i) { return i ? dlookup(m_nd_var+i) : m_c_node; }
 		void setvar(int i, int id) { m_nd_var[i&7] = id; }
 		int curnode_ccmd() { ANode * p = curnode(); return p ? p->ccmd(this) : GCE_WTF; }

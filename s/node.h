@@ -78,6 +78,8 @@
 #define CLIP_DRAW_F(x) if (!((x)->winflg()|WF_CLIP)) (x)->draw(); else
 #define VFUN_I(nm,r) virtual int nm() { return (r); }
 #define STC_BOX(ND,TY) (static_cast<TY##Gen*>(static_cast<ABoxNode*>(ND)->box()))
+#define ERR_CAST(T,V,X,E) T##Node *V; do { ANode *qwqw = (X); if (!qwqw || !qwqw->is##T()) return E; \
+					   V = static_cast<T##Node*>(qwqw); } while (0)
 
 class ANode; class ADirNode; class NDirNode; class ClipNode; class ABoxNode;
 class BoxEdge; class BoxGen; class CmdBuf;
@@ -186,8 +188,9 @@ class ANode {
                 const char * s_name();
                 ANode* up()   const { return m_up; }
                 ANode* next() const { return m_next; }
-                bool is_dir() const { return (m_u24.u[0] & 120)== 64; }
-                bool is_box() const { return (m_u24.u[0] > 94); }
+                bool isADir() const { return (m_u24.u[0] & 120)== 64; }
+                bool isClip() const { return m_u24.u[0] == 'C'; }
+                bool isABox() const { return (m_u24.u[0] > 94); }
                 bool is_wrap() const { return ( (m_u24.u[0]|4) == 'w' ); }
                 int winflg(int m = -1) const { return m_winflg & m; }
                 int gui9() const { return 16*m_id + ((m_winflg>>11)&1) + ((m_winflg>>6)&8); }
@@ -420,7 +423,7 @@ class ADirNode : public ANode {
 		virtual int perm_ed() { return perm_d(DF_EDDIR); }
 		virtual int perm_del() { return m_up && ((m_pm_val | ~m_pm_msk) & DF_EDDIR) 
 						     && m_up->perm(DF_EDDIR); }
-		virtual int set_perm(int mask, int perm) { m_pm_msk = mask&DF_ALL; m_pm_val = perm&m_pm_msk; return 0; }
+		virtual int set_perm(int msk, int prm){ m_pm_msk=msk&DF_ALL; m_pm_val=prm&m_pm_msk; return 0; }
 		virtual int ccmd(CmdBuf * cb);
 		virtual int save1(); // ret: measure / error
 		virtual int wdat_alloc();
@@ -445,7 +448,7 @@ class ABoxNode : public ANode {
 				                                    const char * cl, const char * fmt, ...);
 		virtual int perm(int msk = DF_ALL) { return perm_b(msk); }
 		virtual int perm_ed() { return perm_b(DF_EDBOX); }
-		virtual int perm_del() { return m_up->is_dir() ? (m_up->perm(DF_RMBD)==DF_RMBD)
+		virtual int perm_del() { return m_up->isADir() ? (m_up->perm(DF_RMBD)==DF_RMBD)
 							       : perm_b(DF_EDBOX); }
 		virtual int cond_del();
 		virtual BoxGen * box0() { return m_box; }
@@ -488,7 +491,7 @@ class ABoxNode : public ANode {
 		int save_rgb() { return 1; }
 		int save_sob();
 		int save_cfg();
-		int perm_b(int msk) { ANode *p = m_up; while (!p->is_dir()) p = p->m_up; return p->perm(msk);}
+		int perm_b(int msk) { ANode *p = m_up; while (!p->isADir()) p = p->m_up; return p->perm(msk);}
 		void cond_docw() { int wf2 = 2*(m_u24.u[0]!='h'); if (m_winflg&(2048<<wf2)) draw_window(27+wf2); }
 
 		void qc_st8(int trg, int j);
@@ -564,7 +567,7 @@ class Node {
 		static ADirNode * root() { return static_cast<ADirNode*> (ANode::root()); }
 		static ANode * lr(int i) { return ANode::m0_lr[i]; }
 		static ADirNode * lr_dir(int i) { ANode * p = ANode::m0_lr[i]; 
-			return dynamic_cast<ADirNode*> (p->is_dir() ? p : p->m_up); }
+			return static_cast<ADirNode*> (p->isADir() ? p : p->m_up); }
 		static void set_lr(int i, ANode * p);
 		static ANode* lookup_cb (CmdBuf * cb, const char * path);
 		static ANode* lookup_n(int id) { return ANode::lookup_n(id); }

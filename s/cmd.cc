@@ -17,7 +17,8 @@
 #include "asnd.h"
 #include "midi.h"
 
-#define CMD_NODE(T) T##Node* nd = dynamic_cast<T##Node*>(p->m_c_node); if (!nd) return GCE_EX##T
+#define CMD_NODE(T) if (!(p->m_c_node->is##T())) return GCE_EX##T; \
+		    T##Node* nd = static_cast<T##Node*>(p->m_c_node)
 
 #define CF_NODE 0x100
 #define CF_TOK 0x200
@@ -288,16 +289,15 @@ int CmdTab::c_cre(CmdBuf * p) {
 
 int CmdTab::c_nadm(CmdBuf * p) {
 	char *name, *arg = p->m_c_a1;
-	ANode *trg, *nd = p->m_c_node;
+	ANode *trg, *nd = p->m_c_node; 
 	int ec, nof = p->m_c_nof;
-	ADirNode *dir = dynamic_cast<ADirNode*> (nd);
 	switch(arg?*arg:0) {
 		case 'm': name = arg+1; ec = Node::parse_target(p, &name, &trg);
 			  return ec<0 ? ec : Node::move(nd, trg, name, nof | NOF_PARSE);
 		case 'c': name = arg+1; ec = Node::parse_target(p, &name, &trg);
 			  return ec<0 ? ec : Node::copy(nd, trg, name, nof | NOF_PARSE);
 		case 'd': return Node::del(nd, nof);
-		case 'p': if (!dir) return GCE_EXADir;
+		case 'p': ERR_CAST(ADir, dir, nd, GCE_EXADir);
 			  for (int i=1;i<5;i++) if ((arg[i]&56)!=48) return GCE_EXOCT;
 			  dir -> set_perm(8*(arg[1]&7)+(arg[2]&7), 8*(arg[3]&7)+(arg[4]&7));
 			  return 0;
@@ -325,8 +325,8 @@ int CmdTab::c_tree(CmdBuf * p) {
 	int ec, c0 = *arg, lr = c0>96 && (c0-=32, 1);
 	switch(c0) {
 		case 'W': if ((ec = p->m_c_node->draw_window(16))!=NDE_NOWIN) return ec;
-		case 'E': ADirNode * dir; dir = dynamic_cast<ADirNode*>(p->m_c_node);
-			  return (dir) ? gui2.tree_expand(lr,dir) : GCE_EXADir;
+		case 'E': ERR_CAST(ADir, dir, p->m_c_node, GCE_EXADir);
+			  return gui2.tree_expand(lr,dir);
 		default:  return GCE_UTREE;
 	}}
 

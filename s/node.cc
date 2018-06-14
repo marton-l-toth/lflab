@@ -573,7 +573,7 @@ void nd0_init() { ANode::st_init(); }
 int ADirNode::perm_d(int msk) {
 	msk &= DF_ALL; glob_flg &= ~GLF_SAVED;
 	int m2=0, prm=0;
-	for (ADirNode * p = this; m2!=msk; p=dynamic_cast<ADirNode*>(p->m_up))
+	for (ADirNode * p = this; m2!=msk; p=static_cast<ADirNode*>(p->m_up))
 		prm |= (p->m_pm_val&~m2), m2 |= (msk&p->m_pm_msk);
 	return prm & msk;
 }
@@ -1117,12 +1117,12 @@ int ABoxNode::ui_cmd(CmdBuf * cb) {
 		case 'Q': {
 			ANode * from = m0_lr[s[1]&1];  const char * snnm="?";
 			if (from->cl_id()=='C' && !(from=from->sn(&snnm))) return NDE_NOSOBCP;
-			if (!from->is_box()) return BXE_ARGNBX;
+			if (!from->isABox()) return BXE_ARGNBX;
 			BoxDesc * dsc = static_cast<ABoxNode*>(from)->m_ui.ro()->m_dsc.ro();
 			return dsc ? (SOB_RW(ui)->m_dsc.set(dsc), cond_docw(), 0) : NDE_NOSOBCP; }
 		case 'O': {
 			ANode * nd2a = cb->lookup(s+2); if (!nd2a) return BXE_ARGLU;
-			ABoxNode * nd2 = dynamic_cast<ABoxNode*>(nd2a); if (!nd2) return BXE_ARGNBX;
+			ERR_CAST(ABox, nd2, nd2a, BXE_ARGNBX);
 			int k = s[1] & 7; 
 			switch(k) {
 				case 0: m_ui.from(nd2->m_ui); return 0;
@@ -1206,7 +1206,7 @@ void ABoxNode::qc_st8(int trg, int j) {
 int ABoxNode::dsc(char * to) {
 	if (cl_id() != '_') return m_ui.ro()->dump_dsc(to, 1);
 	ANode * p; int j,n = 1; *to = 33;
-	for (p = m_up; !p->is_dir(); p = p->up()) ;
+	for (p = m_up; !p->isADir(); p = p->up()) ;
 	p = static_cast<ADirNode*>(p)->get_hroot();
 	n += ((j=p->id())<3) ? (j && (to[n] = 3+30*j,1)) : p->get_name(to+n);
 	to[n++] = '.'; return n + s__cat(to+n, m_box->cl_name());
@@ -1388,8 +1388,8 @@ ANode * Node::lookup_cb(CmdBuf * cb, const char * s) {
 	} else if (c=='.') { r = ANode::root(); } else {
 		if (c!='@') return 0; else c = *(s++);
 		switch(c) {
-			case 'L': r = ANode::m0_lr[0]; if (!r->is_dir()) r = r->m_up; break;
-			case 'R': r = ANode::m0_lr[1]; if (!r->is_dir()) r = r->m_up; break;
+			case 'L': r = ANode::m0_lr[0]; if (!r->isADir()) r = r->m_up; break;
+			case 'R': r = ANode::m0_lr[1]; if (!r->isADir()) r = r->m_up; break;
 			case 'l': r = ANode::m0_lr[0]; break;
 			case 'r': r = ANode::m0_lr[1]; break;
 			case 'k': r = ClipNode::m0_kcp[0]; break;
@@ -1409,8 +1409,8 @@ ANode * Node::lookup_cb(CmdBuf * cb, const char * s) {
 void Node::set_lr(int i, ANode * p) { 
 	int wf = WF_LSEL << (i&=1);
 	ANode * p0 = ANode::m0_lr[i]; if (p==p0) return; else slr_invd(wf);
-	if (p0) { p0->winflg_and(~wf); if (!p0->is_dir()) p0->m_up->winflg_and(~wf); }
-	p -> winflg_or(wf); if (!p->is_dir()) p->m_up->winflg_or(wf);
+	if (p0) { p0->winflg_and(~wf); if (!p0->isADir()) p0->m_up->winflg_and(~wf); }
+	p -> winflg_or(wf); if (!p->isADir()) p->m_up->winflg_or(wf);
 	gui2.t2_sel(i, ANode::m0_lr[i] = p);
 }
 
@@ -1495,7 +1495,7 @@ ndok:	if ((ec=up->add(nd, name, i, j)) < 0) return ANode::fN(nd), ec;
 int Node::move(ANode * p, ANode * to, const char * name, int i, int j) {
 	ANode * up = p->up(); if (!up) return NDE_NOROOT; if (!to) to = up;
 	if (!(i&NOF_FORCE)) { if (!up->perm_ed() || (up!=to && !to->perm_ed())) return NDE_PERM;
-			      if (p->is_dir()) { ADirNode * q = static_cast<ADirNode*>(p);
+			      if (p->isADir()) { ADirNode * q = static_cast<ADirNode*>(p);
 				      		 if (q->m_pm_msk & ~q->m_pm_val & DF_EDDIR) return NDE_PERM; }}
 	if (hier(p, to)) return NDE_HIERMV;
 	int ec = to->add(p, name, i, j); if (ec<0) return ec;
@@ -1594,7 +1594,7 @@ co:     return (to1 && conn(fr, to1)) + (to2 && conn(fr, to2));
 
 void Node::shl_add(ANode * nd) {
 	//log("m0_shl_n: %d", m0_shl_n);
-	int id;  if (!nd || !nd->is_box()) return; else id = nd->m_id;
+	int id;  if (!nd || !nd->isABox()) return; else id = nd->m_id;
 	if (m0_shl_n && m0_shl[0]==id) return; else slr_invd(WF_SHL);
 	for (int i=1; i<m0_shl_n; i++) if (m0_shl[i]==id)
 		return (void) (memmove(m0_shl+1, m0_shl, 4*i), m0_shl[0] = id);
@@ -1686,7 +1686,7 @@ int Node::save_batch(ADirNode * dir, const char * fn, int flg) {
 
 int Node::lib_cfg(ANode * nd) {
 	if (!(glob_flg & GLF_LIBMODE)) return 0; else if (!(nd->id())) return NDE_NOLIB;
-	ADirNode * dir = dynamic_cast<ADirNode*>(nd);  if (!dir) return GCE_EXADir;
+	ERR_CAST(ADir, dir, nd, GCE_EXADir);
 	(m0_clibroot = dir)->set_perm(DF_ALL, DF_ALL);  return 0;
 }
 
@@ -1709,10 +1709,9 @@ static void qmk_fail(const char * ty, ANode * up, const char * nm, int ec) {
 static ClipNode* qmk_clip(ANode * up, const char * nm) {
 	ANode * ret0 = 0;
 	int ec = Node::mk(&ret0, up, nm, 'C', 0, 0, 0);
-	if (ec<0) qmk_fail("clip", up, nm, ec);
-	ClipNode *ret  = dynamic_cast<ClipNode*> (ret0);
-	if (!ret) qmk_fail("clip", up, nm, NDE_QMKCAST);
-	return ret;
+	if (ec<0) 		      qmk_fail("clip", up, nm, ec);
+	if (!ret0 || !ret0->isClip()) qmk_fail("clip", up, nm, NDE_QMKCAST);
+	return static_cast<ClipNode*> (ret0);
 }
 
 ANode * qmk_dir(ANode * up, const char * nm) {

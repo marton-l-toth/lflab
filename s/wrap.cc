@@ -1825,9 +1825,10 @@ int DWrapGen::set_sf_2(int ff, BoxGen * bx) {
 int DWrapGen::set_sf(int ff, BoxGen * bx) {
 	BoxGen ** ppbx = m_sfbx + (ff&=1);
 	if (bx==this || bx==*ppbx) return EEE_NOEFF;
-	int ec, cf, wf = wnfl(2048);
-	if (bx && bx->node()->is_wrap()) {
-		DWrapGen * that = dynamic_cast<DWrapGen*> (bx); if (!that) return BXE_SORRY; //TODO (?)
+	int ec, cf, ci, wf = wnfl(2048);
+	if (bx && ((ci=bx->node()->cl_id())|4)=='w') {
+		if (ci=='s') return BXE_SORRY; //TODO (?)
+		DWrapGen * that = static_cast<DWrapGen*> (bx);
 		if ((ec=set_sf_2(ff, that->m_sfbx[ff]))<0) return ec;
 		sob_from(4+ff, that, 1);
 		sob_from(2+ff, that, 1);  cf = xfd_chk(ff,1);  SFUPD(wlg(bxw_rawptr, 0, 0)); }

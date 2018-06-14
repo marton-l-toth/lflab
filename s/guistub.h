@@ -80,9 +80,7 @@ class GuiStub {
 
 		int tree_expand(int lr, ADirNode * dir);
 		void root_expand() { tree_expand(0, Node::root()); tree_expand(1, Node::root()); }
-		void tree_force(int lr, ADirNode * dir) {
-			if (dir && !dir->winflg(2+2*lr)) {
-				tree_force(lr, dynamic_cast<ADirNode*>(dir->up())); tree_expand(lr, dir); }}
+		void tree_force(int lr, ANode * dir0);
 		void tree_sel(int lr, ANode * nd);
 		void t2_sel(int lr, ANode * nd);
 

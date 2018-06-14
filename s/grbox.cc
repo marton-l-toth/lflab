@@ -441,7 +441,7 @@ void GraphBoxGen::debug() {
 	int nb = n_box();
 	char buf[1025];
 	log("-----GR_debug: %d boxes:",nb);
-	ComboBoxModel * mp = dynamic_cast<ComboBoxModel*> (rawmp());
+	ComboBoxModel * mp = static_cast<ComboBoxModel*> (rawmp());
 	for (int i=0; i<=nb; i++) {
 		char * p = buf;
 		GRBX_Node * gn = m_nodes[i];

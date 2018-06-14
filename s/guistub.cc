@@ -116,15 +116,21 @@ void GuiStub::t2_sel(int lr, ANode *nd) {
 
 int GuiStub::tree_expand(int lr, ADirNode * dir) {
 	if (!dir) return 0;
-	ADirNode * up = dynamic_cast<ADirNode*> (dir->up());
+	ANode *up0 = dir->up();
+	ADirNode * up = (up0 && up0->isADir()) ? static_cast<ADirNode*>(up0) : 0;
 	c2(9, 'T');    hex5(up?up->id():0);
 	c2(lr+49, 36); hex5(dir->id());     c2(lr+49, 36);
 	m_bufp += dir->gui_list(m_bufp, 0);
 	dir->winflg_or(2+2*lr); invd(); return 0;
 }
 
+void GuiStub::tree_force(int lr, ANode * dir0) {
+	ERR_CAST(ADir, dir, dir0, ); if (dir->winflg(2+2*lr)) return;
+	tree_force(lr, dir->up()); tree_expand(lr, dir); 
+}
+
 void GuiStub::tree_sel(int lr, ANode * nd) {
-	tree_force(lr, dynamic_cast<ADirNode*>(nd->up())); invd();
+	tree_force(lr, nd->up()); invd();
 	pf("\tN%x%c*%x", nd->up()?nd->up()->id():0, lr+49, nd->id());
 }
 
@@ -143,16 +149,14 @@ void GuiStub::clip_flg(int id, int fid, int v01) {
 	setwin(16*id+3,'K'); wupd_i1(fid, v01); }
 
 void GuiStub::node_name(int i, ANode * nd) {
-	ADirNode * dir = dynamic_cast<ADirNode*>(nd->up()); 
-	if (!dir) return log("node_name: no updir");
-	c2(9, 'N'); hex5(dir->id()); c2(i+49, '+'+nd->is_dir());
+	ERR_CAST(ADir, dir, nd->up(), log("node_name: no updir"));
+	c2(9, 'N'); hex5(dir->id()); c2(i+49, '+'+nd->isADir());
 	hex5(nd->id()); c1(36); m_bufp += nd->get_name(m_bufp);
 }
 
 void GuiStub::node_rm(int i, ANode * nd) {
-	ADirNode * dir = dynamic_cast<ADirNode*>(nd->up()); 
-	if (!dir) return log("node_name: no updir"); else invd();
-	c2(9, 'N'); hex5(dir->id()); c2(i+49, '-'); hex5(nd->id());
+	ERR_CAST(ADir, dir, nd->up(), log("node_rm: no updir"));
+	invd(); c2(9, 'N'); hex5(dir->id()); c2(i+49, '-'); hex5(nd->id());
 }
 
 int GuiStub::flush_all() { 
