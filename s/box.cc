@@ -23,6 +23,10 @@ int box_mxc_notify(BoxGen *p, int ky, int flg) { return p->mxc_notify(ky, flg); 
 void BoxInst::rmcon(int flg, double **pp, int n) { BVFOR_JM(flg) {
 	double *p=pp[j], x=*p; for (int t=1; t<n; t++) p[t] = x; }}
 
+BX_SCALC(BoxInst::sc_bug)  { bug("sc_bug(%p,%d,%p,%p,%d)", abxi, inflg, inb, outb, n); }
+BX_SCALC(BoxInst::sc_zero) { return **outb=0.0, 0; }
+BX_SCALC(BoxInst::sc_cp0)  { return **outb=0.0, 0; }
+
 int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n) {
 	if (ocfg==0x7c01) {
 		int r = calc(inflg, inb, &o0, n); if (r<0 || (r&=1)) return r;

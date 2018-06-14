@@ -22,14 +22,13 @@ void reg_bn(ANode * nd, int i);
 inline static int sec2samp(double x) { return (int)lround((double)sample_rate * x); }
 inline static double att2mul(double x) { return exp(-sample_length*x); }
 
-#define STATELESS_BOX_0(NM) class NM : public BoxInst { public: \
-	virtual int calc(int inflg, double** inb, double** outb, int n); }; \
-	int     NM::calc(int inflg, double** inb, double** outb, int n)
+#define BX_SCALC(F) int F(BoxInst * abxi, int inflg, double** inb, double** outb, int n)
 
-#define STATELESS_BOX_1(NM) class NM : public BoxInst { public: int m_arg; \
-	NM(int arg) : m_arg(arg) {} \
-	virtual int calc(int inflg, double** inb, double** outb, int n); }; \
-	int     NM::calc(int inflg, double** inb, double** outb, int n)
+#define STATELESS_BOX_0(NM) class NM : public BoxInst { public: \
+	static scf_t sc_f0; NM() : BoxInst(sc_f0) {} }; BX_SCALC(NM::sc_f0)
+
+#define STATELESS_BOX_1(NM) class NM : public BoxInstArg { public: \
+	static scf_t sc_f0; NM(int k) : BoxInstArg(sc_f0, k) {} };  BX_SCALC(NM::sc_f0)
 
 #define FUN1_BOX(NM, X) STATELESS_BOX_0(NM) { double x; \
 	if (!(inflg&1)) return x = **inb, **outb = (X), 0; \
@@ -46,19 +45,30 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 #define PREP_INPUT(NM, I) double * NM##p, NM##v; int NM##msk = (inflg&(1<<(I))) ? \
 	(NM##p = inb[I], -1) : (NM##p = &NM##v, NM##v = *inb[I], 0)
 
-#define BX_SCALC(F) int F(BoxInst * abxi, int inflg, double** inb, double** outb, int n)
 #define SCALC_BXI(T) T* bxi = static_cast<T*>(abxi)
-#define CALC_TODO virtual int calc(int inflg, double** inb, double** outb, int n) { \
-	return (*m_psc)(this, inflg, inb, outb, n); }      sc_t m_psc
+
+
 class BoxInst {
         public:
 		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
 		typedef int(scf_t)(BoxInst*, int, double**, double**, int);
 		static void rmcon(int flg, double **pp, int n); 
-                virtual int calc(int inflg, double** inb, double** outb, int n) = 0;
-                virtual bool done() const { return false; };
+		static scf_t sc_bug, sc_zero, sc_cp0;
+
+		BoxInst() 	  : m_psc(sc_bug) {}
+		BoxInst(sc_t fun) : m_psc(fun)	  {}
                 virtual ~BoxInst() {};
+                virtual /*TODO*/ int calc(int inflg, double** inb, double** outb, int n) {
+			return (*m_psc)(this, inflg, inb, outb, n); }
 		int calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n);
+	protected:
+		sc_t m_psc;
+};
+
+class BoxInstArg : public BoxInst {
+	public:	BoxInstArg(sc_t fun, int arg) : BoxInst(fun), m_arg(arg) {}
+		static int s_arg(BoxInst *abx) { return static_cast<BoxInstArg*>(abx)->m_arg; }
+		int m_arg;
 };
 
 class BoxModel {

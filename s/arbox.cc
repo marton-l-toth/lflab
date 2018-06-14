@@ -84,7 +84,7 @@ STATELESS_BOX_0(CrossMix) {
 #define SMXV(J) (q[J][i]*r[J][i])
 STATELESS_BOX_1(SMix) {
 	double c = 0.0, *to = outb[0], x[4], *p[4], *q[4], *r[4];
-	int flg = 0, ni = m_arg*2, f = inflg;
+	int flg = 0, ni = s_arg(abxi)*2, f = inflg;
 	for (int j,i=0; i<ni; i+=2, f>>=2) { switch(f&3) {
 		case 0: flg |= 64; c += inb[i][0] * inb[i+1][0]; break;
 		case 1: j = flg&3; x[j] = inb[i+1][0]; p[j] = inb[ i ]; ++flg; break;

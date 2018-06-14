@@ -85,7 +85,7 @@ class PrimBoxGen: public BoxGen {
 	protected:
 		virtual void set_mdl() { bug("prim.box/set_model"); }
 		char m_ni, m_no, m_cl[6],
-		     m_mdl_spc[24]; // TODO
+		     m_mdl_spc[32];
 };
 
 #endif // __qwe_box_h__

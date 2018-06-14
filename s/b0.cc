@@ -109,7 +109,7 @@ STATELESS_BOX_0(Map01Box) {
 STATELESS_BOX_1(Map01VBox) {
 	NAN_UNPK_8(scl, inb[0], 0);
 	int oflg = 0;  inflg >>= 1;  inb++;
-	for (int i=0, nmap=m_arg; i<nmap; i++, inflg>>=3, inb+=3) {
+	for (int i=0, nmap=s_arg(abxi); i<nmap; i++, inflg>>=3, inb+=3) {
 		int ty = scl_x[i], flg = inflg & 7;
 		double * to = outb[i];
 		if (!flg) { *to = Scale01::f0(inb[1][0], inb[2][0], ty, **inb); }
@@ -235,8 +235,8 @@ LSBOX(SxyBox) { Scale01::vec(q, inb[0][0], inb[1][0],		n, ivlim((int)lround(inb[
 LSBOX(SxmBox) { Scale01::vec(q, inb[0][0], inb[0][0]*inb[1][0], n, ivlim((int)lround(inb[2][0]),-3,3)); }
 
 STATELESS_BOX_1(DebugBox) { 
-	log_n("debug_box[%d]: n=%d", m_arg, n);
-	for (int i=0,m=1; i<m_arg; i++,m+=m) {
+	int arg = s_arg(abxi); log_n("debug_box[%d]: n=%d", arg, n);
+	for (int i=0,m=1; i<arg; i++,m+=m) {
 		log_n(", i%d=", i);
 		if (inflg&m) {  memcpy(outb[i], inb[i], 8*n); log_n("(");
 				for (int n2 = min_i(n, 3), j=0; j<n2; j++) log_n(" %.15g"+!j, inb[i][j]);
@@ -301,15 +301,15 @@ inline int ixround(double x, int n) { int r = (int)lround(x);
 //? this box selects the sel-th of the inputs in0...in<n-1>
 //? (sel is rounded to nearest integer and limited to 0...n-1)
 STATELESS_BOX_1(Sel1Box) {
-	double *pv, *q = *outb, *pi = inb[m_arg];
-	int ixm = 1<<m_arg; 
+	int arg = s_arg(abxi), ixm = 1<<arg; 
+	double *pv, *q = *outb, *pi = inb[arg];
 	if (!(inflg&ixm)) {
-		int j = ixround(*pi, m_arg), r = (inflg>>j)&1;
+		int j = ixround(*pi, arg), r = (inflg>>j)&1;
 		if (!r) *q = *inb[j]; else if ((pv=inb[j])!=q) for (int i=0;i<n;i++) q[i]=pv[i];
 		return r;
 	}
-	double con[m_arg]; BVFOR_JM((ixm-1)&~inflg) con[j] = inb[j][0];
-	for (int j,i=0; i<n; i++) j    = ixround(pi[i], m_arg), 
+	double con[arg]; BVFOR_JM((ixm-1)&~inflg) con[j] = inb[j][0];
+	for (int j,i=0; i<n; i++) j    = ixround(pi[i], arg), 
 				  q[i] = (inflg&(1<<j)) ? inb[j][i] : con[j];
 	return 1;
 }
@@ -320,7 +320,7 @@ STATELESS_BOX_1(Sel1Box) {
 //? (sel is rounded to nearest integer and limited to 0...n-1,
 //? where n is number of input groups)
 STATELESS_BOX_1(Sel2Box) { // TODO: io-ali
-	int igl = m_arg>>4, nig = m_arg&15, itot = nig * igl, ixm = 1<<itot;
+	int arg = s_arg(abxi), igl = arg>>4, nig = arg&15, itot = nig * igl, ixm = 1<<itot;
 	double *pv, *po, *pi = inb[itot];
 	if (!(inflg&ixm)) {
 		int j = ixround(*pi, nig), j2 = j*igl, of = (inflg>>j2)&(ixm-1);

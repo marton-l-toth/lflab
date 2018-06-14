@@ -79,26 +79,26 @@ STATELESS_BOX_0(ZBAdd) {
 // If you want to implement a box with a variable number of inputs/outputs, the only possibility
 // is to make a small _collection_ of boxes, one box for each #in/#out configuration (defined by
 // an integer parameter). In stateless parametrized boxes defined using the following macro,
-// this parameter can be accessed as member variable "m_arg". 
+// this parameter is returned by s_arg(abxi) 
 
 // This example simply copies one of the inputs to output, using the last input as index;
-// here "m_arg" is the number of selectable inputs
+// here s_arg(abxi) is the number of selectable inputs
 // (the macro BVFOR_JM iterates through the nonzero bits of a 32-bit integer)
 
 inline int ixround(double x, int n) { int r = (int)lround(x);
 	        return ((unsigned int)r<(unsigned int)n) ? r : (r<0?0:n-1); }
 
 STATELESS_BOX_1(ZBSel) {
-	double *pv, *q = *outb, *pi = inb[m_arg];
-	int ixm = 1<<m_arg;
+        int arg = s_arg(abxi), ixm = 1<<arg;
+        double *pv, *q = *outb, *pi = inb[arg];
 	if (!(inflg&ixm)) {
-		int j = ixround(*pi, m_arg), r = (inflg>>j)&1;
+		int j = ixround(*pi, arg), r = (inflg>>j)&1;
 		if (!r) *q = *inb[j]; else if ((pv=inb[j])!=q) for (int i=0;i<n;i++) q[i]=pv[i];
 		return r;
 	}
-	double con[m_arg]; BVFOR_JM((ixm-1)&~inflg) con[j] = inb[j][0];
-	for (int j,i=0; i<n; i++) j    = ixround(pi[i], m_arg),
-		q[i] = (inflg&(1<<j)) ? inb[j][i] : con[j];
+	double con[arg]; BVFOR_JM((ixm-1)&~inflg) con[j] = inb[j][0];
+	for (int j,i=0; i<n; i++) j    = ixround(pi[i], arg),
+				  q[i] = (inflg&(1<<j)) ? inb[j][i] : con[j];
 	return 1;
 }
 

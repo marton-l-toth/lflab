@@ -75,9 +75,8 @@ void gwn_debug(int step) {
 
 class NZ0Box : public BoxInst {
 	public: static void mk_dsc(int ix, int ty, double ar);
-		NZ0Box() : m_psc(sc_ini) {}
+		NZ0Box() : BoxInst(sc_ini) {}
 		void ini(const double *pty, const double *psd);
-		CALC_TODO;
 	protected:
 		static scf_t sc_ini, sc_vz, sc_x1, sc_x2a, sc_x3a,
 			     sc_x2m, sc_x3m, sc_x4m, sc_x6m;
@@ -106,8 +105,7 @@ class NZ0Buf {
 //? ==> .!b.noise.nz0 -- details for simple noise gen.
 
 class NZ0x2Box : public BoxInst {
-	public: NZ0x2Box() : m_psc(sc0) {}
-		CALC_TODO;
+	public: NZ0x2Box() : BoxInst(sc0) {}
 	protected:
 		static scf_t sc0, sc1;
 		NZ0Box m_b0, m_b1;
@@ -123,8 +121,7 @@ class NZ0x2Box : public BoxInst {
 //? ==> .!b.noise.nz0 -- details for simple noise gen.
 
 class RndPt : public BoxInst {
-	public: RndPt() : m_psc(sc0), m_acc(1.00000001) {}
-		CALC_TODO;
+	public: RndPt() : BoxInst(sc0), m_acc(1.00000001) {}
 	protected:
 		static scf_t sc0, sc1;
 		NZ0Buf m_b0, m_b1;
