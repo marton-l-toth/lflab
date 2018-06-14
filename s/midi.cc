@@ -156,15 +156,15 @@ int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, 
 	return 0;
 }
 
-#define CHK1 if (r<2 || p[1]>127) return mi_err(i,0,MDE_FRAG12)
-#define CHK2 if (r<3 || ((p[1]|p[2])&128)) return mi_err(i,0,MDE_FRAG23-(r==1||p[2]>127))
+#define CHK1 if (pl-p<2 || p[1]>127) return mi_err(i,0,MDE_FRAG12)
+#define CHK2 if (pl-p<3 || ((p[1]|p[2])&128)) return mi_err(i,0,MDE_FRAG23-(pl-p==1||p[2]>127))
 void midi_input(int i) {
-	unsigned char buf[512], *p = buf;
-	int v, c, r = read(midi_fd[i], buf, 512), x=*p;
-	if (r<0) return close(midi_fd[i]), midi_fd[i]=-1, midi_bv &= ~(1<<i), midi_err_bv |= (1<<i),
-			mi_err(i,1,EEE_ERRNO), gui_midi(32*mi_tr_p2l[i] + 1);
-	while (r) {
-		switch(x>>4) {
+	unsigned char buf[512], *p = buf, *pl;
+	int v, c, x, r = read(midi_fd[i], buf, 512);
+	if (r<=0) return close(midi_fd[i]), midi_fd[i]=-1, midi_bv &= ~(1<<i), midi_err_bv |= (1<<i),
+			 mi_err(i,1,EEE_ERRNO+!r), gui_midi(32*mi_tr_p2l[i] + 1);
+	pl=p+r; do { 
+		switch((x=*p)>>4) {
 			case 8: v=c=0; goto kc;
 			case 9: goto kv;
 			case 10: case 14: goto l2;
@@ -176,13 +176,14 @@ void midi_input(int i) {
 					 default: goto l0; }
 			default: return mi_err(i,0,MDE_SEVEN); 
 		}
-l0:		mi_log(      i, "unused", p, 1); ++p;  --r;  continue;
-l1:		CHK1; mi_log(i, "unused", p, 2); p+=2; r-=2; continue;
-l2:		CHK2; mi_log(i, "unused", p, 3); p+=3; r-=3; continue;
-kc:		CHK2; midi_kc(i, x&15, p[1]+c, v); p+=3, r-=3; continue;
-kv:		CHK2; c=*mi_keyspd; midi_kc(i, x&15, p[1], *mi_keyspd=p[2]); p+=3,r-=3; *mi_keyspd=c; continue;
-f0:		if ((v = midi_f0(i,p,r))<0) return mi_err(i,0,v);  p+=v; r-=v; continue;
-	}}
+l0:		mi_log(      i, "unused", p, 1); ++p;    continue;
+l1:		CHK1; mi_log(i, "unused", p, 2);   p+=2; continue;
+l2:		CHK2; mi_log(i, "unused", p, 3);   p+=3; continue;
+kc:		CHK2; midi_kc(i, x&15, p[1]+c, v); p+=3; continue;
+kv:		CHK2; c=*mi_keyspd; midi_kc(i, x&15, p[1], *mi_keyspd=p[2]); p+=3; *mi_keyspd=c; continue;
+f0:		if ((v = midi_f0(i,p,pl-p))<0) return mi_err(i,0,v);  p+=v; continue;
+	} while (p<pl);
+}
 
 int midi_cmd(const char *s) {
 	if (!s || !*s) return MDE_PARSE;
