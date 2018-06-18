@@ -175,9 +175,8 @@ class CalcBoxModel : public BoxModel {
 
 class CalcBoxInst : public BoxInst {
 	public:
-		CalcBoxInst(CalcBoxModel * mdl) : m_m(mdl), m_op(mdl->op) { BoxModel::ref(mdl); }
-		virtual int calc(int inflg, double** inb, double** outb, int n) {
-			return calc_run_b(m_op, inflg, inb, outb, n, m_m->nx); }
+		static scf_t sc_f;
+		CalcBoxInst(CalcBoxModel *mdl) : BoxInst(sc_f), m_m(mdl), m_op(mdl->op) { BoxModel::ref(mdl); }
 		virtual ~CalcBoxInst() { if (m_m) BoxModel::unref(m_m); }
 	protected:
 		CalcBoxModel * m_m;
@@ -251,6 +250,9 @@ void CalcBoxGen::box_window() {
 	for (int i=0; i<nt; i++) upd_line('z', i, 1);
 	for (int i=0; i<no; i++) upd_line('y', i, 1);
 }
+
+BX_SCALC(CalcBoxInst::sc_f) { SCALC_BXI(CalcBoxInst); 
+			      return calc_run_b(bxi->m_op, inflg, inb, outb, n, bxi->m_m->nx); }
 
 void b_ar_init(ANode * rn) {
 	qmk_box(rn, "+", QMB_ARG0(Ar2BoxAD), 0, 2, 1, "a2", "i*o*R*1", "x$y", "x+y", "Pz%%0%"); 

@@ -46,7 +46,7 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 	(NM##p = inb[I], -1) : (NM##p = &NM##v, NM##v = *inb[I], 0)
 
 #define SCALC_BXI(T) T* bxi = static_cast<T*>(abxi)
-
+#define CALC_FW(F) return (*(bxi->m_psc=(F))) (bxi, inflg, inb, outb, n)
 
 class BoxInst {
         public:

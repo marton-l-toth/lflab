@@ -5,45 +5,65 @@
 #include "combo.h"
 #include "glob.h"
 
+class FeedbackBoxInst : public BoxInst {
+        public:
+		static scf_t sc_first, sc_rest;
+                FeedbackBoxInst(BoxInst * sub, int niof);
+                virtual ~FeedbackBoxInst() { delete(m_sub); }
+        protected:
+                int calc1(int inflg, double** inb, double** outb);
+                int calc2(int inflg, double** inb, double** outb, int i0, int n);
+                BoxInst * m_sub;
+                int m_ni, m_no, m_nf, m_chs, m_omsk;
+                double * m_buf;
+                int * m_tjb;
+};
+
 class ComboBoxInst : public BoxInst {
-        public: 
+        public:
+		static scf_t sc_f;
                 ComboBoxInst(ComboBoxModel * model);
                 virtual ~ComboBoxInst();
-                virtual int calc(int inflg, double** inb, double** outb, int n);
         protected:
                 BoxInst ** m_bxpp;
                 ComboBoxModel * m_m;
 };
 
-FeedbackBoxInst::FeedbackBoxInst(BoxInst * sub, int niof) : m_sub(sub), m_ni(niof>>16), m_no((niof>>8)&31),
+FeedbackBoxInst::FeedbackBoxInst(BoxInst * sub, int niof) : 
+	BoxInst(sc_first), m_sub(sub), m_ni(niof>>16), m_no((niof>>8)&31),
 	m_nf(niof&15), m_chs(-1), m_omsk(((1<<m_no)-1) | ((0xaaaaaaa&((1<<(2*m_nf))-1))<<m_no)),
 	m_buf(0), m_tjb(0) {}
 
-int FeedbackBoxInst::calc(int ifg, double** ib, double** ob, int n) {
-	int i = 0; if (m_chs<0 && (!n || (i=calc1(ifg, ib, ob, n))<0)) return i;
-	while (i<n) i += calc2(ifg, ib, ob, i, n-i);   return (1<<m_no)-1;  }
+BX_SCALC(FeedbackBoxInst::sc_first) {
+	SCALC_BXI(FeedbackBoxInst); bxi->m_psc = sc_rest; 
+	int i = bxi->calc1(inflg, inb, outb); if (i<0) return i;
+	while (i<n) i += bxi->calc2(inflg, inb, outb, i, n-i);   return (1<<bxi->m_no)-1;  }
 
-int FeedbackBoxInst::calc1(int inflg, double** inb, double** outb, int n) {
-	int ni1 = m_ni+m_nf, no1 = m_no+2*m_nf, tlim = 10*sample_rate,
-	    bix[m_nf], idly[m_nf];
-	double dly[m_nf], y0[m_nf], *pin[ni1], *pou[no1];
+BX_SCALC(FeedbackBoxInst::sc_rest) {
+	SCALC_BXI(FeedbackBoxInst); int i = 0;
+	while (i<n) i += bxi->calc2(inflg, inb, outb, i, n-i);   return (1<<bxi->m_no)-1;  }
+
+int FeedbackBoxInst::calc1(int inflg, double** inb, double** outb) {
+	int nf = m_nf, ni1 = m_ni+nf, no1 = m_no+2*nf, tlim = 10*sample_rate,
+	    bix[nf], idly[nf];
+	double dly[nf], y0[nf], *pin[ni1], *pou[no1];
 	memcpy(pin, inb,  m_ni*sizeof(double*));
 	memcpy(pou, outb, m_no*sizeof(double*));
-	for (int i=0; i<m_nf; i++) pin[m_ni+i] = zeroblkD;
-	for (int i=0; i<m_nf; i++) pou[m_no+2*i] = dly + i, pou[m_no+2*i+1] = y0 + i;
+	for (int i=0; i<nf; i++) pin[m_ni+i] = zeroblkD;
+	for (int i=0; i<nf; i++) pou[m_no+2*i] = dly + i, pou[m_no+2*i+1] = y0 + i;
 	int r = m_sub->calc(inflg | ((1<<ni1) - (1<<m_ni)), pin, pou, 1); if (r<1) return r;
 	m_chs = 512;
-	for (int i=0; i<m_nf; i++) {
+	for (int i=0; i<nf; i++) {
 		int t = (int)lround((double)sample_rate * dly[i]);
 		if (t<1) t = 1; else if (t>tlim) t = tlim;
 		if (t<m_chs) m_chs = t;
 		idly[i] = t;
 	}
 	int bufs = 0, bs0 = 2*m_chs - 1;
-	for (int i=0; i<m_nf; i++) bix[i] = bufs, bufs += idly[i] + bs0;
-	char * buf = (char*) malloc(bufs*sizeof(double) + 3*m_nf*sizeof(int));
+	for (int i=0; i<nf; i++) bix[i] = bufs, bufs += idly[i] + bs0;
+	char * buf = (char*) malloc(bufs*sizeof(double) + 3*nf*sizeof(int));
 	m_buf = (double*)buf; m_tjb = (int*)(buf+bufs*sizeof(double));
-	for (int i=0, *p=m_tjb; i<m_nf; i++, p+=3) {
+	for (int i=0, *p=m_tjb; i<nf; i++, p+=3) {
 		int t = p[0] = idly[i];
 		double * q = m_buf + (p[2]=bix[i]);
 		memset(q, 0, 8*t); q[t] = y0[i]; p[1] = 1;
@@ -88,7 +108,7 @@ BoxInst * ComboBoxModel::mk_box() {
 	return (niof&31) ? (BoxInst*)new FeedbackBoxInst(cb, niof) : (BoxInst*)cb;
 }
 
-ComboBoxInst::ComboBoxInst(ComboBoxModel * model) : m_m(model) {
+ComboBoxInst::ComboBoxInst(ComboBoxModel * model) : BoxInst(sc_f), m_m(model) {
 	int nb = m_m->n_bx; if (!nb) { m_bxpp = 0; return; }
 	m_bxpp = (BoxInst**) malloc(nb*sizeof(BoxInst*));
 	for (int i=0; i<nb; i++) m_bxpp[i] = model->boxm[i]->mk_box();
@@ -99,16 +119,17 @@ ComboBoxInst::~ComboBoxInst() {
         for (int i=0,n=m_m->n_bx; i<n; i++) delete m_bxpp[i];
 	BoxModel::unref(m_m); }
 
-int ComboBoxInst::calc(int inflg, double** inb, double** outb, int n) {
-	int n_b = m_m->n_bx, n_cb = m_m->n_cb, n_t = m_m->n_t, n_tb = (n_t+31)>>5, nblk = 2+n_cb+n_tb;
+BX_SCALC(ComboBoxInst::sc_f) {
+	SCALC_BXI(ComboBoxInst); ComboBoxModel * mdl = bxi->m_m; BoxInst ** bxpp = bxi->m_bxpp;
+	int n_b = mdl->n_bx, n_cb = mdl->n_cb, n_t = mdl->n_t, n_tb = (n_t+31)>>5, nblk = 2+n_cb+n_tb;
 	unsigned int flg[n_tb];
 	double **pblk[nblk], *ptmp[n_t], tmp[n_t*n], *p = tmp, **pp = ptmp, ***ppp = pblk + 2 + n_cb,
 	       *iarg[32], *oarg[32];
 	pblk[0] = inb; pblk[1] = outb; flg[0] = (unsigned int)inflg; flg[1] = 0u;
-	for (int i=0; i<n_cb; i++) pblk[2+i] = m_m->pppcon[i], flg[2+i] = 0u;
+	for (int i=0; i<n_cb; i++) pblk[2+i] = mdl->pppcon[i], flg[2+i] = 0u;
 	for (int i=0; i<n_t;  i++) ptmp[i] = p, p += n;
 	for (int i=0; i<n_tb; i++) ppp[i] = pp, pp += 32;
-	BoxInst ** bxpp = m_bxpp; const unsigned char *s = m_m->iolist;
+	const unsigned char *s = mdl->iolist;
 	for (int i=0; i<n_b; i++) {
 		int ifg = 0, ni = *(s++), no = *(s++), omsk = (1<<no)-1, ih, il;
 		for (int j=0; j<ni; j++) iarg[j] = pblk[ih=s[0]][il=s[1]],

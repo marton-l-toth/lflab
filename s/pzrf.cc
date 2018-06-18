@@ -123,8 +123,6 @@ void PZFInst::damp() {
 	for (int i=0; i<m_n_bq; i++) m_ab[i].b1*=d, m_ab[i].b2*=dd, m_ab[i].a1*=d, m_ab[i].a2*=dd;
 }
 
-int PZFInst::ini(double ** inb) { int r = mk_filter(inb+1); if (r>=0) damp(); return r; }
-
 
 void PZFInst::rf_debug(int n) {
 	m_t += n; if (m_t < sample_rate) return; else m_t -= sample_rate;
@@ -137,14 +135,14 @@ void PZFInst::rf_debug(int n) {
 #define PZF_CI(X){double x=in[0]; if(fabs(x)<1e-270){in=zeroblkD+(X);} else{in=p;for(int i=0;i<n;i++) p[i]=x;}}
 #define PZF0(ZX) int m=m_n_bq; if (m<1) {do{if(m){ int r=ini(inb); if(r<0)return r; if ((m=m_n_bq)) break; \
 					  	   return (ZX); }}while(0); }
-#define PZF_II0 { RECF_ABXY *s=m_ab, *sl=s+m; do
+#define PZF_II0 { RECF_ABXY *s=bxi->m_ab, *sl=s+m; do
 #define PZF_II1 while(++s < sl); }
 #define PZF_COL(Q,P) { double z = *(P); PZF_II0 { \
 	double x1=s->x21[1], y1=s->y21[1], y = z*s->a0 + x1*s->a1 + *s->x21*s->a2 + y1*s->b1 + *s->y21*s->b2; \
 	*s->x21=x1, s->x21[1]=z, *s->y21=y1, z=s->y21[1]=y; } PZF_II1 *(Q) = z; }
 
 #define PZF_1(I,X) \
-        RECF_ABXY * vv = m_ab + (I); \
+        RECF_ABXY * vv = bxi->m_ab + (I); \
         double x1 = vv->x21[1], x2 = vv->x21[0],                y1 = vv->y21[1], y2 = vv->y21[0], \
                a0 = vv->a0,     a1 = vv->a1,     a2 = vv->a2,   b1 = vv->b1,     b2 = vv->b2;     \
         for (int j=0; j<n; j++) {                                  \
@@ -158,8 +156,16 @@ void PZFInst::rf_debug(int n) {
 #define ADD2 _mm_add_pd
 #define MUL2 _mm_mul_pd
 
-int SPZFInst::calc(int inflg, double** inb, double** outb, int n) {
-	PZF0(BOX_CP0);
+BX_SCALC(PZFInst::sc_ini) {
+	static sc_t calctab[6]={sc_cp0, sc_zero, sc_one, sc_one, sc_seq, sc_par};
+	SCALC_BXI(PZFInst); int r = bxi->mk_filter(inb+1); if (r<0) return r;
+	bxi->damp(); int m = bxi->m_n_bq; CALC_FW(calctab[ 2*(!!m+(m>1)) + (r&1) ]);	}
+
+BX_SCALC(PZFInst::sc_one) { SCALC_BXI(PZFInst); double *in=inb[0], *p=outb[0];
+			    if (!(inflg&1)) PZF_CI(0)  PZF_1(0, (p[j]=y)); return 1; }
+
+BX_SCALC(PZFInst::sc_seq) {
+	SCALC_BXI(PZFInst); int m = bxi->m_n_bq;
 	double *in0, *in = inb[0], *p = outb[0];
 	switch ( (((long)p>>1)&4) + 2*(inflg&1) + ((n>10)&CFG_DEVEL.i)) {
 		case 0: case 4: PZF_CI(0) 
@@ -187,18 +193,17 @@ even:   --n; in0 = in; PZF_II0 {
 	return 1;
 }
 #else // __SSE2__
-int SPZFInst::calc(int inflg, double** inb, double** outb, int n) {
-	PZF0(BOX_CP0);
+BX_SCALC(PZFInst::sc_seq) {
+	SCALC_BXI(PZFInst); int m = bxi->m_n_bq;
 	double *in = inb[0], *p = outb[0]; if (!(inflg&1)) PZF_CI(0)
 	for (int i=0; i<m; i++) { PZF_1(i, (p[j] = y)); in = p; }
-	IFDBGX(RFINST) rf_debug(n);    		return 1;
+	IFDBGX(RFINST) bxi->rf_debug(n);    		return 1;
 }
 #endif // __SSE2__
 
-int PPZFInst::calc(int inflg, double** inb, double** outb, int n) {
-	PZF0((**outb=0.0, 0)); inflg &= 1;
+BX_SCALC(PZFInst::sc_par) {
+	SCALC_BXI(PZFInst); int m = bxi->m_n_bq; inflg &= 1;
 	double *in = inb[0], *p = outb[0];
-	if (m==1) { if (!(inflg&1)) PZF_CI(0) PZF_1(0, (p[j]=y)); return 1; }
 	int cif = (!inflg && fabs(*in)>1e-270), xtf = (in==p);
 	double tbuf[(cif|xtf)?n:1];
 	if (cif) { double x = *in; in = tbuf; for (int j=0; j<n; j++) tbuf[j] = x; goto notmp; }
@@ -207,7 +212,7 @@ int PPZFInst::calc(int inflg, double** inb, double** outb, int n) {
 	{PZF_1( 0 , tbuf[j]=y);}; for (int i=1; i<m-1; i++) {PZF_1(i, tbuf[j]+=y);} 
 	{PZF_1(m-1, p[j]=tbuf[j]+y);} return 1; goto done;
 notmp:  {PZF_1(0, p[j]=y);} for (int i=1; i<m; i++) { PZF_1(i, p[j]+=y); }
-done:   IFDBGX(RFINST) rf_debug(n);    		return 1;
+done:   IFDBGX(RFINST) bxi->rf_debug(n);    		return 1;
 }
 
 static void half_zero(RECF_ABXY * to, double fq0, double bw1, double c = 1.0) {
@@ -265,17 +270,17 @@ QUICK_PZFILT(EqlzLsF) {
 //? stp - freq. step (multiplied by fq)
 //? cfac - todo....
 //? dmp - dampening
-QUICK_PPZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dmp"
+QUICK_PZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dmp"
 	double fq1 = inb[0][0], bw = inb[1][0], stp1 = inb[4][0], cfac = inb[5][0],
 	       fq = fq1, stp = fq1*stp1, c = 1.0;
 	int np = (int)lround(inb[2][0]), zp2p = (int)lround(inb[3][0]);
 	set_n(np); m_damp = inb[6][0]; 
-	if (zp2p == 1) { for (int i=0; i<np; i++, fq+=stp, c*=cfac) half_zero(m_ab+i, fq, bw, c); return 0; }
+	if (zp2p == 1) { for (int i=0; i<np; i++, fq+=stp, c*=cfac) half_zero(m_ab+i, fq, bw, c); return 1; }
 	RECF_PZItem * pz = new RECF_PZItem[np];
 	double fqw, bw2 = .5*M_PI*bw, cr = -sin(bw2), ci = cos(bw2), zri = zp2p ? 0.0 : NAN;
 	for (int i=0; i<np; i++, fq+=stp, c*=cfac) fqw = fq_warp(fq), pz[i].c = c,
 		pz[i].pr = cr*fqw, pz[i].pi = ci*fqw, pz[i].zr = pz[i].zi = zri;
-	rfpz_transform(m_ab, pz, np); return 0;
+	rfpz_transform(m_ab, pz, np); return 1;
 }
 
 //? {{{!._hpsF}}}
@@ -289,7 +294,7 @@ QUICK_PPZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dmp"
 //? stp - freq. step (multiplied by fq)
 //? dmp - dampening
 //? ==> .!b.misc.map01
-QUICK_PPZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
+QUICK_PZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
 	int np = (int)lround(inb[1][0]), zp2p = (int)lround(inb[2][0]);
 	double fq1 = inb[0][0], stp1 = inb[3][0],
 	       fq = fq1, stp = fq1*stp1, t = 0.0, tstp = 1.0/(double)(np-1);
@@ -298,13 +303,13 @@ QUICK_PPZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
 	csc.set_all(inb[7][0], inb[8][0], (int)lround(inb[9][0]));
 	set_n(np); m_damp = inb[10][0]; 
 	if (zp2p == 1) { for (int i=0; i<np; i++, fq+=stp, t+=tstp) 
-		half_zero(m_ab+i, fq, qsc.f(t), csc.f(t)); return 0; }
+		half_zero(m_ab+i, fq, qsc.f(t), csc.f(t)); return 1; }
 	RECF_PZItem * pz = new RECF_PZItem[np];
 	double fqw, zri = zp2p ? 0.0 : NAN, ang;
 	for (int i=0; i<np; i++, fq+=stp, t+=tstp) fqw = fq_warp(fq), pz[i].c = csc.f(t),
 		ang = qsc.f(t) * .5 * M_PI, pz[i].pr = -sin(ang)*fqw, pz[i].pi = cos(ang)*fqw,
 		pz[i].zr = pz[i].zi = zri;
-	rfpz_transform(m_ab, pz, np); return 0;
+	rfpz_transform(m_ab, pz, np); return 1;
 }
 
 #define CHECK_NPZ(nm) if (npz[1]>npz[0]) return log("mkf/%s: cowardly refusing"\

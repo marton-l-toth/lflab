@@ -28,20 +28,6 @@ class ComboBoxModel : public BoxModel {
 		unsigned char *iolist, *eob;
 };
 
-class FeedbackBoxInst : public BoxInst {
-	public:
-		FeedbackBoxInst(BoxInst * sub, int niof);
-		virtual ~FeedbackBoxInst() { delete(m_sub); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
-	protected:
-		int calc1(int inflg, double** inb, double** outb, int n);
-		int calc2(int inflg, double** inb, double** outb, int i0, int n);
-		BoxInst * m_sub;
-		int m_ni, m_no, m_nf, m_chs, m_omsk;
-		double * m_buf;
-		int * m_tjb;
-};
-
 class Dot {
         public:
                 static Dot * sg();
