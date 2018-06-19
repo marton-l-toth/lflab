@@ -18,11 +18,12 @@ class CFIBoxModel : public BoxModel {
 
 class CFIBoxInst : public BoxInst {
         public:
-                CFIBoxInst(CFIBoxModel * m) : m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
+		static scf_t sc_f0, sc_f1, sc_fa0, sc_fa1;
+                CFIBoxInst(CFIBoxModel * m) : BoxInst(sc_f0), m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
                 ~CFIBoxInst();
-                virtual int calc(int inflg, double** inb, double** outb, int n);
         protected:
                 int ini(double** inb);
+		int prep_in(int inflg, double** inb);
                 void fill_con(double**to, int bv, unsigned char * ix) {
                         ConStore * pcs = m_m->pcs; BVFOR_JM(bv) to[j] = pcs->p(ix[j]&63); }
                 int m_nr, m_inc_bv;
@@ -89,6 +90,7 @@ int CFIBoxInst::ini(double** inb) {
         CFIBoxModel *mo=m_m; if (!mo->fm.nz()) return m_nr = 0;
         int nri=mo->xdsc[0], nr=m_nr = ivlim((int)lround((nri&64) ? mo->pcs->v(nri&63) : inb[nri][0]), 0,1024);
         if (!nr) return 0;
+	int rv = (nr==1) ? 1 : (2+(mo->foif>>30));
         int ff = mo->foif, nfi = ff&31, nco = (ff>>10)&31, sz_pco = nr*nco*sizeof(double);
         char *q = m_blk = (char*)malloc((nr+nfi)*sizeof(void*) + sz_pco);
         double *pco   = (double*)  q; q += sz_pco;
@@ -96,36 +98,51 @@ int CFIBoxInst::ini(double** inb) {
         double **in1 = m_in1 = (double**) q;
         fill_con(in1, mo->ivck_bv[1], mo->fdsc);
 	mo->fm.mk_boxv(m_ppbx, nr);
-        if (!mo->cm.nz()) return m_inc_bv = 0, nr;
+        if (!mo->cm.nz()) return m_inc_bv = 0, rv;
         int nci = (ff>>5)&31; unsigned char *cdsc = mo->cdsc, *fdsc = mo->fdsc;
         double *tci[nci]; fill_con(tci, mo->ivck_bv[3], cdsc);
         BVFOR_JM(((1<<nci)-1)^mo->ivck_bv[3]) tci[j] = inb[(int)cdsc[j]];
         double *ppco[nco]; for (int j=0; j<nco; j++) ppco[j] = junkbuf;
 	IFDBGX(EXPR) log("ff=0x%x nco=%d bv[2]=0x%x", ff, nco, mo->ivck_bv[2]);
-        BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ppco[k] = in1[j] = pco+k*nr; if (k>=nco) bug("k(%d)>nco(%d)",k,nco);
+        BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ppco[k] = in1[j] = pco+k*nr; 
+				   if (k>=nco) bug("k(%d)>=nco(%d)",k,nco);
 				   IFDBGX(EXPR) log("bv[2]: j=%d k=%d",j,k); }
         BoxInst * cb = mo->cm.mk_box();
         int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); delete(cb); if (cret<0) return cret;
         BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ibv |= ((cret>>k)&1)<<j; }
-        return m_inc_bv = ibv, nr;
+        return m_inc_bv = ibv, rv;
 }
 
-#define CCALC1(J,Q) if ((of = m_ppbx[J]->calc(f1_bv|of, in1, Q, n)) < 0) return of; else of &= 1
-int CFIBoxInst::calc(int inflg, double** inb, double** outb, int n) {
-        int nr = m_nr; if (nr<=0) { if (!nr) return BOX_CP0; if ((nr=ini(inb))<=0) return nr?nr:BOX_CP0; }
-        CFIBoxModel *mo = m_m;   int f1_bv = 0, of = inflg&1;   unsigned char *dsc = mo->fdsc;
-        double **in1 = m_in1; in1[0]=inb[0];
-        BVFOR_JM(mo->ivck_bv[0]) { int k = dsc[j]; in1[j] = inb[k], f1_bv |= (((inflg>>k)&1)<<j); }
-        if (nr==1) return in1[0]=inb[0], m_ppbx[0] -> calc(f1_bv|of, in1, outb, n);
-        int incbv = m_inc_bv, al = mo->foif&(1<<30);
-        if(al){ CCALC1(0, outb); in1[0] = outb[0];
-                for (int k=1; k<nr; k++) { BVFOR_JM(incbv) ++in1[j]; CCALC1(k, outb); }}
-        else  { double tmp[n], *pt = tmp;  int j0 = nr&1;
-                if(j0) {           CCALC1(0,outb);                   in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
-                for (int k=j0;;) { CCALC1(k, &pt); ++k;              in1[0]=tmp;   BVFOR_JM(incbv) ++in1[j];
-                                   CCALC1(k,outb); if(++k>=nr)break; in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }}
-        --nr; BVFOR_JM(incbv) in1[j] -= nr;
-        return of;
+int CFIBoxInst::prep_in(int inflg, double** inb) {
+	CFIBoxModel *mo = m_m; int rv = 0; double **in1 = m_in1; unsigned char *dsc = mo->fdsc;
+	in1[0]=inb[0]; BVFOR_JM(mo->ivck_bv[0]) { int k=dsc[j]; in1[j]=inb[k], rv|=(((inflg>>k)&1)<<j); }
+	return rv;
+}
+
+BX_SCALC(CFIBoxInst::sc_f0) {
+	static sc_t sctab[4] = { sc_cp0, sc_f1, sc_fa0, sc_fa1 };
+	SCALC_BXI(CFIBoxInst); int r = bxi->ini(inb); if (r<0) return r; CALC_FW(sctab[r]); }
+
+#define CFI_C0  SCALC_BXI(CFIBoxInst); \
+		double **in1 = bxi->m_in1; int of = inflg&1, f1_bv = bxi->prep_in(inflg, inb)
+
+BX_SCALC(CFIBoxInst::sc_f1) { CFI_C0; return bxi->m_ppbx[0] -> calc(f1_bv|of, in1, outb, n); }
+
+#define CCALC1(J,Q) if ((of = bxi->m_ppbx[J]->calc(f1_bv|of, in1, Q, n)) < 0) return of; else of &= 1
+
+BX_SCALC(CFIBoxInst::sc_fa1) {
+	CFI_C0; int incbv = bxi->m_inc_bv, nr = bxi->m_nr;
+	CCALC1(0, outb); in1[0] = outb[0];
+	for (int k=1; k<nr; k++) { BVFOR_JM(incbv) ++in1[j]; CCALC1(k, outb); }
+	--nr; BVFOR_JM(incbv) in1[j] -= nr; return of;
+}
+
+BX_SCALC(CFIBoxInst::sc_fa0) {
+	CFI_C0; int incbv = bxi->m_inc_bv, nr = bxi->m_nr, j0 = nr&1; double tmp[n], *pt = tmp;
+        if(j0) {           CCALC1(0,outb);                   in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
+        for (int k=j0;;) { CCALC1(k, &pt); ++k;              in1[0]=tmp;   BVFOR_JM(incbv) ++in1[j];
+                           CCALC1(k,outb); if(++k>=nr)break; in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
+	--nr; BVFOR_JM(incbv) in1[j] -= nr; return of;
 }
 
 CFIBoxGen::CFIBoxGen(ABoxNode *nd) : BoxGen(nd), m_fbx(0),m_cbx(0), m_ni(1),m_nif(1),m_nic(0),m_noc(0),

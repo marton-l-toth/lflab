@@ -35,7 +35,7 @@
 //?If you are interested, please see the source file, c/zB.cc
 
 // for any new box you have to
-// (1) define a class (subcl. of BoxInst) with a calc() function
+// (1) define a class (derived from BoxInst) 
 //     (either explicitly or using a convenience macro)
 // (2) insert a node referring to the class into the object tree
 //     (do this in the ci_<foldername>() init function, see at the end of this file)
@@ -48,14 +48,16 @@
 
 FUN1_BOX(ZBAbs, fabs(x))
 
-// For anything more complicated, you need a calc() funtion:
-// virtual int calc(int inflg, double** inb, double** outb, int n)
+// For anything more complicated, you need a calc funtion:
+// int (*sc_t)(BoxInst * abxi, int inflg, double** inb, double** outb, int n)
+// axbi: (base) box pointer, see macro (SCALC_BXI) for typecast below
 // inflg: for all k=0...29, iflg&(1<<k) is nonzero if inb[k] is non-constant
 // inb: pointers to input buffers, inb[k][0] for const, inb[k][0]...inb[k][n-1] otherwise
 // outb: same for output buffers
 // n: number of samples (0...4095)
 // return value: OK: a bit-vector for output, analogous to "inflg"
 //               error: negative value (see errtab.txt, esp. RTE_*)
+// (BoxInst field m_psc points to current calc function, m_psc can change)
 
 // It is possible that more input buffers point to the same address
 // Output buffers are always distinct (except when all point to the junk buffer)
@@ -64,7 +66,7 @@ FUN1_BOX(ZBAbs, fabs(x))
 // Any two non-junk buffers (input/output) are either idential or disctinct -- they
 // never overlap.
 
-// For stateless boxes, there is a macro for class definition and calc() head,
+// For stateless boxes, there is a macro for class definition and sc_f0 declaration/head,
 // you only have to write the function body (this is the two input "+" box, it
 // outputs the sum of the two inputs (which is constant if both inputs are constant)
 
@@ -103,7 +105,7 @@ STATELESS_BOX_1(ZBSel) {
 }
 
 // If you want to implement a box with a state (other than pole/zero filters, see below),
-// you have to explicitly define a class. Beside the calc() function you also have to
+// you have to explicitly define a class. Beside the calc function you also have to
 // define a contructor to initialize the state (default (no args) constructor for
 // singular boxes, and one with an int argument for parametrized boxes. )
 // (for the stateless boxes above, the contructors are defined by the macros.)
@@ -114,23 +116,26 @@ STATELESS_BOX_1(ZBSel) {
 
 class ZBAcc : public BoxInst {
         public: 
-                ZBAcc() : m_v(0.0) {}
-                virtual int calc(int inflg, double** inb, double** outb, int n);
+                static scf_t sc_f0; // declare calc func
+                ZBAcc() : BoxInst(sc_f0), m_v(0.0) {} // init calc func with BoxInst ctor
         protected:
-                double m_v;
+                double m_v;  // state
 };
 
-int ZBAcc::calc(int inflg, double** inb, double** outb, int n) {
-        double x, y, *p = *outb, *q0, *q1; switch (inflg & 3) {
-        case 0 : x = sample_length * **inb, y = exp(-sample_length * inb[1][0]);
-                 for (int i=0; i<n; i++) p[i] = ((m_v+=x)*=y); return 1;
-        case 1 : q0 = *inb, y = exp(-sample_length * inb[1][0]);
-                 for (int i=0; i<n; i++) p[i] = ((m_v+=sample_length*q0[i])*=y); return 1;
-        case 2 : x = sample_length * **inb, q1 = inb[1];
-                 for (int i=0; i<n; i++) p[i] = ((m_v+=x)*=exp(-sample_length*q1[i])); return 1;
-        case 3 : q0 = *inb, q1 = inb[1];
-                 for (int i=0;i<n;i++) p[i]= ((m_v+=sample_length*q0[i])*=exp(-sample_length*q1[i])); return 1;
-        }} // no it doesn't
+BX_SCALC(ZBAcc::sc_f0) {
+        SCALC_BXI(ZBAcc); // macro for casting to ZBAccFilt *bxi
+	double x, y, v=bxi->m_v, *p = *outb, *q0, *q1;
+        switch (inflg & 3) {
+                case 0 : x = sample_length * **inb, y = exp(-sample_length * inb[1][0]);
+                         for (int i=0; i<n; i++) p[i] = ((v+=x)*=y); break;
+                case 1 : q0 = *inb, y = exp(-sample_length * inb[1][0]);
+                         for (int i=0; i<n; i++) p[i] = ((v+=sample_length*q0[i])*=y); break;
+                case 2 : x = sample_length * **inb, q1 = inb[1];
+                         for (int i=0; i<n; i++) p[i] = ((v+=x)*=exp(-sample_length*q1[i])); break;
+                case 3 : q0 = *inb, q1 = inb[1];
+                         for (int i=0;i<n;i++) p[i]= ((v+=sample_length*q0[i])*=exp(-sample_length*q1[i])); }
+        bxi->m_v = v; return 1;
+}
 
 // For filters composed of pole/zero pairs (either sequentially or parallelly combined),
 // you only have to write the fuction that generates the pole/zero pairs, the rest is taken
@@ -139,11 +144,12 @@ int ZBAcc::calc(int inflg, double** inb, double** outb, int n) {
 // The pole-zero pairs have to be filled out from an array of RECF_PZItem
 // You should allocate this array with "new" and not free it (it could be used for the
 // command "filter display" from the main menu (which can be BTW quite useful for checking
-// if your , and only freed when replaced with a new one)
+// if your filter looks as expected) , and only freed when replaced with a new one)
 // You can fill them manually (pr, pi, zr, zi and c (constant multipler)), or you can use
 // some convenience functions (see decl. in pzrf.h)
-// You can find more examples in pzrf.cc (e.g. QUICK_PZFILT_1 for parametrized filter boxes,
-// or QUICK_PPZFILT for parallel (added) filters)
+// mk_filter should return: 0 for sequential filter, 1 for parallel filter, or a (negative)
+// error code from errtab.inc 
+// You can find more examples in pzrf.cc (e.g. QUICK_PZFILT_1 for parametrized filter boxes)
 
 // In the following example (harmonic equalizer filter), one of the arguments in a NaN list
 // the macro NAN_UNPK_32(name, ptr, defval) unpacks at most 16 32-bit-integers from the NaN
@@ -178,7 +184,7 @@ QUICK_PZFILT(ZBEqLF) {
 //				               const char * cl, const char * fmt, ...);
 // up: parent node (must be a folder)
 // nm: name
-// qa: QMB_ARG0(simple_box_class) or QMB_ARG1(param_box_class), type is ptr-to-function
+// qa: QMB_ARG0(single_box_class) or QMB_ARG1(param_box_class), type is ptr-to-function
 // k:  parameter (for single boxes it is ignored)
 // ni: number of input ports
 // no: number of output ports (add 32 for io-alias, see below)

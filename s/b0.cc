@@ -53,8 +53,8 @@ void NM::calc2(double *q, double **inb, int n)
 //? this box has no inputs, and outputs constant zero.
 //? {{{!._2}}}
 //? this box simply copies its input to its output.
-STATELESS_BOX_0(ZeroBox) { **outb = 0.0; return 0; }
-STATELESS_BOX_0(CopyBox) { return BOX_CP0; }
+class ZeroBox : public BoxInst { public: ZeroBox() : BoxInst(sc_zero) {} };
+class CopyBox : public BoxInst { public: CopyBox() : BoxInst(sc_cp0) {} };
 
 //? {{{!._m01}}}
 //? Interval mapping: maps interval [0..1] to [y0..y1]
@@ -100,7 +100,7 @@ STATELESS_BOX_0(Map01Box) {
 //? for each <i>, the 0..1 interval (x<i>) is mapped to
 //? fr<i>..to<i>, with the <i>th element of [sc] selecting
 //? the scale type.
-//? if [sc] is shorted than expected or non-list, the default
+//? if [sc] is shorter than expected or non-list, the default
 //? scale type is 0 (logarithmic)
 //? ---
 //? Unless you want non-constant scale types, you can replace
@@ -127,8 +127,9 @@ STATELESS_BOX_0(VersionBox) { **outb = (double)v_major + 0.01 * (double)v_minor;
 //? simple impulse (first sample is 1.0, the rest are all zero)
 //? HINT: since a simple impulse has a flat frequency graph, it is
 //? ideal for testing the frequency response of filters.
-IMPBOX(Impulse1, 0, 0) { return m_t ? (**outb=0.0, 0) 
-			   	 : (**outb=1.0, memset(*outb+1, 0, 8*n-8), m_t=1, 1); }
+STATELESS_BOX_0(Impulse1) { **outb=1.0; if (--n) memset(*outb+1, 0, 8*n); 
+			    static_cast<Impulse1*>(abxi)->m_psc = sc_zero; return 1; }
+
 //? {{{!._trI}}}
 //? triangle impulse (up and dn are in seconds)
 //? ---
@@ -257,8 +258,8 @@ STATELESS_BOX_1(DebugBox) {
 //? samp is expected to be constant
 class RQOsc : public BoxInst {
 	public:
-		RQOsc() : m_y(0.0), m_v(0.0) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0;
+		RQOsc() : BoxInst(sc_f0), m_y(0.0), m_v(0.0) {}
 	protected:
 		double m_y, m_v;
 };
@@ -277,10 +278,10 @@ class RQOsc : public BoxInst {
 #define RQO3_CL(EL) RQO_LH(EL) { RQO_STEP(.2) ya = y; RQO_STEP(.2) ya+= y; RQO_STEP(.2) ya+= y; \
 				 RQO_STEP(.2) ya+= y; RQO_STEP(.2) q[i] = .2*(ya+y); }
 
-int RQOsc::calc(int inflg, double** inb, double** outb, int n) {
-	PREP_INPUT(f0, 0); PREP_INPUT(f1, 1); PREP_INPUT(vl, 3);
+BX_SCALC(RQOsc::sc_f0) {
+	SCALC_BXI(RQOsc); PREP_INPUT(f0, 0); PREP_INPUT(f1, 1); PREP_INPUT(vl, 3);
 	int ty = (inflg&4) + ((int)lround(inb[4][0]) & 3);
-	double ya, d0, d1, f, f0, f1, vl, el, *pel = inb[2], y = m_y, v = m_v, *q = outb[0];
+	double ya, d0, d1, f, f0, f1, vl, el, *pel = inb[2], y = bxi->m_y, v = bxi->m_v, *q = outb[0];
 	switch(ty) {
 		case 0: el = exp(-sample_length*pel[0]); RQO0_CL(el); break;
 		case 1: el = exp(-sample_length*pel[0]); RQO1_CL(el); break;
@@ -291,7 +292,7 @@ int RQOsc::calc(int inflg, double** inb, double** outb, int n) {
 		case 6: RQO2_CL(exp(-sample_length*pel[i])); break;
 		case 7: RQO3_CL(exp(-sample_length*pel[i])); break;
 	}
-	m_y = CUT300(y); m_v = CUT300(v); return 1; 
+	bxi->m_y = CUT300(y); bxi->m_v = CUT300(v); return 1; 
 }
 
 inline int ixround(double x, int n) { int r = (int)lround(x);

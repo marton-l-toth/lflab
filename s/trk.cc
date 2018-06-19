@@ -33,9 +33,9 @@ void tgn_del(ANode *tn, ANode *gn), tgn_move(ANode *tn, ANode *gn, int j, ANode*
 class TrackModel;
 class TrackInst : public BoxInst {
 	public:
+		static scf_t sc_f0;
 		TrackInst (TrackModel * m);
 		virtual ~TrackInst();
-		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
 		int ini(double **inb);
 		void mxprep(int bflg, double* bpm, int n);
@@ -193,7 +193,7 @@ void BKMK1M::set(int i, int v) {
         ((bv&msk) ? p[i5] : (bv |= msk, p[i5] = (BKMK32k*)ANode::z64())) -> set(i15, v);
 }
 
-TrackInst::TrackInst (TrackModel * m) : m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0), m_aix(8) {
+TrackInst::TrackInst (TrackModel * m) : BoxInst(sc_f0), m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0), m_aix(8) {
 	if (DBGC) log("trki: hello"); BoxModel::ref(m); m_mxid=mx_mkroot(); }
 
 TrackInst::~TrackInst() { TRK_SANE1(2); if (m_mxid>0) mx_del(m_mxid); 
@@ -258,22 +258,23 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 	tgn_move(m_m->tn, m_pn, vti + vti_d, nd); gna(vti+vti_d);
 }
 
-int TrackInst::calc(int inflg, double** inb, double** outb, int n) {
-	if (debug_flags & DFLG_TRK_C) log("trk/calc: md=%d, n=%d", m_md, n);
-	int ec, bpm_f = inflg&1; 
+BX_SCALC(TrackInst::sc_f0) {
+	SCALC_BXI(TrackInst); int ec, bpm_f = inflg&1; 
+	if (debug_flags & DFLG_TRK_C) log("trk/calc: md=%d, n=%d", bxi->m_md, n);
 	double sbpm, cbpm, *bpm = (bpm_f||**inb>0) ? *inb : (cbpm=-**inb*trk_ctx_bpm, &cbpm);
 	if (trk_ctx_n >= CFG_TRK_NLEV.i) return outb[0][0] = outb[1][0] = 0.0, 0;
-	switch (m_md) {
-		case 0: if ((ec = ini(inb))<0) return m_md = 4, ec;
-		case 1: case 2: mxprep(bpm_f, bpm, n);
+	switch (bxi->m_md) {
+		case 0: if ((ec = bxi->ini(inb))<0) return bxi->m_md = 4, ec;
+		case 1: case 2: bxi->mxprep(bpm_f, bpm, n);
 		case 3: TRK_SANE1(7); break;
 		case 4: outb[0][0] = outb[1][0] = 0.0; return 0;
-		default: bug("trk: invalid m_md (%d)", m_md); return 0;
+		default: bug("trk: invalid m_md (%d)", bxi->m_md); return 0;
 	}
 	++trk_ctx_n; sbpm = trk_ctx_bpm; trk_ctx_bpm = *bpm; // TODO: var bpm, time? 
-	ec = mx_calc(m_mxid, outb[0], outb[1], n, 0); --trk_ctx_n; trk_ctx_bpm = sbpm;
+	ec = mx_calc(bxi->m_mxid, outb[0], outb[1], n, 0); --trk_ctx_n; trk_ctx_bpm = sbpm;
 	switch(ec) {
-		case 0:	if (m_md==3 && mx_r_isemp(m_mxid)) m_md=4, mx_del(m_mxid), m_mxid=-1;
+		case 0:	if (bxi->m_md==3 && mx_r_isemp(bxi->m_mxid))
+				bxi->m_md=4, mx_del(bxi->m_mxid), bxi->m_mxid=-1;
 			outb[0][0] = outb[1][0] = 0.0; return 0;
 		case 1: if (outb[1]!=junkbuf) memcpy(outb[1], outb[0], 8*n);
 		case 2: return 3;
