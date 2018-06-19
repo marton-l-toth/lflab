@@ -70,15 +70,15 @@ static const double minifilt9[177] = { 1.0,
 //? (*) if fq1 is negative, times are in samples, and multiplied
 //? by -fq1 (fq1 = -1.0 is raw samples mode)
 #define SPFUN_LS c10,c11,c12,c13,c19,c20,c21,c22,c23,c29,c30,c31,c32,c33,c39,c90,c91,c92,c93,c99
-class SparseRF; typedef int (comb_fun_dt)(SparseRF*, int, double*, double**, double*, int),
-      			    (*comb_fun_t)(SparseRF*, int, double*, double**, double*, int);
+class SparseRF; typedef int (comb_fun_dt)(SparseRF*, int, double*, double*, int),
+      			    (*comb_fun_t)(SparseRF*, int, double*, double*, int);
 class SparseRF : public BoxInst {
 	public:
-		SparseRF(int nxy) : m_nxy(nxy), m_px(0), m_xc(0), m_fun(&cii) {}
+		static scf_t sc_f0, sc_f1;
+		SparseRF(int nxy) : BoxInst(sc_f0), m_nxy(nxy), m_px(0), m_xc(0) {}
 		virtual ~SparseRF() { free(m_px); free(m_xc); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
-		static comb_fun_dt cii, c00, SPFUN_LS;
+		static comb_fun_dt c00, SPFUN_LS;
 		void ini(double ** ap);
 		int m_nxy, m_nx, m_ny, m_siz, m_t, *m_xt, *m_yt;
 		double *m_px, *m_py, *m_xc, *m_yc;
@@ -119,15 +119,14 @@ void SparseRF::ini(double** p) {
 	m_fun = ftab[5*min_i(m_nx, 4)+min_i(m_ny,4)];
 }
 
-int SparseRF::calc(int inflg, double** inb, double** outb, int n) {
-	static double x; double *in = inb[0], *out = outb[0]; int iif;
-	if ( !(iif = -(inflg&1)) ) x = *in, in = &x;
-	return (*m_fun)(this, iif, in, inb, out, n);
-}
+BX_SCALC(SparseRF::sc_f0) { SCALC_BXI(SparseRF); bxi->ini(inb+1); CALC_FW(sc_f1); }
 
-int SparseRF::c00(SparseRF *p, int iim, double *in, double **inb, double *out, int n) { *out=0.0; return 0; }
-int SparseRF::cii(SparseRF *p, int iim, double *in, double **inb, double *out, int n) {
-	return !n ? 1 : (p->ini(inb+1), (*p->m_fun)(p, iim, in, 0, out, n)); }
+BX_SCALC(SparseRF::sc_f1) {
+	static double x; SCALC_BXI(SparseRF); double *in = inb[0], *out = outb[0];
+	int iif; if ( !(iif = -(inflg&1)) ) x = *in, in = &x;
+	return (*bxi->m_fun)(bxi, iif, in, out, n); }
+
+int SparseRF::c00(SparseRF *p, int iim, double *in, double *out, int n) { *out=0.0; return 0; }
 
 #define SPCI(Z,J) Z##t##J = p->m_##Z##t[J]
 #define SPCD(Z,J) Z##c##J = p->m_##Z##c[J]
@@ -151,7 +150,7 @@ int SparseRF::cii(SparseRF *p, int iim, double *in, double **inb, double *out, i
 #define SPC1X9 v =  0.0; for (int j=0; j<nx; j++) v += xc[j] * px[(t-xt[j]) & m];
 #define SPC1Y9		 for (int j=0; j<ny; j++) v += yc[j] * py[(t-yt[j]) & m];
 
-#define SPCDEF(I,J) int SparseRF::c##I##J(SparseRF *p, int iim, double*in, double**inb, double*q, int n) { \
+#define SPCDEF(I,J) int SparseRF::c##I##J(SparseRF *p, int iim, double*in, double*q, int n) { \
 	int t = p->m_t, m = p->m_siz-1;  p->m_t += n; double *px = p->m_px, *py = p->m_py;  SPC0X##I SPC0Y##J \
 	for (int k,i=0; i<n; i++, t++) { px[k=t&m] = in[i&iim]; \
 					 double SPC1X##I SPC1Y##J q[i]=py[k]=CUT300(v); } return 1; }
@@ -172,7 +171,7 @@ SPCDEF(9,0) SPCDEF(9,1) SPCDEF(9,2) SPCDEF(9,3) SPCDEF(9,9)
 
 #define ACCLOOP(X) for (int i=0; i<n; i++) (X); break
 #define ACCLOOPZ(X) for (int i=0; i<n; i++) (X), q[i] = z; break;
-#define ACC_CALC(NM, MUL) static void NM(int md, double *st, double *q, double *p0, double *p1, int n) { \
+#define ACC_CALC(NM, MUL) static int NM(int md, double *st, double *q, double *p0, double *p1, int n) { \
 	double x, y, y1, z, v = *st; switch(md) { 					   \
 		case  0: y = MUL(*p1), y1 = *p0 * (1.0-y); ACCLOOP(q[i] = v = (y*v + y1));  \
 		case  1: y = MUL(*p1), y1 = 1.0 - y; ACCLOOP(q[i] = v = (y*v + y1*p0[i]));   \
@@ -190,58 +189,66 @@ SPCDEF(9,0) SPCDEF(9,1) SPCDEF(9,2) SPCDEF(9,3) SPCDEF(9,9)
 		case 13: y = MUL(*p1), y1 = 1.0 - y; ACCLOOPZ((z = p0[i]-v, v = (y*v + y1*p0[i]))); \
 		case 14: x = *p0; ACCLOOPZ((y = MUL(p1[i]), z = x-v, v = y*v + (1.0-y)*x));         \
 		case 15: ACCLOOPZ((y = MUL(p1[i]), z = p0[i]-v, v = y*v + (1.0-y)*p0[i]));          \
-		default: memset(q, 0, 8*n); return; } *st = fabs(v)>1e-250 ? v : 0.0; return;       }
+		default: memset(q, 0, 8*n); return 1; } *st = fabs(v)>1e-250 ? v : 0.0; return 1;   }
 
 ACC_CALC(acc_calc_d, att2mul)
 ACC_CALC(acc_calc_m, )
 
 class NAccFilt : public BoxInst {
 	public:
-		NAccFilt() : m_rpt(-1) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0, sc_f1, sc_fn;
+		NAccFilt() : BoxInst(sc_f0), m_rpt(0) {}
+		virtual ~NAccFilt() { if(m_rpt>1) free(m_u.p); }
 	protected:
 		int m_rpt;
-		double * m_v;
+		union { double v; double *p; } m_u;
 };
 
-int NAccFilt::calc(int inflg, double** inb, double** outb, int n) {
-	double *out = outb[0], *in = inb[0];
-	int md = (int)lround(inb[1][0]) & 3, m = m_rpt, flg1 = inflg&1;
-	if (m<0 && ((m = m_rpt = ivlim((int)lround(inb[3][0]),0,256)))) m_v = (double*)calloc(m_rpt,8);
-	if (m<2) return (m<1) ? BOX_CP0 : (acc_calc_d(flg1+((inflg&4)>>1)+4*md, m_v, out, in, inb[2], n), 1);
+BX_SCALC(NAccFilt::sc_f0) {
+	SCALC_BXI(NAccFilt); int m = bxi->m_rpt = ivlim((int)lround(inb[3][0]),0,256);
+	switch(m){ case 0:					CALC_FW(sc_cp0);
+		   case 1:  bxi->m_u.v = 0.0;			CALC_FW(sc_f1);
+		   default: bxi->m_u.p = (double*)calloc(m,8);	CALC_FW(sc_fn); }}
+
+BX_SCALC(NAccFilt::sc_f1) { SCALC_BXI(NAccFilt); int f1 = inflg&1, md = (int)lround(inb[1][0]) & 3;
+			    return acc_calc_d(f1+((inflg&4)>>1)+4*md, &bxi->m_u.v, *outb, *inb, inb[2], n); }
+
+BX_SCALC(NAccFilt::sc_fn) {
+	SCALC_BXI(NAccFilt); double *out = outb[0], *in = inb[0], *pv = bxi->m_u.p;
+	int md = (int)lround(inb[1][0]) & 3, m = bxi->m_rpt, flg1 = inflg&1;
 	if (inflg&16) {
 		double x, y, mul[n], mul2[n],
 		       *pm = inb[2], *ps = inb[4], mm = -2.0*sample_length / (double)(m-1);
 		int dmsk = -((inflg>>2)&1), f43 = 3+4*md;
 		for (int i=0; i<n; i++) x = pm[i&dmsk], y = x*ps[i], 
 			mul[i] = att2mul(x-y), mul2[i] = exp(x*mm);
-		acc_calc_m(flg1+2+4*md, m_v, out, in, mul, n);
+		acc_calc_m(flg1+2+4*md, pv, out, in, mul, n);
 		for (int i=1; i<m; i++) { for (int j=0; j<n; j++) mul[j] *= mul2[j];
-					  acc_calc_m(f43, m_v+i, out,out, mul,n); }
+					  acc_calc_m(f43, pv+i, out,out, mul,n); }
 	} else {
 		double spr = inb[4][0];
 		if (spr<1e-14) {
 			if (inflg&4) {
 				double *pm = inb[2], mul[n]; for (int i=0; i<n; i++) mul[i] = att2mul(pm[i]);
-				acc_calc_m(flg1 + 2 + 4*md, m_v, out, in, mul, n);
-				for (int i=1,f43=3+4*md; i<m; i++) acc_calc_m(f43, m_v+i, out, out, mul, n);
+				acc_calc_m(flg1 + 2 + 4*md, pv, out, in, mul, n);
+				for (int i=1,f43=3+4*md; i<m; i++) acc_calc_m(f43, pv+i, out, out, mul, n);
 			} else {
 				double mul = att2mul(inb[2][0]);
-				acc_calc_m(flg1 + 4*md, m_v, out, in, &mul, n);
-				for (int i=1,f41=1+4*md; i<m; i++) acc_calc_m(f41, m_v+i, out, out, &mul, n);
+				acc_calc_m(flg1 + 4*md, pv, out, in, &mul, n);
+				for (int i=1,f41=1+4*md; i<m; i++) acc_calc_m(f41, pv+i, out, out, &mul, n);
 		}} else {
 			double div = .5 * (double)(m-1), sp2 = spr / div;
 			if (inflg&4) {
 				double *pm = inb[2], mul[n], spr1 = 1.0-spr;
 				for (int i=0; i<n; i++) mul[i] = att2mul(pm[i]*spr1);
-				acc_calc_m(flg1 + 2 + 4*md, m_v, out, in, mul, n);
-				for (int i=1,f43=3+4*md; i<m; i++) acc_calc_m(f43, m_v+i, out, out, mul, n);
+				acc_calc_m(flg1 + 2 + 4*md, pv, out, in, mul, n);
+				for (int i=1,f43=3+4*md; i<m; i++) acc_calc_m(f43, pv+i, out, out, mul, n);
 			} else {
 				double x = inb[2][0], mul = att2mul(x*(1.0-spr)), mul2 = att2mul(x*sp2);
 				// log("nacc: %.15g %.15g", mul, mul2);
-				acc_calc_m(flg1 + 4*md, m_v, out, in, &mul, n);
+				acc_calc_m(flg1 + 4*md, pv, out, in, &mul, n);
 				for (int i=1,f41=1+4*md; i<m; i++) mul *= mul2,
-					acc_calc_m(f41, m_v+i, out,out, &mul,n);
+					acc_calc_m(f41, pv+i, out,out, &mul,n);
 	}}}
 	return 1;
 }
@@ -252,23 +259,25 @@ int NAccFilt::calc(int inflg, double** inb, double** outb, int n) {
 //? dmp can be non-constant
 class AccFilt : public BoxInst {
 	public:
-		AccFilt() : m_v(0.0) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0;
+		AccFilt() : BoxInst(sc_f0), m_v(0.0) {}
 	protected:
 		double m_v;
 };
 
-int AccFilt::calc(int inflg, double** inb, double** outb, int n) { 
-	double x, y, *p = *outb, *q0, *q1; switch (inflg & 3) {
-	case 0 : x = sample_length * **inb, y = exp(-sample_length * inb[1][0]); 
-		 for (int i=0; i<n; i++) p[i] = ((m_v+=x)*=y); return 1;
-	case 1 : q0 = *inb, y = exp(-sample_length * inb[1][0]); 
-		 for (int i=0; i<n; i++) p[i] = ((m_v+=sample_length*q0[i])*=y); return 1;
-	case 2 : x = sample_length * **inb, q1 = inb[1]; 
-		 for (int i=0; i<n; i++) p[i] = ((m_v+=x)*=exp(-sample_length*q1[i])); return 1;
-	case 3 : q0 = *inb, q1 = inb[1]; 
-		 for (int i=0;i<n;i++) p[i]= ((m_v+=sample_length*q0[i])*=exp(-sample_length*q1[i])); return 1;
-	}} // no it doesn't
+BX_SCALC(AccFilt::sc_f0) {
+	SCALC_BXI(AccFilt); double x, y, v=bxi->m_v, *p = *outb, *q0, *q1;
+	switch (inflg & 3) {
+		case 0 : x = sample_length * **inb, y = exp(-sample_length * inb[1][0]); 
+			 for (int i=0; i<n; i++) p[i] = ((v+=x)*=y); break;
+		case 1 : q0 = *inb, y = exp(-sample_length * inb[1][0]); 
+			 for (int i=0; i<n; i++) p[i] = ((v+=sample_length*q0[i])*=y); break;
+		case 2 : x = sample_length * **inb, q1 = inb[1]; 
+			 for (int i=0; i<n; i++) p[i] = ((v+=x)*=exp(-sample_length*q1[i])); break;
+		case 3 : q0 = *inb, q1 = inb[1]; 
+			 for (int i=0;i<n;i++) p[i]= ((v+=sample_length*q0[i])*=exp(-sample_length*q1[i])); }
+	bxi->m_v = v; return 1;
+}
 
 static void qlh_ini(double *ed, double f, double a) {
 	double cf = cos(2*M_PI*sample_length*f), cf_1 = cf-1.0, acf_1 = a*cf_1, e2 = 1.0 - cf;
@@ -293,8 +302,8 @@ static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, 
 //? normalized: amp=1.0 at (sample_rate/2.0)
 class QHiFilt : public BoxInst {
 	public:
-		QHiFilt() : m_x1(0.0), m_y1(0.0), m_flg(4) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0;
+		QHiFilt() : BoxInst(sc_f0), m_x1(0.0), m_y1(0.0), m_flg(4) {}
 	protected:
 		double m_x1, m_y1;
 		int m_flg; // 4:cp
@@ -303,20 +312,20 @@ class QHiFilt : public BoxInst {
 #define QHC1(J) (z = pz[J], a = 1.0-z, b = a-z)
 #define QHC2(J) (x = q[J], y1 = to[J] = b*y1 + a*(x-x1), x1 = x)
 #define QHC0(J) (y1 = to[J] = b*y1)
-int QHiFilt::calc(int inflg, double** inb, double** outb, int n) {
-	if (!n) return 0; 
-	double x, z, a, b, x1 = m_x1, y1 = m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
-	switch((inflg|m_flg)&7) {
-		case 4: if (fabs(*pz)<1e-99) return BOX_CP0; else m_flg &= ~4;
+BX_SCALC(QHiFilt::sc_f0) {
+	SCALC_BXI(QHiFilt);
+	double x, z, a, b, x1 = bxi->m_x1, y1 = bxi->m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
+	switch((inflg|bxi->m_flg)&7) {
+		case 4: if (fabs(*pz)<1e-99) return BOX_CP0; else bxi->m_flg &= ~4;
 		case 0: QHC1(0); QHC2(0); x1 = *q; for (int i=1; i<n; i++) QHC0(i); break;
-		case 5: if (fabs(*pz)<1e-99) return BOX_CP0; else m_flg &= ~4;
+		case 5: if (fabs(*pz)<1e-99) return BOX_CP0; else bxi->m_flg &= ~4;
 		case 1: QHC1(0); for (int i=0; i<n; i++) QHC2(i);  break;
-		case 6: m_flg &= ~4;
+		case 6: bxi->m_flg &= ~4;
 		case 2: QHC1(0); QHC2(0); x1 = *q; for (int i=1; i<n; i++) QHC1(i), QHC0(i); break;
-		case 7: m_flg &= ~4;
+		case 7: bxi->m_flg &= ~4;
 		case 3: for (int i=0; i<n; i++) QHC1(i), QHC2(i); break;
 	}
-	m_x1 = x1; m_y1 = y1; return 1;
+	bxi->m_x1 = x1; bxi->m_y1 = y1; return 1;
 }
 
 //? {{{!._q1p}}}
@@ -330,39 +339,39 @@ int QHiFilt::calc(int inflg, double** inb, double** outb, int n) {
 //? q1p-: b=1+a (amp=1.0 @ samp.rate/2 (22050Hz))
 class Q1pFilt : public BoxInst {
 	public:
-		Q1pFilt(int md) : m_y1(0.0), m_flg(16+4*md) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0;
+		Q1pFilt(int md) : BoxInst(sc_f0), m_y1(0.0), m_flg(16+4*md) {}
 	protected:
 		double m_y1;
 		int m_flg; // 12:md 16:cp
 };
 
-#define Q1PF(L) if (fabs(*pz)<1e-99) goto cp##L; else m_flg &= ~16
+#define Q1PF(L) if (fabs(*pz)<1e-99) goto cp##L; else bxi->m_flg &= ~16
 #define Q1P0(B) x=*q; for (int i=0; i<n; i++) a=pz[i],b=(B),y1=to[i]=a*y1+b* x  ; goto bye
 #define Q1P1(B)       for (int i=0; i<n; i++) a=pz[i],b=(B),y1=to[i]=a*y1+b*q[i]; goto bye
-int Q1pFilt::calc(int inflg, double** inb, double** outb, int n) {
-	if (!n) return 0; 
-	double x, a, b, y1 = m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
-	switch((inflg|m_flg)&31) {
-		case 16: Q1PF(0);    case  0: a = *pz; b = 1.0-fabs(a); goto cc0;
-		case 17: Q1PF(1);    case  1: a = *pz; b = 1.0-fabs(a); goto cc1;
-		case 20: Q1PF(0);    case  4: a = *pz; b = 1.0-   a   ; goto cc0;
-		case 21: Q1PF(1);    case  5: a = *pz; b = 1.0-   a   ; goto cc1;
-		case 24: Q1PF(0);    case  8: a = *pz; b = 1.0+   a   ; goto cc0;
-		case 25: Q1PF(1);    case  9: a = *pz; b = 1.0+   a   ; goto cc1;
-		case 18: m_flg&=~16; case  2: Q1P0(1.0-fabs(a));
-		case 19: m_flg&=~16; case  3: Q1P1(1.0-fabs(a));
-		case 22: m_flg&=~16; case  6: Q1P0(1.0-   a   );
-		case 23: m_flg&=~16; case  7: Q1P1(1.0-   a   );
-		case 26: m_flg&=~16; case 10: Q1P0(1.0+   a   );
-		case 27: m_flg&=~16; case 11: Q1P1(1.0+   a   );
+BX_SCALC(Q1pFilt::sc_f0) {
+	SCALC_BXI(Q1pFilt);
+	double x, a, b, y1 = bxi->m_y1, *to = outb[0], *q = inb[0], *pz = inb[1];
+	switch((inflg|bxi->m_flg)&31) {
+		case 16: Q1PF(0);	  case  0: a = *pz; b = 1.0-fabs(a); goto cc0;
+		case 17: Q1PF(1);	  case  1: a = *pz; b = 1.0-fabs(a); goto cc1;
+		case 20: Q1PF(0);	  case  4: a = *pz; b = 1.0-   a   ; goto cc0;
+		case 21: Q1PF(1);	  case  5: a = *pz; b = 1.0-   a   ; goto cc1;
+		case 24: Q1PF(0);	  case  8: a = *pz; b = 1.0+   a   ; goto cc0;
+		case 25: Q1PF(1);	  case  9: a = *pz; b = 1.0+   a   ; goto cc1;
+		case 18: bxi->m_flg&=~16; case  2: Q1P0(1.0-fabs(a));
+		case 19: bxi->m_flg&=~16; case  3: Q1P1(1.0-fabs(a));
+		case 22: bxi->m_flg&=~16; case  6: Q1P0(1.0-   a   );
+		case 23: bxi->m_flg&=~16; case  7: Q1P1(1.0-   a   );
+		case 26: bxi->m_flg&=~16; case 10: Q1P0(1.0+   a   );
+		case 27: bxi->m_flg&=~16; case 11: Q1P1(1.0+   a   );
 		default: return RTE_BUG;
 	}
 cp0:	*to = *q; return 0;
 cp1:	if (to!=q) memcpy(to, q, 8*n);   return 1;
 cc0:	x=*q; for (int i=0; i<n; i++) to[i] = y1 = a*y1+b* x  ;  goto bye;
 cc1:	      for (int i=0; i<n; i++) to[i] = y1 = a*y1+b*q[i];  goto bye;
-bye:	m_y1 = y1; return 1;
+bye:	bxi->m_y1 = y1; return 1;
 }
 
 //? {{{!._ffoa}}}
@@ -371,21 +380,20 @@ bye:	m_y1 = y1; return 1;
 //? dly: delay (in samples, recommended: 0.1 ... 1.1)
 class FOAFilt : public BoxInst {
 	public:
-		FOAFilt() : m_flg(0) {}
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0, sc_f1;
+		FOAFilt() : BoxInst(sc_f0) {}
 	protected:
 		double m_x1, m_y1, m_z;
-		int m_flg;
 };
 
-int FOAFilt::calc(int inflg, double** inb, double** outb, int n) {
-	if (!n) return 0;
-	double x, z = m_flg ? m_z : (m_flg=1, m_x1=m_y1=0.0, x=inb[1][0], m_z=(1.0-x)/(1.0+x));
-	double x1 = m_x1, y1 = m_y1, *q = inb[0], *to = outb[0];
+BX_SCALC(FOAFilt::sc_f0) { SCALC_BXI(FOAFilt); double x = inb[1][0];
+			   bxi->m_x1 = bxi->m_y1 = 0.0; bxi->m_z = (1.0-x)/(1.0+x); CALC_FW(sc_f1); }
+
+BX_SCALC(FOAFilt::sc_f1) {
+	SCALC_BXI(FOAFilt); double x, x1=bxi->m_x1, y1=bxi->m_y1, z=bxi->m_z, *q = inb[0], *to = outb[0];
 	if (inflg&1) { for (int i=0; i<n; i++) x=q[i], to[i]=y1=z*(x-y1)+x1, x1=x; }
 	else { x=*q; to[0]=y1=z*(x-y1)+x1; x1=x; for (int i=1; i<n; i++) to[i]=y1=z*(x-y1)+x1; }
-	m_x1 = x1; m_y1 = y1; return 1;
-}
+	bxi->m_x1 = x1; bxi->m_y1 = y1; return 1;  }
 
 //? {{{!._qlh}}}
 //? quick & simple lowpass/highpass filter
@@ -394,16 +402,18 @@ int FOAFilt::calc(int inflg, double** inb, double** outb, int n) {
 //? amp: (approx.) amplify at fq
 class QLoHiFilt : public BoxInst {
 	public:
-		QLoHiFilt(int f) : m_flg(f|64) { m_yv[0] = m_yv[1] = 0.0; }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0, sc_f1;
+		QLoHiFilt(int f) : BoxInst(sc_f0), m_flg(f) {}
 	protected:
 		int m_flg;
 		double m_ed[2], m_yv[2];
 };
 
-int QLoHiFilt::calc(int inflg, double** inb, double** outb, int n) {
-	if (m_flg & 64) m_flg &= 63, qlh_ini(m_ed, inb[1][0], inb[2][0]);
-	return qlh_calc(*outb, *inb, m_yv, m_ed, n, (inflg&1)+(m_flg&2)), 1; }
+BX_SCALC(QLoHiFilt::sc_f0) { SCALC_BXI(QLoHiFilt); qlh_ini(bxi->m_ed, inb[1][0], inb[2][0]);
+			     bxi->m_yv[0] = bxi->m_yv[1] = 0.0; CALC_FW(sc_f1); }
+
+BX_SCALC(QLoHiFilt::sc_f1) { SCALC_BXI(QLoHiFilt); 
+			     return qlh_calc(*outb,*inb, bxi->m_yv,bxi->m_ed, n, (inflg&1)+(bxi->m_flg&2)), 1;}
 
 //? {{{!._qlh*}}}
 //? sequence of quick low/high pass filters
@@ -414,26 +424,33 @@ int QLoHiFilt::calc(int inflg, double** inb, double** outb, int n) {
 //? ==> .!b.misc.map01
 class QLHSeqFilt : public BoxInst {
 	public:
-		QLHSeqFilt() : m_nf(-1) {}
-		~QLHSeqFilt() { if (m_nf>0) log("qlh_free: %p", m_edyv), free(m_edyv), m_nf=-2; else if (m_nf==-2) bug("qlh* double free"); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
+		static scf_t sc_f0, sc_f1, sc_fn;
+		QLHSeqFilt() : BoxInst(sc_f0) {}
+		~QLHSeqFilt() { if (m_nf>0) free(m_edyv); }
 	protected:
 		int m_nf, m_flg;
 		double * m_edyv;
 };
 
-int QLHSeqFilt::calc(int inflg, double** inb, double** outb, int n) {
-	int nf, flg; 
-	double *edyv, *p = *inb, *q = *outb;
-	if (m_nf <= 0) {
-		if (!m_nf || !(nf = m_nf = (int)lround(inb[3][0]))) 
-			return (inflg&1) ? (p==q || (memcpy(q, p, 8*n), 1)) : (*q=*p, 0);
-		flg = m_flg = (nf<0) ? (nf=-nf, 2) : 0;  m_edyv = edyv = (double*)calloc(m_nf=nf, 32);
-		log("qlh_alloc: %p", m_edyv);
-		Scale01 sc; sc.set_all(inb[1][0], inb[2][0], (int)lround(inb[4][0]));
-		double t, ts; if (nf==1) t = ts = .5; else t = 0.0, ts = 1.0/(double)(nf-1);
-		for (int i=0; i<nf; i++, edyv+=4, t+=ts) qlh_ini(edyv, sc.f(t), inb[5][0]); edyv = m_edyv;
-	} else { edyv = m_edyv; flg = m_flg; nf = m_nf; }
+BX_SCALC(QLHSeqFilt::sc_f0) {
+	SCALC_BXI(QLHSeqFilt); int nf = (int)lround(inb[3][0]), flg = 0;
+	if (nf<0) nf = -nf, flg = 2;  if (nf>999) nf=999;
+	bxi->m_nf = nf; bxi->m_flg = flg;
+	double *edyv = bxi->m_edyv = (double*)calloc(nf, 32);
+	Scale01 sc; sc.set_all(inb[1][0], inb[2][0], (int)lround(inb[4][0]));
+	double t, ts; sc_t psc;
+	if (nf==1) t = 	    ts = 0.5, 			psc = sc_f1;
+	else 	   t = 0.0, ts = 1.0/(double)(nf-1),	psc = sc_fn;
+	for (int i=0; i<nf; i++, edyv+=4, t+=ts) qlh_ini(edyv, sc.f(t), inb[5][0]);
+	CALC_FW(psc);
+}
+
+BX_SCALC(QLHSeqFilt::sc_f1) { SCALC_BXI(QLHSeqFilt); double *edyv = bxi->m_edyv;
+			      qlh_calc(*outb, *inb, edyv+2, edyv, n, bxi->m_flg+(inflg&1)); return 1; }
+
+BX_SCALC(QLHSeqFilt::sc_fn) {
+	SCALC_BXI(QLHSeqFilt); int nf = bxi->m_nf, flg = bxi->m_flg;
+	double *p = *inb, *q = *outb, *edyv = bxi->m_edyv;
 	qlh_calc(q, p, edyv+2, edyv, n, flg+(inflg&1)); ++flg; edyv += 4;
 	for (int i=1; i<nf; i++, edyv += 4) qlh_calc(q, q, edyv+2, edyv, n, flg);
 	return 1;
