@@ -424,6 +424,7 @@ X$>1
 X$iz$.!b.noise.nz0
 X$iz$.!e.box.filt.cH+1p
 X$+0:0=0
+X$+0:1=0
 X$+1:0<0:0
 X$+1:1<0
 X$+1:2<1
@@ -440,6 +441,7 @@ X$>1
 X$iz$.!b.noise.nz0
 X$iz$.!b.filt.=accN
 X$+0:0<1
+X$+0:1=0
 X$+1:0<0:0
 X$+1:1=0
 X$+1:2<0
@@ -454,6 +456,7 @@ X$>1
 X$iz$.!b.noise.nz0
 X$iz$.!b.filt.=accN
 X$+0:0<1
+X$+0:1=0
 X$+1:0<0:0
 X$+1:1=3
 X$+1:2<0
@@ -473,6 +476,7 @@ X$>1
 X$iz$.!b.noise.nz0
 X$iz$.!b.ar.mix.xmix
 X$+0:0=0
+X$+0:1=0
 X$+1:0=1
 X$+1:1<0:0
 X$+1:2<0
@@ -1992,6 +1996,8 @@ X$iz$.!b.ar.+
 X$iz$.!b.misc.rqosc
 X$+0:0=9
 X$+0:1=9
+X$+0:2=0
+X$+0:3=0
 X$+1:0<1
 X$+1:1<0:0
 X$+2:0<0
@@ -2500,15 +2506,67 @@ X$+3:3=0
 X$+3:4=0
 X$+3:5=0
 X$+4:0<3:0
-C.!e.box$Dctrl$ggpt2/6
-E$GVzzu%%
-E$00[s0]$01scl
+C.!e.box$Dctrl$ggpt2/6m
+E$G%zzz%%
+E$00vlim$01scl$02dev#$03chan$04base$05[i0]
 E$C5
 <Modulated wave box controlled by GUI sliders
 <[s0]: list of start positions for sliders
 <scl: mapping scale for modulation (-3...3)
 <==> .!b.map.map01 -- scales are described here
 <TODO: link to MIDI examples
+X$<6
+X$>1
+X$iz$.!b.in.vlm.vlm06
+X$iz$.!b.map.map01*6
+X$iz$.!e.box.wave.gpt2
+X$iz$.!b.ar.*
+X$+0:0<2
+X$+0:1<3
+X$+0:2<4
+X$+0:3<5
+X$+0:4<0
+X$+0:5<0
+X$+0:6<0
+X$+0:7<0
+X$+0:8<0
+X$+0:9<0
+X$+1:0=[0 0 0 0 0 0]
+X$+1:1<0:0
+X$+1:2=0.5
+X$+1:3=32
+X$+1:4<0:1
+X$+1:5=1
+X$+1:6=64
+X$+1:7<0:2
+X$+1:8=55
+X$+1:9=880
+X$+1:10<0:3
+X$+1:11=1
+X$+1:12=64
+X$+1:13<0:4
+X$+1:14=1
+X$+1:15=64
+X$+1:16<0:5
+X$+1:17=0.01
+X$+1:18=1
+X$+2:0<1:0
+X$+2:1<1:1
+X$+2:2<1:2
+X$+2:3<1:3
+X$+2:4<1:4
+X$+2:5<1
+X$+3:0<2:0
+X$+3:1<1:5
+X$+4:0<3:0
+C.!e.box.ctrl$ggpt2/6
+E$GVzzu%%
+E$00[s0]$01scl
+E$C4
+<Modulated wave box controlled by GUI sliders
+<[s0]: list of start positions for sliders
+<scl: mapping scale for modulation (-3...3)
+<==> .!b.map.map01 -- scales are described here
 X$<2
 X$>1
 X$iz$.!b.in.vls.vls06
@@ -7278,6 +7336,21 @@ N$V
 X$G3T31D00Ib
 X$b.!b.imp.^1
 X$>.!e.box.hpar.hpp135
+C.!e.4$wf
+X$#*:7cccccc::
+X$i20*0.00707596612706177:1:6lA
+X$i25*-1:1:5-?
+X$i00*1:10:x-?
+X$i01*-3:3:y-?
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i04=131
+X$i05=[0 16 1 17 2 18]
+X$i60=0.5
+X$i61=1e-05
+X$G6030000Ib
+X$b.!e.box.ctrl.gpt2/6m
 C.!e.4$wd
 X$#*aI9ccccc::
 X$x44
