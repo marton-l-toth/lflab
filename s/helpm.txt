@@ -753,17 +753,16 @@ rearranged in the MIDI config window.
 ---
 The virtual MIDI input device (dev 31) is for simulating MIDI 
 events using GUI sliders and keys on the PC keyboard. It also
-has a special control (chan.0, key 255) which is set to the key
-press speed whenever a sound is started by MIDI key press. This
-device cannot be moved and only has channel 0 -- PC keys have
-key IDs 0...127 and GUI sliders have 128...255. Key config and
-slider values can be set in midi config window (link above).
----
+has a special control (chan.0, key 255) for key press speed.
+==> 4.virtual device -- see details here
 Currently the only "special" input (that is not a single key or
 control) is the touchpad for KORG nanoPAD2 (and possibly other
-touchpads using the same logic) -- it is shownn as 3 controls
-(x,y and a "binary" control for touch/no touch).
+touchpads using the same logic) -- it is reported by NP2 as 3
+controls (x,y and a "binary" control for touch/no touch).
 ==> 4.new devices -- feature-request how-to
+To find out how the keys/sliders/knobs/buttons etc. on your
+MIDI device are numbered, turn on the "log" button in the MIDI
+config window (see link above) and experiment.
 {{{4.grab/release}}}
 You can bind control and play actions of many different shadow
 wraps to the same MIDI key/control. These bindings only become
@@ -827,6 +826,9 @@ Sh-R: set but keep constants
 Ctrl-R: kill
 Release L: stop (hold mode) otherwise no effect
 --- KEYS ---
+NOTE: the key config below is old and may chave bugs.
+Consider using the virtual MIDI device instead:
+==> etc.midi.virtual device
 If keys are configured, they are visible in the grid.
 (unless the window is very small)
 A key press (release) has the same effect as left click (rel.)
@@ -863,14 +865,19 @@ Line groups: (open/close with "<>"/"><" button on the right)
 ==> 3.midi/control -- (S)
 ==> 3.midi/play -- (S)
 {{{1.primitive box}}}
-Primitive boxes has no configurable properties, therefore their
-only GUI window is a description. They cannot be copied, moved
-or deleted. From the '+' menu (top right), the "info1" command
-can be useful, because you will get a "used by" list (on the
-console) which makes finding examples easier.
+Primitive boxes have no configurable properties, so their only
+GUI window is a description. They cannot be copied, moved or
+deleted.
 ---
 You can find primitive boxes in the ".!b" subtree.
----
+You can find examples for primitive boxes with "info1" from
+the '+' menu. The "used by" list is printed on the console.
+You can open a window from the console with typing 'W'
+followed by the full path, e.g. from box
+==> .!b.misc.rqosc -- '+'/info1, copy/paste, repeat:
+W.!e.box.osc.osc+i1
+W.!e.2.q
+==> etc.box -- general description of boxes
 If you want to implement primitive boxes yourself, please see
 s/c/zB.cc for some examples with explanation. These boxes will
 be placed in the ".!c" (contrib) subtree.
