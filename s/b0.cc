@@ -354,9 +354,9 @@ STATELESS_BOX_1(Sel2Box) { // TODO: io-ali
 //? TODO: examples
 class HistGInst : public BoxInst {
 	public:
-		HistGInst() : m_len(0) {}
+		static scf_t sc_f0, sc_f1;
+		HistGInst() : BoxInst(sc_f0), m_len(0) {}
 		virtual ~HistGInst() { if (m_len) free(m_oblk); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
 		inline void ou(double *to, double *q, int n) { memcpy(to, q+m_pos, 8*n); m_pos+=n; }
 		inline int ix(double x, int m) { 
 			int j = (int)lround((x+m_add)*m_mul);
@@ -373,23 +373,26 @@ void HistGInst::upd_blk() {
 	for (int i=0; i<m; i++) m_oblk[i] = mul * (double)m_pcnt[i];
 }
 
-int HistGInst::calc(int inflg, double** inb, double** outb, int n) {
-	int m, *q, sr = sample_rate, xf = inflg&1;  double *ob, *to = outb[0], *p = inb[0];
-	if (!m_len) { if (!n) return 0;
-		      m = m_len = ivlim((int)lround(inb[1][0]*(double)sr), 2, sr<<CFG_STATBUF_SIZ.i);
-		      m_mul = .5 * (double)m, m_add = (double)(m-1) / (double)(m);
-		      m_pos = m_total = 0;
-		      char * buf = (char*)calloc((3*m+1)&~1, 4);
-		      ob = m_oblk = (double*)buf; q = m_pcnt = (int*)(buf+8*m); }
-	else 	   {  m = m_len; ob = m_oblk; q = m_pcnt; }
-	if(xf){ while(1){ int n1 = m - m_pos;
-			  if (n<n1) { for (int i=0; i<n; i++) ++q[ix(p[i],m)]; ou(to, ob, n); return 1; }
-			  for (int i=0; i<n1; i++) ++q[ix(p[i],m)];     ou(to, ob, n1); upd_blk();
+BX_SCALC(HistGInst::sc_f0) {
+	SCALC_BXI(HistGInst); int sr = sample_rate; 
+	int m = bxi->m_len = ivlim((int)lround(inb[1][0]*(double)sr), 2, sr<<CFG_STATBUF_SIZ.i);
+	bxi->m_mul = .5*(double)m, bxi->m_add = (double)(m-1) / (double)(m);
+	char * buf = (char*)calloc((3*m+1)&~1, 4);
+	bxi->m_pos = bxi->m_total = 0; bxi->m_oblk = (double*)buf; bxi->m_pcnt = (int*)(buf+8*m);
+	CALC_FW(sc_f1);
+}
+
+BX_SCALC(HistGInst::sc_f1) {
+	SCALC_BXI(HistGInst); int m=bxi->m_len, *q=bxi->m_pcnt, xf=inflg&1;
+	double *to=outb[0], *p=inb[0], *ob = bxi->m_oblk;
+	if(xf){ while(1){ int n1 = m - bxi->m_pos;
+			  if (n<n1) { for(int i=0;i<n;i++) ++q[bxi->ix(p[i],m)]; bxi->ou(to,ob,n); return 1; }
+			  for (int i=0; i<n1; i++) ++q[bxi->ix(p[i],m)]; bxi->ou(to, ob, n1); bxi->upd_blk();
 			  if (!(n-=n1)) return 1; else to += n1, p += n1; }}
-	else {  int * q1 = q + ix(*p,m);
-		while(1){ int n1 = m - m_pos;
-			  if (n<n1) return *q1+=n, ou(to,ob,n), 1;
-			  *q1 += n1; ou(to,ob,n1); upd_blk(); 
+	else {  int * q1 = q + bxi->ix(*p,m);
+		while(1){ int n1 = m - bxi->m_pos;
+			  if (n<n1) return *q1+=n, bxi->ou(to,ob,n), 1;
+			  *q1 += n1; bxi->ou(to,ob,n1); bxi->upd_blk(); 
 			  if (!(n-=n1)) return 1; else to += n1; }}}
 
 static void sel_ini(ANode *rn) {

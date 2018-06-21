@@ -41,9 +41,9 @@ struct FEblk {
 // (in | hhv hhp hhf) #s opt x2 x1 x0 y2 y1 y0 su0 su1 ipos iwid pkx pky F/y   ie dmp
 class FEBox : public BoxInst {
         public:
-                FEBox(int flg) : m_flg(flg), m_blk(0) {}
+		static scf_t sc_f0, sc_f1;
+                FEBox(int flg) : BoxInst(sc_f0), m_flg(flg), m_blk(0) {}
                 virtual ~FEBox() { if (m_blk) free(m_blk); }
-                virtual int calc(int inflg, double** inb, double** outb, int n);
 		inline int geom_pos() const { return 1 + (m_flg & 2); }
 		inline int par_pos() const { return 15 + (m_flg & 2); }
         protected:
@@ -130,20 +130,22 @@ FEblk * FEBox::ini_blk(double **inb) {
 #define FC_5vy for (j=1, q=p+1; j<m-1; j++,q++) a += q->w * (q->y += FC_su1x);
 #define FC_5v  for (j=1, q=p+1; j<m-1; j++,q++) FC_su1x;
 #define FC_7   for (j=1, q=p+1; j<m-1; j++,q++) a+= q->w*(q->y+= (q->v+= t1[j-1]*q->cs[2]+t1[j]*q->cs[3]));
-#define FC_8 double vd=hhvp[i&hhvmsk]-qhh->v, hhp0=hhpp[i&hhpmsk], hhp=(m_flg&1)?hhp0*hhfp[i&hhfmsk] : hhp0;\
-	if (vd>0.0) vd<hhp ? (m_flg|=1) : (vd= hhp, m_flg&=~1); \
-	else       -vd<hhp ? (m_flg|=1) : (vd=-hhp, m_flg&=~1);   qhh->v+=vd; qhh->y+=vd;
-#define FC_Z to[i] = a; }} return 1;
+#define FC_8 double vd=hhvp[i&hhvmsk]-qhh->v, hhp0=hhpp[i&hhpmsk], hhp=(mfg&1)?hhp0*hhfp[i&hhfmsk] : hhp0;\
+	if (vd>0.0) vd<hhp ? (mfg|=1) : (vd= hhp, mfg&=~1); \
+	else       -vd<hhp ? (mfg|=1) : (vd=-hhp, mfg&=~1);   qhh->v+=vd; qhh->y+=vd;
+#define FC_Z to[i] = a; }} bxi->m_flg = mfg; return 1;
 
-int FEBox::calc(int inflg, double** inb, double** outb, int n) {
-	FEblk * blk = m_blk ? m_blk : ini_blk(inb);
-	int m = blk->m, k = par_pos(), parf = inflg>>k, ty = parf&1;
+BX_SCALC(FEBox::sc_f0) { SCALC_BXI(FEBox); bxi->ini_blk(inb); CALC_FW(sc_f1); }
+
+BX_SCALC(FEBox::sc_f1) {
+	SCALC_BXI(FEBox); FEblk * blk = bxi->m_blk;
+	int m = blk->m, k = bxi->par_pos(), parf = inflg>>k, ty = parf&1, mfg = bxi->m_flg;
 	double s0, t1[m], *to = *outb, **par = inb+k, *attp = par[2], att = (parf&4) ? 0.0 : att2mul(*attp);
 	FE1 *q,*p = blk->p;
 	if (ty) blk->cs_ini_1(0); else blk->cs_ini_x(0, par[0][0]);
 	if (parf&2) { if (inb[1]!=zeroblkD) ty+=4, blk->cs_ini_1(1); }
 	else	    { if (fabs(s0=par[1][0])>1e-280) ty+=2, blk->cs_ini_x(1,s0); }
-	if ((inflg&1)?*inb!=zeroblkD:**inb>1e-280) ty += 6 + 3*(m_flg&2);
+	if ((inflg&1)?*inb!=zeroblkD:**inb>1e-280) ty += 6 + 3*(mfg&2);
 	switch(ty) {
 		FC_00( 0) FC_2      FC_Tc(y)   FC_5vy 			   FC_Z;
 		FC_00( 1) FC_2      FC_Tv(y,0) FC_5vy 			   FC_Z;

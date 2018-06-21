@@ -467,37 +467,38 @@ QUICK_PZFILT(ChebF) {
 }
 
 class ChebPoleLs : public BoxInst {
-	public: 
-		ChebPoleLs(int np) : m_np(np), m_p(0) {}
+	public:
+		static scf_t sc_f0, sc_f1;
+		ChebPoleLs(int np) : BoxInst(sc_f0), m_np(np), m_p(0) {}
 		virtual ~ChebPoleLs() { free(m_p); }
-		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected: 
 		int m_np; double * m_p;
 };
 
-int ChebPoleLs::calc(int inflg, double** inb, double** outb, int n) {
-	int np = m_np, no = 2*np;
-	if (!m_p) {
-		double cr, ci, fq = inb[0][0], ripl = inb[1][0], step = 0.5*M_PI/(double)np,
-		       ang = ((double)np-0.5)*step;
-		cheb_calc_ri(&cr, &ci, ripl, np);
-		m_p = (double*)malloc(no*sizeof(double));
-		if (fq<0.0) {
-			fq = -fq; double fq2 = fq*fq;
-			for (int i=0; i<np; i++, ang-=step) {
-				double pr = -sin(ang)*fq*cr, pi = cos(ang)*fq*ci, pa2 = pr*pr + pi*pi,
-				       c = fq2/pa2, pa = c * sqrt(pa2), aa = (-2.0/M_PI)*atan(pr/pi);
-				m_p[2*i] = pa; m_p[2*i+1] = aa;
-		}} else {
-			for (int i=0; i<np; i++, ang-=step) {
-				double pr = -sin(ang) * fq * cr, pi = cos(ang) * fq * ci,
-				       pa2 = pr*pr + pi*pi, pa = sqrt(pa2), aa = (-2.0/M_PI)*atan(pr/pi);
-				m_p[2*i] = pa; m_p[2*i+1] = aa;
-			}}
-		log_n("chls ("); for (int i=0; i<no; i+=2) log_n(" %.15g,%.15g", m_p[i],m_p[i+1]); log(" )");
-	}
-        for (int i=0; i<no; i++) outb[i][0] = m_p[i];    return 0;
+BX_SCALC(ChebPoleLs::sc_f0) {
+	SCALC_BXI(ChebPoleLs); int np = bxi->m_np, no = 2*np;
+	double cr, ci, fq = inb[0][0], ripl = inb[1][0], step = 0.5*M_PI/(double)np,
+	       ang = ((double)np-0.5)*step;
+	cheb_calc_ri(&cr, &ci, ripl, np);
+	double *p = bxi->m_p = (double*)malloc(no*sizeof(double));
+	if (fq<0.0) {
+		fq = -fq; double fq2 = fq*fq;
+		for (int i=0; i<np; i++, ang-=step) {
+			double pr = -sin(ang)*fq*cr, pi = cos(ang)*fq*ci, pa2 = pr*pr + pi*pi,
+			       c = fq2/pa2, pa = c * sqrt(pa2), aa = (-2.0/M_PI)*atan(pr/pi);
+			p[2*i] = pa; p[2*i+1] = aa;
+	}} else {
+		for (int i=0; i<np; i++, ang-=step) {
+			double pr = -sin(ang) * fq * cr, pi = cos(ang) * fq * ci,
+			       pa2 = pr*pr + pi*pi, pa = sqrt(pa2), aa = (-2.0/M_PI)*atan(pr/pi);
+			p[2*i] = pa; p[2*i+1] = aa;
+		}}
+	log_n("chls ("); for (int i=0; i<no; i+=2) log_n(" %.15g,%.15g", p[i],p[i+1]); log(" )");
+	CALC_FW(sc_f1);
 }
+
+BX_SCALC(ChebPoleLs::sc_f1) { SCALC_BXI(ChebPoleLs); double *p = bxi->m_p;
+			      for (int i=0,no=2*bxi->m_np; i<no; i++) outb[i][0]=p[i]; return 0; }
 
 //? {{{!._arcF}}}
 //? Harmonic arc(s of poles&zeroes) filter

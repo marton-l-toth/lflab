@@ -23,12 +23,12 @@ struct GuiIn {
 
 class AVlimBox : public BoxInst {
 	public:
-		AVlimBox() : m_run(0) {}
+		static scf_t sc_f0, sc_f1;
+		AVlimBox() : BoxInst(sc_f0) {}
 		virtual int ini(double ** inb) = 0;
 		virtual int set_trg(double * to) = 0;
-		virtual int calc(int inflg, double** inb, double** outb, int n);
 	protected:
-		char m_no, m_vlpos, m_vlstep, m_run;
+		char m_no, m_vlpos, m_vlstep, m_rsrv;
 		double * m_st;
 };
 
@@ -93,21 +93,23 @@ void GuiIn::w_slider(double **inb, int n, int bv) {
 	gui_sliderwin(MX_L_WIN(mxid), n, v, dat);
 }
 
+BX_SCALC(AVlimBox::sc_f0) { SCALC_BXI(AVlimBox); bxi->ini(inb); CALC_FW(sc_f1); }
 
-int AVlimBox::calc(int inflg, double** inb, double** outb, int n) {
-	if (!m_run) m_run=1, ini(inb);
-	int ec, r=0, no = m_no, vstp = m_vlstep;
-	double **vlim=inb+(int)m_vlpos, trg[no];  if ((ec=set_trg(trg))) return ec;
+BX_SCALC(AVlimBox::sc_f1) {
+	SCALC_BXI(AVlimBox);
+	int r=0, no = bxi->m_no, vstp = bxi->m_vlstep;
+	double **vlim=inb+(int)bxi->m_vlpos, *pst = bxi->m_st, trg[no];
+	int ec=bxi->set_trg(trg); if(ec) return ec;
 	for (int k=0,vi=0,m=1; k<no; k++, m*=2, vi+=vstp) {
 		double vl = vlim[vi][0] * sample_length, *q = outb[k], 
-		       y = m_st[k], t = trg[k], dif = t-y, adif = fabs(dif);
+		       y = pst[k], t = trg[k], dif = t-y, adif = fabs(dif);
 		if (vl<1e-9) vl = 2.0;
-		if (adif<vl) { *q = m_st[k] = trg[k]; continue; }
+		if (adif<vl) { *q = pst[k] = trg[k]; continue; }
 		int n2 = (int)floor(adif/vl);  r |= m;  if (dif<0.0) vl = -vl;
 		if (n2<0) bug("n2=%d, adif=%.15g, vl=%.15g no=%d k=%d y=%.15g t=%.15g", n2, adif, vl, no, k, y, t);
-		if (n2>=n) { for (int i=0;  i<n;  i++) q[i]=(y+=vl);   m_st[k]=y; }
+		if (n2>=n) { for (int i=0;  i<n;  i++) q[i]=(y+=vl);   pst[k]=y; }
 		else { 	     for (int i=0;  i<n2; i++) q[i]=(y+=vl);
-			     for (int i=n2; i<n;  i++) q[i]=t;          m_st[k]=t; }}
+			     for (int i=n2; i<n;  i++) q[i]=t;         pst[k]=t; }}
 	return r;
 }
 
