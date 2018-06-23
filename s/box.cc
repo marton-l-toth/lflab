@@ -26,6 +26,7 @@ void BoxInst::rmcon(int flg, double **pp, int n) { BVFOR_JM(flg) {
 BX_SCALC(BoxInst::sc_bug)  { bug("sc_bug(%p,%d,%p,%p,%d)", abxi, inflg, inb, outb, n); }
 BX_SCALC(BoxInst::sc_zero) { return **outb=0.0, 0; }
 BX_SCALC(BoxInst::sc_cp0)  { return BOX_CP0; }
+BX_SCALC(BoxInst::sc_imp1) { double *q=*outb; *q=1.0; if(--n)memset(q+1,0,8*n); abxi->m_psc=sc_zero; return 1;}
 
 int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n) {
 	if (ocfg==0x7c01) {

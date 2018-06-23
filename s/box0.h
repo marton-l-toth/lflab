@@ -53,12 +53,11 @@ class BoxInst {
 		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
 		typedef int(scf_t)(BoxInst*, int, double**, double**, int);
 		static void rmcon(int flg, double **pp, int n); 
-		static scf_t sc_bug, sc_zero, sc_cp0;
+		static scf_t sc_bug, sc_zero, sc_cp0, sc_imp1;
 
-		BoxInst() 	  : m_psc(sc_bug) {}
-		BoxInst(sc_t fun) : m_psc(fun)	  {}
+		BoxInst(sc_t fun) : m_psc(fun) {}
                 virtual ~BoxInst() {};
-                virtual /*TODO*/ int calc(int inflg, double** inb, double** outb, int n) {
+                inline int calc(int inflg, double** inb, double** outb, int n) {
 			return (*m_psc)(this, inflg, inb, outb, n); }
 		int calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n);
 	protected:

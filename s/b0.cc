@@ -4,57 +4,75 @@
 #include "cfgtab.inc"
 
 #define IMPBOX(NM,NA,NT) class NM : public BoxInst { \
-	public: NM() : m_t(0) {} \
-		virtual int calc(int inflg, double ** inb, double ** outb, int n); \
-	        double m_t, m_arg[NA]; int m_tx[NT]; }; \
-int NM::calc(int inflg, double ** inb, double ** outb, int n)
+	public: static scf_t sc_f0, sc_f1; \
+		NM() : BoxInst(sc_f0), m_t(0) {} \
+	        double m_arg[NA]; int m_t, m_tx[NT]; }; \
+	BX_SCALC(NM::sc_f0)
 
-#define WVBOX(NM) class NM : public BoxInst { \
-	public: NM() : m_phs(NAN) {} \
-		virtual int calc(int inflg, double ** inb, double ** outb, int n); \
-	protected: double m_phs; }; \
-	int NM::calc(int inflg, double ** inb, double ** outb, int n)
+#define WVBOX(NM,PJ,MUL) class NM : public BoxInst { \
+		public: static scf_t sc_f0, sc_f1;    NM() : BoxInst(sc_f0) {}  \
+		protected: double m_phs; }; \
+	BX_SCALC(NM::sc_f0) { SCALC_BXI(NM); bxi->m_phs=MUL*inb[PJ][0]; CALC_FW(sc_f1); } \
+	BX_SCALC(NM::sc_f1)
 
-#define WVBOX1(NM, X, MUL) WVBOX(NM) { \
-	double *p = *inb, *q = *outb, x = (m_phs==m_phs)?m_phs:(MUL*inb[1][0]), y, mul = (MUL)*sample_length;\
-	if (inflg&1) { for (int i=0; i<n; i++) y=(X), x += mul*p[i], q[i] = y, x>MUL && (x-=MUL); } \
-	else { double d=mul*p[0]; for (int i=0; i<n; i++) q[i]=(X), x+=d, x>MUL && (x-=MUL); }\
-	m_phs = x; return 1; }
+#define PHLOOP(MUL) (x>MUL && (x-=MUL))
+#define WVBOX1(NM, X, MUL) WVBOX(NM,1,MUL) { \
+	SCALC_BXI(NM); double v, *p = *inb, *q = *outb, x = bxi->m_phs, mul = (MUL)*sample_length;  \
+	if (inflg&1) {     	   for(int i=0;i<n;i++)    v=(X), x+=mul*p[i], q[i]=v,  PHLOOP(MUL); } \
+	else	     { v=mul*p[0]; for(int i=0;i<n;i++) q[i]=(X), x+=v,			PHLOOP(MUL); } \
+	bxi->m_phs = x; return 1; }
 
-#define WVBOX2(NM, X, MUL) WVBOX(NM) { \
-	double *p = *inb, *q = *outb, x = (m_phs==m_phs)?m_phs:(MUL*inb[2][0]), y, mul = (MUL)*sample_length;\
-	PREP_INPUT(y, 1); \
-	if (inflg&1) { for (int i=0; i<n; i++) y=(X), x += mul*p[i], q[i]=y, x>MUL && (x-=MUL); }   \
-	else { double d=mul*p[0]; for (int i=0; i<n; i++) q[i]=(X), x+=d, x>MUL && (x-=MUL); }\
-	m_phs = x; return 1; }
+#define W2CASE(J,IX,CX,MUL) case J: IX; for(int i=0;i<n;i++) CX, PHLOOP(MUL); break
+#define WVBOX2(NM, X, MUL) WVBOX(NM,2,MUL) { \
+	SCALC_BXI(NM); double *p=*inb, *z=inb[1], *q=*outb, x=bxi->m_phs, mul=(MUL)*sample_length, y,v; \
+	switch(inflg&3){ W2CASE(0, (v=mul*p[0], y=z[0]), (	  q[i]=(X), x+=v		), MUL); \
+			 W2CASE(1, (            y=z[0]), (	     v=(X), x+=mul*p[i], q[i]=v ), MUL); \
+			 W2CASE(2, (v=mul*p[0]	      ), (y=z[i], q[i]=(X), x+=v		), MUL); \
+			 W2CASE(3, (void)0,		 (y=z[i],    v=(X), x+=mul*p[i], q[i]=v ), MUL); }\
+	bxi->m_phs = x; return 1; }
 
-#define LSBOX(NM) class NM : public BoxInst { \
-	public: NM(int x) : m_x(x), m_p(0) {}  \
-		virtual ~NM() { free(m_p); }    \
-	protected: int m_x, m_y; double * m_p;   \
-		void calc2(double *q, double **inb, int n); }; \
-class NM##O : public NM { \
-	public: NM##O(int m) : NM(m) {} \
-		virtual int calc(int inflg, double** inb, double** outb, int n) { \
-			if (!n) return 0; if (!m_p) calc2(m_p=(double*)malloc(8*m_x), inb, m_x); \
-			for (int m=m_x, j=0; j<m; j++) outb[j][0] = m_p[j]; return 0; }}; \
-class NM##T : public NM { \
-	public: NM##T() : NM(0) {} \
-		virtual int calc(int inflg, double** inb, double** outb, int n) { \
-			if (!n) return 0; if (!m_p) m_y = ivlim((int)lround(**inb),0,1024), \
-						    calc2(m_p=(double*)malloc(8*m_y), inb+1, m_y); \
-			double *q = *outb; int k = m_y-m_x; \
-			return (k>=n) ? 	 (memcpy(q, m_p+m_x, 8*n), m_x+=n, 1) \
-			      	      : ((k>0) ? (memcpy(q, m_p+m_x, 8*k), m_x+=k, memset(q+k,0, 8*(n-k)), 1) \
-					       : (*q=0.0, 0)); }}; \
-void NM::calc2(double *q, double **inb, int n)
+class ALSBox : public BoxInst {
+	public:
+		static scf_t sc_f0, sc_fo, sc_ft;
+		ALSBox(int x) : BoxInst(sc_f0), m_x(x), m_p(0) {}
+		virtual ~ALSBox() { free(m_p); }
+	protected:
+		virtual void calc2(double *q, double **inb, int n) = 0;
+		int m_x, m_y; double *m_p;
+};
+
+BX_SCALC(ALSBox::sc_f0) {
+	SCALC_BXI(ALSBox); int m = bxi->m_x;
+	if (m) { bxi->calc2(bxi->m_p=(double*)malloc(8*m), inb, m); CALC_FW(sc_fo); }
+	if ((m=ivlim((int)lround(**inb),0,1024)) > n) {
+		bxi->calc2(bxi->m_p=(double*)malloc(8*m), inb+1, m); bxi->m_y=m; CALC_FW(sc_ft); }
+	else {  double *to = outb[0]; bxi->calc2(to, inb+1, m);
+		int k = n-m; if(k) memset(to+m,0,8*k);   bxi->m_psc = sc_zero; return 1; }}
+
+BX_SCALC(ALSBox::sc_fo) { SCALC_BXI(ALSBox); double *p = bxi->m_p;
+			  for (int i=0,m=bxi->m_x; i<m; i++) outb[i][0] = p[i];   return 0; }
+
+BX_SCALC(ALSBox::sc_ft) {
+	SCALC_BXI(ALSBox);  int x = bxi->m_x, k = bxi->m_y-x;  double *to = *outb, *p0 = bxi->m_p, *p = p0+x;
+	if (n<k) return memcpy(to,p,8*n), bxi->m_x = x+n,1;
+	memcpy(to,p,8*k); if((n-=k)) memset(to+k,0,8*n);  free(p0);bxi->m_p=0; bxi->m_psc=sc_zero; return 1; }
+
+#define LSBOX(NM) class NM : public ALSBox { public: NM(int x) : ALSBox(x) {} \
+					     virtual void calc2(double *q, double **inb, int n); }; \
+		  void NM::calc2(double *q, double **inb, int n)
 
 //? {{{!._0}}}
 //? this box has no inputs, and outputs constant zero.
 //? {{{!._2}}}
 //? this box simply copies its input to its output.
-class ZeroBox : public BoxInst { public: ZeroBox() : BoxInst(sc_zero) {} };
-class CopyBox : public BoxInst { public: CopyBox() : BoxInst(sc_cp0) {} };
+//? {{{!._1}}}
+//? simple impulse (first sample is 1.0, the rest are all zero)
+//? HINT: since a simple impulse has a flat frequency graph, it is
+//? ideal for testing the frequency response of filters.
+
+class ZeroBox  : public BoxInst { public: ZeroBox()  : BoxInst(sc_zero) {} };
+class CopyBox  : public BoxInst { public: CopyBox()  : BoxInst(sc_cp0)  {} };
+class Impulse1 : public BoxInst { public: Impulse1() : BoxInst(sc_imp1) {} };
 
 //? {{{!._m01}}}
 //? Interval mapping: maps interval [0..1] to [y0..y1]
@@ -123,13 +141,6 @@ STATELESS_BOX_1(Map01VBox) {
 
 STATELESS_BOX_0(VersionBox) { **outb = (double)v_major + 0.01 * (double)v_minor; return 0; }
 
-//? {{{!._1}}}
-//? simple impulse (first sample is 1.0, the rest are all zero)
-//? HINT: since a simple impulse has a flat frequency graph, it is
-//? ideal for testing the frequency response of filters.
-STATELESS_BOX_0(Impulse1) { **outb=1.0; if (--n) memset(*outb+1, 0, 8*n); 
-			    static_cast<Impulse1*>(abxi)->m_psc = sc_zero; return 1; }
-
 //? {{{!._trI}}}
 //? triangle impulse (up and dn are in seconds)
 //? ---
@@ -137,15 +148,19 @@ STATELESS_BOX_0(Impulse1) { **outb=1.0; if (--n) memset(*outb+1, 0, 8*n);
 //? on a plot display, triangle impulses are ideal for checking
 //? if scales in wrap/shadow wrap are working as expected.
 IMPBOX(TriangImp, 3, 2) {
-	int i, n2, t = m_t;
-	if (!t) m_tx[0] = sec2samp(inb[0][0]), m_arg[0] = 1.0 / (double)m_tx[0], m_arg[2] = 0.0,
-		m_tx[1] = sec2samp(inb[1][0]), m_arg[1] = 1.0 / (double)m_tx[1], m_tx[1] += m_tx[0];
-	if (t>=m_tx[1]) return **outb=0.0, 0;
-	double d, v = m_arg[2], *q = outb[0];
-	if (t<m_tx[0]) {d=m_arg[0]; for(i=0,n2=min_i(n,m_tx[0]-t); i<n2; i++) q[i]=(v+=d); t+=n2;n-=n2;q+=n2;}
-	if (t<m_tx[1]) {d=m_arg[1]; for(i=0,n2=min_i(n,m_tx[1]-t); i<n2; i++) q[i]=(v-=d); t+=n2;n-=n2;q+=n2;}
-	if (n) memset(q, 0, 8*n);
-	m_t = t; m_arg[2] = v; return 1;
+	SCALC_BXI(TriangImp); int t0 = sec2samp(inb[0][0]), t1 = sec2samp(inb[1][0]), t2 = t0+t1;
+	if (!t2) CALC_FW(sc_imp1);
+	bxi->m_tx[0]=t0; bxi->m_tx[1]=t2; double *q = bxi->m_arg;
+	q[0] = 1.0/(double)t0; q[1] = -1.0/(double)t1; q[2] = t0>0 ? 0.0 : 1.0; CALC_FW(sc_f1); }
+
+#define TRLOOP(A,Z) for (int i=(A); i<(Z); i++) q[i]=(v+=d)
+BX_SCALC(TriangImp::sc_f1) {
+	SCALC_BXI(TriangImp); int k,j=0, t = bxi->m_t, t0 = bxi->m_tx[0], t1 = bxi->m_tx[1];
+	double d, v = bxi->m_arg[2], *q = *outb;
+	if ((k=t0-t)>0){ d=bxi->m_arg[0]; if(k>=n) { TRLOOP(0,n); goto done; } else { TRLOOP(0,k); j=k; } }
+	if ((k=t1-t)>j){ d=bxi->m_arg[1]; if(k>=n) { TRLOOP(j,n); goto done; } else { TRLOOP(j,k);      } }
+	bxi->m_psc = sc_zero; return (k>0) ? (memset(q+k, 0, 8*(n-k)), 1) : (*q=0.0, 0);
+done:   bxi->m_t = t+n; bxi->m_arg[2] = v; return 1;
 }
 
 //? {{{!._gsI}}}
@@ -153,23 +168,18 @@ IMPBOX(TriangImp, 3, 2) {
 //? wid - total width, out@(t=wid/2) = 1.0
 //? bits - precision, out@(t=0) = out@(t=wid) = 2^(-bits-1)
 IMPBOX(GaussImp, 3, 1) {
-	double y,d,dd,*q=*outb;   int t = m_t; m_t += n;
-	if(!t){ if (!n) return 0;
-		int hw = sec2samp(.5 * **inb);
-		if (hw<1) return m_tx[0]=0, *q=1.0, memset(q+1,0,8*n-8), m_t = 1;
-		double a = (double)hw, c1 = -M_LN2*inb[1][0], c = c1/(a*a);
-		y  = m_arg[0] = exp(c1);
-		d  = m_arg[1] = exp(c*(1.0-a-a));
-		dd = m_arg[2] = exp(c+c);
-		m_tx[0] = 2*hw+1;
-	} else {
-		int n2 = m_tx[0] - t;
-		if (n2<1) return *q=0.0, 0;
-		if (n2<n) memset(q+n2, 0, 8*(n-n2)), n = n2;
-		y = m_arg[0]; d = m_arg[1]; dd = m_arg[2];
-	}
+	SCALC_BXI(GaussImp); int hw = sec2samp(.5 * **inb); if (hw<1) CALC_FW(sc_imp1);
+	double a = (double)hw, c1 = -M_LN2*inb[1][0], c = c1/(a*a);
+	bxi->m_arg[0] = exp(c1); bxi->m_arg[1] = exp(c*(1.0-a-a)); bxi->m_arg[2]=exp(c+c);
+	bxi->m_tx[0] = 2*hw+1; CALC_FW(sc_f1); }
+
+BX_SCALC(GaussImp::sc_f1) {
+	SCALC_BXI(GaussImp); double y=bxi->m_arg[0], d=bxi->m_arg[1], dd=bxi->m_arg[2], *q=*outb;
+	int t = bxi->m_t, n2 = bxi->m_tx[0] - t;
+	if (n2<1) return bxi->m_psc=sc_zero, *q=0.0, 0;
+	if (n2<n) memset(q+n2, 0, 8*(n-n2)), n=n2, bxi->m_psc=sc_zero;
 	for (int i=0; i<n; i++) q[i] = y, y *= d, d *= dd;
-	m_arg[0] = y; m_arg[1] = d; return 1;
+	bxi->m_arg[0] = y; bxi->m_arg[1] = d; bxi->m_t = t+n; return 1;
 }
 
 //? {{{!._w}}}
@@ -178,11 +188,11 @@ IMPBOX(GaussImp, 3, 1) {
 //? Note: for sound sin and saw is recommended (out: -1...1)
 //? for control (with map01) use sin01 and saw01 (out: 0...1)
 #define PTLOOP(X) for (int i=0; i<n; i++) y = (phs>=1.0) ? (phs-=floor(phs), 1.0) : 0.0, phs+=(X), q[i] = y;
-WVBOX(PulseTrain) {
-	double *q = outb[0], *fqp = inb[0], y, phs = (m_phs==m_phs)?m_phs:inb[1][0];
+WVBOX(PulseTrain,1,1) {
+	SCALC_BXI(PulseTrain); double *q = outb[0], *fqp = inb[0], y, phs = bxi->m_phs;
 	if (inflg&1) { PTLOOP(fqp[i]*sample_length); }
 	else { double x = fqp[0]*sample_length; PTLOOP(x); }
-	m_phs = phs; return 1;
+	bxi->m_phs = phs; return 1;
 }
 
 double gpt_f(double x, double y) {
@@ -195,8 +205,8 @@ WVBOX1(SineWave, sin(x), 2.0*M_PI);
 WVBOX1(Sine01Wave, .5+.5*sin(x), 2.0*M_PI);
 WVBOX1(Saw01Wave, x, 1.0);
 WVBOX1(SawTWave, x+x-1.0, 1.0);
-WVBOX2(GPlsTrain, gpt_f(x, yp[i&ymsk]), 1.0);
-WVBOX2(SqWave, (x<yp[i&ymsk]) ? 1.0 : 0.0, 1.0);
+WVBOX2(GPlsTrain, gpt_f(x, y), 1.0);
+WVBOX2(SqWave, (x<y) ? 1.0 : 0.0, 1.0);
 
 //? {{{!._Fib}}}
 //? Fibonacci series generator
@@ -435,12 +445,12 @@ void b_map_init(ANode * rn) {
 	for (int i=3; i<=9; i++) ++nm[6], qmk_box(rn, nm, qa, i, 3*i+1, i, "m01x", "1");
 }
 
-#define LS_DIR(R,NM,NI,IN) ls_dir(R, QMB_ARG1(NM##BoxO), QMB_ARG0(NM##BoxT), #NM, NI, IN)
-static ANode * ls_dir(ANode *rn, qmb_arg_t qaO, qmb_arg_t qaT, const char *nm0, int ni, const char *inm) {
+#define LS_DIR(R,NM,NI,IN) ls_dir(R, QMB_ARG1(NM##Box), #NM, NI, IN)
+static ANode * ls_dir(ANode *rn, qmb_arg_t qa, const char *nm0, int ni, const char *inm) {
 	rn = qmk_dir(rn, nm0);  int l = strlen(nm0); char nm[24]; memcpy(nm, nm0, l);
-	memcpy(nm+l, "01", 3); qmk_box(rn, nm, qaO, 1, ni,   33, nm0, "i*R1", inm+4);
- 	for (int i=2; i<26; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qaO,i,ni,i+32,nm0,"1"); 
-	return memcpy(nm+l, "*",  2), qmk_box(rn, nm, qaT, 1, ni+1, 33, nm0, "i*",   inm); }
+	memcpy(nm+l, "01", 3); qmk_box(rn, nm, qa, 1, ni,   33, nm0, "i*R1", inm+4);
+ 	for (int i=2; i<26; i++) nm[l] = 48+i/10, nm[l+1] = 48+i%10, qmk_box(rn,nm,qa,i,ni,i+32,nm0,"1"); 
+	return memcpy(nm+l, "*",  2), qmk_box(rn, nm, qa, 0, ni+1, 33, nm0, "i*",   inm); }
 
 static void ls_ini(ANode *rn) {
 	LS_DIR(rn, Fib, 1, "siz$i0");		reg_bn(LS_DIR(rn, Sxy, 3, "siz$x0$x1$scl"), 8);
