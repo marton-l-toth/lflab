@@ -1,6 +1,6 @@
 #!/bin/bash
 SDIR="$PWD"
-PDIR="$HOME/lf-prod/s"
+PDIR="$HOME/tmp/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
 OPTARG="-fno-exceptions -fno-rtti -O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
@@ -8,6 +8,7 @@ while [[ -n "$cond" ]]; do
                 "")   cond="" ;;
                 "--") cond=""; shift ;;
                 -j*)  JARG=$1; shift ;;
+		"-BB") rm -r "$PDIR"; shift;;
                 "-S") SSE="-mno-sse2";  shift ;;
                 "-s") SSE="-msse2";  shift ;;
                 "-st") STFLG="y"; shift ;;

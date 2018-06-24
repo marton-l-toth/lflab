@@ -2,10 +2,10 @@
 prog Terminal xterm x-terminal-emulator -ls
 prog xterm xterm xterm -ls
 prog fte fte fte
-prog lf/l/ro app /home/tml/lf-prod/s/lf 
-prog lf/l/t1 app /home/tml/lf-prod/s/lf /home/tml/g/lflab/t/t1.lf
-prog lf/l/t2 app /home/tml/lf-prod/s/lf /home/tml/g/lflab/t/t2.lf
-prog lf/l/t3 app /home/tml/lf-prod/s/lf /home/tml/g/lflab/t/t3.lf
+prog lf/l/ro app /home/tml/tmp/lf-prod/s/lf 
+prog lf/l/t1 app /home/tml/tmp/lf-prod/s/lf /home/tml/g/lflab/t/t1.lf
+prog lf/l/t2 app /home/tml/tmp/lf-prod/s/lf /home/tml/g/lflab/t/t2.lf
+prog lf/l/t3 app /home/tml/tmp/lf-prod/s/lf /home/tml/g/lflab/t/t3.lf
 prog "Iceweasel" iceweasel iceweasel
 prog lf/inst app /usr/bin/lflab
 prog XChat xchat xchat
