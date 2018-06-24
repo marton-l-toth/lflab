@@ -47,7 +47,8 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 
 #define SCALC_BXI(T) T* bxi = static_cast<T*>(abxi)
 #define CALC_FW(F) return (*(bxi->m_psc=(F))) (bxi, inflg, inb, outb, n)
-
+#define LOCAL_BOX(V,M) BoxModel *V##_mdl = (M); char V##_spc[V##_mdl->size()]; \
+		       BoxInst  *V = V##_mdl->place_box(V##_spc);
 class BoxInst {
         public:
 		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
@@ -81,7 +82,8 @@ class BoxModel {
                 virtual ~BoxModel() {}
                 virtual BoxInst * place_box(void *to) = 0;
                 inline  BoxInst * mk_box() { return place_box(malloc(m_size)); }
-                void debug0();
+		inline int size() const { return m_size; }
+                void debug0() const;
         private:
                 int refcount;
 	protected:
@@ -126,9 +128,10 @@ class ModelPtr {
 		void z()  { if (m_p) BoxModel::unref(m_p), m_p = 0; }
 		void z1() {          BoxModel::unref(m_p), m_p = 0; }
 		bool nz() const { return !!m_p; }
-		void debug() { if (m_p) m_p->debug0(); }
+		void debug() const;
 		BoxInst * mk_box() { return m_p->mk_box(); }
-		inline void mk_boxv(BoxInst** to, int n) { for (int i=0; i<n; i++) to[i] = m_p->mk_box(); }
+		inline int size() const { return m_p->size(); }
+		void mk_boxv(char* to, int n) { for (int i=0,sz=size();i<n;i++) m_p->place_box(to), to+=sz; }
 	private:
 		BoxModel * m_p;
 };

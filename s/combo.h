@@ -12,6 +12,7 @@
 #define AX_IX_MASK 0x0fff
 #define SEQCHK if (hex2(s+1) != (p->m_dseq&255)) return BXE_GSEQ
 
+class ComboBoxInst;
 class ComboBoxModel : public BoxModel {
         public: 
                 ComboBoxModel(ConStore * cs, char * q, int nb);
@@ -21,6 +22,7 @@ class ComboBoxModel : public BoxModel {
 		inline void dsc_arg(int a) { int t = (a+1)&3, j = a>>16;
 			(t&2) ? dsc_nio(3-t, j) : dsc_nio(2+((t-1)&n_cb)+(j>>5), j&31); }
 		void set_size();
+		ComboBoxInst * place2(char *to);
 		void dump() {} // TODO 
 		int n_bx, n_cb, n_t, niof;
 		ConStore * pcs;

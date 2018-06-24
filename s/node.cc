@@ -1245,7 +1245,7 @@ void ABoxNode::ab_debug(int flg) {
 		if (p->to != this) log_n(" (bug)"); else log_n(" %s", p->fr->path255());
 	log(""); 
 d2: 	if (flg&4) m_ui.debug(); 
-	if (m_box && (flg&2)) m_box -> spec_debug();
+	if (m_box && (flg&2)) m_box->spec_debug(), m_box->debug_m();
 }
 
 ///////// trk ////////////////////////////////////////////////////////////////

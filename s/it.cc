@@ -18,8 +18,8 @@ class CFIBoxInst : public BoxInst {
                 int m_nr, m_inc_bv;
                 CFIBoxModel * m_m;
                 double ** m_in1;
-                BoxInst ** m_ppbx;
-		char * m_blk;
+		int m_siz1;
+		char *m_bxv, *m_blk;
 };
 
 class CFIBoxModel : public BoxModel {
@@ -84,8 +84,10 @@ class CFIBoxGen : public BoxGen {
                 ConStore m_cs;
 };
 
+#define CFI_IV(O) int siz1 = (O)->m_siz1; char * bxv = (O)->m_bxv
 CFIBoxInst::CFIBoxInst(CFIBoxModel * m) : BoxInst(sc_f0), m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
-CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); for (int i=0;i<m_nr;i++) BoxInst::del(m_ppbx[i]); free(m_blk); }
+CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); CFI_IV(this);
+		            for (int i=0;i<m_nr;i++) BoxInst::dtor((BoxInst*)bxv), bxv+=siz1; free(m_blk); }
 void CFIBoxInst::fill_con(double**to, int bv, unsigned char * ix) {
 	ConStore * pcs = m_m->pcs; BVFOR_JM(bv) to[j] = pcs->p(ix[j]&63); }
 
@@ -95,12 +97,13 @@ int CFIBoxInst::ini(double** inb) {
         if (!nr) return 0;
 	int rv = (nr==1) ? 1 : (2+(mo->foif>>30));
         int ff = mo->foif, nfi = ff&31, nco = (ff>>10)&31, sz_pco = nr*nco*sizeof(double);
-        char *q = m_blk = (char*)malloc((nr+nfi)*sizeof(void*) + sz_pco);
-        double *pco   = (double*)  q; q += sz_pco;
-        m_ppbx =        (BoxInst**)q; q += nr *sizeof(void*);
+	int siz1 = m_siz1 = mo->fm.size(), vsiz = siz1 * nr;
+        char *q = m_blk = (char*)malloc(nfi*sizeof(void*) + vsiz + sz_pco);
+        double *pco = (double*) q; q += sz_pco;
+        char * bxv = m_bxv =    q; q += vsiz;
         double **in1 = m_in1 = (double**) q;
         fill_con(in1, mo->ivck_bv[1], mo->fdsc);
-	mo->fm.mk_boxv(m_ppbx, nr);
+	mo->fm.mk_boxv(bxv, nr);
         if (!mo->cm.nz()) return m_inc_bv = 0, rv;
         int nci = (ff>>5)&31; unsigned char *cdsc = mo->cdsc, *fdsc = mo->fdsc;
         double *tci[nci]; fill_con(tci, mo->ivck_bv[3], cdsc);
@@ -110,8 +113,8 @@ int CFIBoxInst::ini(double** inb) {
         BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ppco[k] = in1[j] = pco+k*nr; 
 				   if (k>=nco) bug("k(%d)>=nco(%d)",k,nco);
 				   IFDBGX(EXPR) log("bv[2]: j=%d k=%d",j,k); }
-        BoxInst * cb = mo->cm.mk_box();
-        int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); BoxInst::del(cb); if (cret<0) return cret;
+	LOCAL_BOX(cb, mo->cm.rawmp());
+        int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); BoxInst::dtor(cb); if (cret<0) return cret;
         BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ibv |= ((cret>>k)&1)<<j; }
         return m_inc_bv = ibv, rv;
 }
@@ -129,22 +132,22 @@ BX_SCALC(CFIBoxInst::sc_f0) {
 #define CFI_C0  SCALC_BXI(CFIBoxInst); \
 		double **in1 = bxi->m_in1; int of = inflg&1, f1_bv = bxi->prep_in(inflg, inb)
 
-BX_SCALC(CFIBoxInst::sc_f1) { CFI_C0; return bxi->m_ppbx[0] -> calc(f1_bv|of, in1, outb, n); }
+BX_SCALC(CFIBoxInst::sc_f1) { CFI_C0; return ((BoxInst*)bxi->m_bxv) -> calc(f1_bv|of, in1, outb, n); }
 
-#define CCALC1(J,Q) if ((of = bxi->m_ppbx[J]->calc(f1_bv|of, in1, Q, n)) < 0) return of; else of &= 1
+#define CCALC1(Q) if((of = ((BoxInst*)bxv)->calc(f1_bv|of,in1,Q,n)) < 0) return of; else of&=1, bxv+=siz1
 
 BX_SCALC(CFIBoxInst::sc_fa1) {
-	CFI_C0; int incbv = bxi->m_inc_bv, nr = bxi->m_nr;
-	CCALC1(0, outb); in1[0] = outb[0];
-	for (int k=1; k<nr; k++) { BVFOR_JM(incbv) ++in1[j]; CCALC1(k, outb); }
+	CFI_C0; CFI_IV(bxi); int incbv = bxi->m_inc_bv, nr = bxi->m_nr;
+	CCALC1(outb); in1[0] = outb[0];
+	for (int k=1; k<nr; k++) { BVFOR_JM(incbv) ++in1[j]; CCALC1(outb); }
 	--nr; BVFOR_JM(incbv) in1[j] -= nr; return of;
 }
 
 BX_SCALC(CFIBoxInst::sc_fa0) {
-	CFI_C0; int incbv = bxi->m_inc_bv, nr = bxi->m_nr, j0 = nr&1; double tmp[n], *pt = tmp;
-        if(j0) {           CCALC1(0,outb);                   in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
-        for (int k=j0;;) { CCALC1(k, &pt); ++k;              in1[0]=tmp;   BVFOR_JM(incbv) ++in1[j];
-                           CCALC1(k,outb); if(++k>=nr)break; in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
+	CFI_C0; CFI_IV(bxi); int incbv = bxi->m_inc_bv, nr = bxi->m_nr, j0 = nr&1; double tmp[n], *pt = tmp;
+        if(j0) {           CCALC1(outb);                   in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
+        for (int k=j0;;) { CCALC1( &pt); ++k;              in1[0]=tmp;   BVFOR_JM(incbv) ++in1[j];
+                           CCALC1(outb); if(++k>=nr)break; in1[0]=*outb; BVFOR_JM(incbv) ++in1[j]; }
 	--nr; BVFOR_JM(incbv) in1[j] -= nr; return of;
 }
 

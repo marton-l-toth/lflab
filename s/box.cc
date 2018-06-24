@@ -44,8 +44,10 @@ int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb
 	return r;
 }
 
-void BoxModel::debug0() { log_n("%p,%d", this, this?refcount:0); }
+void BoxModel::debug0() const { log("%p,%d,%d", this, refcount, m_size); }
 void BoxModel::del(BoxModel *p) { IFDBGX(MODELDEL) log("model_del: %p",p); p->~BoxModel(); free(p); }
+void ModelPtr::debug() const { if (m_p) m_p->debug0(); else log("no model"); }
+
 
 void BoxGen::spec_debug() { log("no class-specific debug info"); }
 void BoxGen::box_window() { log("BUG: undefined box_window() p:%p, #%x", m_node, m_node?m_node->id():-1); }
