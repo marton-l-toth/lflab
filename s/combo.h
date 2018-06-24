@@ -16,10 +16,11 @@ class ComboBoxModel : public BoxModel {
         public: 
                 ComboBoxModel(ConStore * cs, char * q, int nb);
                 virtual ~ComboBoxModel();
-		virtual BoxInst * mk_box();
+		virtual BoxInst * place_box(void *to);
 		inline void dsc_nio(int i, int o) { *(eob++) = i, *(eob++) = o; }
 		inline void dsc_arg(int a) { int t = (a+1)&3, j = a>>16;
 			(t&2) ? dsc_nio(3-t, j) : dsc_nio(2+((t-1)&n_cb)+(j>>5), j&31); }
+		void set_size();
 		void dump() {} // TODO 
 		int n_bx, n_cb, n_t, niof;
 		ConStore * pcs;

@@ -53,6 +53,8 @@ class BoxInst {
 		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
 		typedef int(scf_t)(BoxInst*, int, double**, double**, int);
 		static void rmcon(int flg, double **pp, int n); 
+		static void del (BoxInst *p) { if(p) p->~BoxInst(), free(p); }
+		static void dtor(BoxInst *p) { if(p) p->~BoxInst(); }
 		static scf_t sc_bug, sc_zero, sc_cp0, sc_imp1;
 
 		BoxInst(sc_t fun) : m_psc(fun) {}
@@ -72,16 +74,18 @@ class BoxInstArg : public BoxInst {
 
 class BoxModel {
         public:
-		static void del(BoxModel *p);
+		static void del (BoxModel *p);
                 static inline void   ref   (BoxModel *p) { if (p)    ++p->refcount; }
                 static inline void unref   (BoxModel *p) { if (p && !--p->refcount) del(p); }
-                BoxModel() : refcount(1) {}
-                BoxModel(int rc) : refcount(rc) {}
+                BoxModel(int siz, int rc) : refcount(rc), m_size(siz) {}
                 virtual ~BoxModel() {}
-                virtual BoxInst * mk_box() = 0;
+                virtual BoxInst * place_box(void *to) = 0;
+                inline  BoxInst * mk_box() { return place_box(malloc(m_size)); }
                 void debug0();
         private:
                 int refcount;
+	protected:
+		int m_size;
 };
 
 extern double stat_con[32], *pstat_con[32];
@@ -131,13 +135,18 @@ class ModelPtr {
 
 template <class BXI> class Pr0BoxModel : public BoxModel {
         public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr0BoxModel<BXI>(); }
-                virtual BoxInst * mk_box() { return new BXI(); }
-	private:Pr0BoxModel() : BoxModel(2) {} };
+                virtual BoxInst * place_box(void *to) { return new (to) BXI(); }
+	private:Pr0BoxModel() : BoxModel(sizeof(BXI), 2) {} };
 
 template <class BXI> class Pr1BoxModel : public BoxModel {
         public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr1BoxModel<BXI>(k); }
-                virtual BoxInst * mk_box() { return new BXI(arg); }
-	private:Pr1BoxModel(int k) : BoxModel(2), arg(k) {}
+                virtual BoxInst * place_box(void *to) { return new (to) BXI(arg); }
+	private:Pr1BoxModel(int k) : BoxModel(sizeof(BXI), 2), arg(k) {}
                 int arg; };
 
+template <class BXI> class Pr1MBoxModel : public BoxModel {
+        public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr1MBoxModel<BXI>(k); }
+                virtual BoxInst * place_box(void *to) { return new (to) BXI(arg, (char*)to+sizeof(BXI)); }
+	private:Pr1MBoxModel(int k) : BoxModel(sizeof(BXI)+BXI::msiz(k), 2), arg(k) {}
+                int arg; };
 #endif // __qwe_box0_h__

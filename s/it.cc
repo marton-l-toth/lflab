@@ -5,32 +5,33 @@
 #include "glob.h"
 #include "util2.h"
 
-class CFIBoxModel : public BoxModel {
-        public:
-                CFIBoxModel(ConStore *pc, char *q, int ff) :
-			pcs(pc), foif(ff), fdsc((unsigned char*)q), cdsc((unsigned char*)(q+(ff&31))) {}
-                virtual BoxInst * mk_box();
-                ModelPtr fm, cm;
-                ConStore * pcs;
-                int ivck_bv[4], foif, rsrv;
-                unsigned char xdsc[2], *fdsc, *cdsc;
-};
-
+class CFIBoxModel;
 class CFIBoxInst : public BoxInst {
         public:
 		static scf_t sc_f0, sc_f1, sc_fa0, sc_fa1;
-                CFIBoxInst(CFIBoxModel * m) : BoxInst(sc_f0), m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
+                CFIBoxInst(CFIBoxModel * m);
                 ~CFIBoxInst();
         protected:
                 int ini(double** inb);
 		int prep_in(int inflg, double** inb);
-                void fill_con(double**to, int bv, unsigned char * ix) {
-                        ConStore * pcs = m_m->pcs; BVFOR_JM(bv) to[j] = pcs->p(ix[j]&63); }
+                void fill_con(double**to, int bv, unsigned char * ix);
                 int m_nr, m_inc_bv;
                 CFIBoxModel * m_m;
                 double ** m_in1;
                 BoxInst ** m_ppbx;
 		char * m_blk;
+};
+
+class CFIBoxModel : public BoxModel {
+        public:
+                CFIBoxModel(ConStore *pc, char *q, int ff) :
+			BoxModel(sizeof(CFIBoxInst), 1),
+			pcs(pc), foif(ff), fdsc((unsigned char*)q), cdsc((unsigned char*)(q+(ff&31))) {}
+                virtual BoxInst * place_box(void *to) { return new (to) CFIBoxInst(this); }
+                ModelPtr fm, cm;
+                ConStore * pcs;
+                int ivck_bv[4], foif, rsrv;
+                unsigned char xdsc[2], *fdsc, *cdsc;
 };
 
 class CFIBoxGen : public BoxGen {
@@ -83,8 +84,10 @@ class CFIBoxGen : public BoxGen {
                 ConStore m_cs;
 };
 
-BoxInst * CFIBoxModel::mk_box() { return new CFIBoxInst(this); }
-CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); for (int i=0;i<m_nr;i++) delete (m_ppbx[i]); free(m_blk); }
+CFIBoxInst::CFIBoxInst(CFIBoxModel * m) : BoxInst(sc_f0), m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
+CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); for (int i=0;i<m_nr;i++) BoxInst::del(m_ppbx[i]); free(m_blk); }
+void CFIBoxInst::fill_con(double**to, int bv, unsigned char * ix) {
+	ConStore * pcs = m_m->pcs; BVFOR_JM(bv) to[j] = pcs->p(ix[j]&63); }
 
 int CFIBoxInst::ini(double** inb) {
         CFIBoxModel *mo=m_m; if (!mo->fm.nz()) return m_nr = 0;
@@ -108,7 +111,7 @@ int CFIBoxInst::ini(double** inb) {
 				   if (k>=nco) bug("k(%d)>=nco(%d)",k,nco);
 				   IFDBGX(EXPR) log("bv[2]: j=%d k=%d",j,k); }
         BoxInst * cb = mo->cm.mk_box();
-        int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); delete(cb); if (cret<0) return cret;
+        int ibv = 0, cret = cb -> calc(0, tci, ppco, nr); BoxInst::del(cb); if (cret<0) return cret;
         BVFOR_JM(mo->ivck_bv[2]) { int k = fdsc[j]&31; ibv |= ((cret>>k)&1)<<j; }
         return m_inc_bv = ibv, rv;
 }

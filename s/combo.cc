@@ -9,7 +9,7 @@ class FeedbackBoxInst : public BoxInst {
         public:
 		static scf_t sc_first, sc_rest;
                 FeedbackBoxInst(BoxInst * sub, int niof);
-                virtual ~FeedbackBoxInst() { delete(m_sub); }
+                virtual ~FeedbackBoxInst() { BoxInst::dtor(m_sub); }
         protected:
                 int calc1(int inflg, double** inb, double** outb);
                 int calc2(int inflg, double** inb, double** outb, int i0, int n);
@@ -92,7 +92,7 @@ int FeedbackBoxInst::calc2(int inflg, double** inb, double** outb, int i0, int n
 	return n;
 }
 
-ComboBoxModel::ComboBoxModel(ConStore * cs, char * q, int nb) : n_bx(nb), pcs(cs) {
+ComboBoxModel::ComboBoxModel(ConStore * cs, char * q, int nb) : BoxModel(0,1), n_bx(nb), pcs(cs) {
 	int nc = cs->n(), ncb = (nc+63)>>5, o1=nc*sizeof(void*), o2 = o1+ncb*sizeof(void*);
 	double **ppcon = (double**)q;   pppcon = (double***)(q+o1);  boxm = (BoxModel**)(q+o2);
 	iolist = eob = (unsigned char*)(q+o2+nb*sizeof(void*)); n_cb = ncb;
@@ -101,12 +101,14 @@ ComboBoxModel::ComboBoxModel(ConStore * cs, char * q, int nb) : n_bx(nb), pcs(cs
 	IFDBGX(EXPR) log("nb=%d nc=%d n_cb=%d o1=%d o2=%d", nb, nc, n_cb, o1, o2);
 }
 
+void ComboBoxModel::set_size() { m_size = sizeof(ComboBoxInst) + ((niof&31) ? sizeof(FeedbackBoxInst) : 0); } // TODO
+
 ComboBoxModel::~ComboBoxModel() { for (int i=0; i<n_bx; i++) BoxModel::unref(boxm[i]); }
 
-BoxInst * ComboBoxModel::mk_box() {
-	ComboBoxInst * cb = new ComboBoxInst(this); // log("combo: niof = 0x%x", niof);
-	return (niof&31) ? (BoxInst*)new FeedbackBoxInst(cb, niof) : (BoxInst*)cb;
-}
+BoxInst * ComboBoxModel::place_box(void *to) {
+	if (!(niof&31)) return new (to) ComboBoxInst(this);
+	ComboBoxInst * cb = new ((char*)to+sizeof(FeedbackBoxInst)) ComboBoxInst(this);
+	return new (to) FeedbackBoxInst(cb, niof); }
 
 ComboBoxInst::ComboBoxInst(ComboBoxModel * model) : BoxInst(sc_f), m_m(model) {
 	int nb = m_m->n_bx; if (!nb) { m_bxpp = 0; return; }
@@ -116,7 +118,7 @@ ComboBoxInst::ComboBoxInst(ComboBoxModel * model) : BoxInst(sc_f), m_m(model) {
 }
 
 ComboBoxInst::~ComboBoxInst() {
-        for (int i=0,n=m_m->n_bx; i<n; i++) delete m_bxpp[i];
+        for (int i=0,n=m_m->n_bx; i<n; i++) BoxInst::del(m_bxpp[i]);
 	BoxModel::unref(m_m); }
 
 BX_SCALC(ComboBoxInst::sc_f) {

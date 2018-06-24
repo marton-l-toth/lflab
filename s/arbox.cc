@@ -168,8 +168,8 @@ class CalcBoxGen : public BoxGen {
 
 class CalcBoxModel : public BoxModel {
         public: 
-		CalcBoxModel(char * oopp, int nnxx) : op((CalcStkOp*)oopp), nx(nnxx) {}
-		virtual BoxInst * mk_box();
+		CalcBoxModel(char * oopp, int nnxx);
+		virtual BoxInst * place_box(void *to);
 		CalcStkOp * op; int nx;
 };
 
@@ -182,6 +182,9 @@ class CalcBoxInst : public BoxInst {
 		CalcBoxModel * m_m;
 		CalcStkOp * m_op;
 };
+
+CalcBoxModel::CalcBoxModel(char * oopp, int nnxx) 
+	: BoxModel(sizeof(CalcBoxInst), 1), op((CalcStkOp*)oopp), nx(nnxx) {}
 
 int CalcBoxGen::cmd(CmdBuf* cb) {
 	if (!cb->cperm(DF_EDBOX)) return NDE_PERM;
@@ -226,7 +229,7 @@ int CalcBoxGen::save2(SvArg * sv) {
 	return r;
 }
 
-BoxInst * CalcBoxModel::mk_box() { return new CalcBoxInst(this); }
+BoxInst * CalcBoxModel::place_box(void *to) { return new (to) CalcBoxInst(this); }
 
 void CalcBoxGen::upd_xyz(int c, int n) {
 	gui2.setwin(w_oid(), 'c');

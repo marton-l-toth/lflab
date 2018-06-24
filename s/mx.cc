@@ -150,7 +150,8 @@ struct MxItem {
 	void f_ini_1(double lr);
 	void f_ini_2();
 	void f_1to2() { u.f.abflg |= 10; u.f.abflg &= ~36; u.f.bx[1] = u.f.mdl->mk_box(); }
-	void f_reset() { rf_clear(); u.f.abflg=0; delete(u.f.bx[0]); delete(u.f.bx[1]); u.f.bx[0]=u.f.bx[1]=0; }
+	void f_reset() { rf_clear(); u.f.abflg=0; BoxInst::del(u.f.bx[0]); BoxInst::del(u.f.bx[1]);
+			 u.f.bx[0]=u.f.bx[1]=0; }
 	int r_isemp() const { return !m_x8 && m_nx==m_id; }
 	int c_find(int k, int f = 0);
 	int c_ins(MxItem * that, int k);
@@ -244,7 +245,7 @@ static int mx_chkv(double *p, double *q, int * pt, int tlim, double lim, int n) 
 	}}
 
 static void mx_bdel_z (MxItem * p) { if (p->u.b.trec) trec_fin_1(p->u.b.trec);
-	p->u.b.in.del2(); delete(p->u.b.bx); mx_free(p); }
+	p->u.b.in.del2(); BoxInst::del(p->u.b.bx); mx_free(p); }
 static void mx_bdel_rf(MxItem * p) { int pvi = p->m_pv, nxi = p->m_nx;
 	mx_ptr(pvi)->m_nx = nxi;  mx_ptr(nxi)->m_pv = pvi; mx_bdel_z(p); }
 static void mx_bdel_c (MxItem * p) { if (p->u.b.ctp) p->b_ccut();  mx_bdel_z (p); }

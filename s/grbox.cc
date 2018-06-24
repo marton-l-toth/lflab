@@ -435,6 +435,7 @@ void GraphBoxGen::set_mdl() {
 	for (int i=0; i<n_cp; i++) BoxModel::ref(mpp[i]=cpm), mdl->dsc_nio(1,1),
 				   mdl->dsc_arg(cparg[2*i]), mdl->dsc_arg(cparg[2*i+1]);
 	int d0=2*(nb+n_cp+n_iot), d1=mdl->eob-mdl->iolist; if (d0!=d1) bug("gr/model: %d!=%d", d0, d1);
+	mdl->set_size();
 }
 
 void GraphBoxGen::debug() {

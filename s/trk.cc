@@ -51,9 +51,10 @@ class TrackInst : public BoxInst {
 
 class TrackModel : public BoxModel {
 	public:
-		TrackModel(ANode * t_n, ANode * g_0, ANode * g_1) : BoxModel(2), tn(t_n), g0(g_0), g1(g_1) {}
+		TrackModel(ANode * t_n, ANode * g_0, ANode * g_1) : 
+			BoxModel(sizeof(TrackInst),2), tn(t_n), g0(g_0), g1(g_1) {}
 		virtual ~TrackModel() { ANode::fN(g0); ANode::fN(g1); bkm.del(); }
-		virtual BoxInst * mk_box() { return new TrackInst(this); }
+		virtual BoxInst * place_box(void *to) { return new (to) TrackInst(this); }
 		void sane(int n);
 		ANode *tn, *g0, *g1;
 		BKMK1M bkm;
