@@ -118,6 +118,7 @@ STATELESS_BOX_1(SMix) {
 	}}
 
 extern double fq_warp(double fq);
+static double clip3(double x) { return fabs(x)<1.0 ? 1.5*x-.5*x*x*x : (x<0.0 ? -1.0 : 1.0); }
 //? {{{!._a1}}}
 //? stateless box calculating a single-variable function
 FUN1_BOX(Ar1Abs, fabs(x))
@@ -135,6 +136,7 @@ FUN1_BOX(Ar1Sec2Samp, x*(double)sample_rate)
 FUN1_BOX(Ar1Samp2Sec, x*sample_length)
 FUN1_BOX(Ar1Prime17, (double)next_prime17((int)ceil(x)))
 FUN1_BOX(Ar1Fib7s,   fib7s((int)lround(x)))
+FUN1_BOX(Ar1Clp3, clip3(x))
 
 class CalcBoxGen : public BoxGen {
 	public: 
@@ -272,6 +274,7 @@ void b_ar_init(ANode * rn) {
 	qmk_box(f1, "floor", QMB_ARG0(Ar1RndF), 0, 1, 33, "a1", "1");
 	qmk_box(f1, "ceil",  QMB_ARG0(Ar1RndC), 0, 1, 33, "a1", "1");
 	qmk_box(f1, "round", QMB_ARG0(Ar1RndR), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "clip3", QMB_ARG0(Ar1Clp3), 0, 1, 33, "a1", "1");
 	qmk_box(f1, "fq_warp",  QMB_ARG0(Ar1FqWarp),  0, 1, 33, "a1", "1");
 	qmk_box(f1, "1+x/1-x",  QMB_ARG0(Ar1_1p_1m),  0, 1, 33, "a1", "1");
 	qmk_box(f1, "1-x/1+x",  QMB_ARG0(Ar1_1m_1p),   0, 1, 33, "a1", "1");
