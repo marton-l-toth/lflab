@@ -4312,7 +4312,8 @@ static void fcfg_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio config ///////////////////////////////////////////////
 
 static void acfg_skel (struct _topwin * tw, char * arg) {
-	const char *ws="[{CC%%%XXX(no audio output)}({!sspd$163As}{!rrsv$1faAr}{!ttry$114At}{!wt/w$1faAw}"
+	const char *ws="[{CC%%%XXX(no audio output)}"
+	"([3({!sspd$163As}{!rrsv$1faAr}{!ttry$114At}{!wt/w$1faAw})0(3{L<88.8}{L_-}{L>88.8})]"
 	"[{B_?$$?}{M_name:$An|_01}{en10$AN}{M_chan.c:$Ao|S2}{eo10$AO}{L##out: 0}(3{YB2^x$AB}{Mc$Ac|S1})"
 	"(3{Y0kill PA$A0}{Y1-9$A1})(3{B_stop$AZ}{B_start$AR}){B_saveCfg$~c>}])]";
 	int af = (tw->id!=0x67); tw->cmdp_len=1; tw->cmdpref[0] = '0' + af;

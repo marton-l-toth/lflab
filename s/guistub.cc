@@ -24,7 +24,7 @@ int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 1
 void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0) {
 	gui2.cre(oid, 'J'); gui2.c1(hexc1(n));
 	for (int i=0; i<=n; i++) gui2.hdbl(lbl[i]);
-	for (int i=0; i< n; i++) gui2.c2(hexc1(v0[i]>>4), hexc1(v0[i]&15));
+	for (int i=0; i< n; i++) gui2.hex2(v0[i]);
 }
 
 void GuiStub::errq_add(int ec0, const char *s) {
@@ -168,6 +168,15 @@ int GuiStub::flush_all() {
 		m_gnaq_t = snd0.total_played(); m_gnaq_n = 0; }
 	return flush();
 }
+
+static int k_to_3p(char *q, int x) {
+        if (x<=9999) return (x<=0) ? (q[0]=45+3*!x, 1) :
+                ((x>999) ? (x/=10, q[0]=x/100+48, q[1]=46) : (q[0]=46, q[1]=x/100+48), d99(q+2,x%100), 4);
+        if (x<=99999) return d99(q,x/1000), q[2]=46, q[3]=(x%1000)/100+48, 4;
+        return (x<=999999) ? (d999(q, x/1000), 3) : (q[0]=77, 1);
+}
+
+void GuiStub::wupd_k3p(int wwt, int x, int wwix) { char s[8]; wupd(wwt,wwix); c1('t'); sn(s, k_to_3p(s, x)); }
 
 void GuiStub::j_upd(int wwt, int st, int wwix) {
 	w0(); c1(wwt); if (wwix>=0) hexn(wwix, 2);

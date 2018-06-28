@@ -310,6 +310,12 @@ int ASnd::w(int flg) {
 				else 	  memcpy(buf, s, 20), memcpy(buf+20, "...", 4);
 				gui2.wupd_s('C', "%%%zz%"); gui2.sz(buf);
 			}}}
+	if (flg&4096) {
+		double z = 1e6*sample_length;
+		int bs  = (int)lround(2048.0 * ipow(0.965936328924846, kSPD()->i)),
+		    bs2 = (bs*kRSRV()->i + 50)/100, bs3 = bs2+bs, bs4 = bs3+bs;
+		gui2.wupd_k3p('<', (int)lround(z*(double)bs3));
+		gui2.wupd_k3p('>', (int)lround(z*(double)bs4)); }
 	return 0;
 }
 
@@ -319,9 +325,9 @@ int ASnd::cmd(const char *s) { CDEBUG(s); switch(*s) {
 	case 'R': if (m_flg&2) return (m_pump_st&2) ? m_pump_st|=8, close() : start();
 		  if (m_hnd) close(); return start();
 	case 'W': return w(-1);
-	case 's': cfg_setint(kSPD(),   atoi_h(s+1)); return 0; 
-	case 'r': cfg_setint(kRSRV(),  atoi_h(s+1)); return 0; 
-	case 'c': cfg_setint(kCMODE(), s[1]&3     ); return w(32);
+	case 's': cfg_setint(kSPD(),   atoi_h(s+1)); return w(4096); 
+	case 'r': cfg_setint(kRSRV(),  atoi_h(s+1)); return w(4096); 
+	case 'c': cfg_setint(kCMODE(), s[1]&3     ); return w(4128);
 	case 't': cfg_setint(kTRY_N(), atoi_h(s+1)); return 0; 
 	case 'w': cfg_setint(kTRY_MS(),atoi_h(s+1)); return 0;
 	case 'B': kBFILL()->i = s[1]&1; return w(2048);
