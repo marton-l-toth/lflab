@@ -1,3 +1,4 @@
+:syn keyword   cStatement if0 if1
 :sy match comment /^{{{.*/
 :sy match comment /^S[0-9][_0-9][_0-9]___.*(BUG)__/
 :sy match identifier /^\/\/?.*/

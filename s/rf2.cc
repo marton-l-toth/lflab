@@ -283,7 +283,7 @@ static void qlh_ini(double *ed, double f, double a) {
 	double cf = cos(2*M_PI*sample_length*f), cf_1 = cf-1.0, acf_1 = a*cf_1, e2 = 1.0 - cf;
 	ed[0] = e2 + e2; ed[1] = (M_SQRT2 * sqrt(-cf_1*cf_1*cf_1) + acf_1) / acf_1;  }
 
-static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, int md) {
+static int qlh_calc(double *q, double *p, double *yv, const double *ed, int n, int md) {
 	double x, y = yv[0], v = yv[1], e = ed[0], d = ed[1];
 	switch(md) {
 		case 0: x=*p; for (int i=0; i<n; i++) v*=d, y+=(v+=e*(  x -y)), q[i] = y; break;
@@ -291,7 +291,7 @@ static void qlh_calc(double *q, double *p, double *yv, const double *ed, int n, 
 		case 2: x=*p; for (int i=0; i<n; i++) v*=d, y+=(v+=e*(  x -y)), q[i] = x-y; break;
 		case 3:       for (int i=0; i<n; i++) v*=d, y+=(v+=e*(p[i]-y)), q[i] = p[i]-y; break;
 	}
-	yv[0] = CUT300(y); yv[1] = CUT300(v);
+	yv[0] = CUT300(y); yv[1] = CUT300(v); return 1;
 }
 
 //? {{{!._qh1}}}
@@ -413,7 +413,7 @@ BX_SCALC(QLoHiFilt::sc_f0) { SCALC_BXI(QLoHiFilt); qlh_ini(bxi->m_ed, inb[1][0],
 			     bxi->m_yv[0] = bxi->m_yv[1] = 0.0; CALC_FW(sc_f1); }
 
 BX_SCALC(QLoHiFilt::sc_f1) { SCALC_BXI(QLoHiFilt); 
-			     return qlh_calc(*outb,*inb, bxi->m_yv,bxi->m_ed, n, (inflg&1)+(bxi->m_flg&2)), 1;}
+			     return qlh_calc(*outb,*inb, bxi->m_yv,bxi->m_ed, n, (inflg&1)+(bxi->m_flg&2)); }
 
 //? {{{!._qlh*}}}
 //? sequence of quick low/high pass filters
@@ -446,7 +446,7 @@ BX_SCALC(QLHSeqFilt::sc_f0) {
 }
 
 BX_SCALC(QLHSeqFilt::sc_f1) { SCALC_BXI(QLHSeqFilt); double *edyv = bxi->m_edyv;
-			      qlh_calc(*outb, *inb, edyv+2, edyv, n, bxi->m_flg+(inflg&1)); return 1; }
+			      return qlh_calc(*outb, *inb, edyv+2, edyv, n, bxi->m_flg+(inflg&1)); }
 
 BX_SCALC(QLHSeqFilt::sc_fn) {
 	SCALC_BXI(QLHSeqFilt); int nf = bxi->m_nf, flg = bxi->m_flg;

@@ -51,7 +51,7 @@ int FeedbackBoxInst::calc1(int inflg, double** inb, double** outb) {
 	memcpy(pou, outb, m_no*sizeof(double*));
 	for (int i=0; i<nf; i++) pin[m_ni+i] = zeroblkD;
 	for (int i=0; i<nf; i++) pou[m_no+2*i] = dly + i, pou[m_no+2*i+1] = y0 + i;
-	int r = m_sub->calc(inflg | ((1<<ni1) - (1<<m_ni)), pin, pou, 1); if (r<1) return r;
+	int r = m_sub->calc(inflg | ((1<<ni1) - (1<<m_ni)), pin, pou, 1); if0 (r<0) return r;
 	m_chs = 512;
 	for (int i=0; i<nf; i++) {
 		int t = (int)lround((double)sample_rate * dly[i]);
@@ -72,13 +72,13 @@ int FeedbackBoxInst::calc1(int inflg, double** inb, double** outb) {
 }
 
 int FeedbackBoxInst::calc2(int inflg, double** inb, double** outb, int i0, int n) {
-	int k, ni1 = m_ni+m_nf, no1 = m_no+2*m_nf, c = m_chs, cpn[m_nf];
-	double *pin[ni1], *pou[no1], *cpt[m_nf], *cps[m_nf];
-	memset(cpn, 0, m_nf*sizeof(int));
+	int k, nf = m_nf, ni1 = m_ni+nf, no1 = m_no+2*nf, c = m_chs, cpn[nf];
+	double *pin[ni1], *pou[no1], *cpt[nf], *cps[nf];
+	memset(cpn, 0, nf*sizeof(int));
 	if (n>c) n = c;
 	for (int i=0, f=inflg; i<m_ni; i++,f>>=1) pin[i] = inb[i] + (i0 &- (f&1));
 	for (int i=0; i<m_no; i++) pou[i] = outb[i] + i0;
-	for (int i=0; i<m_nf; i++) {
+	for (int i=0; i<nf; i++) {
 		int *p = m_tjb + 3*i, t = p[0], j = p[1], jj = (j>=c ? j-c : j+t);
 		double * q = m_buf + p[2];
 		pin[m_ni+i] = q + j; pou[m_no+2*i] = junkbuf; pou[m_no+2*i+1] = q + jj;
@@ -87,8 +87,8 @@ int FeedbackBoxInst::calc2(int inflg, double** inb, double** outb, int i0, int n
 		j += n; if ((k=j-c-t)>=0) j = k; p[1] = j;
 	}
 	int r = m_sub->calc(inflg | ((1<<ni1) - (1<<m_ni)), pin, pou, n);
-	if (r<0) return r; else BoxInst::rmcon(~r&m_omsk, pou, n);
-	for (int i=0; i<m_nf; i++) if (cpn[i]) memcpy(cpt[i], cps[i], cpn[i]);
+	if0 (r<0) return r; else BoxInst::rmcon(~r&m_omsk, pou, n);
+	for (int i=0; i<nf; i++) if (cpn[i]) memcpy(cpt[i], cps[i], cpn[i]);
 	return n;
 }
 
@@ -136,13 +136,14 @@ BX_SCALC(ComboBoxInst::sc_f) {
 	for (int i=0; i<n_tb; i++) ppp[i] = pp, pp += 32;
 	const unsigned char *s = mdl->iolist;
 	for (int i=0; i<n_b; i++) {
-		int ifg = 0, ni = *(s++), no = *(s++), omsk = (1<<no)-1, ih, il;
+		int ifg = 0, ni = *(s++), no = *(s++), ih, il;
 		for (int j=0; j<ni; j++) iarg[j] = pblk[ih=s[0]][il=s[1]],
 					 ifg |= ((flg[ih]>>il)&1) << j, s += 2;
-		for (int j=0; j<no; j++) oarg[j] = pblk[ih=s[2*j]][il=s[2*j+1]];
-		int rv = bxpp[i]->calc(ifg, iarg, oarg, n); if (rv<0) return rv;
-		BVFOR_JM( rv & omsk) flg[s[2*j]] |=  (1u << s[2*j+1]);
-		BVFOR_JM(~rv & omsk) flg[s[2*j]] &= ~(1u << s[2*j+1]);
+		for (int j=0; j<no; j++) oarg[j] = pblk[s[2*j]][s[2*j+1]];
+		int rv = bxpp[i]->calc(ifg, iarg, oarg, n); if0 (rv<0) return rv;
+		for (int j=0; j<no; j++, rv>>=1) {
+			unsigned int *pf = flg+s[2*j], f = *pf, of = rv&1, msk = 1u << s[2*j+1];
+			*pf = (f & ~msk) | (msk &- of); }
 		s += 2*no;
 	}
 	return (int) flg[1];

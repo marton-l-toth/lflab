@@ -79,10 +79,37 @@ STATELESS_BOX_0(CrossMix) {
 
 //? {{{!._smx}}}
 //? mixer, output is a1*b1 + a2*b2 + ... + a<n>*b<n>
-#define SMXC(J,X) case J: for (int i=0;i<n;i++) to[i] = (X);  return 1
+
+#define SMX(X) for (int i=0;i<n;i++) to[i] = (X);  return 1
+static int smx2_cax (double *to, int n, double c, double x, double *p)   { SMX(c+x*p[i]); }
+static int smx2_cxx (double *to, int n, double c, double *p, double *q) { SMX(c+p[i]*q[i]); }
+static int smx2_axby(double *to, int n, double x, double y, double *p, double *q) { SMX(x*p[i]+y*q[i]); }
+static int smx2_xxby(double *to, int n, double x, double *z, double *p, double *q) { SMX(x*z[i]+p[i]*q[i]); }
+STATELESS_BOX_0(SMix2) {
+	double *z = outb[0];
+	switch(inflg&15) {
+		case  0: return *z=inb[0][0]*inb[1][0] + inb[2][0]*inb[3][0], 0;
+		case  1: return smx2_cax (z,n, inb[2][0]*inb[3][0], inb[1][0], inb[0]);
+		case  2: return smx2_cax (z,n, inb[2][0]*inb[3][0], inb[0][0], inb[1]);
+		case  3: return smx2_cxx (z,n, inb[2][0]*inb[3][0], inb[0],    inb[1]);
+		case  4: return smx2_cax (z,n, inb[0][0]*inb[1][0], inb[3][0], inb[2]);
+		case  8: return smx2_cax (z,n, inb[0][0]*inb[1][0], inb[2][0], inb[3]);
+		case 12: return smx2_cxx (z,n, inb[0][0]*inb[1][0], inb[2],    inb[3]);
+		case  5: return smx2_axby(z,n, inb[1][0], inb[3][0], inb[0], inb[2]);
+		case  6: return smx2_axby(z,n, inb[0][0], inb[3][0], inb[1], inb[2]);
+		case  9: return smx2_axby(z,n, inb[1][0], inb[2][0], inb[0], inb[3]);
+		case 10: return smx2_axby(z,n, inb[0][0], inb[2][0], inb[1], inb[3]);
+		case  7: return smx2_xxby(z,n, inb[3][0], inb[2], inb[0], inb[1]);
+		case 11: return smx2_xxby(z,n, inb[2][0], inb[3], inb[0], inb[1]);
+		case 13: return smx2_xxby(z,n, inb[1][0], inb[0], inb[2], inb[3]);
+		case 14: return smx2_xxby(z,n, inb[0][0], inb[1], inb[2], inb[3]);
+		case 15: { double *px = inb[0], *qx = inb[1], *py = inb[2], *qy = inb[3];
+			   for (int i=0;i<n;i++) z[i] = px[i]*qx[i]+py[i]*qy[i]; return 1; }}} // no it doesn't
+
+#define SMXC(J,X) case J: SMX(X)
 #define SMXc(J) (x[J]*p[J][i])
 #define SMXV(J) (q[J][i]*r[J][i])
-STATELESS_BOX_1(SMix) {
+STATELESS_BOX_1(SMix34) {
 	double c = 0.0, *to = outb[0], x[4], *p[4], *q[4], *r[4];
 	int flg = 0, ni = s_arg(abxi)*2, f = inflg;
 	for (int j,i=0; i<ni; i+=2, f>>=2) { switch(f&3) {
@@ -92,23 +119,20 @@ STATELESS_BOX_1(SMix) {
 		case 3: j = (flg>>3)&3; q[j] = inb[i]; r[j] = inb[i+1]; flg+=8; break;
 	}}
 	switch(flg) {
-		SMXC(0002, SMXc(0) + SMXc(1));
 		SMXC(0003, SMXc(0) + SMXc(1) + SMXc(2));
 		SMXC(0004, SMXc(0) + SMXc(1) + SMXc(2) + SMXc(3));
-		SMXC(0011, SMXV(0) + SMXc(0));
 		SMXC(0012, SMXV(0) + SMXc(0) + SMXc(1));
 		SMXC(0013, SMXV(0) + SMXc(0) + SMXc(1) + SMXc(2));
-		SMXC(0020, SMXV(0) + SMXV(1));
 		SMXC(0021, SMXV(0) + SMXV(1) + SMXc(0));
 		SMXC(0022, SMXV(0) + SMXV(1) + SMXc(0) + SMXc(1));
 		SMXC(0030, SMXV(0) + SMXV(1) + SMXV(2));
 		SMXC(0031, SMXV(0) + SMXV(1) + SMXV(2) + SMXc(1));
 		SMXC(0040, SMXV(0) + SMXV(1) + SMXV(2) + SMXV(3));
 		case 0100: return *to=c, 0;
-		SMXC(0101, c + SMXc(0));
+		case 0101: return smx2_cax(to, n, c, x[0], p[0]); // SMXC(0101, c + SMXc(0));
 		SMXC(0102, c + SMXc(0) + SMXc(1));
 		SMXC(0103, c + SMXc(0) + SMXc(1) + SMXc(2));
-		SMXC(0110, c + SMXV(0));
+		case 0110: return smx2_cxx(to, n, c, q[0], r[0]); // SMXC(0110, c + SMXV(0));
 		SMXC(0111, c + SMXV(0) + SMXc(0));
 		SMXC(0112, c + SMXV(0) + SMXc(0) + SMXc(1));
 		SMXC(0120, c + SMXV(0) + SMXV(1));
@@ -283,9 +307,9 @@ void b_ar_init(ANode * rn) {
 	qmk_box(f1, "prime17",  QMB_ARG0(Ar1Prime17),  0, 1, 33, "a1", "1");
 	qmk_box(f1, "fib7s",    QMB_ARG0(Ar1Fib7s),    0, 1, 33, "a1", "1");
 	qmk_box(mx, "xmix", QMB_ARG0(CrossMix), 0, 3, 33, "xmx", "i*R*1", "x$y$t", "qqq%%q");
-	qmk_box(mx, "mix2", QMB_ARG1(SMix), 2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
-	qmk_box(mx, "mix3", QMB_ARG1(SMix), 3, 6, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3");
-	qmk_box(mx, "mix4", QMB_ARG1(SMix), 4, 8, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3$a4$b4");
+	qmk_box(mx, "mix2", QMB_ARG0(SMix2),  2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
+	qmk_box(mx, "mix3", QMB_ARG1(SMix34), 3, 6, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3");
+	qmk_box(mx, "mix4", QMB_ARG1(SMix34), 4, 8, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3$a4$b4");
 }
 
 int setbox_calc(ABoxNode * nd, BoxGen * _) { nd->m_box = new CalcBoxGen(nd); return 2; }

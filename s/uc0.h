@@ -6,6 +6,9 @@
 #define ASIZ(A) ((int)(sizeof(A) / sizeof(A[0])))
 #define UNUSED __attribute__((unused))
 
+#define if0(X)   if(__builtin_expect((X),0))
+#define if1(X)   if(__builtin_expect((X),1))
+
 static inline int    min_i(int    x, int    y) { return x<y ? x : y; }
 static inline double min_d(double x, double y) { return x<y ? x : y; }
 static inline int    max_i(int    x, int    y) { return x>y ? x : y; }
