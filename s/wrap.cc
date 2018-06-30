@@ -1719,8 +1719,11 @@ CH(rvt){ANode * nd = cb->lookup(s+1); if (!nd) return BXE_ARGLU;
 	return cb->perm(nd, DF_EDBOX) ? STC_BOX(nd, SWrap)->set_trg(p) : NDE_PERM; }
 
 #define DDIV(X,Y) ((double)(X)/(double)(Y))
-CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) return BXE_PARSE;
-	int mxi = -1, t = clk0.ev2('%'), tm=INT_MAX, tM=-1, ts = 0;
+CH(spt){int nk, ni, nj, sn, r; const char *s0 = s+1;
+	while(*s && *s!=':') ++s;   sn = s+1-s0;    if (!*s) return BXE_PARSE;
+	r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) return BXE_PARSE;
+	int mxi = -1, t = clk0.ev2('%');
+	int64_t tm=0x7fffeeeeffffeeeeLL, tM=-1, ts = 0;
 	double m=0.0,  buf[2*nj];
 	for (int k=0; k<nk; k++) {
 		if (mxi>0) mx_del(mxi); if ((mxi = p->mx1(WRF_MONO))<0) return mxi;
@@ -1731,7 +1734,7 @@ CH(spt){int nk, ni, nj, r = sscanf(s+1, "%d %d %d", &nk, &ni, &nj); if (r<0) ret
 		if (tc<tm) tm=tc; if (tc>tM) tM = tc; ts += tc;
 	}
 	clk0.ev2(';'); int ij = ni * nj;
-	log("perfstat: tm=%g tM=%g tA=%g max=%.15g", DDIV(tm,ij), DDIV(tM,ij), DDIV(ts,ij*nk), m);
+	write(2,s0,sn); log(" tm=%g tM=%g tA=%g max=%.15g", DDIV(tm,ij), DDIV(tM,ij), DDIV(ts,ij*nk), m);
 	mx_del(mxi); return 0;
 }
 
