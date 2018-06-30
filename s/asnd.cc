@@ -262,7 +262,7 @@ void ASnd::cpf_pump(ASnd *p) {
 	short buf[bsc]; p->play2(buf, nf); write(p->m_pump_ofd, buf, 2*bsc); clk0.pump_y(); }
 
 void ASnd::cpf_true(ASnd *p) {
-	int nf = clk0.f2play(2); if (!nf) return;
+	int nf = clk0.f2play(2); if (nf<=0) { if (nf) gui_errq_add(AUE_NEGP), p->start(1); return; }
 	short buf[nf*p->m_cfg.nch]; p->play2(buf, nf);
 	int ec = p->play_and_adj(buf, nf, 0); if (ec<0)  gui_errq_add(ec), p->start(1); }
 
