@@ -152,7 +152,7 @@ BX_SCALC(CFIBoxInst::sc_fa0) {
 }
 
 CFIBoxGen::CFIBoxGen(ABoxNode *nd) : BoxGen(nd), m_fbx(0),m_cbx(0), m_ni(1),m_nif(1),m_nic(0),m_noc(0),
-	m_f09(0), m_dseq(0), m_wnum(0.0) { m_xin[0]=70; }
+	m_f09(0),m_dseq(0),m_wnum(0.0) { m_xin[0]=70; m_xin[1]=69; memset(m_fin,69,30); memset(m_cin,69,30); }
 
 void CFIBoxGen::set_mdl() {
 	int nic = m_nic, nif = m_nif;

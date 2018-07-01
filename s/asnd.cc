@@ -253,7 +253,8 @@ int ASnd::aux_pump() {  int nf = m_bs, bsc = nf*m_cfg.nch;  short buf[bsc]; m_pu
 
 void ASnd::cpf_bug(ASnd *p)  { bug("cpf_bug() called"); }
 void ASnd::cpf_mute(ASnd *p) {
-	int nf = clk0.f2play(1); if (!nf) return; else p->play2((short*)junkbufC, nf);
+	int nf = clk0.f2play(1); if (nf<=0) { if (nf) gui_errq_add(AUE_NEGP), p->start(1); return; }
+	p->play2((short*)junkbufC, nf);
 	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
 
 void ASnd::cpf_pump(ASnd *p) {
