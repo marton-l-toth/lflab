@@ -1711,19 +1711,24 @@ static void dabmp_upd(struct _ww_t * ww, const char * dat, int nf) {
 
 #define CLOG if (errtemp<1000) errtemp+=20, LOG
 static void tlog_cmd(const char * h16) {
-	static int maxv = 0, cnt = 0, errtemp = 0, lt = -1, nf = 0;
+	static int cnt = 0, maxv = 0, vtot = 0, errtemp = 0, lt = -1, nf = 0, maxcnt = 0, lastmax = 0;
 	unsigned int *q = tlog_cp(h16, 0), x0 = *q;
 	if (errtemp) --errtemp;
 	if (x0>0xfffeffff) { CLOG("tlog_cp: \"%s\": error %d", h16,  x0 & 65535); return; }
 	char bbuf[32]; int i, n = (int)x0, j=0, m=0; //, lt = -1;
 	for (i=2; i<=n; i+=2) {
 		int v, c = q[i]&127, t = (q[i]>>7)&0x7fffff;
+		if (c==35&&cnt) { 
+			if ((++maxcnt>3)|(4*maxv>5*lastmax)) v=lastmax=maxv, maxcnt=maxv=0;
+			else v=vtot/cnt;
+			bbuf[j]=min_i(v, 99), cnt=vtot=0, j=j<31?j+1:(++m,0);continue; }
 		if ((c|33)!='q') { if (lt>=0) (c=='K') ? (lt=-1,nf=0) : (lt+=t); continue; }
 		cpu_austat = (cpu_austat&2) | (1 & ~c);
 		if (!(c&32)) {  if (lt>=0) { CLOG("tlog: unexp %c",c); } nf = q[i+1]; lt = t|-!nf; continue; }
 		if (lt<0 || !nf) { CLOG("tlog: unexp '%c' (0x%x)", c<32?63:c, c); v = 0; lt=-1; nf=0; }
-		else { v = ((51 * lt) / nf)>>8; lt = -1; nf = 0; if (v>maxv) maxv = v; }
-		if (++cnt>3) cnt = 0, bbuf[j] = min_i(maxv, 99), maxv = 0, j = j<31 ? j+1 : (++m,0);
+		else { v = ((51 * lt) / nf)>>8; lt = -1; nf = 0; if (v>maxv) maxv = v; vtot += v; }
+		++cnt;
+	//	if (++cnt>3) cnt = 0, bbuf[j] = min_i(maxv, 99), maxv = 0, j = j<31 ? j+1 : (++m,0);
 	}
 	if (!j || cnt) { CLOG("tlog_cmd: j=%d, cnt=%d", j, cnt); }
 	if (j|m) { if (m) { CLOG("tipe_in: lots of input, m=%d", m), dabmp_upd(NULL, bbuf+j, 32-j); }

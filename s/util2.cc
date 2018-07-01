@@ -150,7 +150,7 @@ int BufClock::ini(int bits, int flg, int jst, int jsn) {
 	static clockid_t cv[2] = { CLOCK_MONOTONIC, CLOCK_MONOTONIC_RAW };
         if (!(m_buf = (unsigned int *)map_wdir_shm('@', 8<<bits, 3))) return -1;
 	m_bits = bits, m_ix_msk = (2<<bits)-1, m_seq_sh = 29-bits; m_cf_jst=jst, m_cf_jsn=jsn;
-	m_buf[0] = 0x40000021; m_g_ix = m_ix = 2u<<bits; m_gcnt = 0;
+	m_buf[0] = 0x40000021; m_g_ix = m_ix = 2u<<bits; m_gcnt = 0; m_gbsiz = 4;
 	if (clock_gettime(m_ty=cv[1& flg], &m_ts)>=0) return 0;
 	if (clock_gettime(m_ty=cv[1&~flg], &m_ts)>=0) return 1; else return -2;
 }
@@ -169,6 +169,7 @@ int BufClock::set(int t) {
 
 void BufClock::bcfg(int rate, int bs, int bs2, int fmax) {
         double npf = 1e9 / (double)rate; int e,f,fe;
+	m_gbsiz = max_i(1, (3 * rate / bs) >> 6);
         m_cf_nspf  = (int)lround(     npf);   m_cf_empty = e = (int)lround(npf*(double)(  bs+bs2));
         m_cf_ns16f = (int)lround(16.0*npf);   m_cf_full  = f = (int)lround(npf*(double)(2*bs+bs2));
         m_cf_fmax = fmax; fe = f-e; m_cf_jtmin = m_cf_half = e+(fe>>1); m_cf_stmin = e+(fe>>3); }
