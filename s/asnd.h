@@ -26,7 +26,7 @@ class ASnd {
         protected:
 		static void cpf_mute(ASnd*), cpf_true(ASnd*), cpf_liar(ASnd*), cpf_pump(ASnd*), cpf_bug(ASnd*);
 		int start1(int sc_lim), try_start(int n);
-		void cfg_pre(int spd, int rsrv, int liar);
+		void cfg_pre(int spd, int rsrv, int adjlim, int liar);
 		int start_buf(int tlim);
 		int adj2(int dif, unsigned int *to);
 		void err3(int flg);
@@ -35,14 +35,14 @@ class ASnd {
 		int e_msg_re(int e1, const char *s, int re);
 		int play_and_adj(short *buf, int nf, int opt);
 		ASND_KF(NAME)  ASND_KF(CHCFG)  ASND_KF(SPD)     ASND_KF(RSRV)  ASND_KF(CLKLIM)
-		ASND_KF(TRY_N) ASND_KF(TRY_MS) ASND_KF(KILL_PA) ASND_KF(CMODE) ASND_KF(BFILL)
+		ASND_KF(TRY_N) ASND_KF(TRY_MS) ASND_KF(KILL_PA) ASND_KF(CMODE) ASND_KF(BFILL) ASND_KF(ADJLIM)
 
                 snd_pcm_t * m_hnd;
 		void (*m_cur_cpf)(ASnd*);
 		long long m_total_played;
 		au16w_t m_cfg;
 		char m_hcp_lbl[8];
-		int m_bufsiz, m_n_chan, m_mxid, m_hcp, m_hcp_s0;
+		int m_bufsiz, m_n_chan, m_mxid, m_hcp, m_hcp_s0, m_adj_lim;
 		int m_bs, m_bs2, m_hwbs_trg, m_swb_siz, m_cfg_offs, m_flg; // flg: 1:liar 2:pump 8:fill 32:aux
 		int m_pump_st, m_pump_ofd, m_pump_et, *m_pump_pcp; // st: 1-r2r 2-runn 4-wt4up 8:re 256*#try
 		int m_aux_jid;

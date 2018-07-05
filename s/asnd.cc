@@ -107,7 +107,7 @@ int ASnd::start(int flg, int mxid, int *ppcp) {
 	int n = kTRY_N()->i;  
 	if (ppcp) m_pump_pcp=ppcp, m_pump_et=0, m_cfg_offs = (m_flg=flg&32) ? &CFG_AX_NAME-&CFG_AU_NAME : 0;
 	if (flg&1) flg|=m_flg&32, n = (n+1)>>1; else if (mxid>=0) m_mxid = mxid;
-	cfg_pre(kSPD()->i, kRSRV()->i, ((flg&32)?34:kCMODE()->i)+8*(kBFILL()->i) );
+	cfg_pre(kSPD()->i, kRSRV()->i, kADJLIM()->i, ((flg&32)?34:kCMODE()->i)+8*(kBFILL()->i) );
 	if (flg&64) return set_vol(92),0; if (m_flg&2) return pump_launch(n,(m_flg>>2)&8);
 	double clf = (n<2) ? 1.0 : exp(M_LN10 / (double)(n-1)), sclim = 1e3*(double)kCLKLIM()->i;
 	int e=-1, us = 1000 * kTRY_MS()->i;   m_flg &= ~2;
@@ -117,10 +117,10 @@ int ASnd::start(int flg, int mxid, int *ppcp) {
 	return err(e, "start", AUE_START), w(-1), 0;
 }
 
-void ASnd::cfg_pre(int spd, int rsrv, int mode) {
+void ASnd::cfg_pre(int spd, int rsrv, int adjlim, int mode) {
 	int bs  = m_bs  = (int)lround(2048.0 * ipow(0.965936328924846, spd)),
-	    bs2 = m_bs2 = (bs*rsrv+50)/100,  bs3;
-	IFDBG log("cfg_pre: spd=%d rsrv=%d mode=%d", spd, rsrv, mode);
+	    bs2 = m_bs2 = (bs*rsrv+50)/100,  bs3; m_adj_lim = m_bs * adjlim;
+	IFDBG log("cfg_pre: spd=%d rsrv=%d mode=%d adjlim=%d", spd, rsrv, mode, m_adj_lim);
 	if (!(mode&32)) clk0.bcfg(sample_rate, bs, bs2, (3*bs)>>1);
 	m_flg &= ~15; m_flg |= mode;
 	if (mode&3) bs3 = bs+(mode&3)*bs2,	    m_cur_cpf = (mode&2) ? &cpf_mute : &cpf_liar;
@@ -214,7 +214,7 @@ int ASnd::e_msg_re(int e1, const char *s, int re) {
 	return log("audio/%s: %s (R: %s)", s, snd_strerror(e1), e2<0 ? snd_strerror(e2) : "OK"), e2;
 }
 
-int ASnd::adj2(int dif, unsigned int *to) { int adj = ivlim(dif/16,-960000,960000);
+int ASnd::adj2(int dif, unsigned int *to) { int alim=m_adj_lim, adj = ivlim(dif,-alim,alim);
 					    clk0.add(adj); *to = (unsigned int)adj; clk0.gcond(); return 0; }
 
 void ASnd::err3(int flg) { if (flg&  1) gui_errq_add(AUE_LTNOSEE);
@@ -287,6 +287,7 @@ int ASnd::w(int flg) {
 	if (flg&   1) gui2.cre(oid, 'S'); else gui2.setwin(oid, 'S');
 	if (flg&   2) gui2.wupd_i2('s', kSPD()->i);
 	if (flg&   4) gui2.wupd_i2('r', kRSRV()->i);
+	if (flg&8192) gui2.wupd_i2('a', kADJLIM()->i);
 	if (flg&   8) gui2.wupd_s('n', kNAME()->s);
 	if (flg&  16) gui2.wupd_s('o', kCHCFG()->s);
 	if (flg&  32) gui2.wupd_c48('c', kCMODE()->i);
@@ -328,6 +329,7 @@ int ASnd::cmd(const char *s) { CDEBUG(s); switch(*s) {
 	case 'W': return w(-1);
 	case 's': cfg_setint(kSPD(),   atoi_h(s+1)); return w(4096); 
 	case 'r': cfg_setint(kRSRV(),  atoi_h(s+1)); return w(4096); 
+	case 'a': cfg_setint(kADJLIM(),atoi_h(s+1)); return 0;
 	case 'c': cfg_setint(kCMODE(), s[1]&3     ); return w(4128);
 	case 't': cfg_setint(kTRY_N(), atoi_h(s+1)); return 0; 
 	case 'w': cfg_setint(kTRY_MS(),atoi_h(s+1)); return 0;
