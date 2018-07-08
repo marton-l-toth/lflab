@@ -659,7 +659,7 @@ static int gp_inpipe = -1, gp_outpipe = -1, gp_pid = 0, gp_w_id = 0, gp_len = 0,
 static double gp_ctr = 0.5, gp_rad = 0.5;
 static char gp_w_title[64], gp_f_title[64];
 static const char gp_rgb[] = "#ff0000\0#00a000\0#0000ff\0#a08000\0#009090\0#e000e0\0#000000",
-	     	  wrk_dflg_s[] = "1:qstat 2:plot 4:cmd";
+	     	  wrk_dflg_s[] = "(hex) 1:qstat 2:plot 4:cmd 8:gpout0 10:gpout1";
 static int gp_tlog_n = 0;
 static unsigned int *gp_tlog = NULL, *gp_tlog_tab;
 static double * gp_ptf_dat = 0;
@@ -1033,7 +1033,7 @@ echk:	return (fabs(g_c-gp_ctr)>1e-11 || fabs(g_r-gp_rad)>1e-11) ? (gp_ctr=g_c, g
 }
 
 static int gp_cmd(const char *s) {
-	// LOG("gp_cmd: \"%s\"", s); // TODO: debug_flg
+	if (wrk_dflg&8) LOG("gp_cmd: \"%s\"", s);
 	int r; switch(*s) { 
 		case 'T': return ((r=gp_tlog_read(1, s+1))<0) ? r : gp_plot(1);
 		case 't': return ((r=gp_tlog_read(0, s+1))<0) ? r : gp_plot(1);
@@ -1065,11 +1065,12 @@ static void wrk_cmd_l(char *s, int n, int src) {
 static void gp_out() {
 	static int state = 37;
 	signed char buf[4096];
-	int i, c, r = read(gp_outpipe, buf, 4096);
+	int i, c, r = read(gp_outpipe, buf, 4096), df = wrk_dflg;
 	if (r<=0) return LOG("gp_pipe/read: %s", r ? strerror(errno) : "zero"), set_fd(&gp_outpipe, -1, 0),
 			 (void)kill(gp_pid,9);
-//  	LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r-(buf[r-1]==10)]=0,buf) : "...");
-	for (i=0;i<r;i++) { if	    ((c=buf[i])==state) state+=19;
+  	if (df&8) LOG("gp_read: %d \"%s\"", r, r<999 ? (const char*)(buf[r-(buf[r-1]==10)]=0,buf) : "...");
+	for (i=0;i<r;i++) { if (df&16) LOG("gp_parse: i=%d, state=%d, chr=%d", i, state, buf[i]);
+			    if	    ((c=buf[i])==state) state+=19;
 			    else if (state!=132) state = (c==37) ? 56 : 37;
 			    else if (state=37, (unsigned int)(c-=40) >= GP_N_CMDK) LOG("gp_key=%d,???", c);
 			    else wrk_cmd_l((char*)gp_cmd_key[c],-1,0), state = 37; }}
