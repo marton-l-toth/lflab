@@ -2,7 +2,8 @@
 SDIR="$PWD"
 PDIR="$HOME/tmp/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
-OPTARG="-fno-exceptions -fno-rtti -O2 -fpredictive-commoning -fgcse-after-reload"
+CGARG="-fno-exceptions -fno-rtti"
+OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
         case "$1" in
                 "")   cond="" ;;
@@ -14,6 +15,7 @@ while [[ -n "$cond" ]]; do
                 "-st") STFLG="y"; shift ;;
 		"-md") DEFS="$DEFS -DLF_C_MEMDEBUG"; shift ;;
 		"-0") OPTARG="";    shift ;;
+		"-0g") OPTARG="-Og";    shift ;;
 		"-cf")  UCFLG="$2"; shift 2 ;;
 		"-ocmd") OCMD="$2"; shift 2 ;;
 		"-fcmd") FCMD="$2"; shift 2 ;;
@@ -24,9 +26,8 @@ while [[ -n "$cond" ]]; do
 		*) cond="" ;;
 	esac
 done
-mkdir -p "$PDIR/c"
-mkdir -p "$PDIR/co"
-[[ -z "$JARG" ]] && JARG=-j$(expr $(grep '^processor[[:space:]]*:' /proc/cpuinfo | wc -l) + 1)
+mkdir -p "$PDIR/c" "$PDIR/co" || exit 1
+[[ -z "$JARG" ]] && JARG=-j$(expr $(nproc) + 1)
 if [[ "$SSE" == "i" ]]; then
 	SSE=""; grep -q 'flag.*sse2' /proc/cpuinfo && SSE="-msse2"
 fi
@@ -49,7 +50,7 @@ if [[ -n "$STFLG" ]]; then
 	rm $stfil; exit 0
 fi
 CP=$(echo /run/shm/lf.*/A)
-CFLG="CFLAGS=$SSE -pipe $OPTARG $UCFLG$DEFS"
+CFLG="CFLAGS=$SSE -pipe $CGARG $OPTARG $UCFLG$DEFS"
 echo make $JARG "\"$CFLG\"" $*
 if [[ -z "$OCMD$FCMD" ]]; then exec make $JARG "$CFLG" $*; fi
 if [[ ! -p "$CP" ]]; then echo "no pipe found ('$CP')"; exec make $JARG "$CFLG" $*; fi
