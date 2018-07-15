@@ -948,7 +948,7 @@ BoxGen * ClipNode::find_bx(BoxGen * cb, int stp, int msk) {
 }
 
 int ClipNode::keyop_j(int j, int ky, int op, const char *s, int nof) {
-	return (m_map&(1u<<j)) ? wrap_key_op(ent_j(j)->box(), ky, op, s, nof) : EEE_NOEFF; }
+	return (m_map&(1u<<j)) ? wrap_key_op(ent_j(j)->box(), ky, op, s, nof) : 0; }
 
 #define KO_COND(J) ((r = wrap_key_op(ent_j(J)->box(),ky,op,s,nof))!=BXE_UNDEFKEY)
 int ClipNode::keyop_f(int ky, int op, const char *s, int nof) {

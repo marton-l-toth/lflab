@@ -73,7 +73,7 @@ class CFIBoxGen : public BoxGen {
 		unsigned char * ijp(int i, int j);
 		void au_rgb(), au_lbl();
 		int cf_win(int j) { return ((m_cbx&&!j) ? m_cbx : m_fbx?m_fbx:this)->node()->draw_window(16); }
-                int foif() const { log("foif: m_nif=%d m_nic=%d m_noc=%d", m_nif, m_nic, m_noc);
+                int foif() const { IFDBGX(EXPR) log("foif: m_nif=%d m_nic=%d m_noc=%d", m_nif, m_nic, m_noc);
 			return m_fbx ? (m_fbx->io_alias_perm()<<30) + (m_flg<<15) + 1024*m_noc + 32*m_nic+m_nif
 				     : (m_flg<<15) + 1; }
 		void dsc_debug(const char * head, const unsigned char *p, int n);

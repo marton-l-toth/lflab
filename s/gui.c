@@ -63,6 +63,7 @@
 #define DF_CHOO 4096
 #define DF_WLUVB 8192
 #define DF_KEYC 16384
+#define DF_TRK0 32768
 
 #define RGB_C(X) (.0117647058823529 * (double)((X)-37))
 #define RGB_C3(X,Y) cairo_set_source_rgb(X, RGB_C((Y)[0]), RGB_C((Y)[1]), RGB_C((Y)[2]))
@@ -3353,7 +3354,7 @@ static void datrk_cmd(struct _ww_t * ww, const char * s) {
 			  if (r<0) LOG("trk/-: ret=%d", r);
 			  s += 17; continue;
 		case '*': for (i=0; i<3; i++) hx[i] = qh4rs(s+1+4*i);
-			  LOG("trk/*: %x %x %x", hx[0], hx[1], hx[2]);
+			  if (dflg&(DF_TRK|DF_TRK0)) LOG("trk/*: %x %x %x", hx[0], hx[1], hx[2]);
 			  if (*hx<tc->x0a||*hx>tc->x1a) { LOG("datrk/*: x(%d) out of range", *hx); goto done;}
 			  tc->ybv[*hx&15] |= ((unsigned int)hx[1]<<16)+hx[2]; tc->flg &= ~TCF_PEND;
 			  da_fullre(ww); tsr_op(ww, TSR_DROP, 0); return;
