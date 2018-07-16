@@ -2414,9 +2414,10 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] 
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
 "({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS}{Y4sl.upd$XAU})",
-"({M7+$|V0}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,0,
+"(3{80t|$1Xzt}{Y11$Xz1}{Y22$Xz2}{Y33$Xz3}{Y44$Xz4}{Y55$Xz5}{Y66$Xz6}{Y77$Xz7}{Y88$Xz8}{Y99$Xz9})",
+"({M7+$|V0}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,
 "({Y0iadj.S$XcS}{Y1iadj.T$XcT})" };
-return parse_w_s(ww->top, str[(ix>2&&(VB_ARG(ww)&1))?ix+4:ix]); }
+return parse_w_s(ww->top, str[(ix>3&&(VB_ARG(ww)&1))?ix+3:ix]); }
 
 static void swrap_cmd (struct _topwin * tw, char * arg) {
 	ww_t *vb = widg_lu1_pc(tw, 'E');
@@ -2460,11 +2461,11 @@ static const char wrap_tw_fmt[] = "[" TW_TOPH   // xtab
 	"([{Mm$Xm|#1}{B_stp$X.1}{B_kill$X.2}]{1w}"
 	"3[3{+#XG.}0{__}]0"
 	"3[({L_}[(3{et6$Xt1}0{L_...}3{eT6$Xt2}0{__})({Mf$Xt|P0}3{B_plot$XPG})])"
-		"(3()0{YG[#]$XWt0}{YWwav$XWt1}{Y:cfg$XWt2}%s)])" "%s]";
+		"(3()0{YG#$XWt0}{YWwv$XWt1}{Y:cf$XWt2}{Y;tr$XWt3}%s)])" "%s]";
 
-static const char * wrap_tw_a0[2] = {"{YAa.v$XWt3}", "{YAsic$XWt3}"};
-static const char * wrap_tw_a1[2] = {"{:YW5:0}{:Ew982}{:SwO80}{:ZwN81}",
-				     "{:YW5:1}{:ES:80}{:Ss780}{:CC<90}{:ZKF:0}"};
+static const char * wrap_tw_a0[2] = {"{YAa.v$XWt4}", "{YAsic$XWt4}"};
+static const char * wrap_tw_a1[2] = {"{:YW6:0}{:Ew982}{:SwO80}{:ZwN81}",
+				     "{:YW6:1}{:ES:80}{:Ss780}{:CC<90}{:ZKF:0}"};
 
 static const char * wrap_tws(int flg) {
 	static char tws_d[sizeof(wrap_tw_fmt)+64],

@@ -421,7 +421,7 @@ class AWrapGen : public BoxGen {
 		typedef int (acmd_t) (AWrapGen *, const char *, CmdBuf *);
 		static int slf_conv(int k);
 		static acmd_t c_c2k, c_cut, c_gcl, c_gmd, c_gr, c_ky, c_pl, c_stp, c_tf, c_wav, c_win, c_rvt,
-			      c_xfd, c_flg, c_spt;
+			      c_xfd, c_flg, c_spt, c_tg;
 		virtual int show_tab_2(sthg * bxw_rawptr, int i) = 0;
 		virtual int wlg(sthg * bxw_rawptr, int ix, int flg) = 0;
 		virtual void w_col0() = 0;
@@ -1488,6 +1488,7 @@ int AWrapGen::show_tab(int i) {
 		case 0: w_tab0(-1); return 0;
 		case 1: w_a20(-1); return 0;
 		case 2: w_tlim(-1); return 0;
+		case 3: return 0;  // TODO
 		default: return show_tab_2(bxw_rawptr, i);
 	}}
 
@@ -1738,10 +1739,12 @@ CH(spt){int nk, ni, nj, sn, r; const char *s0 = s+1;
 	mx_del(mxi); return 0;
 }
 
+CH(tg) { return BXE_SORRY; }
+
 #define AW_CTAB {'+'+256, (cmd_t)c_c2k}, {'P'+256, (cmd_t)c_pl }, {'t', (cmd_t)c_tf}, {'x', (cmd_t)c_xfd}, \
 	        {'W'+256, (cmd_t)c_win}, {'A'+256, (cmd_t)c_wav}, {'#', (cmd_t)c_gr}, {'T', (cmd_t)c_cut}, \
 	        {'.'+256, (cmd_t)c_stp}, {'G'+256, (cmd_t)c_gcl}, {'k', (cmd_t)c_ky}, {'m', (cmd_t)c_gmd}, \
-		{'<'+256, (cmd_t)c_rvt}, {'%'+256, (cmd_t)c_spt},                     {'F', (cmd_t)c_flg}
+		{'<'+256, (cmd_t)c_rvt}, {'%'+256, (cmd_t)c_spt}, {'z', (cmd_t)c_tg}, {'F', (cmd_t)c_flg}
 
 /////// box (wr) ////////////////////////////////////////////////////////////
 
@@ -1873,7 +1876,7 @@ int DWrapGen::sob_from(int ix, BoxGen * bx0, int bxf) {
 int DWrapGen::start_job_3(JobQ::ent_t * ent, char * arg) {
 	int c, ec, xf=0; switch(ent->i4f) {
 		case 1:
-			ent->plttwwii = 0x6b775924;
+			ent->plttwwii = 0x6b77592e;
 			xf = (arg && (c=*arg)) ? (c=='^' ? hxd2i(arg[1]) : ((c!='w')<<8)) : 0;
 			WrapAutoVol * av; if (xf&1) { av=0; goto mkr; }
 			av = (glob_flg&GLF_AVOLSHR) ? m_sob.ro()->m_avol.ro() : SOB_RW(sob)->avol_rw();
@@ -1976,15 +1979,15 @@ int DWrapGen::av_guiconf(int c, const char * s) {
 		default: return BXE_UCMD;
 	}
 	intv_cmd_uc(WR_AVCONF+i, s, 1, k&255, k>>8);
-        if (wnfl() && WR_TAB==3) w_avol(1<<i, WR_AVCONF);
+        if (wnfl() && WR_TAB==4) w_avol(1<<i, WR_AVCONF);
 	return 0;
 }
 
 void DWrapGen::w_avol(int f, unsigned char * s) { gui2.setwin(w_oid(), 'w');
-	BVFOR_JM(f) gui2.wupd_i2('Y', s[j], j+30); }
+	BVFOR_JM(f) gui2.wupd_i2('Y', s[j], j+40); }
 
 int DWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
-	case 3: w_avol(63, WR_AVCONF); return 0;
+	case 4: w_avol(63, WR_AVCONF); return 0;
 	default:return BXE_CENUM;
 }}
 
@@ -2168,8 +2171,8 @@ void SWrapGen::w_col0_s(int f8) {
 }
 
 int SWrapGen::show_tab_2(sthg * bxw_rawptr, int i) { switch(i) {
-	case 3: return gui2.setwin(w_oid(),'w'), gui2.wupd_i1('Y', !!(m_bflg&WRF_IADJS), 30),
-					   	 gui2.wupd_i1('Y', !!(m_bflg&WRF_IADJT), 31), 0;
+	case 4: return gui2.setwin(w_oid(),'w'), gui2.wupd_i1('Y', !!(m_bflg&WRF_IADJS), 40),
+					   	 gui2.wupd_i1('Y', !!(m_bflg&WRF_IADJT), 41), 0;
 	default:return BXE_CENUM;
 }}
 
@@ -2197,11 +2200,11 @@ CH(vfl){if (s[1]==42&&s[2]) { p->m_bflg &= ~255; p->m_bflg |= hex2(s+2); if (p->
 	return p->w_slbv(2), 0; }
 
 CH(scf){int fj, fm, k;
-	switch(s[1]){case 'S': fm = WRF_IADJS; fj = 30; break;
-		     case 'T': fm = WRF_IADJT; fj = 31; break;
+	switch(s[1]){case 'S': fm = WRF_IADJS; fj = 40; break;
+		     case 'T': fm = WRF_IADJT; fj = 41; break;
 		     default: return BXE_CENUM; }
 	if ((k=s[2]&1)) p->m_bflg |= fm; else p->m_bflg &= ~fm;
-	if (p->tab_vis(3)) gui2.setwin(p->w_oid(),'w'), gui2.wupd_i1('Y', k, fj);
+	if (p->tab_vis(4)) gui2.setwin(p->w_oid(),'w'), gui2.wupd_i1('Y', k, fj);
 	return 0; }
 
 CH(tab){int x, j = s[1]-48, k = 0;
