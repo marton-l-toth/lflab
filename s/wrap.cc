@@ -134,7 +134,7 @@ class WrapCore : public SOB {
 		WrapCore(const WrapCore * that, int uarg);
 		~WrapCore() { del_keytab(); }
 		void ini_default(int _) { t01[0]=0u; t01[1]=50000u;
-			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); } 
+			xfd=63; memcpy(grdim, "\031\031""333333\012\012", 10); trig = 0; } 
                 int save2(SvArg * p);
 		void debug2() { log("WrapCore: xfd=0x%x(0x%x)", xfd, wr_ixtr_r(xfd)); } 
 		int sv_t01(char * to);
@@ -159,6 +159,7 @@ class WrapCore : public SOB {
 								(0x32524c31>>((8*fzrl)&24)) & 127); }
 		unsigned int t01[2];
 		char grdim[10], xfd, fzrl;
+		unsigned short trig;  // 0-6:target 7-15:trig
 		key_t * ktab;
 };
 
@@ -442,8 +443,7 @@ class AWrapGen : public BoxGen {
 		void w_gr_xyk(int x0, int y0, int f);
 		void w_mini();
 		void w_gmd() { gui2.setwin(w_oid(), 'w'); gui2.wupd('m'); gui2.c2('+', 48+(m_bflg&3)); }
-		void w_a20(int flg);
-		void w_tlim(int flg);
+		void w_a20(int flg), w_tlim(int flg), w_trig(int flg);
 		void w_dim(int gis6, int wf);
 		void w_tab0(int f20);
 		void w_slbv(int flg); // 1: force 2: setwin
@@ -567,7 +567,7 @@ SOB_INIFUN(SWrapMEP,  1)
 
 WrapCore::WrapCore(const WrapCore * that, int uarg) : SOB(uarg), xfd(that->xfd), fzrl(that->fzrl) {
 	if (DBGC) log("wrcore copy: %p -> %p", that, this);
-	memcpy(t01, that->t01, 8); memcpy(grdim, that->grdim, 10); 
+	memcpy(t01, that->t01, 8); memcpy(grdim, that->grdim, 10); trig = that->trig;
 	key_t * oktab = that->ktab; if (!oktab) { ktab = 0; return; }
 	(ktab = (key_t*)ANode::a64())->n5 = oktab->n5;
 	for (int i=0;i<4;i++) if ((ktab->bv[i]=oktab->bv[i])) ktab->pk[i] = (short*)ANode::cp64(oktab->pk[i]);
@@ -597,10 +597,11 @@ int WrapCore::sv_t01(char * to) {
 }
 
 int WrapCore::save2(SvArg * sv) {
-	char buf[600]; memcpy(buf, "X$#*", 4);
+	char buf[620]; memcpy(buf, "X$#*", 4);
 	for (int i=0; i<10; i++) buf[i+4] = grdim[i]+48;   buf[14] = 10;
-	int l = (xfd == 63) ? 15 : 15+sprintf(buf+15,"X$x%02x\n", wr_ixtr_r(xfd));
+	int x, l = (xfd == 63) ? 15 : 15+sprintf(buf+15,"X$x%02x\n", wr_ixtr_r(xfd));
 	if (ktab) memcpy(buf+l, "X$k", 3), l += 4+wrap_dump_keytab(buf+l+3, ktab->bv, ktab->pk), buf[l-1] = 10;
+	if (trig) memcpy(buf+l, "X$z*", 4), x = qh4(trig), memcpy(buf+l+4, &x, 4), l+=9, 	 buf[l-1] = 10;
 	return sv->st2=-1, l+=sv_t01(buf+l), sv->out->sn(buf, l);
 }
 
@@ -1481,6 +1482,13 @@ void AWrapGen::w_tlim(int f) {
 	if (f&8) gui2.wupd_i1('Y', !!(m_bflg&WRF_SLUPD), 24);
 }
 
+void AWrapGen::w_trig(int f) {
+	WrapCore * cr = core_ro(); int x97 = cr->trig;
+	gui2.setwin(w_oid(), 'w'); 
+	if (f&1) --f, gui2.wupd_i2('Y', x97&127, 30);
+	BVFOR_JM(f&0x3fe) gui2.wupd_i1('Y', !!(x97&(64<<j)), 30+j);
+}
+
 int AWrapGen::show_tab(int i) {
 	BXW_GET; if (i<0) i=WR_TAB; else if (i==WR_TAB) return 0; else WR_TAB=i;
 	gui2.setwin(w_oid(), 'w'); gui2.wupd_0('Y', ".W"); gui2.c1(48+i);
@@ -1488,7 +1496,7 @@ int AWrapGen::show_tab(int i) {
 		case 0: w_tab0(-1); return 0;
 		case 1: w_a20(-1); return 0;
 		case 2: w_tlim(-1); return 0;
-		case 3: return 0;  // TODO
+		case 3: w_trig(-1); return 0;
 		default: return show_tab_2(bxw_rawptr, i);
 	}}
 
@@ -1739,7 +1747,12 @@ CH(spt){int nk, ni, nj, sn, r; const char *s0 = s+1;
 	mx_del(mxi); return 0;
 }
 
-CH(tg) { return BXE_SORRY; }
+CH(tg){ WrapCore * cr = p->core_rw(); int x = s[1], df = 1, tg = cr->trig;
+	switch(x) { case 't': x=tg&127; if(!intv_cmd(&x,s+2,0,99,-1))return 0; cr->trig=(tg&~127)|x; break;
+		    case '*': cr->trig = atoi_h(s+2); return 0;
+		    default:  if ((unsigned int)(x-=49)>8u) return BXE_CENUM;
+			      df=2<<x; x=df*64; cr->trig = (s[2]&1) ? tg|x : tg&~x; break; }
+	if (p->tab_vis(3)) p->w_trig(df);   return 0;  }
 
 #define AW_CTAB {'+'+256, (cmd_t)c_c2k}, {'P'+256, (cmd_t)c_pl }, {'t', (cmd_t)c_tf}, {'x', (cmd_t)c_xfd}, \
 	        {'W'+256, (cmd_t)c_win}, {'A'+256, (cmd_t)c_wav}, {'#', (cmd_t)c_gr}, {'T', (cmd_t)c_cut}, \

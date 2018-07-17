@@ -2414,7 +2414,7 @@ GtkWidget * wrap_vbl_t (struct _ww_t * ww, int ix) { static const char * str[8] 
  "{832|$2X#d3}{843|$2X#d4}{854|$2X#d5}{865|$2X#d6}{876|$2X#d7})",
 "({Y0stereo$XA2}{Y1from-to$XA-}3{B2write$XAW})", 
 "({Y0mute$XT_}{L1t:}3{e28$XTT}0{Y3>shdw$XAS}{Y4sl.upd$XAU})",
-"(3{80t|$1Xzt}{Y11$Xz1}{Y22$Xz2}{Y33$Xz3}{Y44$Xz4}{Y55$Xz5}{Y66$Xz6}{Y77$Xz7}{Y88$Xz8}{Y99$Xz9})",
+"({80trg|$2Xzt}3{Y11$Xz1}{Y22$Xz2}{Y33$Xz3}{Y44$Xz4}{Y55$Xz5}{Y66$Xz6}{Y77$Xz7}{Y88$Xz8}{Y99$Xz9})",
 "({M7+$|V0}{80x|$1XVx}{81y|$1XVy}{821|$1XVz}{832|$1XVw}{85t|$:3XVt}{84r|$1XVr}3{%6calc$J1})",0,0,
 "({Y0iadj.S$XcS}{Y1iadj.T$XcT})" };
 return parse_w_s(ww->top, str[(ix>3&&(VB_ARG(ww)&1))?ix+3:ix]); }
