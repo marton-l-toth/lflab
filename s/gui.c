@@ -3257,7 +3257,7 @@ static void datrk_clk(struct _ww_t * ww, int b9, int cx, int cy, GdkEventButton 
 static void tsr_op(ww_t * ww, int y, int x);
 static void trk_sel(ww_t * ww, int i, int j, int id, const char * s14) {
         tc_t * tc = (tc_t*) ww->etc;   topwin * tw = ww->top;  int f;
-	if (i<0) f = 3, i = tc->sely, j = tc->selx; 
+	if (i<0) f = 3, i = tc->sely, j = tc->selx;
 	else tsr_op(ww,tc->sely,tc->selx), f=(tc->selx!=j&&(tc->selx=j,1))|(3*(tc->sely!=i&&(tc->sely=i,1))),
 	     tsr_op(ww,tc->sely,tc->selx);
 	if (tsc_drag_id==-1) tsc_drag_id = id, tsc_drag_xd -= (j-40320*tc->x0)/TC_UPP(tc);
@@ -3266,8 +3266,8 @@ static void trk_sel(ww_t * ww, int i, int j, int id, const char * s14) {
 	if(f&1){int a[4]; k=TC_UPP(tc), a[0]=j/40320; j%=40320; a[1]=j/d2; j%=d2; a[2]=j/k; a[3]=1000*(j%k)/k;
 		for (k=0;k<4;k++) dacnt_set_x(widg_lu1_pc(tw, "BDPU"[k]), a[k], 256);        }
 	trk_24 * q = tc_p24(tc, 1);
-	if (id) q->b.id = id, memcpy(q->b.s, s14, 14), dalbl_mw18(widg_lu1_pc(tw, 'S'), s14);
-	else if (q->b.id) q->b.id = 0, dalbl_mw18(widg_lu1_pc(tw, 'S'), 0);
+	if (id>0) q->b.id = id, memcpy(q->b.s, s14, 14), dalbl_mw18(widg_lu1_pc(tw, 'S'), s14);
+	else if (!id && q->b.id) q->b.id = 0, dalbl_mw18(widg_lu1_pc(tw, 'S'), 0);
 }
 
 static void trk_send_gcf(ww_t * ww, unsigned int * bv9) {
@@ -3410,9 +3410,12 @@ static void tc_set_ppb(tc_t * tc, int v) { if (dflg&DF_TRK)  LOG("tc_set_ppb %d"
 	if (v==tc->gwfr[1]) return;
 	if (!le40320(tc->gwfr[0], v)) return LOG("BUG: tc_set_ppb: v=%d, g=%d", v, tc->gwfr[0]);
 	tc->gwfr[1] = v;  tsr_op(tc->ww, TSR_ALL, 0);  trk_upd_wgd(tc->ww, 4);
+	trk_sel(tc->ww, -1, 0, -1, NULL);
+	int cmd[3]; cmd[0]=0x75580000; cmd[1]=qh4(TC_UPP(tc)); cmd[2]=0; widg_defcmd(tc->ww, (char*)cmd+2);
 }
 
-static int tc_find_ppb(tc_t * tc, int i, int d) { int x, b = tc->gwfr[0]; LOG("tc_find_ppb %d %d", i, d);
+static int tc_find_ppb(tc_t * tc, int i, int d) { 
+	int x, b = tc->gwfr[0];  if (dflg&(DF_TRK|DF_TRK0)) LOG("tc_find_ppb %d %d", i, d);
 	for (; (x=tdiv_ppb_ix[i]); i+=d) if (le40320(b,x)) return tc_set_ppb(tc, x), 1;   return 0; }
 
 static void tc_set_gd(tc_t * tc, int gd) {
