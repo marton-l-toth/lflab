@@ -1154,6 +1154,8 @@ TDIV_MENU_LN
 			"103579=AIQ]m2468:<>@BDFHJLNPRTVX"},
 {'K', 13,0,5,6, "[g*C]help descrinfo del/snew dnew snew ?-----cleardel  -----WAV/s", 
 	"KG    N?    $.W?  I3    Kd    Cw%K  Cs%K  Ch?   ##    KZ    Nd    ######$.X*$A"},
+{0,  32, 0,2,2, "0 101 2 3 4 5 6 7 8 9 111213141516171819888990919293949596979899",
+	        "0 a 1 2 3 4 5 6 7 8 9 b c d e f 1011121358595a5b5c5d5e5f60616263"},
 {'k', 4, 1,4,1, "ask keepwav flac", "0123"},
 {'S', 1, 0,1,1, "?", "#" },
 {0,   3, 1,5,1, "availnonblpump ", "012"},
@@ -4488,7 +4490,7 @@ static void clip_setflg(struct _topwin * tw, int flg) {
 
 static void clip_skel (struct _topwin * tw, char * arg) {
 	const char * str = "[{C.228$16$kkk000...}"
-		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{Ma+$|K0}){KK}]";
+		"(3{YCcp$KC}{YPps$KP}{YD2x$KD}{YAau$KA}{YXxc$KX}{Brre$KW}{M_>$KT|K1}{Ma+$|K0}){KK}]";
 	ww_t * cl;
 	if (tw->state) {
 		cl = widg_lu1_pc(tw, 'K'); if (!cl) {

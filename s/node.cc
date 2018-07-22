@@ -993,6 +993,9 @@ int ClipNode::cmd(CmdBuf * cb) {
 			  if (winflg(8)) draw();    return 0;
 		case 'G': k=0;  BVFOR_JM(m_map) if ((nd=ent_j(j))->cl_id()=='s') 
 			  				k=min_i(k,swrap_grab_c(nd->box(), 0));  return k;
+		case 'T': if (!perm(DF_EDBOX)) return NDE_PERM;
+			  if ((unsigned int)(k=atoi_h(s+1)) > 99u) return NDE_WTF;
+			  BVFOR_JM(m_map) wrap_set_trg(bx_j(j), k); return 0;
 		default:  return GCE_UCLIP;
 	}
 xcg:
