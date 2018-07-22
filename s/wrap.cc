@@ -417,7 +417,7 @@ class AWrapGen : public BoxGen {
 		inline int pflg() { return m_bflg & WRF_PASS; }
 		void delayed_clip_upd();
 		void set_tl(int t = INT_MAX) { m_node->etc()->i[0] = t; }
-		int key_op(int k, int op, const char * xys, int nof);
+		int key_op(int k, int op, const char * xys, int nof, int dly_trg = -1);
 	protected:
 		typedef int (acmd_t) (AWrapGen *, const char *, CmdBuf *);
 		static int slf_conv(int k);
@@ -1512,17 +1512,22 @@ void AWrapGen::box_window() {
 }
 
 // rel b1 cp set   sb1 cp2 set* cb1   kill stop tggl ply  uniq rsrv rsrv nop
-int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
+int AWrapGen::key_op(int k, int op, const char * xys, int nof, int dly_tg) {
 	static const unsigned int optr[4] = { 0xc65a32bf, 0xc65a32b9, 0xc65b32af, 0xb65a32cf };
 	if (op<8) { if (op<0) return BXE_CENUM; else op = (optr[m_bflg&3]>>(4*op)) & 15; }
 	if (op==15) return 0;
-	char buf[8], xysav[8]; int ec, nb, bfsav = m_bflg, tlim = INT_MAX;
+	WrapCore *cr=core_ro(); char buf[8],xysav[8]; int trg=0, dly=0, ec, nb, bfsav=m_bflg, tlim=INT_MAX;
+	while ((unsigned int)(op-9)<4u) {
+		if (dly_tg>=0) { trg = dly_tg&65535; dly = dly_tg>>16; break; }
+		trg = cr->trig&127; if (!trg|(trg==10)) { trg = !!trg; break; }
+		if (trg<20) return trk_keyop_2q(k,op,xys,id(),trg);
+		if ((trg=trk_mx99(trg)) < 0) return trg; if0(DBGC) log("mxid=%d",trg); break;
+	}
 	if (k<0) { 
 		nb = 2+6*(k&1); for (int j,i=0;i<nb;i++) if ((j=xys[i]-48)<0) return BXE_PARSE; else buf[i]=j;
 		k = 64*buf[1]+buf[0]+64;
 	} else {
-		if (k&65536) { WrapCore *cr = core_ro(); k &= 65535;
-			       if (!cr->has_key(k)) return BXE_UNDEFKEY; else k = cr->get_key(k); }
+		if (k&65536) { if (!cr->has_key(k&=65535)) return BXE_UNDEFKEY; else k = cr->get_key(k); }
 		if (k<64) { nb = 0; if ((m_bflg&3)==1) tlim = min_i(2*sample_rate, m_node->etc()->i[0]); }
 		else { nb = 2, buf[0] = k&63, buf[1] = (k>>6)-1; }
 	}
@@ -1536,8 +1541,8 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof) {
 		case  3:
 		case  6: return nb ? (w_gr_xyk(m_xys6[0], m_xys6[1], 1), w_mini(), w_col0(), 0) : EEE_NOEFF;
 		case  5: ec = qcopy(1, nof & ~NOF_FGUI); break;
-		case 11: ec = add2mx_txdlv(0,0,0,tlim,0); if (ec>=0) ec = add2ctl(ec, k);       break;
-		case 12: ec = add2mx_txdlv(0,0,0,tlim,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
+		case 11: ec = add2mx_txdlv(trg,0,dly,tlim,0); if (ec>=0) ec = add2ctl(ec, k);       break;
+		case 12: ec = add2mx_txdlv(trg,0,dly,tlim,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
 		default: ec = BXE_CENUM; break;
 	}
 	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
@@ -2294,7 +2299,7 @@ int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 		to[n] = hexc1(2*i+(j>>4)), to[n+1] = hexc1(j&15), v = pk[i][j],
 		to[n+2] = 48+(v>>6), to[n+3] = 48+(v&63), n += 4;
 	return n; }
-int wrap_key_op(BoxGen * bx, int ky, int op, const char *s, int nof) { return WARG(A) -> key_op(ky,op,s,nof); }
+int wrap_key_op(BoxGen *bx, int k, int o, const char *s, int f, int t) { return WARG(A)->key_op(k,o,s,f,t); }
 void wrap_set_trec(BoxGen * bx, int j) { WARG(A)->m_trec = j; }
 int swrap_grab_c(BoxGen *bx, int f) { return WARG(S)->m_ssob.ro()->m_mec.ro()->grab(bx->node()->id(), -1, f); }
 int wrap_midi_ev(unsigned int j5i20o7, int ky, int val, const unsigned int * blk) {

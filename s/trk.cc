@@ -20,6 +20,8 @@ static ANode * trgp_node = 0; static int trgp_i, trgp_j;
 static double trk_ctx_bpm = 60.0;
 static int trk_ctx_n = 0;
 
+struct keyop_qe_t { unsigned char pv,nx; unsigned short key; int op4_id; };
+
 struct BKMK128 { int n, rsrv; unsigned char * lo; unsigned short * hi[4]; unsigned int bv[4];
                  int find(int i), set(int i, int v); void del(); };
 struct BKMK32k { unsigned long long bv[4]; BKMK128 *** p[4];
@@ -34,10 +36,12 @@ class TrackModel;
 class TrackInst : public BoxInst {
 	public:
 		static scf_t sc_f0;
+		static int m0_mx79tab[80];
 		TrackInst (TrackModel * m);
 		virtual ~TrackInst();
 	protected:
 		int ini(double **inb);
+		int mx99_ini(int x);
 		void mxprep(int bflg, double* bpm, int n);
 		void sane(int n);
 		void unexp_node(ANode * nd);
@@ -45,7 +49,7 @@ class TrackInst : public BoxInst {
 
 		TrackModel * m_m;
 		ANode *m_pn, *m_fn, *m_tn;
-		int m_mxid, m_vti, m_to, m_to2, m_fr2, m_rpc, m_md, m_aix;
+		int m_mxid, m_vti, m_to, m_to2, m_fr2, m_rpc, m_md, m_aix, m_mx79;
 		double m_vtf;
 };
 
@@ -74,8 +78,9 @@ class TrackGen : public BoxGen {
 	public:
 		friend void track_init();
 		friend int trk_cut_time(BoxGen *bx, int t);
+
 		TrackGen(ABoxNode * nd, ANode * g0, ANode * g1);
-		virtual int n_in () const { return 6; }
+		virtual int n_in () const { return 7; }
 		virtual int n_out() const { return 2; }
 		virtual bool io_alias_perm() const { return true; }
 		virtual const char* cl_name() { return "trk"; }
@@ -124,6 +129,8 @@ class TrackGen : public BoxGen {
 		int m_gnaf, m_gnav[8];
 		int m_pl_op, m_pl_pos;
 };
+
+int TrackInst::m0_mx79tab[80];
 
 int BKMK128::find(int i) {
         int i2 = i>>5, i5 = i&31;
@@ -195,26 +202,33 @@ void BKMK1M::set(int i, int v) {
 }
 
 TrackInst::TrackInst (TrackModel * m) : BoxInst(sc_f0), m_m(m), m_pn(0), m_fn(0), m_tn(0), m_md(0), m_aix(8) {
-	if (DBGC) log("trki: hello"); BoxModel::ref(m); m_mxid=mx_mkroot(); }
+	if (DBGC) log("trki: hello"); BoxModel::ref(m); m_mxid=mx_mkroot(); m_mx79=-1; }
 
 TrackInst::~TrackInst() { TRK_SANE1(2); if (m_mxid>0) mx_del(m_mxid); 
 	ABoxNode * tn = static_cast<ABoxNode*> (m_m->tn);
 	if (m_aix<8) static_cast<TrackGen*>(tn->box())->gna_reg(&m_aix, -1);
-	if (DBGC) log("trki: bye"); tgn_del(tn, m_pn); tgn_del(tn, m_tn); tgn_del(tn, m_fn); TRK_SANE1(3);
+	if0(DBGC) log("trki: bye"); tgn_del(tn, m_pn); tgn_del(tn, m_tn); tgn_del(tn, m_fn); TRK_SANE1(3);
+	int k= m_mx79; if (k>=0 && m0_mx79tab[k]==m_mxid) m0_mx79tab[k] = TKE_MXILU;
 	BoxModel::unref(m_m); }
 
 void TrackInst::gna(int x) { static_cast<TrackGen*>(static_cast<ABoxNode*>(m_m->tn)->box())->gna_reg(&m_aix, x); }
+
+int TrackInst::mx99_ini(int x) {
+	if0 ((unsigned int)(x-=20) > 79u) return TKE_MXIRNG;
+	if0 (m0_mx79tab[x]>=0) return TKE_MXIDUP;
+	m0_mx79tab[m_mx79 = x] = m_mxid; if0(DBGC) log("trk/mx99: %d,%d",x,m_mxid); return 0;
+}
 
 #define VTARG(x) ((int)lround(40320.0*inb[x][0]))
 int TrackInst::ini(double **inb) {
 	TRK_SANE1(1);
 	m_md = 1; m_rpc = (int)lround(inb[3][0]);
-	int vti = VTARG(1); m_to = VTARG(2); if ((vti|m_to)<0) return BXE_RANGE; else gna(vti);
+	int vti = VTARG(1); m_to = VTARG(2); if0 ((vti|m_to)<0) return BXE_RANGE; else gna(vti);
 	m_vtf = .5 * natural_bpm;
 	m_pn = tgn_new(m_m->tn, 6, vti,  0);
 	m_tn = tgn_new(m_m->tn, 7, m_to, 0);
 	if (m_rpc) m_fr2 = VTARG(4), m_to2 = VTARG(5), m_fn = tgn_new(m_m->tn, 4, m_fr2, 0);
-	return 0;
+	int mx99 = (int)lround(inb[6][0]); return mx99 ? mx99_ini(mx99) : 0;
 }
 
 void TrackInst::sane(int n) { m_m->sane(n); }
@@ -274,7 +288,7 @@ BX_SCALC(TrackInst::sc_f0) {
 	++trk_ctx_n; sbpm = trk_ctx_bpm; trk_ctx_bpm = *bpm; // TODO: var bpm, time? 
 	ec = mx_calc(bxi->m_mxid, outb[0], outb[1], n, 0); --trk_ctx_n; trk_ctx_bpm = sbpm;
 	switch(ec) {
-		case 0:	if (bxi->m_md==3 && mx_r_isemp(bxi->m_mxid))
+		case 0:	if (bxi->m_md==3 && bxi->m_mx79<0 && mx_r_isemp(bxi->m_mxid))
 				bxi->m_md=4, mx_del(bxi->m_mxid), bxi->m_mxid=-1;
 			outb[0][0] = outb[1][0] = 0.0; return 0;
 		case 1: if (outb[1]!=junkbuf) memcpy(outb[1], outb[0], 8*n);
@@ -517,6 +531,9 @@ void trk_bkm_add(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_ad
 void trk_bkm_rm(BoxGen * abx, ANode * nd) { static_cast<TrackGen*>(abx)->bkm_rm(nd); }
 int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*>(abx)->cond_pm(nd, pm); }
 void trk_sane(BoxGen * abx, int j) { static_cast<TrackGen*>(abx)->sane(j); }
+int trk_mx99(int k) { if0((unsigned int)(k-=20)>79u) return TKE_WTF; return TrackInst::m0_mx79tab[k]; }
+
+int trk_keyop_2q(int k, int op, const char *xys, int id, int trg) { return BXE_SORRY; }
 
 int trk_cut_time(BoxGen *bx, int t) {
 	ABoxNode *p = bx->node(); if (!p->is_wrap() || p->cth()->ct!='t') return TKE_INVCUT;
@@ -539,4 +556,4 @@ void trk_w_gna(int id) {
 	ANode * tnd = ANode::lookup_n_q(id); if (tnd->cl_id()!='t') return;
 	static_cast<TrackGen*>(static_cast<ABoxNode*>(tnd)->box())->w_gna(); }
 
-void track_init() { TrackGen::cmd_init(); }
+void track_init() { TrackGen::cmd_init(); for (int i=0;i<80;i++) TrackInst::m0_mx79tab[i]=TKE_MXILU; }

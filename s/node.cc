@@ -241,7 +241,7 @@ void NameVec::ini_default(int k) { switch (k) {
         case 2: set_pt(0, "x", 0); return;
         case 3: set_pt(0, "y", 0); return;
         case 4: set_pt(0, "s", -1); set_nm(3, "x$y"); return;
-	case 5: set_nm(63, "BPM$from$to$rpt#$r.fr$r.to"); return;
+	case 5: set_nm(127, "BPM$from$to$rpt#$r.fr$r.to$mxid"); return;
 }}
 
 void BoxDesc::set_n(int k) {

@@ -12,6 +12,9 @@ int trk_rec(ANode * wnd, int mxbi);
 int trk_glob_paste(BoxGen * bx, int nof);
 void trk_w_gna(int id);
 void trk_sane(BoxGen * abx, int j);
+int trk_mx99(int k);
+int trk_keyop_2q(int k, int op, const char *xys, int id, int trg);
+
 
 #ifdef SANCHK_TRK
 #define TRK_SANE1(J) sane(J)
