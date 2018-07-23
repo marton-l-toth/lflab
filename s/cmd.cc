@@ -44,7 +44,7 @@ class CmdTab {
                 static int c_invalid(CmdBuf * p) { return GCE_WHAT; }
                 static int c_nop(CmdBuf * p) { return 0; }
                 static int c_bye(CmdBuf * p) { bye((p->m_c_a0[0]&31)<<8); return GCE_WTF; }
-                static int c_stfu(CmdBuf * p) { mx_clear(0); return 0; }
+                static int c_stfu(CmdBuf * p) { mx_clear(0); mx_clear(1); kyop_q_clear(); return 0; }
                 static int c_debug(CmdBuf * p) { if (*p->m_c_a0=='?')
 			log("debug_flg=%d (%s)", debug_flags, DFLG_HELP);
 			else debug_flags = atoi_h(p->m_c_a0); return 0; }

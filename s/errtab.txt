@@ -310,5 +310,7 @@ TKE_NONEMP   cannot delete nonempty track, sorry
 TKE_MXIRNG   track mixer ID should be 0 or 20...99
 TKE_MXIDUP   track already running with same mixer ID
 TKE_MXILU    no mixer is running with target ID 
+TKE_KQFULL   key/op queue is full (240 elements)
+TKE_KQLU     delayed/triggered wrap not found 
 S6__________ __________________________________________________________(BUG)__
 ERRTAB_LAST  this error message is supposed to be invisible (BUG)

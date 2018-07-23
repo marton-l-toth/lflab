@@ -396,6 +396,7 @@ class AWrapGen : public BoxGen {
 	public:
 		friend void wrap_set_trec(BoxGen * bx, int v); friend class SWrapGen;
 		friend void wrap_set_trg (BoxGen * bx, int trg);
+		friend int  wrap_trig_bv(BoxGen *bx);
 		AWrapGen(ABoxNode * nd);
 		AWrapGen(ABoxNode * nd, const AWrapGen * that);
                 virtual ~AWrapGen();
@@ -2303,6 +2304,7 @@ int wrap_dump_keytab(char * to, unsigned int * bv, short ** pk) {
 int wrap_key_op(BoxGen *bx, int k, int o, const char *s, int f, int t) { return WARG(A)->key_op(k,o,s,f,t); }
 void wrap_set_trec(BoxGen * bx, int j) { WARG(A)->m_trec = j; }
 int swrap_grab_c(BoxGen *bx, int f) { return WARG(S)->m_ssob.ro()->m_mec.ro()->grab(bx->node()->id(), -1, f); }
+int wrap_trig_bv(BoxGen *bx) { return WARG(A)->core_ro()->trig >> 7; }
 int wrap_midi_ev(unsigned int j5i20o7, int ky, int val, const unsigned int * blk) {
 	ABoxNode * nd = static_cast<ABoxNode*> (ANode::lookup_n_q(j5i20o7>>7));
 	if (nd->cl_id()!='s') return nd->cl_id() ? MDE_LOOKUPT : MDE_LOOKUPZ; // TODO : global ev?

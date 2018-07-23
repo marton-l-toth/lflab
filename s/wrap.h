@@ -15,5 +15,6 @@ AReader * wrap_avreader(BoxGen * bx, int cflg);
 int swrap_grab_c(BoxGen *bx, int f);
 int wrap_midi_ev(unsigned int j5i20o7, int ky, int val, const unsigned int * blk);
 void wrap_set_trg(BoxGen * bx, int trg);
+int  wrap_trig_bv(BoxGen *bx);
 
 #endif // __qwe_wrap_h__

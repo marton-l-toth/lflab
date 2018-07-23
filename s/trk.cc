@@ -20,7 +20,11 @@ static ANode * trgp_node = 0; static int trgp_i, trgp_j;
 static double trk_ctx_bpm = 60.0;
 static int trk_ctx_n = 0;
 
-struct keyop_qe_t { unsigned char pv,nx; unsigned short key; int op4_id; };
+struct kyop_qe{	unsigned char nx, pv, op, flg; int id;
+		union { char s[8]; int k; } u; };
+
+static kyop_qe kyop_q[256];
+static int kyop_q_f;
 
 struct BKMK128 { int n, rsrv; unsigned char * lo; unsigned short * hi[4]; unsigned int bv[4];
                  int find(int i), set(int i, int v); void del(); };
@@ -131,6 +135,21 @@ class TrackGen : public BoxGen {
 };
 
 int TrackInst::m0_mx79tab[80];
+
+static void keyop_q_fire1(kyop_qe *q, int dly_trg) {
+	ANode * nd = ANode::lookup_n_q(q->id); 
+	if (!nd->is_wrap()) { gui_errq_add(TKE_KQLU); } else {
+		int fg = q->flg; BoxGen *bx = static_cast<ABoxNode*>(nd)->box();
+		int ec = (fg&2) ? wrap_key_op(bx, q->u.k,   q->op, 	0, 0, dly_trg)
+				: wrap_key_op(bx, (fg&1)-2, q->op, q->u.s, 0, dly_trg);
+		if0 (ec<0) gui_errq_add(ec);
+	}}
+
+static void keyop_q_fire(int bv, int dly_trg) { BVFOR_JM(bv) {
+	kyop_qe *q = kyop_q+j; int k=q->nx; if1 (k==(int)j) continue;
+	for(;;){kyop_qe *q = kyop_q+k;  int nx = q->nx, fg = q->flg;   keyop_q_fire1(q, dly_trg);
+		if (nx< 9) { kyop_q[j].nx =	kyop_q[j ].pv = j; break; }
+		if (fg&64) { kyop_q[j].nx = nx; kyop_q[nx].pv = j; break; }  k = nx; }}}
 
 int BKMK128::find(int i) {
         int i2 = i>>5, i5 = i&31;
@@ -259,6 +278,8 @@ void TrackInst::mxprep(int bflg, double* bpm, int n) {
 			int ci = nd->cth()->i; if (ci>15) {
 				if (!nd->is_wrap()) return gna(-1), unexp_node(nd);
 				wrap_nd_2mx(static_cast<ABoxNode*>(nd), m_mxid, *bpm, i);
+				int tbv = wrap_trig_bv(static_cast<ABoxNode*>(nd)->box());
+				if (tbv) keyop_q_fire(tbv, (i<<16)+m_mxid);
 				if (DBGC) log("trk2mx: %d", m_mxid);   continue; }
 			if (ci==15) return m_md = 3, gna(-1);
 			if (nd!=m_tn) continue; 
@@ -374,10 +395,11 @@ int TrackGen::play(int op, int pos) {
 	else { mx_c_stop(m_mxctl,1,2); if (m_mxctl) return TKE_WTF; if (!op) return 0; }
 	if (pos<0) op = m_pl_op, pos = m_pl_pos; else m_pl_op = op, m_pl_pos = pos;
 	m_mxctl = mx_mkctl(this);
-	double v[12]; v[0] = v[1] = 1.0; v[2] = v[5] = 0.0; v[3] = 10.0; v[4] = 1e-5;
+	double v[13]; v[0] = v[1] = 1.0; v[2] = v[5] = 0.0; v[3] = 10.0; v[4] = 1e-5;
 	v[6] = 0.1 * (double)m_bp10m; v[9] = (op&1) ? 0.0 : 9999.0;
 	v[7] = v[10] = (double)pos; v[8] = v[11] = (op==1) ? 53000.0 : (double)(pos+(op>>1));
-	int bi = mx_add_box(glob_flg&1, m_m.mk_box(), "-A\x06\x02", v, 0x402); 
+	v[12] = 0.0;
+	int bi = mx_add_box(glob_flg&1, m_m.mk_box(), "-A\x07\x02", v, 0x402); 
 	return (bi<0) ? bi : mx_c_add(m_mxctl, bi, 1);
 }
 
@@ -533,7 +555,6 @@ int trk_cond_pm(BoxGen * abx, ANode * nd, int pm) { return static_cast<TrackGen*
 void trk_sane(BoxGen * abx, int j) { static_cast<TrackGen*>(abx)->sane(j); }
 int trk_mx99(int k) { if0((unsigned int)(k-=20)>79u) return TKE_WTF; return TrackInst::m0_mx79tab[k]; }
 
-int trk_keyop_2q(int k, int op, const char *xys, int id, int trg) { return BXE_SORRY; }
 
 int trk_cut_time(BoxGen *bx, int t) {
 	ABoxNode *p = bx->node(); if (!p->is_wrap() || p->cth()->ct!='t') return TKE_INVCUT;
@@ -556,4 +577,19 @@ void trk_w_gna(int id) {
 	ANode * tnd = ANode::lookup_n_q(id); if (tnd->cl_id()!='t') return;
 	static_cast<TrackGen*>(static_cast<ABoxNode*>(tnd)->box())->w_gna(); }
 
-void track_init() { TrackGen::cmd_init(); for (int i=0;i<80;i++) TrackInst::m0_mx79tab[i]=TKE_MXILU; }
+void kyop_q_clear() { for (int i=0; i<9;   i++) kyop_q[i].nx = kyop_q[i].pv = i;
+		      for (int i=9; i<255; i++) kyop_q[i].nx = i+1;   kyop_q_f = 9; }
+
+int trk_keyop_2q(int key, int op, const char *xys, int id, int trg) {
+	int f2, j0, j1, j = kyop_q_f; if0 (!j) return TKE_KQFULL;
+	kyop_qe *q0, *q1, *q = kyop_q + j; kyop_q_f = q->nx;
+	if (trg<10) q0 = kyop_q+(j0=trg-1),  q1 = kyop_q+(j1=q0->nx), f2 = 32;
+	else        q1 = kyop_q+(j1=trg-11), q0 = kyop_q+(j0=q1->pv), f2 = 64;
+	q0->nx = q1->pv = j; q->nx = j1; q->pv = j0; q->op = op; q->id = id;
+	if (key<0) memcpy(q->u.s, xys, 2+6*(key&1)), q->flg = f2 + (key&1);
+	else	          q->u.k = key,		     q->flg = f2 + 2;
+	return 0;
+}
+
+void track_init() { TrackGen::cmd_init(); kyop_q_clear();
+		    for (int i=0;i<80;i++) TrackInst::m0_mx79tab[i]=TKE_MXILU; }
