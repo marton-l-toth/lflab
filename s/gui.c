@@ -1996,8 +1996,8 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) { // 1:rbrace
 		int l2 = 0; while (buf[l2] && memcmp(buf+l2, " -- ", 4)) ++l2; DACLB_ARG(ww) = -l2; }
 	if (force) {
 		if (buf[0]!='.') { LOG("daclb_set: path begins with 0x%x", buf[0]); return; }
-		int j; for (j=l-1; buf[j]!='.'; j--) ;
-		memcpy(ww->top->title, buf+j+1, l-j-1);
+		char *q = ww->top->title; static int max_tlen = 20; // TODO
+		if (l<=max_tlen) memcpy(q, buf, l); else q[0]=q[1]='.', memcpy(q+2, buf+l-max_tlen, max_tlen);
 		gtk_window_set_title(GTK_WINDOW(ww->top->w), ww->top->title);
 	}
 	da_fullre(ww);
