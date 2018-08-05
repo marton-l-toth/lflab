@@ -107,6 +107,27 @@ void GuiStub::cre(int oid, int ty, const char *s) {
 	nd -> winflg_or(1 << i4);
 }
 
+void GuiStub::t0() { cfl(); m_bufp += (m_cwi==m_lwi) ? (*(int*)m_bufp = m_th, 4) : lx0('U'); }
+void GuiStub::w0() { cfl(); m_bufp += (m_cwi==m_lwi) ? (*(int*)m_bufp = m_wh, 4) : lx0('W'); }
+void GuiStub::setwin(int oid, int ty) { m_cwi=oid; m_cwt=ty; ty<<=24; m_th=ty+0x245509; m_wh=ty+0x245709; }
+int  GuiStub::lx0(int c) { c2(9, c); hexn(m_lwi=m_cwi, 6); c2(36, m_cwt); return 0; }
+void GuiStub::closewin(int id) { c2(9,'Z'); hexn(id, 6); c2(36, 63); }
+void GuiStub::wupd(int wwt, int wwix) { w0(); c1(wwt); if (wwix>=0) hex2(wwix); }
+void GuiStub::wupd_s(int wwt, const char *s, int wwix) 		{ wupd(wwt,wwix); c1('t'); sz(s); }
+void GuiStub::wupd_cs(int wwt, int c, const char *s, int wwix)  { wupd(wwt,wwix); c1(c); sz(s); }
+void GuiStub::wupd_ct(int wwt, const char *s, int wwix)		{ wupd(wwt,wwix); c2('t',','); sz(s); }
+void GuiStub::wupd_0(int wwt, const char *s, int wwix)		{ wupd(wwt,wwix); sz(s); }
+void GuiStub::wupd_c0(int wwt, int c, int wwix) { wupd(wwt,wwix); c1(c); }
+void GuiStub::wupd_i(int wwt, int x, int wwix)  { wupd(wwt,wwix); c1('x'); if(x&~0xfffff) hexn(x,8);
+                                                                      	   else           hex5(x); }
+void GuiStub::wupd_si(int wwt, int x, int wwix) { if (x<0) wupd_i(wwt, -x, wwix), c1('-');
+                                                  else     wupd_i(wwt,  x, wwix); }
+void GuiStub::wupd_i1(int wwt, int x, int wwix)   { wupd(wwt,wwix); c2('x', hexc1(x)); }
+void GuiStub::wupd_c48(int wwt, int x, int wwix)  { wupd(wwt,wwix); c2('c', x+48); }
+void GuiStub::wupd_ls(int wwt, int x, int wwix)   { wupd(wwt,wwix); c2('+', x+48); }
+void GuiStub::wupd_i2(int wwt, int x, int wwix)   { wupd(wwt,wwix); c1('x'); hex2(x); }
+void GuiStub::wupd_d(int wwt, double x, int wwix) { wupd(wwt,wwix); c1('@'); hdbl(x); }
+
 void GuiStub::t2_sel(int lr, ANode *nd) {
 	m_bufp[0] = 9; m_bufp[1] = '+'; m_bufp[2] = 48+(lr&1); m_bufp[3] = nd->cl_id();
 	m_bufp += 4; hex5(nd->id()); c1(36); sn(nd->rgb(), 6);

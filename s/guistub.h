@@ -53,33 +53,23 @@ class GuiStub {
 		void slr_upd() { m_bufp += Node::slr_upd_2(m_bufp); }
 		void mx_keylist(int ci) { m_bufp += mx_c_dump_keys(m_bufp, ci); }
 		void wr_keylist(unsigned int *bv, short ** pk) { m_bufp += wrap_dump_keytab(m_bufp, bv, pk); }
-		void setwin(int oid, int ty) { m_cwi=oid; m_cwt=ty; ty<<=24; m_th=ty+0x245509; m_wh=ty+0x245709; }
+		void setwin(int oid, int ty);
 		void cre(int oid, int ty, const char *s = 0);
 		void t_sz(const char *s) { t0(); sz(s); }
 		void t_sn(const char *s, int n) { t0(); sn(s,n); }
 		void t_pf(const char * fmt, ...);
 
-		void t0() { cfl(); m_bufp += (m_cwi==m_lwi) ? (*(int*)m_bufp = m_th, 4) : lx0('U'); }
-		void w0() { cfl(); m_bufp += (m_cwi==m_lwi) ? (*(int*)m_bufp = m_wh, 4) : lx0('W'); }
-		int lx0(int c) { c2(9, c); hexn(m_lwi=m_cwi, 6); c2(36, m_cwt); return 0; }
-		void closewin(int id) { c2(9,'Z'); hexn(id, 6); c2(36, 63); }
-		void errq_cfl();
-		void wupd(int wwt, int wwix = -1) { w0(); c1(wwt); if (wwix>=0) hex2(wwix); }
-		void wupd_s(int wwt, const char *s, int wwix = -1) { wupd(wwt,wwix); c1('t'); sz(s); }
-		void wupd_cs(int wwt, int c, const char *s, int wwix = -1) { wupd(wwt,wwix); c1(c); sz(s); }
-		void wupd_ct(int wwt, const char *s, int wwix = -1) { wupd(wwt,wwix); c2('t',','); sz(s); }
-		void wupd_0(int wwt, const char *s, int wwix = -1) { wupd(wwt,wwix); sz(s); }
-		void wupd_c0(int wwt, int c, int wwix = -1) { wupd(wwt,wwix); c1(c); }
-		void wupd_i(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c1('x'); if(x&~0xfffff) hexn(x,8);
-										      else	     hex5(x); }
-		void wupd_si(int wwt, int x, int wwix = -1) { if (x<0) wupd_i(wwt, -x, wwix), c1('-');
-							      else     wupd_i(wwt,  x, wwix); }
-		void wupd_i1(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('x', hexc1(x)); }
-		void wupd_c48(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('c', x+48); }
-		void wupd_ls(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c2('+', x+48); }
-		void wupd_i2(int wwt, int x, int wwix = -1) { wupd(wwt,wwix); c1('x'); hex2(x); }
-		void wupd_d(int wwt, double x, int wwix = -1) { wupd(wwt,wwix); c1('@'); hdbl(x); }
+		void t0(), w0(), closewin(int id), errq_cfl();
+		int lx0(int c);
+		void wupd(int wwt, int wwix = -1);
+		void wupd_c0 (int wwt, int c, int wwix=-1),  wupd_s (int wwt, const char *s, int wwix=-1);
+		void wupd_i  (int wwt, int x, int wwix=-1),  wupd_ct(int wwt, const char *s, int wwix=-1); 
+		void wupd_si (int wwt, int x, int wwix=-1),  wupd_0 (int wwt, const char *s, int wwix=-1);
+		void wupd_i1 (int wwt, int x, int wwix=-1),  wupd_ls (int wwt, int x, int wwix=-1);
+		void wupd_c48(int wwt, int x, int wwix=-1),  wupd_i2 (int wwt, int x, int wwix=-1);
+		void wupd_d  (int wwt, double x, int wwix = -1);
 		void wupd_k3p(int wwt, int x, int wwix = -1);
+		void wupd_cs(int wwt, int c, const char*s, int wwix=-1);
 
 		int tree_expand(int lr, ADirNode * dir);
 		void root_expand() { tree_expand(0, Node::root()); tree_expand(1, Node::root()); }
