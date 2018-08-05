@@ -673,6 +673,15 @@ static topwin * tw_lookup(int id) {
 	}
 }
 
+static void tw_title_path(topwin *tw, const char *s, int n, int pfx) {
+	static int lim = 20;  // TODO (general: gui cfg imm. update)
+	if (s[0]!='.') { LOG("tw_title_path: path begins with 0x%x", s[0]); return; }
+	char *q = tw->title; q[0]=pfx; q+=!!pfx;
+	if (n<=lim)     	 memcpy(q,   s,		n), q[n]=0;
+	else  q[0] = q[1] = '.', memcpy(q+2, s+n-lim, lim), q[lim]=0;
+	gtk_window_set_title(GTK_WINDOW(tw->w), tw->title);
+}
+
 static inline ww_t * widg_qp(topwin * tw, int ix) { return tw->pp_sub[ix>>5] + (ix&31); }
 static 	      ww_t * widg_fp(topwin * tw, int ix) {
 	if (ix&~1023) return NULL;
@@ -1983,8 +1992,7 @@ static void dalbl_skel(struct _ww_t * ww, const char **pp) {
 }
 
 static void daclb_set(struct _ww_t * ww, const char **pp, int flg) { // 1:rbrace 2:noclr 8:docw
-	char buf[256]; int force = 0;
-	if (**pp=='!') force=1, ++*pp;
+	char buf[256]; int tt = (**pp=='!');  *pp += tt;
 	if (flg&8) memcpy(ww->arg[2].c, "%%%ccc  Azz666"-8*(DACLB_ARG(ww)=-!memcmp(*pp, "==> ", 4)), 6);
 	else if (**pp=='(') ++*pp, DACLB_ARG(ww)=atoi_h_ppc(pp), *pp += (**pp==')');
 	else DACLB_ARG(ww) = 0;
@@ -1994,12 +2002,7 @@ static void daclb_set(struct _ww_t * ww, const char **pp, int flg) { // 1:rbrace
 	ww->etc = realloc(ww->etc, l); memcpy(ww->etc, buf, l);
 	if (DACLB_ARG(ww)<0) {
 		int l2 = 0; while (buf[l2] && memcmp(buf+l2, " -- ", 4)) ++l2; DACLB_ARG(ww) = -l2; }
-	if (force) {
-		if (buf[0]!='.') { LOG("daclb_set: path begins with 0x%x", buf[0]); return; }
-		char *q = ww->top->title; static int max_tlen = 20; // TODO
-		if (l<=max_tlen) memcpy(q, buf, l); else q[0]=q[1]='.', memcpy(q+2, buf+l-max_tlen, max_tlen);
-		gtk_window_set_title(GTK_WINDOW(ww->top->w), ww->top->title);
-	}
+	if (tt) tw_title_path(ww->top, buf, l, 0);
 	da_fullre(ww);
 }
 
@@ -2741,8 +2744,7 @@ static void tgrid_cmd (struct _topwin * tw, char * arg) {
 		case '#':
 			ww = widg_lu1_ps(tw, arg); (*ww->cl->cmd)(ww, arg+1); return;
 		case 'T':
-			tw->title[0] = '#';
-			for (i=1; i<20 && arg[i]&&arg[i]!=36; i++) tw->title[i] = arg[i]; tw->title[i] = 0;
+			for (i=1; arg[i]&&arg[i]!=36; i++);  tw_title_path(tw, arg+1, i-1, '#');
 			if (!arg[i]) return;  arg += i+1; continue;
 		case '*':
 			ww = widg_lu1_pc(tw, '#');

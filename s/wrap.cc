@@ -1456,7 +1456,7 @@ int AWrapGen::slf_conv(int k) {
 	for (int i=0; i<6; i++) if (k&(1<<i)) v |= 1 << (2*i+(--d<0));    return v; }
 
 int AWrapGen::aux_window() {
-	gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.nname(m_node);
+	gui2.cre(w_oid(9), '#'); gui2.c1('T'); gui2.npath(m_node,256);
 	gui2.c1(36); gr_rgbc(); if (m_bflg&WRF_SLUPD) gui2.c1('u');
 	WrapCore * cr = core_ro();
 	cr->slcmd(m_xys6, 63); w_slbv(1); cr->grcmd(m_xys6);
