@@ -13,24 +13,24 @@ typedef double (*abxf_cc)(double,double);
 typedef void (*abxf_cv)(double*,double,double*,int);
 typedef void (*abxf_vv)(double*,double*,double*,int);
 
-STATELESS_BOX_0(Ar2BoxAD) { double *o = outb[0]; switch(inflg&3) {
+STATELESS_BOX(Ar2BoxAD) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] + *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = x+q[i]; return 1; }
 	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+q[i]; return 1; }}} // no
-STATELESS_BOX_0(Ar2BoxSB) { double *o = outb[0]; switch(inflg&3) {
+STATELESS_BOX(Ar2BoxSB) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] - *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]-y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = x-q[i]; return 1; }
 	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]-q[i]; return 1; }}} // no
-STATELESS_BOX_0(Ar2BoxML) { double *o = outb[0]; switch(inflg&3) {
+STATELESS_BOX(Ar2BoxML) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] * *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; if (fabs(y)<1e-280) return *o=0.0, 0; 
 					      for (int i=0;i<n;i++) o[i] = p[i]*y; return 1; }
 	case 2: { double x=*inb[0],*q=inb[1]; if (fabs(x)<1e-280) return *o=0.0, 0; 
 					      for (int i=0;i<n;i++) o[i] = x*q[i]; return 1; }
 	case 3: { double *p=inb[0],*q=inb[1]; for (int i=0;i<n;i++) o[i] = p[i]*q[i]; return 1; }}} // no
-STATELESS_BOX_0(Ar2BoxDV) { double *o = outb[0]; switch(inflg&3) {
+STATELESS_BOX(Ar2BoxDV) { double *o = outb[0]; switch(inflg&3) {
 	case 0: return **outb = *inb[0] / *inb[1], 0;
 	case 1: { double *p=inb[0],y=*inb[1]; if (fabs(y)<1e-280) return *o=1.0/0.0, 0; else y = 1.0/y;
 					      for (int i=0;i<n;i++) o[i] = p[i]*y; return 1; }
@@ -46,7 +46,7 @@ STATELESS_BOX_0(Ar2BoxDV) { double *o = outb[0]; switch(inflg&3) {
 //? xi: integer part
 //? xf: fraction part
 //? xi is an integer, x = xi + xf, mf <= xf < mf+1
-STATELESS_BOX_0(ArSplitBox) {
+STATELESS_BOX(ArSplitBox) {
 	double x, y, mf, *px = *inb, *pmf = inb[1], *toi = *outb, *tof = outb[1];
 	switch(inflg & 3) {
 		case 0: x=*px, mf=*pmf, *toi=y=floor(x-mf), *tof=(x-y); return 0;
@@ -60,7 +60,7 @@ STATELESS_BOX_0(ArSplitBox) {
 //? {{{!._xmx}}}
 //? cross-mixer, output is (1-t)*x + t*y
 #define XMX_L1(X,Y,J) x=(X); y=(Y); p = inb[J]; for (int i=0; i<n; i++) to[i] = x + y*p[i]; return 1
-STATELESS_BOX_0(CrossMix) {
+STATELESS_BOX(CrossMix) {
 	double x, y, *p, *q, *r, *to = *outb;
 	switch(inflg & 7) {
 		case 0: return *to = *inb[1] * *inb[2] + *inb[0] * (1.0-*inb[2]), 0;
@@ -85,7 +85,7 @@ static int smx2_cax (double *to, int n, double c, double x, double *p)   { SMX(c
 static int smx2_cxx (double *to, int n, double c, double *p, double *q) { SMX(c+p[i]*q[i]); }
 static int smx2_axby(double *to, int n, double x, double y, double *p, double *q) { SMX(x*p[i]+y*q[i]); }
 static int smx2_xxby(double *to, int n, double x, double *z, double *p, double *q) { SMX(x*z[i]+p[i]*q[i]); }
-STATELESS_BOX_0(SMix2) {
+STATELESS_BOX(SMix2) {
 	double *z = outb[0];
 	switch(inflg&15) {
 		case  0: return *z=inb[0][0]*inb[1][0] + inb[2][0]*inb[3][0], 0;
@@ -109,9 +109,9 @@ STATELESS_BOX_0(SMix2) {
 #define SMXC(J,X) case J: SMX(X)
 #define SMXc(J) (x[J]*p[J][i])
 #define SMXV(J) (q[J][i]*r[J][i])
-STATELESS_BOX_1(SMix34) {
+STATELESS_BOX(SMix34) {
 	double c = 0.0, *to = outb[0], x[4], *p[4], *q[4], *r[4];
-	int flg = 0, ni = s_arg(abxi)*2, f = inflg;
+	int flg = 0, ni = abxi->m_arg*2, f = inflg;
 	for (int j,i=0; i<ni; i+=2, f>>=2) { switch(f&3) {
 		case 0: flg |= 64; c += inb[i][0] * inb[i+1][0]; break;
 		case 1: j = flg&3; x[j] = inb[i+1][0]; p[j] = inb[ i ]; ++flg; break;
@@ -199,15 +199,10 @@ class CalcBoxModel : public BoxModel {
 		CalcStkOp * op; int nx;
 };
 
-class CalcBoxInst : public BoxInst {
-	public:
-		static scf_t sc_f;
-		CalcBoxInst(CalcBoxModel *mdl) : BoxInst(sc_f), m_m(mdl), m_op(mdl->op) { BoxModel::ref(mdl); }
-		virtual ~CalcBoxInst() { if (m_m) BoxModel::unref(m_m); }
-	protected:
-		CalcBoxModel * m_m;
-		CalcStkOp * m_op;
-};
+struct CalcBoxInst : BoxInst_BU {
+	static scf_t sc_f; static dtorf_t dtf;	 CalcBoxModel * m_m;   CalcStkOp * m_op;
+	BoxInst * ini(CalcBoxModel *mdl) { m_psc = &sc_f; set_dtf(&dtf);
+					   m_m = mdl; m_op = mdl->op; BoxModel::ref(mdl); return this; }};
 
 CalcBoxModel::CalcBoxModel(char * oopp, int nnxx) 
 	: BoxModel(sizeof(CalcBoxInst), 1), op((CalcStkOp*)oopp), nx(nnxx) {}
@@ -255,7 +250,7 @@ int CalcBoxGen::save2(SvArg * sv) {
 	return r;
 }
 
-BoxInst * CalcBoxModel::place_box(void *to) { return new (to) CalcBoxInst(this); }
+BoxInst * CalcBoxModel::place_box(void *to) { return ((CalcBoxInst*)to)->ini(this); }
 
 void CalcBoxGen::upd_xyz(int c, int n) {
 	gui2.setwin(w_oid(), 'c');
@@ -280,36 +275,38 @@ void CalcBoxGen::box_window() {
 	for (int i=0; i<no; i++) upd_line('y', i, 1);
 }
 
+void CalcBoxInst::dtf(BoxInst *q) { BoxModel::unref(((CalcBoxInst*)q)->m_m); } 
+
 BX_SCALC(CalcBoxInst::sc_f) { SCALC_BXI(CalcBoxInst); 
 			      return calc_run_b(bxi->m_op, inflg, inb, outb, n, bxi->m_m->nx); }
 
 void b_ar_init(ANode * rn) {
-	qmk_box(rn, "+", QMB_ARG0(Ar2BoxAD), 0, 2, 1, "a2", "i*o*R*1", "x$y", "x+y", "Pz%%0%"); 
-	qmk_box(rn, "-", QMB_ARG0(Ar2BoxSB), 0, 2, 1, "a2", "1o*", "x-y");
-	qmk_box(rn, "*", QMB_ARG0(Ar2BoxML), 0, 2, 1, "a2", "1o*", "x*y");
-	qmk_box(rn, "/", QMB_ARG0(Ar2BoxDV), 0, 2, 1, "a2", "1o*", "x/y");
-	qmk_box(rn, "split", QMB_ARG0(ArSplitBox), 0, 2, 34, "asp", "1i*o*", "x$mf", "xi$xf");
+	qmk_box(rn, "+", QMB_A_SL(Ar2BoxAD), 0, 2, 1, "a2", "i*o*R*1", "x$y", "x+y", "Pz%%0%"); 
+	qmk_box(rn, "-", QMB_A_SL(Ar2BoxSB), 0, 2, 1, "a2", "1o*", "x-y");
+	qmk_box(rn, "*", QMB_A_SL(Ar2BoxML), 0, 2, 1, "a2", "1o*", "x*y");
+	qmk_box(rn, "/", QMB_A_SL(Ar2BoxDV), 0, 2, 1, "a2", "1o*", "x/y");
+	qmk_box(rn, "split", QMB_A_SL(ArSplitBox), 0, 2, 34, "asp", "1i*o*", "x$mf", "xi$xf");
 	ANode *f1 = qmk_dir(rn, "f1"), *mx = qmk_dir(rn, "mix");
-	qmk_box(f1, "abs",   QMB_ARG0(Ar1Abs ), 0, 1, 33, "a1", "1i*o*R1", "x", "f(x)");
-	qmk_box(f1, "sqrt",  QMB_ARG0(Ar1Sqrt), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "cbrt",  QMB_ARG0(Ar1Cbrt), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "exp",   QMB_ARG0(Ar1Exp ), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "exp-",  QMB_ARG0(Ar1_Exp), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "floor", QMB_ARG0(Ar1RndF), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "ceil",  QMB_ARG0(Ar1RndC), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "round", QMB_ARG0(Ar1RndR), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "clip3", QMB_ARG0(Ar1Clp3), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "fq_warp",  QMB_ARG0(Ar1FqWarp),  0, 1, 33, "a1", "1");
-	qmk_box(f1, "1+x/1-x",  QMB_ARG0(Ar1_1p_1m),  0, 1, 33, "a1", "1");
-	qmk_box(f1, "1-x/1+x",  QMB_ARG0(Ar1_1m_1p),   0, 1, 33, "a1", "1");
-	qmk_box(f1, "sec2samp", QMB_ARG0(Ar1Sec2Samp), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "samp2sec", QMB_ARG0(Ar1Samp2Sec), 0, 1, 33, "a1", "1");
-	qmk_box(f1, "prime17",  QMB_ARG0(Ar1Prime17),  0, 1, 33, "a1", "1");
-	qmk_box(f1, "fib7s",    QMB_ARG0(Ar1Fib7s),    0, 1, 33, "a1", "1");
-	qmk_box(mx, "xmix", QMB_ARG0(CrossMix), 0, 3, 33, "xmx", "i*R*1", "x$y$t", "qqq%%q");
-	qmk_box(mx, "mix2", QMB_ARG0(SMix2),  2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
-	qmk_box(mx, "mix3", QMB_ARG1(SMix34), 3, 6, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3");
-	qmk_box(mx, "mix4", QMB_ARG1(SMix34), 4, 8, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3$a4$b4");
+	qmk_box(f1, "abs",   QMB_A_SL(Ar1Abs ), 0, 1, 33, "a1", "1i*o*R1", "x", "f(x)");
+	qmk_box(f1, "sqrt",  QMB_A_SL(Ar1Sqrt), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "cbrt",  QMB_A_SL(Ar1Cbrt), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "exp",   QMB_A_SL(Ar1Exp ), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "exp-",  QMB_A_SL(Ar1_Exp), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "floor", QMB_A_SL(Ar1RndF), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "ceil",  QMB_A_SL(Ar1RndC), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "round", QMB_A_SL(Ar1RndR), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "clip3", QMB_A_SL(Ar1Clp3), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "fq_warp",  QMB_A_SL(Ar1FqWarp),  0, 1, 33, "a1", "1");
+	qmk_box(f1, "1+x/1-x",  QMB_A_SL(Ar1_1p_1m),  0, 1, 33, "a1", "1");
+	qmk_box(f1, "1-x/1+x",  QMB_A_SL(Ar1_1m_1p),   0, 1, 33, "a1", "1");
+	qmk_box(f1, "sec2samp", QMB_A_SL(Ar1Sec2Samp), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "samp2sec", QMB_A_SL(Ar1Samp2Sec), 0, 1, 33, "a1", "1");
+	qmk_box(f1, "prime17",  QMB_A_SL(Ar1Prime17),  0, 1, 33, "a1", "1");
+	qmk_box(f1, "fib7s",    QMB_A_SL(Ar1Fib7s),    0, 1, 33, "a1", "1");
+	qmk_box(mx, "xmix", QMB_A_SL(CrossMix), 0, 3, 33, "xmx", "i*R*1", "x$y$t", "qqq%%q");
+	qmk_box(mx, "mix2", QMB_A_SL(SMix2),  2, 4, 33, "smx", "1i*R1", "a1$b1$a2$b2");
+	qmk_box(mx, "mix3", QMB_A_SL(SMix34), 3, 6, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3");
+	qmk_box(mx, "mix4", QMB_A_SL(SMix34), 4, 8, 33, "smx", "1i*R1", "a1$b1$a2$b2$a3$b3$a4$b4");
 }
 
 int setbox_calc(ABoxNode * nd, BoxGen * _) { nd->m_box = new CalcBoxGen(nd); return 2; }

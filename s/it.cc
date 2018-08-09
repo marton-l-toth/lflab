@@ -6,20 +6,17 @@
 #include "util2.h"
 
 class CFIBoxModel;
-class CFIBoxInst : public BoxInst {
-        public:
-		static scf_t sc_f0, sc_f1, sc_fa0, sc_fa1;
-                CFIBoxInst(CFIBoxModel * m);
-                ~CFIBoxInst();
-        protected:
-                int ini(double** inb);
-		int prep_in(int inflg, double** inb);
-                void fill_con(double**to, int bv, unsigned char * ix);
-                int m_nr, m_inc_bv;
-                CFIBoxModel * m_m;
-                double ** m_in1;
-		int m_siz1;
-		char *m_bxv, *m_blk;
+struct CFIBoxInst : BoxInst_BU {
+	static scf_t sc_ini, sc_f1, sc_fa0, sc_fa1;	static dtorf_t dtf;
+	CFIBoxInst* ini00(CFIBoxModel * m);
+	int ini(double** inb);
+	int prep_in(int inflg, double** inb);
+	void fill_con(double**to, int bv, unsigned char * ix);
+	int m_nr, m_inc_bv;
+	CFIBoxModel * m_m;
+	double ** m_in1;
+	int m_siz1;
+	char *m_bxv, *m_blk;
 };
 
 class CFIBoxModel : public BoxModel {
@@ -27,7 +24,7 @@ class CFIBoxModel : public BoxModel {
                 CFIBoxModel(ConStore *pc, char *q, int ff) :
 			BoxModel(sizeof(CFIBoxInst), 1),
 			pcs(pc), foif(ff), fdsc((unsigned char*)q), cdsc((unsigned char*)(q+(ff&31))) {}
-                virtual BoxInst * place_box(void *to) { return new (to) CFIBoxInst(this); }
+                virtual BoxInst * place_box(void *to) { return ((CFIBoxInst*)to)->ini00(this); }
                 ModelPtr fm, cm;
                 ConStore * pcs;
                 int ivck_bv[4], foif, rsrv;
@@ -85,9 +82,12 @@ class CFIBoxGen : public BoxGen {
 };
 
 #define CFI_IV(O) int siz1 = (O)->m_siz1; char * bxv = (O)->m_bxv
-CFIBoxInst::CFIBoxInst(CFIBoxModel * m) : BoxInst(sc_f0), m_nr(-1), m_m(m), m_blk(0) { BoxModel::ref(m); }
-CFIBoxInst::~CFIBoxInst() { BoxModel::unref(m_m); CFI_IV(this);
-		            for (int i=0;i<m_nr;i++) BoxInst::dtor((BoxInst*)bxv), bxv+=siz1; free(m_blk); }
+CFIBoxInst* CFIBoxInst::ini00(CFIBoxModel *m) {
+	m_psc=sc_ini; set_dtf(&dtf); m_nr=-1; m_blk=0; BoxModel::ref(m_m=m); return this; }
+
+void CFIBoxInst::dtf(BoxInst *abxi) { SCALC_BXI(CFIBoxInst); BoxModel::unref(bxi->m_m); CFI_IV(bxi);
+	for (int i=0,n=bxi->m_nr; i<n;i++) BoxInst::dtor((BoxInst*)bxv), bxv+=siz1; free(bxi->m_blk); }
+
 void CFIBoxInst::fill_con(double**to, int bv, unsigned char * ix) {
 	ConStore * pcs = m_m->pcs; BVFOR_JM(bv) to[j] = pcs->p(ix[j]&63); }
 
@@ -125,7 +125,7 @@ int CFIBoxInst::prep_in(int inflg, double** inb) {
 	return rv;
 }
 
-BX_SCALC(CFIBoxInst::sc_f0) {
+BX_SCALC(CFIBoxInst::sc_ini) {
 	static sc_t sctab[4] = { sc_cp0, sc_f1, sc_fa0, sc_fa1 };
 	SCALC_BXI(CFIBoxInst); int r = bxi->ini(inb); if (r<0) return r; CALC_FW(sctab[r]); }
 

@@ -11,9 +11,9 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "../util.h" // error codes, NaN-lists and Scale01
 #include "../box0.h" // needed for all primitive boxes
 #include "../pzrf.h" // only if you want to make pole/zero filters
-#include "../util.h" // error codes, NaN-lists and Scale01
 
 // help texts: lines beginning with "//?" are collected from source files
 // help texts are identified by {{{<package>.<cl_id>}}}
@@ -70,7 +70,7 @@ FUN1_BOX(ZBAbs, fabs(x))
 // you only have to write the function body (this is the two input "+" box, it
 // outputs the sum of the two inputs (which is constant if both inputs are constant)
 
-STATELESS_BOX_0(ZBAdd) { 
+STATELESS_BOX(ZBAdd) { 
 	double *o = outb[0]; switch(inflg&3) {
 		case 0: return **outb = *inb[0] + *inb[1], 0;
 		case 1: { double *p=inb[0],y=*inb[1]; for (int i=0;i<n;i++) o[i] = p[i]+y; return 1; }
@@ -90,8 +90,8 @@ STATELESS_BOX_0(ZBAdd) {
 inline int ixround(double x, int n) { int r = (int)lround(x);
 	        return ((unsigned int)r<(unsigned int)n) ? r : (r<0?0:n-1); }
 
-STATELESS_BOX_1(ZBSel) {
-        int arg = s_arg(abxi), ixm = 1<<arg;
+STATELESS_BOX(ZBSel) {
+        int arg = abxi->m_arg, ixm = 1<<arg;
         double *pv, *q = *outb, *pi = inb[arg];
 	if (!(inflg&ixm)) {
 		int j = ixround(*pi, arg), r = (inflg>>j)&1;
@@ -114,15 +114,12 @@ STATELESS_BOX_1(ZBSel) {
 // sample_rate(int) and sample_length(double) are global variables
 // sample_length is ( 1.0/(double)sample_rate ), sample_rate is currently fixed at 44100
 
-class ZBAcc : public BoxInst {
-        public: 
-                static scf_t sc_f0; // declare calc func
-                ZBAcc() : BoxInst(sc_f0), m_v(0.0) {} // init calc func with BoxInst ctor
-        protected:
+struct ZBAcc : public BoxInst_B0 {
+                static scf_t sc_ini, sc_f1; // declare calc func
                 double m_v;  // state
 };
 
-BX_SCALC(ZBAcc::sc_f0) {
+BX_SCALC(ZBAcc::sc_f1) {
         SCALC_BXI(ZBAcc); // macro for casting to ZBAccFilt *bxi
 	double x, y, v=bxi->m_v, *p = *outb, *q0, *q1;
         switch (inflg & 3) {
@@ -136,6 +133,8 @@ BX_SCALC(ZBAcc::sc_f0) {
                          for (int i=0;i<n;i++) p[i]= ((v+=sample_length*q0[i])*=exp(-sample_length*q1[i])); }
         bxi->m_v = v; return 1;
 }
+
+BX_SCALC(ZBAcc::sc_ini) { SCALC_BXI(ZBAcc); bxi->m_v=0.0; CALC_FW(sc_f1); }
 
 // For filters composed of pole/zero pairs (either sequentially or parallelly combined),
 // you only have to write the fuction that generates the pole/zero pairs, the rest is taken
@@ -164,7 +163,7 @@ QUICK_PZFILT(ZBEqLF) {
                amp1 = exp(M_LN2 / inb[3][0]), wid2 = wid1 * fq;
         NAN_UNPK_32(amp, inb[4], 0);
         int i, j, k, np = amp_n; 
-	set_n(np); // sets number poles, allocates m_ab
+	set_n_d(np); // sets number poles, allocates m_ab
         RECF_PZItem * pzn = new RECF_PZItem[np]; // pole-zero pairs
         for (i=j=0; i<np; i++, fq+=step) if ((k=amp_x[i])) pzn[j].eql(fq_warp(fq),wid2/fq,ipows(amp1,k)), j++;
         rfpz_transform(m_ab, pzn, j); return 0; // pzn not freed now, available for main menu/filter disp.
@@ -214,17 +213,17 @@ QUICK_PZFILT(ZBEqLF) {
 
 void ci_zB(ANode * r) {
 	log("lflab is easy to extend, see %s for details", __FILE__);
-	qmk_box(r, "abs", QMB_ARG0(ZBAbs), 0, 1, 33, "zB", "i*o*R*1", "X", "absX", "Pz%%0%"); 
-	qmk_box(r, "+", QMB_ARG0(ZBAdd), 0, 2, 1, "zB", "1i*o*", "x$y", "x+y");
+	qmk_box(r, "abs", QMB_A_SL(ZBAbs), 0, 1, 33, "zB", "i*o*R*1", "X", "absX", "Pz%%0%"); 
+	qmk_box(r, "+", QMB_A_SL(ZBAdd), 0, 2, 1, "zB", "1i*o*", "x$y", "x+y");
 
-	ANode * dsel = qmk_dir(r, "sel"); qmb_arg_t qa = QMB_ARG1(ZBSel);
+	ANode * dsel = qmk_dir(r, "sel"); qmb_arg_t qa = QMB_A_SL(ZBSel);
 	char nm[8]; memcpy(nm, "sel02", 6); 
 	qmk_box(dsel, nm, qa, 2, 3, 33, "zB", "R*1i-", "uu%99%", 513, "sel"); // store color only
 	for (int i=3; i<30; i++) nm[3] = '0'+i/10, nm[4] = '0'+i%10,   // keep default labels (exc. "sel")
 		qmk_box(dsel, nm, qa, i, i+1, 33, "zB", "1i-", 1+256*i, "sel");
 
-	qmk_box(r, "=acc", QMB_ARG0(ZBAcc), 0, 2, 1, "zB", "i*", "in$loss");
-	qmk_box(r, "=eql-ls", QMB_ARG0(ZBEqLF),0,6,33,"zB", "i*R*", "in$fq1$step$wid$2div$[a]", "uuu3%F");
+	qmk_box(r, "=acc", QMB_A_BX(ZBAcc), 0, 2, 1, "zB", "i*", "in$loss");
+	qmk_box(r, "=eql-ls", QMB_A_BX(ZBEqLF),0,6,33,"zB", "i*R*", "in$fq1$step$wid$2div$[a]", "uuu3%F");
 }
 
 // you can find more examples (although with less comments) in the main source files.

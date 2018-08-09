@@ -39,17 +39,11 @@ struct FEblk {
 
 //  0    0    1   2  g1/3 1  2  3  4  5  6  7  8   9   10   11   12  13  p1[57] 1  2 
 // (in | hhv hhp hhf) #s opt x2 x1 x0 y2 y1 y0 su0 su1 ipos iwid pkx pky F/y   ie dmp
-class FEBox : public BoxInst {
-        public:
-		static scf_t sc_f0, sc_f1;
-                FEBox(int flg) : BoxInst(sc_f0), m_flg(flg), m_blk(0) {}
-                virtual ~FEBox() { if (m_blk) free(m_blk); }
-		inline int geom_pos() const { return 1 + (m_flg & 2); }
-		inline int par_pos() const { return 15 + (m_flg & 2); }
-        protected:
-		FEblk * ini_blk(double **inb);
-		int m_flg;
-		FEblk * m_blk;
+struct FEBox : BoxInst_B1 {
+	static scf_t sc_ini, sc_f1;
+	inline int geom_pos() const { return 1 + (m_arg & 2); }
+	inline int par_pos() const { return 15 + (m_arg & 2); }
+	FEblk * ini_blk(double **inb);
 };
 
 static inline void ply_qi(double *q, const double *p, int n) {
@@ -98,25 +92,26 @@ void FEblk::iv_ini(double z0, double z1) { double j = (double)i0, y, a = 0.0;
 	a = 1.0/a; for (int i=0; i<iw; i++) iv[i] *= a; }
 
 FEblk * FEBox::ini_blk(double **inb) {
-	double **pg = inb + 1 + (m_flg&2);
+	FEblk * blk;
+	double **pg = inb + 1 + (m_arg&2);
 	double x012[3]; for (int i=0; i<3; i++) x012[i] = pg[4-i][0];
 	double y012[3]; for (int i=0; i<3; i++) y012[i] = pg[7-i][0];
 	int m0 = (int)lround(**pg), m = ((unsigned int)(m0-1)<250u) ? m0+2 : (m0>1?252:3),
 	    ipm0 = (int)ceil(pg[10][0]*(double)(m-2)), ipm = ipm0<1 ? 1 : (min_i(ipm0, m-2));
-	if (m_flg&2) {
-		(m_blk = FEblk::mk0(m, ipm, 0))->geom_ini(x012, y012, pg[12][0], pg[13][0], 0); // TODO(?)
+	if (m_arg&2) {
+		(blk = FEblk::mk0(m, ipm, 0))->geom_ini(x012, y012, pg[12][0], pg[13][0], 0); // TODO(?)
 	} else {
 		double ipmd = (double)ipm, ihw = 0.5 * pg[11][0], z0 = ipmd - ihw, z1 = ipmd + ihw;
 		int z0i = (int)ceil (z0); if (z0i<1  ) z0i = 1;   else if (z0i>ipm) z0i = ipm;
 		int z1i = (int)floor(z1); if (z1i>m-2) z1i = m-2; else if (z1i>ipm) z1i = ipm;
 		if (z1i<z0i) z0i = z1i = ipm;
-		m_blk = FEblk::mk0(m, z0i, z1i-z0i+1);
-		m_blk->geom_ini(x012, y012, pg[12][0], pg[13][0], pg[1][0]!=pg[1][0]);
-		m_blk->iv_ini(z0, z1); 
-		if (DBGC) log("fe: geo(%g,%g) iv(%g,%g,%d,%d)", pg[12][0],pg[13][0],z0,z1,m_blk->i0,m_blk->iw);
+		blk = FEblk::mk0(m, z0i, z1i-z0i+1);
+		blk->geom_ini(x012, y012, pg[12][0], pg[13][0], pg[1][0]!=pg[1][0]);
+		blk->iv_ini(z0, z1); 
+		if (DBGC) log("fe: geo(%g,%g) iv(%g,%g,%d,%d)", pg[12][0],pg[13][0],z0,z1,blk->i0,blk->iw);
 	}
-	m_blk->cs1[0] *= pg[8][0]; m_blk->cs1[2*m-5] *= pg[9][0];
-	return m_blk;
+	blk->cs1[0] *= pg[8][0]; blk->cs1[2*m-5] *= pg[9][0];
+	m_p0 = blk; m_dt = 2; return blk;
 }
 
 #define FC_00(IX) case IX: { 
@@ -133,13 +128,13 @@ FEblk * FEBox::ini_blk(double **inb) {
 #define FC_8 double vd=hhvp[i&hhvmsk]-qhh->v, hhp0=hhpp[i&hhpmsk], hhp=(mfg&1)?hhp0*hhfp[i&hhfmsk] : hhp0;\
 	if (vd>0.0) vd<hhp ? (mfg|=1) : (vd= hhp, mfg&=~1); \
 	else       -vd<hhp ? (mfg|=1) : (vd=-hhp, mfg&=~1);   qhh->v+=vd; qhh->y+=vd;
-#define FC_Z to[i] = a; }} bxi->m_flg = mfg; return 1;
+#define FC_Z to[i] = a; }} bxi->m_arg = mfg; return 1;
 
-BX_SCALC(FEBox::sc_f0) { SCALC_BXI(FEBox); bxi->ini_blk(inb); CALC_FW(sc_f1); }
+BX_SCALC(FEBox::sc_ini) { SCALC_BXI(FEBox); bxi->ini_blk(inb); CALC_FW(sc_f1); }
 
 BX_SCALC(FEBox::sc_f1) {
-	SCALC_BXI(FEBox); FEblk * blk = bxi->m_blk;
-	int m = blk->m, k = bxi->par_pos(), parf = inflg>>k, ty = parf&1, mfg = bxi->m_flg;
+	SCALC_BXI(FEBox); FEblk *blk = (FEblk*)bxi->m_p0;
+	int m = blk->m, k = bxi->par_pos(), parf = inflg>>k, ty = parf&1, mfg = bxi->m_arg;
 	double s0, t1[m], *to = *outb, **par = inb+k, *attp = par[2], att = (parf&4) ? 0.0 : att2mul(*attp);
 	FE1 *q,*p = blk->p;
 	if (ty) blk->cs_ini_1(0); else blk->cs_ini_x(0, par[0][0]);
@@ -170,7 +165,7 @@ BX_SCALC(FEBox::sc_f1) {
 
 static const char * fe_inm2 = "#s$opt$x2$x1$x0$y2$y1$y0$su0$su1$ipos$iwid$pkx$pky$F/y$F/v$dmp";
 void b_filt_fe_init(ANode * rn) {
-	qmk_box(rn, "=fe",  QMB_ARG1(FEBox), 0, 18, 1, "_fe", "*i-i-", "0zz%II", 
+	qmk_box(rn, "=fe",  QMB_A_BX(FEBox), 0, 18, 1, "_fe", "*i-i-", "0zz%II", 
 			1, "in", 0x111, fe_inm2);
 	//qmk_box(rn, "fe/hh", QMB_ARG1(FEBox), 2, 20, 1, "_fe", "*i-i-", "0zz%II",   TODO
 	//		3, "hhv$hhp$hhf", 0x311, fe_inm2);

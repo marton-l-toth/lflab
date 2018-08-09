@@ -114,12 +114,11 @@ void pzrf_show_last() {
 	gui2.cre(0x77, 'P'); gui2.wupd('P'); gui2.sn(buf, len);
 }
 
-PZFInst::~PZFInst() { free(m_blk); }
-void PZFInst::set_n(int n) { char *p = (m_blk = (char*)malloc(n*sizeof(RECF_ABXY)+15));
-			     m_n_bq = n; m_ab = (RECF_ABXY*)(p + (-((long)p) & 15)); }
-void PZFInst::damp() {
-	if (!m_n_bq || m_damp<1e-14 || m_damp>1e20) return;
-	double d = exp(-m_damp * sample_length), dd = d*d;
+void PZFInst::set_n_d(int n, double d) { char *p = (char*)(m_p0 = malloc(n*sizeof(RECF_ABXY)+15));
+					 m_n_bq = n; m_ab = (RECF_ABXY*)(p + (-((long)p) & 15)); m_dcy=d; }
+void PZFInst::dcy() {
+	if (!m_n_bq || m_dcy<1e-14 || m_dcy>1e20) return;
+	double d = exp(-m_dcy * sample_length), dd = d*d;
 	for (int i=0; i<m_n_bq; i++) m_ab[i].b1*=d, m_ab[i].b2*=dd, m_ab[i].a1*=d, m_ab[i].a2*=dd;
 }
 
@@ -156,10 +155,10 @@ void PZFInst::rf_debug(int n) {
 #define ADD2 _mm_add_pd
 #define MUL2 _mm_mul_pd
 
-BX_SCALC(PZFInst::sc_ini) {
+int PZFInst::ini2(BoxInst * abxi, int inflg, double** inb, double** outb, int n, int r) {
 	static sc_t calctab[6]={sc_cp0, sc_zero, sc_one, sc_one, sc_seq, sc_par};
-	SCALC_BXI(PZFInst); int r = bxi->mk_filter(inb+1); if (r<0) return r;
-	bxi->damp(); int m = bxi->m_n_bq; CALC_FW(calctab[ 2*(!!m+(m>1)) + (r&1) ]);	}
+	if0(r<0) return r; SCALC_BXI(PZFInst);
+	bxi->m_t=0; bxi->dcy(); int m = bxi->m_n_bq; CALC_FW(calctab[ 2*(!!m+(m>1)) + (r&1) ]); }
 
 BX_SCALC(PZFInst::sc_one) { SCALC_BXI(PZFInst); double *in=inb[0], *p=outb[0];
 			    if (!(inflg&1)) PZF_CI(0)  PZF_1(0, (p[j]=y)); return 1; }
@@ -223,7 +222,7 @@ static void half_zero(RECF_ABXY * to, double fq0, double bw1, double c = 1.0) {
 				to->b1 = rcf+rcf;		to->b2 = -rr;
 }
 
-QUICK_PZFILT(SBandF) { set_n(1); half_zero(m_ab, inb[0][0], inb[1][0]); return 0; }
+QUICK_PZFILT(SBandF) { set_n_d(1); half_zero(m_ab, inb[0][0], inb[1][0]); return 0; }
 
 //? {{{!._eqF}}}
 //? Equalizer filter
@@ -234,12 +233,12 @@ QUICK_PZFILT(SBandF) { set_n(1); half_zero(m_ab, inb[0][0], inb[1][0]); return 0
 //? amp<i> - amplification for fq1 * f*<i>
 //? amp may be negative, which makes phase different
 //? amp=-1 -> (almost) no frq. amplitude change, only phase
-QUICK_PZFILT_1(EqlzF) {
+QUICK_PZFILT(EqlzF) {
 	double fq1 = inb[0][0]; 
 	int n = 0, n0 = m_arg;
 	RECF_PZItem * pzn = new RECF_PZItem[n0];
 	for (int i=0; i<n0; i++) n += pzn[n].eql(fq_warp(fq1*inb[3*i+1][0]), inb[3*i+2][0], inb[3*i+3][0]);
-	set_n(n); rfpz_transform(m_ab, pzn, n); return 0;
+	set_n_d(n); rfpz_transform(m_ab, pzn, n); return 0;
 }
 
 //? {{{!._eqLF}}}
@@ -254,7 +253,7 @@ QUICK_PZFILT(EqlzLsF) {
 	double fq = inb[0][0], step = fq*inb[1][0], wid1 = inb[2][0], 
 	       amp1 = exp(M_LN2 / inb[3][0]), wid2 = wid1 * fq;
 	NAN_UNPK_32(amp, inb[4], 0);
-	int i, j, k, np = amp_n;   set_n(np);
+	int i, j, k, np = amp_n;   set_n_d(np);
 	RECF_PZItem * pzn = new RECF_PZItem[np];
 	for (i=j=0; i<np; i++, fq+=step) if ((k=amp_x[i])) pzn[j].eql(fq_warp(fq),wid2/fq,ipows(amp1,k)), j++;
 	rfpz_transform(m_ab, pzn, m_n_bq = j); return 0;
@@ -269,12 +268,12 @@ QUICK_PZFILT(EqlzLsF) {
 //? z/2p - number of zeroes for each pole pair (0, 1, or 2)
 //? stp - freq. step (multiplied by fq)
 //? cfac - todo....
-//? dmp - dampening
-QUICK_PZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dmp"
+//? dcy - decay
+QUICK_PZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dcy"
 	double fq1 = inb[0][0], bw = inb[1][0], stp1 = inb[4][0], cfac = inb[5][0],
 	       fq = fq1, stp = fq1*stp1, c = 1.0;
 	int np = (int)lround(inb[2][0]), zp2p = (int)lround(inb[3][0]);
-	set_n(np); m_damp = inb[6][0]; 
+	set_n_d(np, inb[6][0]);
 	if (zp2p == 1) { for (int i=0; i<np; i++, fq+=stp, c*=cfac) half_zero(m_ab+i, fq, bw, c); return 1; }
 	RECF_PZItem * pz = new RECF_PZItem[np];
 	double fqw, bw2 = .5*M_PI*bw, cr = -sin(bw2), ci = cos(bw2), zri = zp2p ? 0.0 : NAN;
@@ -292,16 +291,16 @@ QUICK_PZFILT(HPPF) { //"in$fq$Q$np$z/2p$stp$cfac$dmp"
 //? np - # of poles
 //? z/2p - number of zeroes for each pole pair (0, 1, or 2)
 //? stp - freq. step (multiplied by fq)
-//? dmp - dampening
+//? dcy - decay
 //? ==> .!b.misc.map01
-QUICK_PZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
+QUICK_PZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dcy"
 	int np = (int)lround(inb[1][0]), zp2p = (int)lround(inb[2][0]);
 	double fq1 = inb[0][0], stp1 = inb[3][0],
 	       fq = fq1, stp = fq1*stp1, t = 0.0, tstp = 1.0/(double)(np-1);
 	Scale01 qsc, csc;
 	qsc.set_all(inb[4][0], inb[5][0], (int)lround(inb[6][0]));
 	csc.set_all(inb[7][0], inb[8][0], (int)lround(inb[9][0]));
-	set_n(np); m_damp = inb[10][0]; 
+	set_n_d(np, inb[10][0]); 
 	if (zp2p == 1) { for (int i=0; i<np; i++, fq+=stp, t+=tstp) 
 		half_zero(m_ab+i, fq, qsc.f(t), csc.f(t)); return 1; }
 	RECF_PZItem * pz = new RECF_PZItem[np];
@@ -314,7 +313,7 @@ QUICK_PZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
 
 #define CHECK_NPZ(nm) if (npz[1]>npz[0]) return log("mkf/%s: cowardly refusing"\
 	" to create filter with #z(%d) > #p(%d)", #nm, npz[1], npz[0]), RTE_FZZZ; \
-	set_n(*npz); RECF_PZItem *p, *pzi = new RECF_PZItem[*npz]
+	set_n_d(*npz); RECF_PZItem *p, *pzi = new RECF_PZItem[*npz]
 
 #define CHECK_NPZ_2(nm) \
 	if (np!=npz[0]) return log("mkf/%s: BUG: wrong num of poles(exp:%d got:%d)", #nm, npz[0],np),RTE_BUG;\
@@ -336,7 +335,7 @@ QUICK_PZFILT(HPPscF) { //"in$fq$Q$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp"
 //? q<j> - angle (0..1 for pole, -1..1 for zero, mult.by -pi/2)
 //? CPU usage is approx. linear with total number of poles
 //? HINT: use main menu/filter disp. to visualize poles/zeroes
-QUICK_PZFILT_1(BiQuad1F) {
+QUICK_PZFILT(BiQuad1F) {
 	log("hello/bq1");
 	double fq1 = **inb * M_PI * sample_length;
 	NAN_UNPK_8(dsc, inb[1], 0);
@@ -372,7 +371,7 @@ QUICK_PZFILT_1(BiQuad1F) {
 //? ri,ai: interval type (0: [] 1: ]] 2: [[ 3:][ )
 //? CPU usage is approx. linear with total number of poles
 //? HINT: use main menu/filter disp. to visualize poles/zeroes
-QUICK_PZFILT_1(BiQuadSeqF) {
+QUICK_PZFILT(BiQuadSeqF) {
 	log("hello/bqs");
 	static const double div1[4] = { .5, 1.0, 0.0, .5 };
 	double fq1 = **inb * M_PI * sample_length;
@@ -426,7 +425,7 @@ static void cheb_calc_ri(double *re, double *im, double ripl, int n) {
 //? #pol - number of poles
 //? ripl - passband ripple 0.0 ... 0.29 (0: Butterworth f.)
 //? zr* - extra (low-p.) or missing (high-p.) zeros, 0...(#pol-1)
-//? damp - dampening (out multiplied by exp(-t*damp))
+//? dcy - decay (out multiplied by exp(-t*dcy))
 //? CPU usage depends on number of poles.
 //? non-zero "zr*" turns the lp/hp filter to asymmetric bandpass
 
@@ -434,10 +433,9 @@ QUICK_PZFILT(ChebF) {
 	int np = (int)lround(inb[1][0]), wf = 0;
 	if (np<1) return 0; else if (np>30) np=30;
 	int np_skip = (int)lround(inb[3][0]);
-	m_damp = inb[4][0];
 	double ripl = inb[2][0], step=0.5*M_PI/(double)np, fq = **inb, fqw = fq_warp(fq), cm = fqw*fqw;
 	if (ripl < -1e-11) ripl = -ripl, wf = 2; else fq = fqw;
-	set_n(np);
+	set_n_d(np, inb[4][0]);
 	RECF_PZItem * pzn = new RECF_PZItem[np];
 	double ang = ((double)np-0.5)*step, re_fac, im_fac;
 	cheb_calc_ri(&re_fac, &im_fac, ripl, np);
@@ -466,21 +464,14 @@ QUICK_PZFILT(ChebF) {
 	rfpz_transform(m_ab, pzn, np, wf+1); return 0;
 }
 
-class ChebPoleLs : public BoxInst {
-	public:
-		static scf_t sc_f0, sc_f1;
-		ChebPoleLs(int np) : BoxInst(sc_f0), m_np(np), m_p(0) {}
-		virtual ~ChebPoleLs() { free(m_p); }
-	protected: 
-		int m_np; double * m_p;
-};
+struct ChebPoleLs : BoxInst_B1 { static scf_t sc_ini, sc_f1; double * m_p; };
 
-BX_SCALC(ChebPoleLs::sc_f0) {
-	SCALC_BXI(ChebPoleLs); int np = bxi->m_np, no = 2*np;
+BX_SCALC(ChebPoleLs::sc_ini) {
+	SCALC_BXI(ChebPoleLs); int np = bxi->m_arg, no = 2*np;
 	double cr, ci, fq = inb[0][0], ripl = inb[1][0], step = 0.5*M_PI/(double)np,
 	       ang = ((double)np-0.5)*step;
 	cheb_calc_ri(&cr, &ci, ripl, np);
-	double *p = bxi->m_p = (double*)malloc(no*sizeof(double));
+	double *p = (double*)bxi->alloc0(no*sizeof(double));
 	if (fq<0.0) {
 		fq = -fq; double fq2 = fq*fq;
 		for (int i=0; i<np; i++, ang-=step) {
@@ -497,8 +488,8 @@ BX_SCALC(ChebPoleLs::sc_f0) {
 	CALC_FW(sc_f1);
 }
 
-BX_SCALC(ChebPoleLs::sc_f1) { SCALC_BXI(ChebPoleLs); double *p = bxi->m_p;
-			      for (int i=0,no=2*bxi->m_np; i<no; i++) outb[i][0]=p[i]; return 0; }
+BX_SCALC(ChebPoleLs::sc_f1) { SCALC_BXI(ChebPoleLs); double *p = (double*)bxi->m_p0;
+			      for (int i=0,no=2*bxi->m_arg; i<no; i++) outb[i][0]=p[i]; return 0; }
 
 //? {{{!._arcF}}}
 //? Harmonic arc(s of poles&zeroes) filter
@@ -512,10 +503,10 @@ BX_SCALC(ChebPoleLs::sc_f1) { SCALC_BXI(ChebPoleLs); double *p = bxi->m_p;
 //? [sc] - 6 scale types : [p0 p1 p z0 z1 z] (see map01)
 //? stp1 - gap between pole & next zero fq. (*fq1)
 //? stp2 - gap between zero & next pole fq. (*fq1)
-//? damp - dampening (attenuation) mul. exp(-t*damp)
+//? dcy - decay (attenuation) mul. exp(-t*dcy)
 //? (CPU usage is approx. linear with total number of poles)
 //? ==> .!b.misc.map01
-// in fq1 [np] [nz] pl0 pl1 ph0 ph1 zl0 zl1 zh0 zh1 [p0 p1 p z0 z1 z] stp1 stp2 dmp
+// in fq1 [np] [nz] pl0 pl1 ph0 ph1 zl0 zl1 zh0 zh1 [p0 p1 p z0 z1 z] stp1 stp2 dcy
 
 QUICK_PZFILT(ArcRF) {
 	NAN_UNPK_8(npole, inb[1], 0);
@@ -555,50 +546,50 @@ QUICK_PZFILT(ArcRF) {
 norm:		pzi[pix].c = 1.0 / pzi[pix].eval1(0.0, nfq); --pix;
 	}}
 	if (pix != -1) log("ArcRF BUG!!: pix = %d (exp. -1)", pix);
-	m_damp = inb[14][0];
-	set_n(ptot); if (pcf) paraconj(pzi, ptot); rfpz_transform(m_ab, pzi, ptot); return 0;
+	set_n_d(ptot, inb[14][0]);
+	if (pcf) paraconj(pzi, ptot); rfpz_transform(m_ab, pzi, ptot); return 0;
 }
 
 static void bq_init(ANode * rn) {
 	char nm[8]; memcpy(nm,"=bq*1\0 ", 8);
-	qmk_box(rn, nm, QMB_ARG1(BiQuadSeqF), 1, 10, 1, "bqF", "i-o*R*1", 30,
+	qmk_box(rn, nm, QMB_A_BX(BiQuadSeqF), 1, 10, 1, "bqF", "i-o*R*1", 30,
 			"in$fq1$[sc]$[md]$nfq$n1$f1<$>f1$q1<$>q1$n2$f2<$>f2$q2<$>q2$"
 			  "n3$f3<$>f3$q3<$>q3$n4$f4<$>f4$q4<$>q4$n5$f5<$>f5$q5<$>q5",
 			  "out", "uuu3%F");
-	for (int i=2; i<6; i++) ++nm[4], qmk_box(rn, nm, QMB_ARG1(BiQuadSeqF), i, 5*i+5, 1, "bqsF", "1");
+	for (int i=2; i<6; i++) ++nm[4], qmk_box(rn, nm, QMB_A_BX(BiQuadSeqF), i, 5*i+5, 1, "bqsF", "1");
 	nm[3] = '0', nm[4] = '1';
-	qmk_box(rn, nm, QMB_ARG1(BiQuad1F), 1, 6, 1, "bqF", "i-i:o*R*1",
+	qmk_box(rn, nm, QMB_A_BX(BiQuad1F), 1, 6, 1, "bqF", "i-i:o*R*1",
 			4, "in$fq1$[#]$nfq", 2, 3, "f$q", "out", "uuu3%F");
 	for (int i=2; i<14; i++) i==10 ? (++nm[3], nm[4]=48) : ++nm[4],
-		qmk_box(rn, nm, QMB_ARG1(BiQuad1F), i, 2*i+4, 1, "bqF", "1");
+		qmk_box(rn, nm, QMB_A_BX(BiQuad1F), i, 2*i+4, 1, "bqF", "1");
 
 }
 
 static void pls_init(ANode * rn) {
 	char nm[8]; memcpy(nm,"chb-ls2\0 ", 8);
-	qmk_box(rn, nm, QMB_ARG1(ChebPoleLs), 2, 2, 36, "chL", "i*o-R*1", "fq$ripl", 18,
+	qmk_box(rn, nm, QMB_A_BX(ChebPoleLs), 2, 2, 36, "chL", "i*o-R*1", "fq$ripl", 18,
 			"f1$q1$f2$q2$f3$q3$f4$q4$f5$q5$f6$q6$f7$q7$f8$q8$f9$q9", "uuu%F%");
-	for (int i=3; i<10; i++) ++nm[6], qmk_box(rn, nm, QMB_ARG1(ChebPoleLs), i, 2, 32+2*i, "chL", "1");
+	for (int i=3; i<10; i++) ++nm[6], qmk_box(rn, nm, QMB_A_BX(ChebPoleLs), i, 2, 32+2*i, "chL", "1");
 }
 
 static void eq_init(ANode * rn) {
-	qmk_box(rn, "=eql-ls", QMB_ARG0(EqlzLsF),0,6,33,"eqLF", "i*R*", "in$fq1$step$wid$2div$[a]", "uuu3%F");
+	qmk_box(rn, "=eql-ls", QMB_A_BX(EqlzLsF),0,6,33,"eqLF", "i*R*", "in$fq1$step$wid$2div$[a]", "uuu3%F");
 	char nm[8]; memcpy(nm,"=eql1\0", 6);
-	qmk_box(rn, nm, QMB_ARG1(EqlzF), 1, 5, 33, "eqF", "i-R*1", 29,
+	qmk_box(rn, nm, QMB_A_BX(EqlzF), 1, 5, 33, "eqF", "i-R*1", 29,
 			"in$fq1$f*1$wid1$amp1$f*2$wid2$amp2$f*3$wid3$amp3$f*4$wid4$amp4$f*5$wid5$amp5$"
 			"f*6$wid6$amp6$f*7$wid7$amp7$f*8$wid8$amp8$f*9$wid9$amp9", "uuu3%F");
 	for (int i=2; i<10; i++) 
-		++nm[4], qmk_box(rn, nm, QMB_ARG1(EqlzF), i, 3*i+2, 33, "eqF", "1");
+		++nm[4], qmk_box(rn, nm, QMB_A_BX(EqlzF), i, 3*i+2, 33, "eqF", "1");
 }
 
 void b_filt_pz_init(ANode * rn) {
-	qmk_box(rn, "=band", QMB_ARG0(SBandF), 0, 3, 1, "bF", "i*o*R*1", "in$fq$Q", "out", "uuu3%F");
-	qmk_box(rn, "=cheb", QMB_ARG0(ChebF), 0, 6, 1, "chF", "1i-", 0x105, "+-fq$#pol$ripl$zr*$damp");
-	qmk_box(rn, "=arc", QMB_ARG0(ArcRF), 0, 16, 1, "arcF", "1+i*", "zza", "in$fq1$[#p]$[#z]$"
-			"pl0$pl1$ph0$ph1$zl0$zl1$zh0$zh1$[sc]$stp1$stp2$damp");
-	qmk_box(rn, "=hpp", QMB_ARG0(HPPF), 0, 8,  1, "hppF", "1i*", "in$fq$Q$np$z/2p$stp$cfac$dmp");
-	qmk_box(rn, "=hppsc", QMB_ARG0(HPPscF), 0, 12, 1, "hpsF", "1i*",
-			"in$fq$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dmp");
+	qmk_box(rn, "=band", QMB_A_BX(SBandF), 0, 3, 1, "bF", "i*o*R*1", "in$fq$Q", "out", "uuu3%F");
+	qmk_box(rn, "=cheb", QMB_A_BX(ChebF), 0, 6, 1, "chF", "1i-", 0x105, "+-fq$#pol$ripl$zr*$dcy");
+	qmk_box(rn, "=arc", QMB_A_BX(ArcRF), 0, 16, 1, "arcF", "1+i*", "zza", "in$fq1$[#p]$[#z]$"
+			"pl0$pl1$ph0$ph1$zl0$zl1$zh0$zh1$[sc]$stp1$stp2$dcy");
+	qmk_box(rn, "=hpp", QMB_A_BX(HPPF), 0, 8,  1, "hppF", "1i*", "in$fq$Q$np$z/2p$stp$cfac$dcy");
+	qmk_box(rn, "=hppsc", QMB_A_BX(HPPscF), 0, 12, 1, "hpsF", "1i*",
+			"in$fq$np$z/2p$stp$Q0$Q1$Qs$c0$c1$cs$dcy");
 	bq_init(qmk_dir(rn, "bq"));
 	eq_init(qmk_dir(rn, "eql"));
 	pls_init(qmk_dir(rn, "pls"));

@@ -34,7 +34,7 @@ static void rf(const char ** ppf) {
 		if (ec<0) log("%s: %s(%d)", s, err_str(ec), ec);
 	}}
 
-#define INI_LIST hi(), dat_init(), nd0_init(), calc_init(), graph_init(), nd_init(), mx_init(), \
+#define INI_LIST hi(), dat_init(), nd0_init(), calc_init(), graph_init(), nz_init(), nd_init(), mx_init(), \
 		 wrap_init(), track_init(), itb_init(), midi_init()
 static void ini(const char ** ppf) {
 	extern void INI_LIST; INI_LIST;

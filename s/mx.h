@@ -4,7 +4,7 @@
 #define MX_L_WIN(X) (0xe00007 + 16*(X))
 #define MXLF_WIN 1
 
-class BoxInst; class BoxGen; class BoxModel;
+struct BoxInst; class BoxGen; class BoxModel;
 struct au16w_t; struct fa_writer;
 
 int mx_mkroot();

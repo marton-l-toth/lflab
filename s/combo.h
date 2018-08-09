@@ -12,7 +12,7 @@
 #define AX_IX_MASK 0x0fff
 #define SEQCHK if (hex2(s+1) != (p->m_dseq&255)) return BXE_GSEQ
 
-class ComboBoxInst;
+struct ComboBoxInst;
 class ComboBoxModel : public BoxModel {
         public: 
                 ComboBoxModel(ConStore * cs, char * q, int nb);

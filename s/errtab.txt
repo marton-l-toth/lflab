@@ -238,6 +238,7 @@ BXE_WLGDONE  wrap linegrp done (BUG)
 BXE_ZPLOT    plot is all zeroes -- refusing to open window
 BXE_ITINV    iter: connection not allowed (see help)
 BXE_ITNONE   iter: non-existing i/o port (BUG)
+BXE_CTOR     pseudo-calc constructor called (BUG)
 BXE_SORRY    sorry not yet implemented (box)
 QSE_BUG      plot quick stat: wrong status (BUG)
 QSE_DIF      plot quick stat mismatch (TEST CASE FAIL)

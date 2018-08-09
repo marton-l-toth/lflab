@@ -10,14 +10,8 @@
 #define RECF_HARM 4
 #define RECF_ARC 5
 
-#define QUICK_PZFILT(NM) class NM : public PZFInst { \
-		public: virtual int mk_filter(double ** inb); }; \
-	int NM::mk_filter(double **inb)
-
-#define QUICK_PZFILT_1(NM) class NM : public PZFInst { \
-	protected: int m_arg; \
-	public: NM(int arg) : m_arg(arg) {} \
-		virtual int mk_filter(double ** inb); }; \
+#define QUICK_PZFILT(NM) struct NM : PZFInst { static scf_t sc_ini; int mk_filter(double**); }; \
+	BX_SCALC(NM::sc_ini) { SCALC_BXI(NM); return ini2(abxi,inflg,inb,outb,n,bxi->mk_filter(inb+1)); } \
 	int NM::mk_filter(double **inb)
 
 class RECF_PZItem {
@@ -36,21 +30,16 @@ double fq_warp(double fq);
 double fq_warp2(double fq2);
 void rfpz_transform(RECF_ABXY * to, RECF_PZItem * pz, int n, int flg = 1);
 
-class PZFInst : public BoxInst {
-	public:
-		static scf_t sc_ini, sc_one, sc_seq, sc_par;
-		PZFInst() : BoxInst(sc_ini), m_t(0), m_damp(0.0), m_blk(0) {}
-		virtual ~PZFInst();
-	protected:
-		virtual int mk_filter(double ** inb) = 0;
-		void set_n(int n);
-		void damp();
-		void rf_debug(int n);
+struct PZFInst : BoxInst_B1 {
+	static scf_t sc_one, sc_seq, sc_par;
+	static int ini2(BoxInst * abxi, int inflg, double** inb, double** outb, int n, int r);
+	void set_n_d(int n, double d=0.0);
+	void dcy();
+	void rf_debug(int n);
 
-		int m_n_bq, m_t;
-		double m_damp;
-		char * m_blk;
-		RECF_ABXY * m_ab;
+	int m_n_bq, m_t;
+	double m_dcy;
+	RECF_ABXY * m_ab;
 };
 
 #endif // __qwe_pzrf_h__

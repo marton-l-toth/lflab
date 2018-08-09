@@ -73,29 +73,15 @@ void gwn_debug(int step) {
 //? small rounding differences may lead to altered output data.
 //? (insertion/deletion of a few samples)
 
-class NZ0Box : public BoxInst {
-	public: static void mk_dsc(int ix, int ty, double ar);
-		NZ0Box() : BoxInst(sc_ini) {}
-		void ini(const double *pty, const double *psd);
-	protected:
-		static scf_t sc_ini, sc_vz, sc_x1, sc_x2a, sc_x3a,
-			     sc_x2m, sc_x3m, sc_x4m, sc_x6m;
-		static void* m0_dsctab[16];
-		static const sc_t m0_sftab[16];
-		uint64_t m_xoro[2];
-		void * m_dsc;
-};
-
-class NZ0Buf {
-	public:
-		NZ0Buf() : m_pv(m_v), m_ix(15) {}
-		inline void ini(const double *pty, const double *psd) { m_b.ini(pty,psd); }
-		inline double v() { return (m_ix<15) ? m_v[++m_ix]
-						     : (m_b.calc(0,0,&m_pv,16), m_v[m_ix=0]); }
-	protected:
-		NZ0Box m_b;
-		double m_v[16], *m_pv;
-		int m_ix;
+struct NZ0Box : BoxInst_B0 {
+	static void mk_dsc(int ix, int ty, double ar);
+	void ini(const double *pty, const double *psd);
+	static scf_t sc_ini, sc_vz, sc_x1, sc_x2a, sc_x3a,
+		     sc_x2m, sc_x3m, sc_x4m, sc_x6m;
+	static void* m0_dsctab[16];
+	static const sc_t m0_sftab[16];
+	uint64_t m_xoro[2];
+	void * m_dsc;
 };
 
 //? {{{!._nz2}}}
@@ -104,12 +90,17 @@ class NZ0Buf {
 //? sd1, sd2 - seed values
 //? ==> .!b.noise.nz0 -- details for simple noise gen.
 
-class NZ0x2Box : public BoxInst {
-	public: NZ0x2Box() : BoxInst(sc0) {}
-	protected:
-		static scf_t sc0, sc1;
-		NZ0Box m_b0, m_b1;
+struct NZ0x2Box : BoxInst_B0 { static scf_t sc_ini, sc1; NZ0Box m_b0, m_b1; };
+
+struct NZ0Buf {
+	inline void ini(const double *pty, const double *psd) { m_pv=m_v; m_ix=15; m_b.ini(pty,psd); }
+	inline double v() { return (m_ix<15) ? m_v[++m_ix]
+		: (m_b.calc(0,0,&m_pv,16), m_v[m_ix=0]); }
+	NZ0Box m_b;
+	double m_v[16], *m_pv;
+	int m_ix;
 };
+
 
 //? {{{!._rpt}}}
 //? Randomized pulse train
@@ -120,13 +111,7 @@ class NZ0x2Box : public BoxInst {
 //? ty1,ty2,sd1,sd2 - parameters to nz1() and nz2()
 //? ==> .!b.noise.nz0 -- details for simple noise gen.
 
-class RndPt : public BoxInst {
-	public: RndPt() : BoxInst(sc0), m_acc(1.00000001) {}
-	protected:
-		static scf_t sc0, sc1;
-		NZ0Buf m_b0, m_b1;
-		double m_acc, m_fmul;
-};
+struct RndPt : BoxInst_B0 { static scf_t sc_ini, sc1;   NZ0Buf m_b0, m_b1;   double m_acc, m_fmul; };
 
 void NZ0Box::ini(const double *pty, const double *psd) {
 	int ty = (int)lround(*pty) & 15, seed = (int)lround(*psd);
@@ -229,7 +214,7 @@ BX_SCALC(NZ0x2Box::sc1) {
 	bxi->m_b0.calc(0, 0, &q0, n);
 	bxi->m_b1.calc(0, 0, &q1, n);  for (int i=0; i<n; i++) q0[i] *= q1[i];  return 1;  }
 
-BX_SCALC(NZ0x2Box::sc0) { 
+BX_SCALC(NZ0x2Box::sc_ini) { 
 	SCALC_BXI(NZ0x2Box); bxi->m_b0.ini(inb[0], inb[2]); bxi->m_b1.ini(inb[1], inb[3]);
 	return (*(bxi->m_psc = &sc1)) (bxi, inflg, inb, outb, n);  }
 
@@ -245,17 +230,14 @@ BX_SCALC(RndPt::sc1) {
         return 1;
 }
 
-BX_SCALC(RndPt::sc0) {
-	SCALC_BXI(RndPt); bxi->m_b0.ini(inb[4], inb[6]); bxi->m_b1.ini(inb[5], inb[7]);
-	return (*(bxi->m_psc = &sc1)) (bxi, inflg, inb, outb, n);  }
+BX_SCALC(RndPt::sc_ini) { SCALC_BXI(RndPt); bxi->m_b0.ini(inb[4], inb[6]); bxi->m_b1.ini(inb[5], inb[7]);
+	bxi->m_acc=1.00000001; return (*(bxi->m_psc = &sc1)) (bxi, inflg, inb, outb, n);  		 }
+
+void nz_init(){ int seed = CFG_RND_SEED.i; if (!seed) seed = zero_sec;    xoro_s64(xoro_glob, seed);
+		for(int i=0;i<ASIZ(rnd_dsc);i++) NZ0Box::mk_dsc(rnd_dsc[i].ix, rnd_dsc[i].ty, rnd_dsc[i].ar); }
 
 void b_noise_init(ANode *rn) {
-	int seed = CFG_RND_SEED.i; if (!seed) seed = zero_sec;
-	xoro_s64(xoro_glob, seed);
-	for (int i=0; i<ASIZ(rnd_dsc); i++)
-		NZ0Box::mk_dsc(rnd_dsc[i].ix, rnd_dsc[i].ty, rnd_dsc[i].ar);
-	qmk_box(rn, "nz0", QMB_ARG0(NZ0Box), 0, 2, 33, "nz", "i*o*R*1", "ty$sd", "out", "zzzOOO");
-	qmk_box(rn, "nz0*2", QMB_ARG0(NZ0x2Box), 0, 4, 33, "nz2", "1i*", "ty1$ty2$sd1$sd2");
-	qmk_box(rn, "rnd-pt", QMB_ARG0(RndPt), 0, 8, 33, "rpt", "i*o*R*", "fq1$fnz$vnz$rsrv$ty1$ty2$sd1$sd2",
-			"out", "z%%OOO");
-}
+	qmk_box(rn, "nz0", QMB_A_BX(NZ0Box), 0, 2, 33, "nz", "i*o*R*1", "ty$sd", "out", "zzzOOO");
+	qmk_box(rn, "nz0*2", QMB_A_BX(NZ0x2Box), 0, 4, 33, "nz2", "1i*", "ty1$ty2$sd1$sd2");
+	qmk_box(rn, "rnd-pt", QMB_A_BX(RndPt), 0, 8, 33, "rpt", "i*o*R*", "fq1$fnz$vnz$rsrv$ty1$ty2$sd1$sd2",
+			"out", "z%%OOO"); }

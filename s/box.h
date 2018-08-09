@@ -24,7 +24,6 @@ class BoxGen {
 		virtual ~BoxGen() {}
 		virtual int n_in() const = 0;
 		virtual int n_out() const = 0;
-		virtual int in_mask() { return 0; }
 		virtual const char * cl_name() = 0;
 		virtual bool io_alias_perm() const = 0;
 		virtual int cmd(CmdBuf* cbf) { return BXE_NOCMD; }
@@ -75,7 +74,6 @@ class BoxGen {
 
 class PrimBoxGen: public BoxGen {
 	public:
-		PrimBoxGen(BoxModel * m, int ni, int no, const char * cl);
 		PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl);
                 virtual int n_in() const;
                 virtual int n_out() const;

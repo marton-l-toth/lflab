@@ -4,6 +4,23 @@
 #include "guistub.h"
 #include "pt.h"
 
+class BoxModel_SL : public BoxModel {
+//        public: BoxModel_SL(BoxInst::sc_t f, int k) : BoxModel(0,2){(m_bx=(BoxInst*)nf_alloc(16))->fdk(f,0,k);}
+        public: BoxModel_SL(BoxInst::sc_t f, int k) : BoxModel(0,2){
+			(m_bx=(BoxInst*)nf_alloc(16))->fdk(f,0,k); log("stateless-box %p %x",m_bx,k);}
+                virtual BoxInst * place_box(void *p) { return m_bx; }
+        protected:
+		BoxInst * m_bx;
+};
+
+class BoxModel_B0 : public BoxModel {
+	public: BoxModel_B0(BoxInst::sc_t f, int k, int siz) : BoxModel(siz, 2) { m_proto.fdk(f, 1, k); }
+		virtual BoxInst * place_box(void *p) { BoxInst *q = (BoxInst*)p;
+						       memcpy(q, &m_proto, sizeof(BoxInst)); return q; }
+	protected:
+		BoxInst m_proto;
+};
+
 class HelpBoxGen : public BoxGen {
 	public:
 		HelpBoxGen(ABoxNode * nd) : BoxGen(nd) {}
@@ -17,6 +34,12 @@ class HelpBoxGen : public BoxGen {
                 virtual void set_mdl() { bug("hlp: set_model() called"); }
 };
 
+void BoxInst::del(BoxInst *p) { if(p&&p->m_dt) { if (p->m_dt>1u) dtor2(p); free(p); }} 
+
+void BoxInst::dtor2(BoxInst *p) { return (p->m_dt==2) ? free(((BoxInst_B1*)p)->m_p0)
+						      :    (*((BoxInst_BU*)p)->m_dtf)(p); }
+
+double *zero30[30], *junk30[30];
 BoxGen * box_bookmark[10];
 int box_mxc_notify(BoxGen *p, int ky, int flg) { return p->mxc_notify(ky, flg); }
 
@@ -24,9 +47,6 @@ void BoxInst::rmcon(int flg, double **pp, int n) { BVFOR_JM(flg) {
 	double *p=pp[j], x=*p; for (int t=1; t<n; t++) p[t] = x; }}
 
 BX_SCALC(BoxInst::sc_bug)  { bug("sc_bug(%p,%d,%p,%p,%d)", abxi, inflg, inb, outb, n); }
-BX_SCALC(BoxInst::sc_zero) { return **outb=0.0, 0; }
-BX_SCALC(BoxInst::sc_cp0)  { return BOX_CP0; }
-BX_SCALC(BoxInst::sc_imp1) { double *q=*outb; *q=1.0; if(--n)memset(q+1,0,8*n); abxi->m_psc=sc_zero; return 1;}
 
 int BoxInst::calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n) {
 	if (ocfg==0x7c01) {
@@ -61,12 +81,15 @@ int BoxGen::set_boxp(BoxGen ** pp, BoxGen * to) {
 	*pp = to; return ec;
 }
 
-PrimBoxGen::PrimBoxGen(BoxModel * mdl, int ni, int no, const char * cl) : BoxGen(mdl), m_ni(ni), m_no(no) { 
-	m_cl[0] = '_'; cl += (*cl=='_');
-	int i; for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0;  }
+int BoxInst::sc_ctor_2(BoxInst *p, BoxInst::sc_t f0, int siz) { p->m_psc=f0; p->m_arg=siz; return BXE_CTOR; }
+
+static BoxModel * place_b_mdl(char *q, qmb_arg_t qa, int k) {
+	BoxInst b; b.m_arg=k; int r = qa(&b, 0, zero30, junk30, 1);
+	return (r==BXE_CTOR) ? (BoxModel*) (new (q) BoxModel_B0(b.m_psc, k, b.m_arg))
+			     : (BoxModel*) (new (q) BoxModel_SL(qa,	    k)	    ); }
 
 PrimBoxGen::PrimBoxGen(qmb_arg_t qa, int k, int ni, int no, const char * cl) 
-	: BoxGen((*qa)(m_mdl_spc, k)), m_ni(ni), m_no(no) { 
+	: BoxGen(place_b_mdl(m_mdl_spc, qa, k)), m_ni(ni), m_no(no) { 
 		m_cl[0] = '_'; cl += (*cl=='_'); int i;
 		for (i=0; i<4 && cl[i] && cl[i]!='.'; i++) m_cl[i+1] = cl[i]; m_cl[i+1] = 0; }
 
@@ -97,4 +120,6 @@ int ConStore::add(double x) {
 int setbox_hlp(ABoxNode * nd, BoxGen * _) { nd->m_box = new HelpBoxGen(nd); return 0; }
 void reg_bn(ANode * nd, int i) { BoxGen **qq = box_bookmark+i; 
 				 if (*qq) log("BUG: duplicate box_bkm: %s", nd->s_name()); *qq = nd->box0(); }
-void dat_init() { for (int i=0; i<32; i++) pstat_con[i] = stat_con+i; }
+void dat_init() { for (int i=0; i<32; i++) pstat_con[i] = stat_con+i;
+		  for (int i=0; i<30; i++) zero30[i] = zeroblkD;
+		  for (int i=0; i<30; i++) junk30[i] = junkbuf;  }

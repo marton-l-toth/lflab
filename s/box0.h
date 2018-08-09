@@ -6,13 +6,10 @@ inline void* operator new(size_t, void* p) { return p; }
 class ANode; class ABoxNode; class BoxModel; class BoxGen;
 extern int sample_rate; extern double sample_length;
 extern BoxGen * box_bookmark[10];
+extern double *zero30[30], *junk30[30];
 
-typedef BoxModel * (*qmb_arg_t) (char *, int);
-ANode * qmk_dir(ANode * up, const char * nm);
-ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no, 
-					     const char * cl, const char * fmt, ...);
-#define QMB_ARG0(CL) (&Pr0BoxModel<CL >::cons_wrap)
-#define QMB_ARG1(CL) (&Pr1BoxModel<CL >::cons_wrap)
+#define QMB_A_SL(CL) (&CL##_calc)
+#define QMB_A_BX(CL) (&CL::sc_ctor<CL >)
 
 const char * iolbl_name(int ty, int ix);
 void bug(const char *, ...) __attribute__ ((noreturn));
@@ -24,13 +21,9 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 
 #define BX_SCALC(F) int F(BoxInst * abxi, int inflg, double** inb, double** outb, int n)
 
-#define STATELESS_BOX_0(NM) class NM : public BoxInst { public: \
-	static scf_t sc_f0; NM() : BoxInst(sc_f0) {} }; BX_SCALC(NM::sc_f0)
+#define STATELESS_BOX(NM) static BX_SCALC(NM##_calc)
 
-#define STATELESS_BOX_1(NM) class NM : public BoxInstArg { public: \
-	static scf_t sc_f0; NM(int k) : BoxInstArg(sc_f0, k) {} };  BX_SCALC(NM::sc_f0)
-
-#define FUN1_BOX(NM, X) STATELESS_BOX_0(NM) { double x; \
+#define FUN1_BOX(NM, X) STATELESS_BOX(NM) { double x; \
 	if (!(inflg&1)) return x = **inb, **outb = (X), 0; \
 	double *p=*inb, *q=*outb; for (int i=0; i<n; i++) x=p[i], q[i]=(X); return 1; }
 
@@ -49,39 +42,43 @@ inline static double att2mul(double x) { return exp(-sample_length*x); }
 #define CALC_FW(F) return (*(bxi->m_psc=(F))) (bxi, inflg, inb, outb, n)
 #define LOCAL_BOX(V,M) BoxModel *V##_mdl = (M); char V##_spc[V##_mdl->size()]; \
 		       BoxInst  *V = V##_mdl->place_box(V##_spc);
-class BoxInst {
-        public:
-		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
-		typedef int(scf_t)(BoxInst*, int, double**, double**, int);
-		static void rmcon(int flg, double **pp, int n); 
-		static void del (BoxInst *p) { if(p) p->~BoxInst(), free(p); }
-		static void dtor(BoxInst *p) { if(p) p->~BoxInst(); }
-		static scf_t sc_bug, sc_zero, sc_cp0, sc_imp1;
 
-		BoxInst(sc_t fun) : m_psc(fun) {}
-                virtual ~BoxInst() {};
-                inline int calc(int inflg, double** inb, double** outb, int n) {
-			return (*m_psc)(this, inflg, inb, outb, n); }
-		int calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n);
-	protected:
-		sc_t m_psc;
+struct BoxInst {
+	typedef int(*sc_t)(BoxInst*, int, double**, double**, int);	typedef void (*dtor_t)(BoxInst*);
+	typedef int(scf_t)(BoxInst*, int, double**, double**, int);	typedef void (dtorf_t)(BoxInst*);
+	static int  sc_ctor_2(BoxInst *p, BoxInst::sc_t f0, int siz);
+	static void rmcon(int flg, double **pp, int n); 
+	static void dtor(BoxInst *p) { if0(p->m_dt>1u) dtor2(p); }
+	static void dtor2(BoxInst *p);
+	static void del(BoxInst* p);
+	static scf_t sc_bug, sc_zero, sc_cp0;
+
+	inline void fdk(sc_t f, int d, int k) { m_psc=f; m_dt=d; m_arg=k; }
+	inline int calc(int inflg, double** inb, double** outb, int n) {
+		return (*m_psc)(this, inflg, inb, outb, n); }
+//	inline int calc(int inflg, double** inb, double** outb, int n) {
+//		int r = (*m_psc)(this, inflg, inb, outb, n); if (r<ERRTAB_LAST) bug("ec:%p %d",this,r); return r; }
+	int calc_nzo2(int ocfg, double *o0, double *o1, int inflg, double **inb, int n);
+
+	sc_t m_psc;
+	unsigned char m_dt, m_c1, m_c2, m_c3;
+	int m_arg;
 };
 
-class BoxInstArg : public BoxInst {
-	public:	BoxInstArg(sc_t fun, int arg) : BoxInst(fun), m_arg(arg) {}
-		static int s_arg(BoxInst *abx) { return static_cast<BoxInstArg*>(abx)->m_arg; }
-		int m_arg;
-};
-
+typedef int (*qmb_arg_t) (BoxInst*, int, double**, double**, int);
+ANode * qmk_dir(ANode * up, const char * nm);
+ANode * qmk_box(ANode * up, const char * nm, qmb_arg_t qa, int k, int ni, int no, 
+					     const char * cl, const char * fmt, ...);
 class BoxModel {
         public:
+		typedef int(*sc_t)(BoxInst*, int, double**, double**, int);
 		static void del (BoxModel *p);
                 static inline void   ref   (BoxModel *p) { if (p)    ++p->refcount; }
                 static inline void unref   (BoxModel *p) { if (p && !--p->refcount) del(p); }
                 BoxModel(int siz, int rc) : refcount(rc), m_size(siz) {}
                 virtual ~BoxModel() {}
                 virtual BoxInst * place_box(void *to) = 0;
-                inline  BoxInst * mk_box() { return place_box(malloc(m_size)); }
+                inline  BoxInst * mk_box() { return place_box(m_size ? malloc(m_size) : 0); }
 		inline int size() const { return m_size; }
                 void debug0() const;
         private:
@@ -89,6 +86,15 @@ class BoxModel {
 	protected:
 		int m_size;
 };
+
+struct BoxInst_B0 : BoxInst { template<class B> static int sc_ctor(BoxInst *q, int,double**,double**,int) { 
+						      return sc_ctor_2(q, B::sc_ini, sizeof(B)); }};
+
+struct BoxInst_B1 : BoxInst_B0 { void *m_p0;  inline void* alloc0(int k)   { m_dt=2; return m_p0=malloc(k); }};
+struct BoxInst_BU : BoxInst_B0 { dtor_t m_dtf;inline void set_dtf(dtor_t f){ m_dt=3; m_dtf = f; }};
+
+struct Impulse1 : BoxInst_B0 { static scf_t sc_ini; };
+#define sc_imp1 Impulse1::sc_ini
 
 extern double stat_con[32], *pstat_con[32];
 class ConStore {
@@ -136,20 +142,4 @@ class ModelPtr {
 		BoxModel * m_p;
 };
 
-template <class BXI> class Pr0BoxModel : public BoxModel {
-        public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr0BoxModel<BXI>(); }
-                virtual BoxInst * place_box(void *to) { return new (to) BXI(); }
-	private:Pr0BoxModel() : BoxModel(sizeof(BXI), 2) {} };
-
-template <class BXI> class Pr1BoxModel : public BoxModel {
-        public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr1BoxModel<BXI>(k); }
-                virtual BoxInst * place_box(void *to) { return new (to) BXI(arg); }
-	private:Pr1BoxModel(int k) : BoxModel(sizeof(BXI), 2), arg(k) {}
-                int arg; };
-
-template <class BXI> class Pr1MBoxModel : public BoxModel {
-        public: static BoxModel * cons_wrap(char *to, int k) { return new (to) Pr1MBoxModel<BXI>(k); }
-                virtual BoxInst * place_box(void *to) { return new (to) BXI(arg, (char*)to+sizeof(BXI)); }
-	private:Pr1MBoxModel(int k) : BoxModel(sizeof(BXI)+BXI::msiz(k), 2), arg(k) {}
-                int arg; };
 #endif // __qwe_box0_h__
