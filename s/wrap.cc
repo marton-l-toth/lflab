@@ -1534,7 +1534,7 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof, int dly_tg) {
 		else { nb = 2, buf[0] = k&63, buf[1] = (k>>6)-1; }
 	}
 	if ((unsigned int)(op-8)<3u){ if (m_mxctl && (ec=mx_c_stop(m_mxctl,k,1+(op==8)))!=MXE_CTLU) return ec;
-				      if (op==10) ++op; else return EEE_NOEFF; }
+				      if (op==10) ++op; else return EEE_NOEFF &- !(nof&NOF_YES); }
 	if (op!=3 && op!=6) memcpy(xysav, m_xys6, 8);
 	else if (!(nof&NOF_FORCE) && !m_node->perm(DF_EDBOX)) return NDE_PERM;
 	if (nb) { if (op!=6) m_bflg |= WRF_NOCON; for (int i=0; i<nb; i++) m_xys6[i] = buf[i]; }

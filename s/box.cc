@@ -5,9 +5,7 @@
 #include "pt.h"
 
 class BoxModel_SL : public BoxModel {
-//        public: BoxModel_SL(BoxInst::sc_t f, int k) : BoxModel(0,2){(m_bx=(BoxInst*)nf_alloc(16))->fdk(f,0,k);}
-        public: BoxModel_SL(BoxInst::sc_t f, int k) : BoxModel(0,2){
-			(m_bx=(BoxInst*)nf_alloc(16))->fdk(f,0,k); log("stateless-box %p %x",m_bx,k);}
+        public: BoxModel_SL(BoxInst::sc_t f, int k) : BoxModel(0,2){(m_bx=(BoxInst*)nf_alloc(16))->fdk(f,0,k);}
                 virtual BoxInst * place_box(void *p) { return m_bx; }
         protected:
 		BoxInst * m_bx;

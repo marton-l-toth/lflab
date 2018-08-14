@@ -954,7 +954,7 @@ int ClipNode::keyop_j(int j, int ky, int op, const char *s, int nof) {
 int ClipNode::keyop_f(int ky, int op, const char *s, int nof) {
 	unsigned int m0 = m_map, m1 = (1u<<m_sel);    ky |= 65536;
 	int r, rot = m_sel&24;   if (m0&m1) { if (KO_COND(m_sel)) return r; else m0 &= ~m1; }
-	BVFOR_JM((m0>>rot)|(m0<<(32-rot))) { if (KO_COND((j+rot)&31)) return r; } return EEE_NOEFF; }
+	BVFOR_JM((m0>>rot)|(m0<<(32-rot))) { if (KO_COND((j+rot)&31)) return r; } return 0; }
 
 int ClipNode::cmd(CmdBuf * cb) {
 	char * s = cb->tok();
@@ -986,8 +986,8 @@ int ClipNode::cmd(CmdBuf * cb) {
 			  if (!(m_map&(1u<<k)) || (k!=m_sel && (m_flg&16))) goto xcg;
 			  return ent_j(k) -> draw_window(0x19); 
 		case '9': return (m_map&(1u<<(k=(s[1]-48)&31))) ? ent_j(k)->draw_window(0x1b) : EEE_NOEFF;
-		case 'k': return keyop_f(hex2(s+1), 1, 0, 0);
-		case 'K': return keyop_f(hex2(s+1), 0, 0, 0);
+		case 'k': return keyop_f(hex2(s+1), 1, 0, NOF_YES);
+		case 'K': return keyop_f(hex2(s+1), 0, 0, NOF_YES);
 		case 'Z': if (!m_map) return EEE_NOEFF;
 			  BVFOR_JM(m_map) if ((k=Node::del(ent_j(j), f))<0) return k;
 			  if (winflg(8)) draw();    return 0;
