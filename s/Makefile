@@ -47,20 +47,20 @@ errtab.inc: errtab.txt errtab.sh
 	./errtab.sh errtab.txt > errtab.inc
 
 co/%.o: c/%.cc $(INCS) errtab.inc cfgtab.inc
-	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<
+	$(CC) -g -c $(CFLAGS) -o$@ $<
 %.o: %.cc $(INCS) errtab.inc cfgtab.inc
-	$(CC) -g -Wall -Wno-unused-function -c $(CFLAGS) -o$@ $<
+	$(CC) -g -c $(CFLAGS) -o$@ $<
 %.s: %.cc $(INCS) errtab.inc cfgtab.inc
-	$(CC) -S -Wall -Wno-unused-function $(CFLAGS) -o$@ $<
+	$(CC) -S $(CFLAGS) -o$@ $<
 
 lf.bin: $(OBJS)  
 	$(CC) -g $(OBJS) -lasound -olf.bin
 
 lf.gui: gui.c uc0.h uc1.h errtab.inc cfgtab.inc
-	gcc -g -Wall -Wno-unused-function $(CFLAGS) gui.c $(GTKINC) $(GTKLIB) -olf.gui
+	gcc -g $(CFLAGS) gui.c $(GTKINC) $(GTKLIB) -olf.gui
 
 lf.bb:  bb.c uc0.h
-	gcc -g -Wall $(CFLAGS) bb.c -olf.bb -lm
+	gcc -g $(CFLAGS) bb.c -olf.bb -lm
 
 lf.pump: asnd.cc
 	ln -sf asnd.cc pump.c && gcc -g -Wall $(CFLAGS) -olf.pump pump.c -lm -lasound

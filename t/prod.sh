@@ -2,7 +2,8 @@
 SDIR="$PWD"
 PDIR="$HOME/tmp/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
-CGARG="-fno-exceptions -fno-rtti"
+CGARG="-fno-exceptions -fno-rtti -fwrapv"
+WNARG="-Wall -Wno-unused-function -Wno-misleading-indentation"
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do
         case "$1" in
@@ -50,7 +51,7 @@ if [[ -n "$STFLG" ]]; then
 	rm $stfil; exit 0
 fi
 CP=$(echo /run/shm/lf.*/A)
-CFLG="CFLAGS=$SSE -pipe $CGARG $OPTARG $UCFLG$DEFS"
+CFLG="CFLAGS=$SSE -pipe $CGARG $WNARG $OPTARG $UCFLG$DEFS"
 echo make $JARG "\"$CFLG\"" $*
 if [[ -z "$OCMD$FCMD" ]]; then exec make $JARG "$CFLG" $*; fi
 if [[ ! -p "$CP" ]]; then echo "no pipe found ('$CP')"; exec make $JARG "$CFLG" $*; fi
