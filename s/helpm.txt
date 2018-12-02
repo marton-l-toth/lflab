@@ -854,6 +854,7 @@ Tab select: [#], wav, cfg... (selects contents of line below)
 ==> 3.grid config -- "[#]" tab
 ==> 3.write to file -- "wav" tab
 ==> 3.general config -- "cfg" tab
+==> 3.target/trigger -- "tr" tab
 ==> 3.autovol -- "a.v" tab (D)
 ==> 3.shadow cfg -- "sic" tab (S)
 Line groups: (open/close with "<>"/"><" button on the right)
@@ -1246,8 +1247,21 @@ update only happens at right-click).
 ---
 Mute is useful for "reference" shadow wraps in tracks.
 "t" is automatically set by "record-to-track"
+{{{3.target/trigger}}}
+Here you can set the target mixer for the wrap object.
+Target 0 is the main mixer, 10 is the secondary mixer.
+Targets 20-99 are sent to a currently played track with the
+same target ID. Targets 1-9 mean wait until a wrap (in a track)
+with the trigger enabled is played. Targets 11-19 are similar
+except they are "queued" and only one is played per trigger.
+---
+With the on-off buttons "1-9" you can enable triggers.
+Triggers only work when a wrap gets played in a track.
+---
+Some target values can also be set in the clipboard's ">" menu
+for all wraps in the clipboard.
 {{{1.clipboard}}}
-A clipboard is a container for at most 32 instrument objects.
+A clipboard is a container for at most 32 wrap objects.
 Besides providing a convenient collection, it also serves as a
 source/target for copy/paste operations. 
 "cp" - toggle copy target (*)
@@ -1256,10 +1270,11 @@ source/target for copy/paste operations.
 "au" - play when left-clicked (to select)
 "xc" - exchange on right-click
 "re" - redraw
+">" - target menu (set target for all wraps in clipboard)
 "+"  - menu (you can delete objects here)
 (*) at any time, there is one source clipboard and one target
-clipboard; at start both are set to the default clipb. "!b.[]",
----
+clipboard; at start both are set to the default clipb. "!b.[]"
+==> 3.target/trigger
 left-cl:sel, right-cl:open(play) ctrl+right-cl:open(cfg)
 middle-click: copy
 keybindings for instruments also work from this window
