@@ -1425,7 +1425,7 @@ static void upd_flgvec(topwin * tw, const char* s, int n, int oldbv, int newbv);
 static void vbox_cmd(struct _ww_t * ww, const char * arg) {
 	if (dflg&DF_WIDG) LOG("vbox_cmd=\"%s\"", arg);
 	int k=0; switch(*arg) {
-		case 'W': upd_flgvec(ww->top, "G", 4, VB_LBV(ww), k = 1<<(arg[1]-48)); break;
+		case 'W': upd_flgvec(ww->top, "G", VB_LMAX(ww), VB_LBV(ww), k = 1<<(arg[1]-48)); break;
 		case '.': k = (1<<(arg[1]-48)); break;
 		case '^': k = VB_LBV(ww) ^ (1<<(arg[1]-48)); break;
 		case '+': k = (1<<(arg[1]-48)) - 1; break;
