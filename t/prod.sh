@@ -2,7 +2,7 @@
 SDIR="$PWD"
 PDIR="$HOME/tmp/lf-prod/s"
 OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
-CGARG="-fno-exceptions -fno-rtti -fwrapv"
+CGARG="-fno-exceptions -fno-rtti"
 WNARG="-Wall -Wno-unused-function -Wno-misleading-indentation"
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
 while [[ -n "$cond" ]]; do

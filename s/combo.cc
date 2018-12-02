@@ -119,7 +119,7 @@ void ComboBoxInst::dtf(BoxInst *abxi) { SCALC_BXI(ComboBoxInst); BoxInst **pp = 
 BX_SCALC(ComboBoxInst::sc_f) {
 	SCALC_BXI(ComboBoxInst); ComboBoxModel * mdl = bxi->m_m; BoxInst ** bxpp = bxi->m_bxpp;
 	int n_b = mdl->n_bx, n_cb = mdl->n_cb, n_t = mdl->n_t, n_tb = (n_t+31)>>5, nblk = 2+n_cb+n_tb;
-	unsigned int flg[n_tb+2];
+	unsigned int flg[nblk];
 	double **pblk[nblk], *ptmp[n_t], tmp[n_t*n], *p = tmp, **pp = ptmp, ***ppp = pblk + 2 + n_cb,
 	       *iarg[32], *oarg[32];
 	pblk[0] = inb; pblk[1] = outb; flg[0] = (unsigned int)inflg; flg[1] = 0u;
@@ -134,7 +134,6 @@ BX_SCALC(ComboBoxInst::sc_f) {
 		for (int j=0; j<no; j++) oarg[j] = pblk[s[2*j]][s[2*j+1]];
 		int rv = bxpp[i]->calc(ifg, iarg, oarg, n); if0 (rv<0) return rv;
 		for (int j=0; j<no; j++, rv>>=1) {
-//			if0 (s[2*j+1] > 29) bug("wtf: %p %d,%d %d", bxi, i, j, s[2*j+1]);
 			unsigned int *pf = flg+s[2*j], f = *pf, of = rv&1, msk = 1u << s[2*j+1];
 			*pf = (f & ~msk) | (msk &- of); }
 		s += 2*no;
