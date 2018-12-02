@@ -34,6 +34,7 @@ a "help" command. If you are new to lflab, it is recommended to
 read the following general help texts:
 ==> 0.gui/general -- overview of GUI elements
 ==> 2.object tree -- general overview
+==> 2.boxes and mixers -- how sound is played
 ==> 2.wrap -- sound/instrument objects
 ==> 2.direct wrap -- config instr. using boxes
 ==> 2.shadow wrap -- config instr. using another wrap
@@ -229,6 +230,30 @@ examples, the tracks differ in only one wrap (the muted
 ==> .!e.sc.01.t3x3 -- these tracks have a description
 ==> .!e.sc.01.t3x3_2
 ==> .!e.sc.01.t3x3_3
+{{{2.boxes and mixers}}}
+In lflab, all audio output comes from a mixer. Mixers can
+contain source and linear time-invariant (LTI) filter boxes.
+(LTI means that many source boxes can share a single filter.)
+The main mixer is connected to the primary audio output.
+If you set up an auxilary audio it also has a top-level mixer.
+Also, whenever a sound is written to WAV file or plotted via
+gnuplot, a temporary top-level mixer is created.
+---
+Boxes are little machines with input and output ports.
+==> 2.box -- see general description here
+In most cases, you need to create a "wrap" object that defines
+how a box (or two boxes, a source and a filter) is added to a
+mixer (e.g. inputs, duration, volume).
+==> 2.wrap -- see description here
+---
+lflab comes with some builtin boxes: waves/impulses/filters...
+You can also build your own boxes from these. Tracks are the
+only type of box which contain their own mixer. Tracks can
+contain timed wrap objects but you can also set a "target ID"
+for a track and add sounds interactively (from GUI or a MIDI
+input device). This is useful when the track is connected to
+a filter -- thus you can test various sounds combined with a
+single filter.
 {{{2.box}}}
 A box is a little machine with 0...30 input ports and 1...30
 output ports, each of which receives/sends 44100 real(64-bit)
