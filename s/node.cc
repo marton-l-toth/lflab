@@ -435,6 +435,9 @@ int ANode::get_path_uf(char * to, int max) {
 	to[0] = '.'; memcpy(to+1+nd->get_name(to+1),"...",3); return max;
 }
 
+int nd_path_uf(char *to, int nid, int max) {
+	ANode *nd = Node::lookup_n(nid); return nd ? nd->get_path_uf(to,max) : sprintf(to,"UD:%x",nid); }
+
 int ANode::get_path_2(char* to, int max) {
         if (!m_up) return 0;
         int r = m_up->get_path_2(to, max);

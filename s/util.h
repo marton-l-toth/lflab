@@ -91,6 +91,7 @@ class AReader { public: virtual int line(char * s) = 0; virtual ~AReader() {} };
 int qstat_op(int op);
 int qstat_cfg(int op, const char * arg);
 int qstat_chk0(AReader ** ppr, const char *s);
+int nd_path_uf(char *to, int id, int max); // def: node.c
 
 class Scale01 {
 	public:

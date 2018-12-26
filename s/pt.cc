@@ -411,6 +411,9 @@ void errtemp_cond(const char *s) {
 		log ("%s: giving up", s); IFDBGX(AOET) abort(); else  bye(1); }
 	else IFDBGX(PT) { log("%s: errtemp=%d", s, pt_errtemp); }}
 
+int pt_plot(int nid, int flg, int bits, int len) {
+        char buf[96]; int k = sprintf(buf, "gs%c%c,%x,", hexc1(flg), 48+bits, len);
+        k += nd_path_uf(buf+k, nid, 63); buf[k++]=10;  return pt_wrk_cmd(buf, k); }
 
 // e: -1:no_ini(1) -2:inisv.e.(2) -4:optarg_missing 1<<30(+n):argn 1<<29(+n):ini/ln
 static void ee_msg() {

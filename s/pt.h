@@ -33,6 +33,7 @@ double * pt_samp_shm(int bits);
 int pt_wrk_start(int re);
 int pt_io_dead(), pt_wrk_dead(), pt_acv_dead(const char *);
 void errtemp_cond(const char* s);
+int pt_plot(int nid, int flg, int bits, int len);
 void pt_debug();
 
 #endif // __qwe_pt_h__
