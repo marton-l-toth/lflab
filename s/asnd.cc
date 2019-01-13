@@ -75,6 +75,8 @@ int main(int ac, char** av) { // arg2: fnn, f: 1*nonbl + 8*aux
 #define SAMP2NS(X) (((X)*m_ns_16f+8)>>4)
 #define ADDSAMP(X) (m_clk_nbuf += SAMP2NS(X))
 
+#define SPD2SEC(X) (.16 * ipow(0.943874312681693,(X)))
+
 class SndJob : public Job {
 	public:
 		SndJob(JobQ::ent_t * ent, ASnd * snd) : Job(ent), m_snd(snd) {}
@@ -118,13 +120,14 @@ int ASnd::start(int flg, int mxid, int *ppcp) {
 }
 
 void ASnd::cfg_pre(int spd, int rsrv, int adjlim, int mode) {
-	int bs  = m_bs  = (int)lround(2048.0 * ipow(0.965936328924846, spd)),
-	    bs2 = m_bs2 = (bs*rsrv+50)/100,  bs3; m_adj_lim = m_bs * adjlim;
+	double b1 = SPD2SEC(spd), z = .01 * (double)sample_rate;
+	int bs  = m_bs  = (int)lround(z*b1*(double)(45-rsrv)),
+	    bs2 = m_bs2 = (int)lround(z*b1*(double)((rsrv+5) << !(mode&2)));
 	IFDBG log("cfg_pre: spd=%d rsrv=%d mode=%d adjlim=%d", spd, rsrv, mode, m_adj_lim);
 	if (!(mode&32)) clk0.bcfg(sample_rate, bs, bs2, (3*bs)>>1);
-	m_flg &= ~15; m_flg |= mode;
-	if (mode&3) bs3 = bs+(mode&3)*bs2,	    m_cur_cpf = (mode&2) ? &cpf_mute : &cpf_liar;
-	else 	    bs3 = 1024|bs*(500+3*rsrv)/200, m_cur_cpf = &cpf_true;
+	m_adj_lim = bs * adjlim;  m_flg &= ~15;  m_flg |= mode;  int bs3;
+	if (mode&3) bs3 = bs+(mode&3)*bs2,		m_cur_cpf = (mode&2) ? &cpf_mute : &cpf_liar;
+	else 	    bs3 = max_i(1024,(3*(bs+bs2))>>1),	m_cur_cpf = &cpf_true;
 	m_hwbs_trg = ((mode-1)&14) ? (bitfill(bs3)+1) : bs3;
 }
 
@@ -313,11 +316,9 @@ int ASnd::w(int flg) {
 				gui2.wupd_s('C', "%%%zz%"); gui2.sz(buf);
 			}}}
 	if (flg&4096) {
-		double z = 1e6*sample_length;
-		int bs  = (int)lround(2048.0 * ipow(0.965936328924846, kSPD()->i)),
-		    bs2 = (bs*kRSRV()->i + 50)/100, bs3 = bs2+bs, bs4 = bs3+bs;
-		gui2.wupd_k3p('<', (int)lround(z*(double)bs3));
-		gui2.wupd_k3p('>', (int)lround(z*(double)bs4)); }
+		double b1 = SPD2SEC(kSPD()->i);
+		gui2.wupd_k3p('<', (int)lround(1e4*b1*(double)(55+kRSRV()->i)));
+		gui2.wupd_k3p('>', (int)lround(1e6*b1));  }
 	return 0;
 }
 

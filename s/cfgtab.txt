@@ -34,8 +34,8 @@ MIDI_KTR    |k|7	  |0   |7    |ktr   |keyboard (virt.midi) trans: 1:f11,f12 2:q2
 MIDI_PRM    |s|           |0   |32   |miprm |midi input device permutation
 AU_NAME     |s|default    |1   |99   |anm   |name of ALSA PCM output device
 AU_CHCFG    |s|lr         |1   |19   |chcfg |channel cfg [lracsz]* (Left Right Avg Center(1.41*A) Sum Zero)
-AU_SPD      |k|35         |0   |99   |asp   |audio buffer size: 2^(11-.05*x) frames
-AU_RSRV     |k|120        |1   |250  |arsrv |audio buffer reserve (percentage of buffer size)
+AU_SPD      |k|24         |0   |88   |asp   |audio buffer size: 0.16 / 2^(x/12) seconds
+AU_RSRV     |k|25         |0   |35   |arsrv |audio buffer reserve ((55+x)% of buffer size)
 AU_ADJLIM   |k|20         |5   |250  |aalim |max clock adj: x ns / (target) sample size
 AU_CLKLIM   |i|100        |0   |250  |aclkt |time limit for audio/setclk (only for aclk 0)
 AU_TRY_N    |k|10         |1   |99   |artn  |(re)try audio init x times
@@ -45,8 +45,8 @@ AU_CMODE    |k|0          |0   |2    |acmod |audio/clock mode: 0-avail 1-nonbloc
 AU_BFILL    |k|0          |0   |1    |abbf  |round up hw bufsiz to next power of 2
 AX_NAME     |s|default    |1   |99   |aanm  |name of ALSA PCM output device (aux)
 AX_CHCFG    |s|lr         |1   |19   |accfg |aux.ch.cfg [lracsz]* (Left Right Avg Center(1.41*A) Sum Zero)
-AX_SPD      |k|35         |0   |99   |aasp  |aux audio buffer size: 2^(11-.05*x) frames
-AX_RSRV     |k|120        |1   |250  |aarsv |aux audio buffer reserve (percentage of buffer size)
+AX_SPD      |k|12         |0   |88   |aasp  |aux audio buffer size: 0.16 / 2^(x/12) seconds
+AX_RSRV     |k|25         |0   |35   |aarsv |aux audio buffer reserve ((55+x)% of buffer size)
 AX_ADJLIM   |k|20         |5   |250  |aaalim|aux audio clock adj: currently unused
 AX_CLKLIM   |i|100        |0   |250  |aackt |time limit for audio/setclk (aux, only for aclk 0)
 AX_TRY_N    |k|10         |1   |99   |aartn |(re)try aux audio init x times
