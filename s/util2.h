@@ -38,8 +38,7 @@ class BufClock {
 		inline int set_f(int nf) { return set(nf*m_cf_nspf); }
 		inline int add_f(int nf) { return m_t += f2ns(nf); }
 		inline void cls() { ev('x'); m_t = m_cf_half-1; m_pump_jt = 0; }
-		void gcond() {  extern void gui_tlog(int,int); if (++m_gcnt<m_gbsiz) return (void)ev(65);
-				m_gcnt=0; ev2('#'); gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2; }
+		void gcond() { if1(++m_gcnt<m_gbsiz) ev(65); else tlog2gui(); }
 		int wrk(int op, int n = 0);
 		void pump_cfg(int yn);
 		void pump_y(), pump_n();
@@ -47,7 +46,9 @@ class BufClock {
         protected:
 		inline int rnd5() { int r = m_rnd>31 ? m_rnd : random()|0x40000000; m_rnd=r>>5; return r&31; }
                 inline void jvi() { m_j_ct = m_cf_jst, m_j_cn = m_cf_jsn-1, m_j_max = 0; }
+		void tlog2gui();
                 int jwr(int cont);
+
                 struct timespec m_ts;
                 unsigned int *m_buf;
                 unsigned int m_ix, m_ix_msk, m_seq_sh;

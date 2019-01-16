@@ -213,7 +213,7 @@ int ASnd::hcp_end(int f) { return !(f|m_hcp) ? EEE_NOEFF : (m_hcp = 0, gui_acv_o
 
 int ASnd::e_msg_re(int e1, const char *s, int re) {
 	if (e1>=0) return e1; if (!re) return log("audio/%s: %s (giving up)", s, snd_strerror(e1)), e1;
-	int e2 = snd_pcm_recover(m_hnd, e1, 1);
+	int e2 = snd_pcm_recover(m_hnd, e1, 1); clk0.ev('E'+((e2>=0)<<5));
 	return log("audio/%s: %s (R: %s)", s, snd_strerror(e1), e2<0 ? snd_strerror(e2) : "OK"), e2;
 }
 

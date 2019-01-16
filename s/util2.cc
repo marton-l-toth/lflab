@@ -197,6 +197,13 @@ int BufClock::j1(int cont) {
         cont &= ((m_t-=dn)>m_cf_jtmin); BCLKJ( (((cont-1)|m_j_ct|m_j_cn)<0) ? jwr(cont) : cont );
 }
 
+void BufClock::tlog2gui() {
+	extern void gui_tlog(int,int); m_gcnt = 0; ev('%');
+	struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
+	*pa() = wall.tv_sec; ev2('#', wall.tv_nsec);
+	gui_tlog(m_g_ix&m_ix_msk, m_ix+2-m_g_ix); m_g_ix=m_ix+2;
+}
+
 int BufClock::wrk(int op, int n) {
 	ev('T'); if (n<=0) n = (m_buf[m_ix_msk-1]) ? 0x7fffffff : (m_ix&m_ix_msk);
 	if ((n&=~1)>(int)(m_ix_msk-1023)) n = m_ix_msk - 1023;

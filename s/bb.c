@@ -1099,23 +1099,25 @@ int t_main(int ac, char** av) {
 	if (ac==3 && !memcmp(av[1],"-x",3)) return w_main(2, av+1);
         if (ac!=2) return fprintf(stderr,"usage: %s [-x] <binfile>\n", *av), 1;
         int i, r, sq0=-1, fd = open(av[1], O_RDONLY); if (fd<0) return  perror(av[1]), 1;
-        unsigned int x, y, buf[4096];
-	double ttot = 0.0;
-	int ldiv = 10, lcnt = 0;
-        while ((r=read(fd, buf, 16384))>0) {
-                for (i=0, r>>=2; i<r; i+=2) {
-                        x = buf[i]; y = buf[i+1];
-                        int c = x&127; if (!c) goto done; if (c<32) c='?';
-                        int t = x&0x3fffff80, sq = (int)(x>>30);
-                        if (sq!=sq0) printf(" [[s=%d]]", sq0=sq);
-			if (c!='s') { putchar(32); }
-			else if (putchar(10), !(lcnt++%ldiv)) {
-				int min = (int)floor(ttot) / 60;
-				printf("============= %d:%.7g ======\n", min, ttot - (double)(60*min)); }
-                        putchar(c); if (y) printf("(%d)",(int)y);
-                        printf(":%d.%c", t/1000, 48+(t%1000)/100);
-			ttot += 1e-9*(double)t;
-                }}
+        unsigned int buf[4096];  const int d9 = 1000000000;
+	int wsec = 0, wnano = 0, wtmp = 0, wadj = 0, wexp = '%';
+        while ((r=read(fd, buf, 16384))>0) {  for (i=0, r>>=2; i<r; i+=2) {
+		unsigned int x = buf[i], y = buf[i+1];
+		int c = x&127; if (c<32) { if (!c) goto done; else c='?'; }
+		int t = x&0x3fffff80, sq = (int)(x>>30);
+		if (sq!=sq0) printf(" [[s=%d]]", sq0=sq);
+		if (c==wexp) ((wexp^=6)&2) ? (wtmp = y)
+				           : (wadj = d9*(wtmp-wsec)+(int)y-wnano, wsec = wtmp, wnano = y);
+		if (c!='s') { putchar(32); }
+		else if (!wadj) { printf("\n%06d ", wnano/1000); }
+		else {	time_t tt = wsec; struct tm * lt = localtime(&tt); int wus = wnano/1000;
+			printf("\n-------- %d.%02d.%02d/%02d:%02d:%02d.%06d a:%d\n%06d ",
+					1900+lt->tm_year, lt->tm_mon+1, lt->tm_mday,
+					lt->tm_hour, lt->tm_min, lt->tm_sec, wus, wadj, wus); wadj=0; }
+		putchar(c); if (y) printf("(%d)",(int)y);
+		printf(":%d.%c", t/1000, 48+(t%1000)/100);
+		for (wnano += t; wnano >= d9; wnano -= d9, ++wsec);
+	}}
 done:   puts("");
         return 0;
 }
