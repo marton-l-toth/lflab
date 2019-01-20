@@ -751,23 +751,29 @@ static double gp_tlog_t(int ix) {
 static int gp_statf_tlog(int j0, int jz) {
 	j0<<=1, jz<<=1;
 	unsigned int x;
-	int j, samp_cnt = 0, df = wrk_dflg;
+	int j, samp_cnt = 0, df = wrk_dflg, tdf = 0;
 	double samp_calc=0.0, xt, cpu0 = 0.0, *q = samp2gplot;
 	double td1, ttot = 0.0; for (j=j0; j<jz; j+=2) ttot += TLSEC(j);
-	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, tdloc = 0.0, t1 = t+tdmin;
+	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, t1 = t+tdmin;
+	double tdloc = 0.0, tdloc0 = 0.0, tdloc1 = 0.0;
 	if (df&2) LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
 	int pcnt = 0, PQcnt = 0;
 	for (j=j0; j<jz; j+=2) {
 		int k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
-		switch(k){ case 'p': td1 = 1e-6*(double)(int)gp_tlog[j+1], td+=td1, tdloc += td1; ++pcnt; break;
+		switch(k){ case 'v': tdloc = td + 1e-6*(double)(int)gp_tlog[j+1]; 
+				     if (!tdf) { tdloc0=tdloc1=tdloc; tdf = 1; break; }
+				     if (tdloc<tdloc0) tdloc0 = tdloc;
+				     if (tdloc>tdloc1) tdloc1 = tdloc;	break;
+			   case 'p': td1 = 1e-6*(double)(int)gp_tlog[j+1], td += td1; ++pcnt; break;
 			   case 'P': case 'Q': samp_cnt += gp_tlog[j+1]; samp_calc += xt;   ++PQcnt; break;
 			   default: break; }
-		if ((t+=xt)>t1) q[3] = !samp_cnt ? cpu0 : (cpu0=4.41e6*samp_calc/(double)samp_cnt,
-							   samp_calc=samp_cnt=0, cpu0),
-				q[2] = tdloc, tdloc = 0.0,
-				q[0] = t, q[1] = td, t1 = t+tdmin, q += 8; }
+		if ((t+=xt)<t1) continue;
+		if (samp_cnt) cpu0=4.41e6*samp_calc/(double)samp_cnt, samp_calc=0.0, samp_cnt=0;
+		q[0] = t; q[1] = td; q[2] = tdloc0; q[3] = tdloc1; q[4] = cpu0;
+		t1 = t+tdmin; q += 8; tdf = 0;
+	}
 	if (df&2) LOG("gp_tl: #p=%d, #PQ=%d", pcnt, PQcnt);
-	return 0x80f + ((q-samp2gplot)<<13);
+	return 0x101f + ((q-samp2gplot)<<13);
 }
 
 static unsigned int * tlog_rf(const char * fname) {
@@ -787,7 +793,7 @@ static int gp_tlog_read(int flg, const char *arg) {
 	unsigned int *q, *tab;
 	if (flg&1) { if (!(q = gp_tlog = tlog_rf(arg))) return -3; }
 	else 	   { if (*(q = tlog_cp(arg, 1))>0xfffeffff) return -6; else gp_tlog = q; }
-	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.+-\0__cpu%\0__", 24);
+	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.m-\0__td.M-\0__cpu%\0__", 32);
 	int i, j, k, n = (int)*q;  gp_tlog_n = gp_len = n>>1; LOG("tlog_read: n=%d", n);
 	unsigned int as = 0, ans = 0;
 	q += 2; tab = q+n; tab[0] = tab[1] = 0u; gp_tlog_tab = tab;
@@ -1095,6 +1101,11 @@ int w_main(int ac, char ** av) {
 
 /**************** tlog dump (text) *****************************************/
 
+static int t_stamp(int s, int ns, int c, int v) {
+	time_t tt = s; struct tm * q = localtime(&tt); ns/=1000;
+	return printf("\n-------- %d.%02d.%02d/%02d:%02d:%02d.%06d %c:%d\n%06d " + (c==33),
+		1900+q->tm_year, q->tm_mon+1, q->tm_mday, q->tm_hour, q->tm_min, q->tm_sec, ns, c, v, ns); }
+
 int t_main(int ac, char** av) {
 	if (ac==3 && !memcmp(av[1],"-x",3)) return w_main(2, av+1);
         if (ac!=2) return fprintf(stderr,"usage: %s [-x] <binfile>\n", *av), 1;
@@ -1103,17 +1114,15 @@ int t_main(int ac, char** av) {
 	int wsec = 0, wnano = 0, wtmp = 0, wadj = 0, wexp = '%';
         while ((r=read(fd, buf, 16384))>0) {  for (i=0, r>>=2; i<r; i+=2) {
 		unsigned int x = buf[i], y = buf[i+1];
-		int c = x&127; if (c<32) { if (!c) goto done; else c='?'; }
-		int t = x&0x3fffff80, sq = (int)(x>>30);
-		if (sq!=sq0) printf(" [[s=%d]]", sq0=sq);
+		int c = x&127, t = x&0x3fffff80, sq = (int)(x>>30);
+		if (sq!=sq0) ((sq0>=0 || c!=33) ? printf(" [[s=%d]]", sq)
+						: t_stamp(wsec=(int)y, wnano=(int)buf[3], c, 0)), sq0=sq;
+		if (c<32) { if (!c) goto done; else c='?'; }
 		if (c==wexp) ((wexp^=6)&2) ? (wtmp = y)
 				           : (wadj = d9*(wtmp-wsec)+(int)y-wnano, wsec = wtmp, wnano = y);
-		if (c!='s') { putchar(32); }
-		else if (!wadj) { printf("\n%06d ", wnano/1000); }
-		else {	time_t tt = wsec; struct tm * lt = localtime(&tt); int wus = wnano/1000;
-			printf("\n-------- %d.%02d.%02d/%02d:%02d:%02d.%06d a:%d\n%06d ",
-					1900+lt->tm_year, lt->tm_mon+1, lt->tm_mday,
-					lt->tm_hour, lt->tm_min, lt->tm_sec, wus, wadj, wus); wadj=0; }
+		if (c!='s') putchar(32);
+		else if (!wadj) printf("\n%06d ", wnano/1000);
+		else t_stamp(wsec, wnano, 'a', wadj), wadj = 0;
 		putchar(c); if (y) printf("(%d)",(int)y);
 		printf(":%d.%c", t/1000, 48+(t%1000)/100);
 		for (wnano += t; wnano >= d9; wnano -= d9, ++wsec);

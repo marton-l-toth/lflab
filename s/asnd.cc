@@ -238,9 +238,11 @@ int ASnd::play_and_adj(short *buf, int nf, int opt) {
 	int t3 = clk0.ev('p'), /*tea = t0-t1,*/ teb = t2-t3, tb1 = clk0.f2ns(m_bufsiz-av1), tb0 = tb1-teb,
 	    taz = clk0.f2ns(m_bufsiz-av0+wr)+t3, ta0 = taz-t0, ta1 = taz-t1;
 	unsigned int *paa = clk0.pa();
-	*clk0.pa(-1) = (unsigned int) (m_bufsiz-av1); 
-	*clk0.pa(-2) = (unsigned int) (m_bufsiz-av0); 
-	int t4 = clk0.add_f(wr), avg = (ta0+ta1+tb0+tb1+2)>>2; return adj2(avg-t4, paa);
+	*clk0.pa(-3) = (unsigned int) (m_bufsiz-av0); 
+	*clk0.pa(-2) = (unsigned int) (m_bufsiz-av1); 
+	int t4 = clk0.add_f(wr), avg = (ta0+ta1+tb0+tb1+2)>>2, dif = avg-t4;
+	*clk0.pa(-1) = (unsigned int) (dif); 
+	return adj2(dif, paa);
 }
 
 void ASnd::play2(short *buf, int nf) {
