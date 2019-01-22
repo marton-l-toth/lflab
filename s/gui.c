@@ -4285,7 +4285,7 @@ static void midi_cmd (struct _topwin * tw, char *s) { int j,k; switch(*s) {
 #define VMSL(C) "{!" #C "999$17fmVSff}"
 #define VMSL3(A,B,C) VMSL(A) VMSL(B) VMSL(C)
 static void midi_skel (struct _topwin * tw, char * arg) {
-	const char * str = "(3{:vmP60}0{__8}[(3{Y3log$m>}{B_saveCfg$##}{B_rls*$mz}{B_?$$?})3("
+	const char * str = "(3{:vmP60}0{__8}[(3{Y3log$m>}{B_saveCfg$c>}{B_rls*$mz}{B_?$$?})3("
 		VMSL3(B,C,D) VMSL3(E,F,G) VMSL3(H,I,A) 
 		")0({88^^$3mx}3{L_/}0{89vv$3my})3("
 		VMSL3(K,L,M) VMSL3(N,O,P) VMSL3(Q,R,J) 
