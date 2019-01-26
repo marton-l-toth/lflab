@@ -752,28 +752,29 @@ static int gp_statf_tlog(int j0, int jz) {
 	j0<<=1, jz<<=1;
 	unsigned int x;
 	int j, samp_cnt = 0, df = wrk_dflg, tdf = 0;
-	double samp_calc=0.0, xt, cpu0 = 0.0, *q = samp2gplot;
+	double samp_calc=0.0, xt, cpu0 = 0.0, cpu1 = -1.0, *q = samp2gplot;
 	double td1, ttot = 0.0; for (j=j0; j<jz; j+=2) ttot += TLSEC(j);
 	double tdmin = ttot/(double)(gp_res()-1), t = gp_tlog_t(j0), td = 0.0, t1 = t+tdmin;
 	double tdloc = 0.0, tdloc0 = 0.0, tdloc1 = 0.0;
 	if (df&2) LOG("gp_tl: j0=%d, jz=%d, t=%g, tdmin=%g", j0, jz, t, tdmin);
 	int pcnt = 0, PQcnt = 0;
 	for (j=j0; j<jz; j+=2) {
-		int k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
+		double z; int sc, k = (x=gp_tlog[j]) & 127; xt = 1e-9*(double)(x&0x3fffff80);
 		switch(k){ case 'v': tdloc = td + 1e-6*(double)(int)gp_tlog[j+1]; 
 				     if (!tdf) { tdloc0=tdloc1=tdloc; tdf = 1; break; }
 				     if (tdloc<tdloc0) tdloc0 = tdloc;
 				     if (tdloc>tdloc1) tdloc1 = tdloc;	break;
 			   case 'p': td1 = 1e-6*(double)(int)gp_tlog[j+1], td += td1; ++pcnt; break;
-			   case 'P': case 'Q': samp_cnt += gp_tlog[j+1]; samp_calc += xt;   ++PQcnt; break;
+			   case 'P': case 'Q': samp_cnt += (sc = gp_tlog[j+1]); samp_calc += xt;   ++PQcnt;
+					       if (sc && (z=xt*4.41e6/(double)sc) > cpu1) cpu1=z;   break;
 			   default: break; }
 		if ((t+=xt)<t1) continue;
 		if (samp_cnt) cpu0=4.41e6*samp_calc/(double)samp_cnt, samp_calc=0.0, samp_cnt=0;
-		q[0] = t; q[1] = td; q[2] = tdloc0; q[3] = tdloc1; q[4] = cpu0;
-		t1 = t+tdmin; q += 8; tdf = 0;
+		q[0] = t; q[1] = td; q[2] = tdloc0; q[3] = tdloc1; q[4] = cpu0; q[5] = cpu1>0.0 ? cpu1 : cpu0;
+		t1 = t+tdmin; q += 8; tdf = 0; cpu1 = -1.0;
 	}
 	if (df&2) LOG("gp_tl: #p=%d, #PQ=%d", pcnt, PQcnt);
-	return 0x101f + ((q-samp2gplot)<<13);
+	return 0x303f + ((q-samp2gplot)<<13);
 }
 
 static unsigned int * tlog_rf(const char * fname) {
@@ -793,7 +794,7 @@ static int gp_tlog_read(int flg, const char *arg) {
 	unsigned int *q, *tab;
 	if (flg&1) { if (!(q = gp_tlog = tlog_rf(arg))) return -3; }
 	else 	   { if (*(q = tlog_cp(arg, 1))>0xfffeffff) return -6; else gp_tlog = q; }
-	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.m-\0__td.M-\0__cpu%\0__", 32);
+	memcpy(gp_w_title, "tlog", 5); memcpy(gp_f_title+8, "td.A\0___td.m-\0__td.M-\0__cpu%A\0__cpu%M\0_", 40);
 	int i, j, k, n = (int)*q;  gp_tlog_n = gp_len = n>>1; LOG("tlog_read: n=%d", n);
 	unsigned int as = 0, ans = 0;
 	q += 2; tab = q+n; tab[0] = tab[1] = 0u; gp_tlog_tab = tab;
