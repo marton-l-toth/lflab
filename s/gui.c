@@ -2429,7 +2429,8 @@ static void swrap_cmd (struct _topwin * tw, char * arg) {
 	int i, j, wi = VB_WBASE(vb);
 	switch(*arg) {
 		case '(': case ')':
-			  wi = VB_WBASE(widg_lu1_pc(tw, "CZ"[*arg&1])); j = *arg&1; i = atoi_h(arg+1); LOG("swr(%s)",arg);
+			  wi = VB_WBASE(widg_lu1_pc(tw, "CZ"[*arg&1])); j = *arg&1; i = atoi_h(arg+1);
+			  if (dflg&DF_WRAP) LOG("swr(%s)",arg);
 			  d59(DALBL_TXT(widg_qp(tw, wi))+5, j?i:bitcnt(i)); da_fullre(widg_qp(tw, wi));
 			  DLM_MSK(widg_qp(tw,wi+2)) = DLM_MSK(widg_qp(tw,wi+3)) = ~(j ? (2<<i)-1 : 2*i+1);
 			  return;
@@ -3406,8 +3407,8 @@ static void tc_upd255(tc_t * tc, int flg) {
 	if (!(flg&2)) {
 		if (flg&1) for (i=1; i<256; i++) if (!p[i]) tc_set_d1(tc, i, 0);     return; }
 	unsigned int m = TC_GD(tc)->d;
-	if(flg&1) for (i=1; i<256; i++) if (!p[i] || !((1u<<tdiv_idsf[p[i]].i)&m)) tc_set_d1(tc, i, 0);
-	else	  for (i=1; i<256; i++) if ( p[i] && !((1u<<tdiv_idsf[p[i]].i)&m)) tc_set_d1(tc, i, 0);
+	if(flg&1) { for (i=1; i<256; i++) if (!p[i] || !((1u<<tdiv_idsf[p[i]].i)&m)) tc_set_d1(tc, i, 0); }
+	else	  { for (i=1; i<256; i++) if ( p[i] && !((1u<<tdiv_idsf[p[i]].i)&m)) tc_set_d1(tc, i, 0); }
 }
 
 static void tc_set_ppb(tc_t * tc, int v) { if (dflg&DF_TRK)  LOG("tc_set_ppb %d", v);
