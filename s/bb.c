@@ -194,7 +194,7 @@ static const char *xapp_name[N_XAPP], *wrkdir, *lf_ed;
 static unsigned int ino_bv = 0u;
 static int ino_epid[32], ino_oid[32], ino_fd = -1;
 static char ino_inm[80], logbuf[16384], bigbuf[0x8000], xapp_nbuf[N_XAPP*256];
-static int log_ix = 0, log_ox = 0, log_flg = 0;
+static int log_ix = 0, log_ox = 0, log_flg = 0, io_cleanup_flg = 0;
 static ibuf ib[9] = {{ 0, 3072, 0, 0,   &cmd_l, bigbuf},
 		     {-1, 4096, 0, '.', &log_l, bigbuf+0x0c00},
 		     {-1, 1024, 0, 'C', &cmd_l, bigbuf+0x1c00},
@@ -347,7 +347,11 @@ static void fail(const char*s) { LOG("%s", s); log_sn(0,-1,0), exit(5); }
 static void bye(int kf) {
 	if (!kf) exit(1);
 	con_end(); search_and_destroy(killer_fd); del_workdir();
-	if (!rs_ts || time(NULL)>rs_ts+5) LOG("bye"), log_sn(0,-1,0), exit(0);
+	if (!rs_ts || time(NULL)>rs_ts+5) {
+		LOG("bye %d", io_cleanup_flg); log_sn(0,-1,0);
+		if (io_cleanup_flg&1) execlp("pacmd", "pacmd", "suspend", "0", (char*)0); 
+		exit(0);
+	}
 	const char *es, *fn = getenv("LF_BIN"); 
 	if (!fn) LOG("restart failed (missing env)"), log_sn(0,-1,0), exit(1);
 	LOG("restarting (%s)...", fn); log_sn(0, -1, 0); close_all();
@@ -468,6 +472,7 @@ static void cmd_l(char *s, int n, int src) { s[n] = 0; switch(*s) {
 	case 'h': return (n>7 && s[7]=='.') ? ino_add(atoi_h(s+2), s[1]&1,  s+8, n-8) : LOG("h: parse error");
 	case 'd': return (void) (dflg = atoi_h(s+1));
 	case 'T': if (s[1]>=48) tlog_hcp(s[1]-48, s+2); return;
+	case 'F': io_cleanup_flg = s[1] & 7; return;
 	default: LOG("unknown cmd%c 0x%x (%s)", 48+src, *s, s); return;
 }}
 

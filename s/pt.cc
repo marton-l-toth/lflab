@@ -372,8 +372,6 @@ int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
 
 int pt_show_lic() { return launch(CFG_XTERM.s, "!())", "-e", QENV('v'), (char*)0); }
 void pt_debug()   { return qe_dump(); }
-int pt_kill_pa(int flg) { return ((flg&2) ? launch("killall","!(ss","-v","-9","pulseaudio", (char*)0)
-					  : launch("pulseaudio","!(ss","-k", (char*)0)) < 0 ? EEE_ERRNO : 0; }
 
 void pt_calc_xbv() {
 	for (int i=0; i<N_XAPP; i++) {

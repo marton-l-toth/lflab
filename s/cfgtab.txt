@@ -12,10 +12,10 @@ AO_RECLIM   |i|100        |10  |1264 |aorl  |tmpfile size limit (MB) for live re
 AUTOCON     |i|1          |0   |1    |aucon |automatically open console for debug info
 TRK_NLEV    |i|20         |5   |99   |trkns |max. track nest level
 GUI_TRKUP   |i|100        |10  |999  |trkup |track play (arrow) update interval (msec.)
-GUI_SLFOC   |i|1          |0   |1    |slfoc |1:sliders can have keyboard focus (eff. after GUI restart)
+GUI_SLFOC   |i|1          |0   |1    |slfoc |1: sliders can have keyboard focus (eff. after GUI restart)
 GUI_QCPU    |i|0          |0   |1    |qcpu  |1: quick&dirty CPU meter redraw (bypassing GTK ev.queue)
 GUI_F_YN    |i|1          |0   |1    |fwask |1: ask before overwriting file (save as/save lib)
-DEVEL       |i|0          |0   |1    |devel |1:allow non-ready features (at your own risk)
+DEVEL       |i|0          |0   |1    |devel |1: allow non-ready features (at your own risk)
 PLOT_XSIZ   |i|4	  |0   |6    |plotx |max. FFT-plot samples - 2^x * (1Msamp=23.777sec=16MB)
 CLK_TYPE    |i|1	  |0   |1    |clkty |clock type: 0:monotonic 1:monot.raw (eff. after restart)
 CLK_TLBITS  |i|3	  |0   |10   |tlsiz |tlog buffer size 2^x Mbyte (2^x*131k events)
@@ -40,7 +40,7 @@ AU_ADJLIM   |k|20         |5   |250  |aalim |max clock adj: x ns / (target) samp
 AU_CLKLIM   |i|100        |0   |250  |aclkt |time limit for audio/setclk (only for aclk 0)
 AU_TRY_N    |k|10         |1   |99   |artn  |(re)try audio init x times
 AU_TRY_MS   |k|50         |10  |250  |artt  |millisecs. to wait between audio init retries
-AU_KILL_PA  |k|0          |0   |3    |kpa   |pulseaudio: 0-don't kill 1-sig15 3-sig9
+AU_SUSP_PA  |k|0          |0   |1    |kpa   |1: suspend pulseaudio on start, un-suspend on mute
 AU_CMODE    |k|0          |0   |2    |acmod |audio/clock mode: 0-avail 1-nonblock 2-pump proc.
 AU_BFILL    |k|0          |0   |1    |abbf  |round up hw bufsiz to next power of 2
 AX_NAME     |s|default    |1   |99   |aanm  |name of ALSA PCM output device (aux)

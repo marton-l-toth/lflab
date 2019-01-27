@@ -31,9 +31,11 @@ class BufClock {
                 inline unsigned int *pt(int j=0) { return m_buf+((m_ix+2*j  ) & m_ix_msk); }
                 inline unsigned int *pa(int j=0) { return m_buf+((m_ix+2*j+1) & m_ix_msk); }
                 inline int err(int z=1) { return z ? (z=m_err, m_err=0, z) : m_err; }
-                inline int tcond(struct timespec *p, int min_ms = 0x80000000) {
-                        return (1000*(m_ts.tv_sec-p->tv_sec)+(m_ts.tv_nsec-p->tv_nsec)/1000000>=min_ms)
-                                && (memcpy(p, &m_ts, sizeof(m_ts)), 1); }
+#define BUFCLK_COND(NM, MUL, DIV) inline int NM(struct timespec *p, int dif = 0x80000000) {    \
+			 return (MUL*(m_ts.tv_sec-p->tv_sec)+(m_ts.tv_nsec-p->tv_nsec)/DIV>=dif) \
+			 	&&  (memcpy(p, &m_ts, sizeof(m_ts)), 1); }
+		BUFCLK_COND(tcond, 1000, 1000000)
+		BUFCLK_COND(ucond, 1000000, 1000)
 		inline int f2ns(int nf) { return (nf*m_cf_ns16f+8)>>4; }
 		inline int set_f(int nf) { return set(nf*m_cf_nspf); }
 		inline int add_f(int nf) { return m_t += f2ns(nf); }

@@ -152,7 +152,7 @@ int BufClock::ini(int bits, int flg, int jst, int jsn) {
 	m_g_ix = m_ix = 2u<<bits; m_gcnt = 0; m_gbsiz = 4;
 	static clockid_t cv[2] = { CLOCK_MONOTONIC, CLOCK_MONOTONIC_RAW };
 	int res; if (clock_gettime(m_ty=cv[1& flg], &m_ts)>=0) res=0;
-	if 	    (clock_gettime(m_ty=cv[1&~flg], &m_ts)>=0) res=1; else return -2;
+	else if     (clock_gettime(m_ty=cv[1&~flg], &m_ts)>=0) res=1; else return -2;
 	struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
 	buf[0] = 0x40000021; buf[1] = wall.tv_sec;
 	return ev2('!', wall.tv_nsec), res;

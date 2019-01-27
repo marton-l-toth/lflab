@@ -77,6 +77,9 @@ int main(int ac, char** av) { // arg2: fnn, f: 1*nonbl + 8*aux
 
 #define SPD2SEC(X) (.16 * ipow(0.943874312681693,(X)))
 
+static int pa_susp(int x) { return launch("pacmd", "!(ss", "suspend", "0\0001"+x+x, (char*)0); }
+static int pa_susp_io(int x) { int y=0x0a3046+(x<<8); return pt_iocmd_sn((char*)&y, 3); }
+
 class SndJob : public Job {
 	public:
 		SndJob(JobQ::ent_t * ent, ASnd * snd) : Job(ent), m_snd(snd) {}
@@ -93,11 +96,13 @@ int asnd_mkjob(jobq_ent_t * ent, char * arg) {
 
 static fa_writer fa_wr;
 
-int ASnd::close() { if (m_flg&32) jobq.kill(0,m_aux_jid), m_aux_jid=-1;  else clk0.cls();
-                    p_close(&m_pump_ofd); if (m_hnd) snd_pcm_close(m_hnd);
-                    return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~7, w(1024), 0; }
-int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, snd_strerror(k), k); close();
-					      if (ec) gui2.errq_add(ec); return k; }
+int ASnd::close(int x) {
+	if (m_flg&32) jobq.kill(0,m_aux_jid), m_aux_jid=-1;  else clk0.cls();
+	p_close(&m_pump_ofd);  if(m_hnd) snd_pcm_close(m_hnd);  if(kSUSP_PA()->i>(x>>1)) pa_susp(0);
+	return m_hnd=0, m_cur_cpf = &cpf_mute, m_n_chan=0, m_pump_st&=~7, m_re_usec=0, w(1024|-(x&1)), 0; }
+
+int ASnd::err(int k, const char *s, int ec) { log("alsa/%s: %s(%d)", s, k?snd_strerror(k):"", k);
+					      this->close(!k); if (ec) gui2.errq_add(ec); return k; }
 
 #define FUNCHK(N) if (m_cur_cpf==&cpf_##N) fnm = #N; else
 void ASnd::debug(const char *s) {
@@ -110,13 +115,7 @@ int ASnd::start(int flg, int mxid, int *ppcp) {
 	if (ppcp) m_pump_pcp=ppcp, m_pump_et=0, m_cfg_offs = (m_flg=flg&32) ? &CFG_AX_NAME-&CFG_AU_NAME : 0;
 	if (flg&1) flg|=m_flg&32, n = (n+1)>>1; else if (mxid>=0) m_mxid = mxid;
 	cfg_pre(kSPD()->i, kRSRV()->i, kADJLIM()->i, ((flg&32)?34:kCMODE()->i)+8*(kBFILL()->i) );
-	if (flg&64) return set_vol(92),0; if (m_flg&2) return pump_launch(n,(m_flg>>2)&8);
-	double clf = (n<2) ? 1.0 : exp(M_LN10 / (double)(n-1)), sclim = 1e3*(double)kCLKLIM()->i;
-	int e=-1, us = 1000 * kTRY_MS()->i;   m_flg &= ~2;
-	
-	for (int i=0; i<n; u_sleep(us), i++, sclim*=clf)
-		if ((e=start1(min_i((1<<27)-1, (int)lround(sclim))))>=0) return w(1024), e;
-	return err(e, "start", AUE_START), w(-1), 0;
+	return (flg&64) ? (set_vol(92),0) : (m_flg&2) ? pump_launch(n,(m_flg>>2)&8) : start1(0);
 }
 
 void ASnd::cfg_pre(int spd, int rsrv, int adjlim, int mode) {
@@ -129,6 +128,7 @@ void ASnd::cfg_pre(int spd, int rsrv, int adjlim, int mode) {
 	if (mode&3) bs3 = bs+(mode&3)*bs2,		m_cur_cpf = (mode&2) ? &cpf_mute : &cpf_liar;
 	else 	    bs3 = max_i(1024,(3*(bs+bs2))>>1),	m_cur_cpf = &cpf_true;
 	m_hwbs_trg = ((mode-1)&14) ? (bitfill(bs3)+1) : bs3;
+	m_sclim = 1000 * kCLKLIM()->i;
 }
 
 #define AUPUMP_ARGL kNAME()->s, (char*)aa, (char*)(aa+1), (char*)(aa+3)
@@ -139,49 +139,33 @@ int ASnd::pump_launch(int nt, int flg) {
 	IFDBG log("pump/cp=%d, args: %s %s %s %s", *m_pump_pcp, AUPUMP_ARGL);
 	return w(1024), (pid<0) ? EEE_ERRNO : (m_pump_st = 4 + (nt ? 256*nt : m_pump_st&0xff00), 0); }
 
+#define PMP_0(C,X1) \
+	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("pmp_op %d " #C, x), debug("p/o"); \
+	if (x==1) return (X1); int e,k; switch(x) { \
+		case 0: case 8: e = AUE_##C##_CRASH; goto down;  \
+		case 4: 	e = 0;		 goto down0; \
+		case 5: case 6: case 7: case 9: e = AUE_##C##_ERREX; goto down; \
+		case 3: return AUE_##C##_RECOV; \
+		default: break; } \
+	if ((unsigned int)(x-17)>15u) return AUE_##C##_WHAT; \
+	if ((m_pump_st&7)!=4) return AUE_##C##_STATE
+#define PMP_1(C,CPF,CLK,D0) \
+	mx_au16_cfg(&m_cfg, m_n_chan=x-16, kCHCFG()->s); m_cur_cpf = &cpf_##CPF; \
+	log("pump(" #C ")process started, #chan=%d", m_n_chan); CLK; return w(1024), 0; \
+  down: IFDBG log("pump(" #C ")/dn: et=%d", m_pump_et); \
+	if (!(x&7)) { if ((m_pump_et+=32)<999) gui_errq_add(AUE_##C##_RE), m_pump_st|=8; else m_pump_et=0; } \
+  down0:p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00; D0; \
+	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e
+
 int ASnd::apmp_op(int x) {
-	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("apmp_op %d ", x), debug("p/o");
-	if (x==1) return ((m_pump_st&1)|(m_aux_jid<0)) ? (AUE_Q_STATE &- (m_pump_st&1))
-						       : (++m_pump_st, jobq.wake(0,m_aux_jid,0));
-	int e,k; switch(x) {
-		case 0: case 8: e = AUE_Q_CRASH; goto down;
-		case 4: 	e = 0;		 goto down0;
-		case 5: case 6: case 7: case 9: e = AUE_Q_ERREX; goto down;
-		case 3: return AUE_Q_RECOV;
-		default: break; }
-	if ((unsigned int)(x-17)>15u) return AUE_Q_WHAT;
-	if ((m_pump_st&7)!=4) return AUE_Q_STATE;
+	PMP_0(Q, ((m_pump_st&1)|(m_aux_jid<0)) ? (AUE_Q_STATE &- (m_pump_st&1))
+			                       : (++m_pump_st, jobq.wake(0,m_aux_jid,0)) );
 	if ((m_aux_jid=jobq.launch(0,0,0))<0) return m_aux_jid; else m_pump_st=3;
-	mx_au16_cfg(&m_cfg, m_n_chan=x-16, kCHCFG()->s); m_cur_cpf = &cpf_bug;
-	log("aux/pump process started, #chan=%d", m_n_chan);
-	return w(1024), 0;
-down:	IFDBG log("aux/pump/dn: et=%d", m_pump_et); 
-	if (!(x&7)) { if ((m_pump_et+=32) < 999) gui_errq_add(AUE_P_RE), m_pump_st |= 8; else m_pump_et = 0; }
-down0:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00;
-	jobq.kill(0, m_aux_jid); m_aux_jid = -1;
-	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e;
-}
+	PMP_1(Q, bug, (void)0, (jobq.kill(0,m_aux_jid), m_aux_jid=-1)); }
 
 int ASnd::pump_op(int x) {
-	if (debug_flags&DFLG_AUDIO&-(x!=1)) log_n("pump_op %d ", x), debug("p/o");
-	if (x==1) return (m_pump_st&1) ? AUE_P_STATE : (++m_pump_st,clk0.pump_1(),0);
-	int e,k; switch(x) {
-		case 0: case 8: e = AUE_P_CRASH; goto down;
-		case 4: e = 0;		 goto down0;
-		case 5: case 6: case 7: case 9: e = AUE_P_ERREX; goto down;
-		case 3: return AUE_P_RECOV;
-		default: break; }
-	if ((unsigned int)(x-17)>15u) return AUE_P_WHAT;
-	if ((m_pump_st&7)!=4) return AUE_P_STATE; else m_pump_st = 3, clk0.pump_1();
-	mx_au16_cfg(&m_cfg, m_n_chan=x-16, kCHCFG()->s); m_cur_cpf = &cpf_pump;
-	log("pump process started, #chan=%d", m_n_chan); clk0.pump_cfg(1);
-	return w(1024), 0;
-down:	IFDBG log("pump/dn: et=%d", m_pump_et); 
-	if (!(x&7)) { if ((m_pump_et+=32) < 999) gui_errq_add(AUE_P_RE), m_pump_st |= 8; else m_pump_et = 0; }
-down0:	p_close(m_pump_pcp), p_close(&m_pump_ofd); k = m_pump_st&8; m_pump_st &= 0xff00;
-	clk0.pump_cfg(0); m_cur_cpf = &cpf_mute;
-	e = k ? start() : (m_pump_st ? (m_pump_st-=256, pump_launch()) : e); return w(1024), e;
-}
+	PMP_0(P, (m_pump_st&1) ? AUE_P_STATE : (++m_pump_st,clk0.pump_1(),0) );  m_pump_st=3;  clk0.pump_1();
+	PMP_1(P, pump, clk0.pump_cfg(1), (clk0.pump_cfg(0), m_cur_cpf=&cpf_mute)); }
 
 int ASnd::start_buf(int tlim) {
 	int wr0=64, lr=m_flg&1; // TODO: config
@@ -195,15 +179,23 @@ int ASnd::start_buf(int tlim) {
 	else  { clk0.bcfg(sample_rate, m_bs, m_bs2, (3*m_bs)>>1);  m_cur_cpf = &cpf_true;
 		return play_and_adj((short*)zeroblkD, wr0, tlim|(1<<30)); }}
 
-int ASnd::start1(int sc_lim) {
+int ASnd::retry(int re) {
+	int ec = 0, us = m_re_usec; m_cur_cpf = cpf_mute;
+	if(re){ if (!us) ec = AUE_STATE; else if ((us=(3*us)>>1) > 384000) ec = AUE_START; }
+	else  { if (us)  ec = AUE_STATE; else clk0.ucond(&m_re_stamp), us = 2582; }
+	return ec ? (gui_errq_add(ec), w(-1), m_re_usec=0, 0)
+		  : (log("audio/retry%d: %d %d", re, m_re_usec=us, m_sclim), 0); }
+
+int ASnd::start1(int re) {
 	if (m_hnd) close(); clk0.ev('o');
-	if (kKILL_PA()->i) gui2.errq_add(pt_kill_pa(kKILL_PA()->i));
+	if (kSUSP_PA()->i > re) pa_susp_io(1), pa_susp(1);
 	int rate = 44100, chan = kCHCFG()->i, bsiz = m_hwbs_trg;
 	const char *es = au_op_cfg(&m_hnd, kNAME()->s, &bsiz, &chan, &rate, m_flg&1);
-	if (es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), bsiz;
+	if(es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), retry(re);
 	m_n_chan = chan; sample_rate = rate; *clk0.pa() = m_bufsiz = bsiz;
 	mx_au16_cfg(&m_cfg, m_n_chan, kCHCFG()->s);
-	return start_buf(sc_lim);
+	int r = start_buf(m_sclim)<0; 
+	if (!r) return 0;  if (r==AUE_CLOCK) m_sclim=(3*m_sclim)>>1;  return retry(re);
 }
 
 int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
@@ -258,7 +250,9 @@ int ASnd::aux_pump() {  int nf = m_bs, bsc = nf*m_cfg.nch;  short buf[bsc]; m_pu
 
 void ASnd::cpf_bug(ASnd *p)  { bug("cpf_bug() called"); }
 void ASnd::cpf_mute(ASnd *p) {
-	int nf = clk0.f2play(1); if (nf<=0) { if (nf) gui_errq_add(AUE_NEGP), p->start(1); return; }
+	int nf = clk0.f2play(1), usec = p->m_re_usec;
+	if (usec && clk0.ucond(&p->m_re_stamp, usec)) p->start1(1);
+	if (nf<=0) { if (nf) gui_errq_add(AUE_NEGP); return; }
 	p->play2((short*)junkbufC, nf);
 	glob_flg|=GLF_SILENCE, clk0.add_f(nf), clk0.ev('q'), clk0.gcond(); }
 
@@ -298,8 +292,7 @@ int ASnd::w(int flg) {
 	if (flg&  32) gui2.wupd_c48('c', kCMODE()->i);
 	if (flg&  64) gui2.wupd_i2('t', kTRY_N()->i);
 	if (flg& 128) gui2.wupd_i2('w', kTRY_MS()->i);
-	if (flg& 256) gui2.wupd_i1('0', kKILL_PA()->i&1);
-	if (flg& 512) gui2.wupd_i1('1', kKILL_PA()->i>>1);
+	if (flg& 256) gui2.wupd_i1('0', kSUSP_PA()->i); // 512: rsrv
 	if (flg&2048) gui2.wupd_i1('B', kBFILL()->i);
 	if (flg&1024) { 
 		char buf[8]; memcpy(buf, "#out: 0", 8); 
@@ -325,10 +318,10 @@ int ASnd::w(int flg) {
 }
 
 int ASnd::cmd(const char *s) { CDEBUG(s); switch(*s) {
-	case 'Y': if (is_up()) close(); else start(); CDEBUG("Y1");  return 0;
+	case 'Y': if (is_up()||m_re_usec) close(); else start(); CDEBUG("Y1");  return 0;
 	case 'Z': close(); return 0;
 	case 'R': if (m_flg&2) return (m_pump_st&2) ? m_pump_st|=8, close() : start();
-		  if (m_hnd) close(); return start();
+		  if (m_hnd||m_re_usec) this->close(2); return start();
 	case 'W': return w(-1);
 	case 's': cfg_setint(kSPD(),   atoi_h(s+1)); return w(4096); 
 	case 'r': cfg_setint(kRSRV(),  atoi_h(s+1)); return w(4096); 
@@ -337,8 +330,7 @@ int ASnd::cmd(const char *s) { CDEBUG(s); switch(*s) {
 	case 't': cfg_setint(kTRY_N(), atoi_h(s+1)); return 0; 
 	case 'w': cfg_setint(kTRY_MS(),atoi_h(s+1)); return 0;
 	case 'B': kBFILL()->i = s[1]&1; return w(2048);
-	case '0': kKILL_PA()->i = 3*(s[1]&1); return w(768);
-	case '1': return (kKILL_PA()->i) ? (kKILL_PA()->i=1+2*((s[1]&1)), w(512)) : EEE_NOEFF; 
+	case '0': pa_susp_io(kSUSP_PA()->i = s[1]&1); return w(256);
 	case 'n': cfg_setstr(kNAME(),  s+1); return w(8);
 	case 'o': cfg_setstr(kCHCFG(), s+1); return w(16);
 	case 'N': cfg_setstr(kNAME(),  s+1); return 0;
