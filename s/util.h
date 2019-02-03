@@ -97,20 +97,23 @@ class Scale01 {
 	public:
 		static double f0(double v0, double v1, int ty, double x);
 		static void vec(double *q, double x0, double x1, int n, int ty);
-		Scale01() : m_ty(1), m_v0(0.0), m_v1(1.0), m_t0(0.0), m_t1(1.0) {}
-		int ty() { return m_ty; }
+		Scale01() : m_ty(1), m_x(0), m_v0(0.0), m_v1(1.0), m_t0(0.0), m_t1(1.0) {}
+		int ty() { return m_ty; }   
+		int x()  { return m_x; }
 		int ty_c() { return "CQhl-qc"[m_ty+3]; }
 		double v0() { return m_v0; }
 		double v1() { return m_v1; }
 		void set_ty(int ty) { set_ty_2(ty); upd_t01(); }
+		void set_x(int xx) { m_x = xx; }
 		void set_v0(double v0) { m_v0 = v0; upd_t01(); }
 		void set_v1(double v0) { m_v0 = v0; upd_t01(); }
 		void set_all(double v0, double v1, int ty) { set_ty_2(ty); m_v0=v0; m_v1=v1; upd_t01(); }
+		void set_all_x(double v0, double v1, int ty, int xx) { set_all(v0,v1,ty); m_x = xx; }
 		double f(double x);
 	protected:
 		void upd_t01();
 		void set_ty_2(int ty);
-		int m_ty;
+		int m_ty, m_x;
 		double m_v0, m_v1;
 		double m_t0, m_t1, m_sg;
 };
