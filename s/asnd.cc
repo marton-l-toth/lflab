@@ -191,11 +191,11 @@ int ASnd::start1(int re) {
 	if (kSUSP_PA()->i > re) pa_susp_io(1), pa_susp(1);
 	int rate = 44100, chan = kCHCFG()->i, bsiz = m_hwbs_trg;
 	const char *es = au_op_cfg(&m_hnd, kNAME()->s, &bsiz, &chan, &rate, m_flg&1);
-	if(es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), retry(re);
+	if(es) return log("snd/start1: %s failed, %s", es+1, snd_strerror(bsiz)), retry(re), w(1024);
 	m_n_chan = chan; sample_rate = rate; *clk0.pa() = m_bufsiz = bsiz;
 	mx_au16_cfg(&m_cfg, m_n_chan, kCHCFG()->s);
 	int r = start_buf(m_sclim)<0; 
-	if (!r) return 0;  if (r==AUE_CLOCK) m_sclim=(3*m_sclim)>>1;  return retry(re);
+	if (!r) return w(1024), 0;  if (r==AUE_CLOCK) m_sclim=(3*m_sclim)>>1;  return retry(re);
 }
 
 int ASnd::hcp_start(int t) { return m_hcp ? JQE_DUP : ((fa_start(&fa_wr, 2)<0) ? EEE_A20 : 
@@ -300,7 +300,8 @@ int ASnd::w(int flg) {
 		gui2.wupd_s('#', buf);
 		if (m_flg&2) {  gui2.wupd_s('C', "%%%XXX(off)\0%%%zz%pump \0%%%zz%pu...\0zz%z%%BUG!\0 "
 						 + 6*(m_pump_st&6)); }
-		else if (!m_hnd) { gui2.wupd_s('C', "%%%XXX(no audio output)"); }
+		else if (!m_hnd) { gui2.wupd_s('C', m_re_usec ? "zzX%%%(trying...)"
+							      : "%%%XXX(no audio output)"); }
 		else {  snd_pcm_info_t * info;
 			if (snd_pcm_info_malloc(&info)<0 || snd_pcm_info(m_hnd, info)<0) {
 				gui2.wupd_s('C', "zz%z%%(getinfo failed)"); }
