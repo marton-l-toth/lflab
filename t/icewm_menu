@@ -1,6 +1,6 @@
 # icewm menu def.
-prog Terminal xterm x-terminal-emulator -ls
-prog xterm xterm xterm -ls
+prog xterm xterm xterm -ls -bg black -fg "#e0e0e0" -font -misc-fixed-medium-r-normal--18-120-100-100-c-90-iso10646-1
+
 prog fte fte fte
 prog lf/l/ro app /home/tml/tmp/lf-prod/s/lf 
 prog lf/l/t1 app /home/tml/tmp/lf-prod/s/lf /home/tml/g/lflab/t/t1.lf
