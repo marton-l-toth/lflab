@@ -19,7 +19,7 @@ void gui_tlog(int i0, int n) { gui2.c2(9, 'c'); gui2.hex8(i0); gui2.hex8(n); }
 int  gui_dead(int ef) { return gui2.gui_dead(ef); }
 
 int gui_acv_op(int j, int op) { if (op<0) op = (0x73fe>>(4*CFG_AO_ACTION.i)) & 15;
-	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0); }
+	return op==0xe ? (gui2.cre(ACV_WIN(j),'A'), gui2.hex8(j), 0) : pt_acv_op(j, op|256, 0, 0, 0); }
 
 void gui_sliderwin(int oid, int n, const double * lbl, const unsigned char * v0) {
 	gui2.cre(oid, 'J'); gui2.c1(hexc1(n));

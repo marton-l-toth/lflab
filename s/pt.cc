@@ -347,19 +347,23 @@ found:  const char * s = av[2*(!strcmp(*av,CFG_XTERM.s) && !memcmp(av[1],"-e",3)
 	return pt_ptab[i].pid = pid;
 }
 
-int pt_acv_op(int id, int opw, const char *a1, const char *a2) {
+int pt_acv_op(int id, int opw, const char * nm, const char *a1, const char *a2) {
 	int sdl, tdl, pid, op = opw & 255, nwf = opw & 256;
-	const char *sdir, *tdir, *src, *trg;
+	char src[1024], trg[1024];
+	const char *sdir, *tdir;
 	if ((sdl = CFG_AO_DIR.i )) sdir = CFG_AO_DIR.s;  else sdl = QENVL('t'), sdir = QENV('t');
 	if ((tdl = CFG_WAV_DIR.i)) tdir = CFG_WAV_DIR.s; else tdl = QENVL('h'), tdir = QENV('h');
+	memcpy(src, sdir, sdl); sdl += sprintf (src + sdl,     "/%08x.a20", id);
+	memcpy(trg, tdir, tdl); tdl += snprintf(trg + tdl, 800-tdl, "/%s", nm);
 	switch(op) {
-		case 0xd: if (unlink(au_file_name(sdir,sdl,id,0,0,"a20"))<0) return EEE_ERRNO; // else FT
+		case 0xd: if (unlink(src)<0) return EEE_ERRNO; // else FT
 		case 0xf: return nwf ? 0 : (gui_closewin(ACV_WIN(id)), 0);
 		case 0xe: log("pt_acv_op: 0x0e -- why here?"); return GCE_ROUTE;
 		default:  if (op>7) return GCE_PARSE; else break;
 	}
-	src = au_file_name(sdir, sdl, id, 0,  0,  "a20");
-	trg = au_file_name(tdir, tdl, id, a1, a2, "wav\0flac" + (op&4));
+	if (a1) tdl += snprintf(trg + tdl, 900-tdl, "_%s", a1);
+	if (a2) tdl += snprintf(trg + tdl, 990-tdl, "_%s", a2);
+	memcpy(trg+tdl, ".wav\0___.flac\0_"+2*(op&4), 8);
 	pt_acv_cw = !nwf && !(~op&3);
 	switch (op&3) {
 		case 0: pid = launch(QENV('b'), "9(kk", "lf.acv",       src, trg,         (char*)0); break;

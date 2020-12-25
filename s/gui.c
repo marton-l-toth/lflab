@@ -4362,13 +4362,14 @@ static void in01_skel (struct _topwin * tw, char * arg) {
 ///////////////// audio file dialog //////////////////////////////////////////
 
 static void a20_skel (struct _topwin * tw, char * arg) {
-	const char * ws = "({B_>>wav$w3}{B_>>flac$w7}3[({L_skip:}3{eF6}0{L_len:}3{eL6})" 
-	"3(3{B_keep$wf}{B_wav$w0$ %F$ %L}{B_flac$w4$ %F$ %L}{B_del$wd}{B_config$~cW})]0{B_?$$?})";
+	const char * ws = "[({L_name:}{eN30})({B_>>wav$w3$ %N}{B_>>flac$w7$ %N}3[({L_skip:}3{eF6}0{L_len:}3{eL6})" 
+	"3(3{B_keep$wf}{B_wav$w0$ %N$ %F$ %L}{B_flac$w4$ %N$ %F$ %L}{B_del$wd}{B_config$~cW})]0{B_?$$?})]";
 	if (!tw->state) tw->arg[0].p = parse_w_s(tw, ws); 
 	else   gtk_window_present(GTK_WINDOW(tw->w)); 
 	int l=0; if (arg && (l=strlen(arg)) == 8) {
 		memcpy(tw->cmdpref, arg, 8); tw->cmdpref[8] = '$'; tw->cmdp_len = 9;
 		int i; for (i=0; i<8; i++) tw->title[i] = arg[i]|32; tw->title[8] = 0;
+		entry_set(widg_qp(tw, 0), arg);
 	} else { LOG("auconv BUG: l=%d", l); }
 }
 ///////////////// calculator /////////////////////////////////////////////////

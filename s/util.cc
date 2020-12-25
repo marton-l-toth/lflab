@@ -624,21 +624,6 @@ static int fa_w2k(fa_writer * fa, int fl) {
         return 0;
 }
 
-const char * au_file_name(const char *dir, int dlen, int id, const char *a1, const char *a2, const char *ext) {
-	static char * bptr[2];  static int blen[2];
-	int hx[2], j, al1, al2, ix = !memcmp(ext, "a20", 4), elen = ix ? 4 : strlen(ext),
-	    siz = dlen + (al1=a1?strlen(a1)+1:0) + (al2=a2?strlen(a2)+1:0) + elen + 16;
-	if (blen[ix]<siz) { for (blen[ix] += 8*!blen[ix]; blen[ix] < siz; blen[ix] <<= 1); 
-		 	    free(bptr[ix]); bptr[ix] = (char*)malloc(blen[ix]); }
-	char * q = bptr[ix]; memcpy(q, dir, dlen); q[dlen]='/';
-	hx[0] = qh4((unsigned int)id>>16u) | 0x20202020; 
-	hx[1] = qh4(	         id&65535) | 0x20202020; memcpy(q+dlen+1, hx, 8); j = dlen+9;
-	if (al1) q[j] = '_', memcpy(q+j+1, a1, al1-1), j += al1;
-	if (al2) q[j] = '_', memcpy(q+j+1, a2, al2-1), j += al2;
-	q[j] = '.'; memcpy(q+j+1, ext, elen+1);
-	return q;
-}
-
 const char * au_file_name(int id, int j) {
 	static char *srcp = 0, *dstp = 0;
 	const char *dir, *ext; int dlen, elen;

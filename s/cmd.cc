@@ -374,12 +374,13 @@ int CmdTab::c_cfg(CmdBuf * p) {
 
 int CmdTab::c_wav(CmdBuf * p) {
 	int id = atoi_h(p->m_c_a0), op = atoi_h(p->m_c_a1);
-	const char *s1 = 0, *s2 = 0;
+	const char *s1 = 0, *s2 = 0, *nm = 0;
+	if (op<8)     { if ((nm=p->tok())) { while (*nm==32) ++nm; if (!*nm) nm = 0; } }
 	if ((op|4)==4){ if ((s1=p->tok())) { while (*s1==32) ++s1; if (!*s1) s1 = 0; } 
 		 	if ((s2=p->tok())) { while (*s2==32) ++s2; if (!*s2) s2 = 0; } 
 			op += s1 ? (1+!!s2) : 2*(s2 && (s1="0")); }
-	IFDBGX(PT) log("c_wav 0x%x 0x%x '%s' '%s'", id, op, s1?s1:"NULL", s2?s2:"NULL");
-	return pt_acv_op(id, op, s1, s2);
+	IFDBGX(PT) log("c_wav 0x%x 0x%x '%s' '%s' '%s'", id, op, nm?nm:"NULL", s1?s1:"NULL", s2?s2:"NULL");
+	return pt_acv_op(id, op, nm, s1, s2);
 }
 
 int CmdTab::c_misc(CmdBuf * p) {
