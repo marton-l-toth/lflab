@@ -54,6 +54,7 @@ extern char zeroblkC[32768], junkbufC[32768];
 extern char save_file_name[1024], debug_utxt_buf[1024];
 
 extern int v_major, v_minor;
+extern const char * patch_string;
 
 void ini_err(int ec);
 void log(const char * fmt, ...);

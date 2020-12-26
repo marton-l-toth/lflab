@@ -5,6 +5,7 @@ OCMD=""; FCMD=""; JARG=""; cond="y"; SSE="i"; UCFLG=""; DEFS=""; STFLG="";
 CGARG="-fno-exceptions -fno-rtti"
 WNARG="-Wall -Wno-unused-function -Wno-misleading-indentation"
 OPTARG="-O2 -fpredictive-commoning -fgcse-after-reload"
+PSTR="";
 while [[ -n "$cond" ]]; do
         case "$1" in
                 "")   cond="" ;;
@@ -24,6 +25,7 @@ while [[ -n "$cond" ]]; do
 		"-rsg")  OCMD="^q";  FCMD="^C47\$E>00ffffeb"; shift ;;
 		"-sd") SDIR="$2"; shift 2 ;;
 		"-pd") PDIR="$2"; shift 2 ;;
+		"-pstr") PSTR="$2"; shift 2 ;;
 		*) cond="" ;;
 	esac
 done
@@ -39,7 +41,15 @@ for a in * c/*; do
 	if [[ -d "$a" ]]; then continue; fi
 	if [[ ! -f "$b" ]] || [[ "$a" -nt "$b" ]]; then cp $a $b; fi
 done
+
 cd "$PDIR"
+
+if [[ -n "$PSTR" ]]; then
+	mv v.cc v.cc.orig
+	grep -v "patch_string" v.cc.orig > v.cc
+	echo "const char * patch_string = \"$PSTR\";" >> v.cc
+fi
+
 if [[ -n "$STFLG" ]]; then
 	LF_TMPROOT="$(readlink -f /run/shm)"
 	[[ -d "$LF_TMPROOT" ]] || LF_TMPROOT="$(readlink -f /dev/shm)"

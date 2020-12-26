@@ -21,9 +21,11 @@ static const char * cmd_dsc[] = {"/9 2R0\0io", "/9~2R1\0gui", "/1 4_c-4\0con", "
 				 "/9 3Rp8\0pump", "/9 3Rq8\0apmp"};
 static struct timespec asv_ts;
 
-void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s", v_major, v_minor, pt_hello,
-	    "Copyright (C) 2014-2019 Marton Laszlo Toth","This is free software with ABSOLUTELY NO WARRANTY.",
-	    "see the file \"COPYING\" for details"); }
+void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s",
+		v_major, v_minor, patch_string, pt_hello,
+		"Copyright (C) 2014-2020 Marton Laszlo Toth",
+		"This is free software (GNU GPL 2.0) with ABSOLUTELY NO WARRANTY.",
+		"see the file \"COPYING\" for details"); }
 
 static void rf(const char ** ppf) {
 	for (int ec, i=0, ro=1; ppf[i]; i++) {
