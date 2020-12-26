@@ -1878,7 +1878,9 @@ static void dalbl_draw(ww_t * ww, cairo_t * cr2) {
 				  cairo_set_source_rgb (cr2, 0.2, 0.2, 1.0), fr=fg=1.0, fb=0.0;
 			  else    cairo_set_source_rgb (cr2, 0.0, 0.0, 0.3), fr=fg=0.4, fb=0.0;
 			  break;
-		case 'M': cairo_set_source_rgb (cr2, .2, .2, .1), fr = fg = 1.0, fb = .5; break;
+		case 'M': if (*s=='!') ++s, cairo_set_source_rgb (cr2, .2, .1, .1), fr = 1.0, fg = fb = .2;
+			  else		    cairo_set_source_rgb (cr2, .2, .2, .1), fr = fg = 1.0, fb = .5;
+			  break;
 		default:  LOG("dalbl_draw: invalid class 0x%x(%c)", ww->cl->ch, ww->cl->ch); return;
 	}}
 dr:	cairo_paint(cr2);
@@ -5060,7 +5062,7 @@ static gboolean cmd_in (GIOChannel *src, GIOCondition condition, gpointer data) 
 	if (*str == 9) {
 		char *s, *toks;
 		for (s=strtok_r(str+1, "\t", &toks); s; s=strtok_r(0, "\t", &toks))
-			cmd1(s);
+			cmd1(s); // no it may not
 	} else {
 		cmd1(str);
 	}

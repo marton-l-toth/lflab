@@ -79,7 +79,6 @@ class WrapScale {
 		inline int uses_xf() const { return m_xop != '.'; }
 		inline int si() const { return m_si; }
                 int cmd(const char *s);
-		void draw(int oid, int ix, int flg, const double * pc, BoxGen * bx);
 		void ini_default(int k);
 		int save(SvArg * sv, int i);
 		void wl_1(int flg), wl_2(int flg);
@@ -97,10 +96,10 @@ class WrapScale {
                 inline int sxop(int c) { return (c==63 || c==m_xop) ? 0 : (m_xop=c, 0x28); } 
                 inline int sfun(int c) { return c==m_fch ? 0 : ((*sfi_ent(m_fch=c)->f.f)(this), 0x24); }
 		inline int ssrc(int c) { return ((c = ((c+(c<64))&7)) == m_si) ? 0 : (m_si=c, 0x22); }
-		inline const char * fnm() const { return sfi_ent(m_fch)->f.s; }
 		inline const char * snm() const { return "x\0 y\0 s1\0s2\0s3\0s4\0s5\0s6" + 3*m_si; }
 		inline int sch() const { return m_si + (m_si>1 ? 47 : 120); }
 		inline int fch() const { return m_fch ? m_fch : 'c'; }
+		const char * fnm() const;
                 static sfun_p m0_sfun[17];
                 double m_v0, m_v1, m_vx;
                 char m_fch, m_fi, m_si, m_xop, rsrv[4];
@@ -701,8 +700,8 @@ void WrapScale::ini_default(int k) { switch(k) {
 }}
 
 int WrapScale::cmd(const char *s) { switch(*(s++)) {
-        case '<': m_v0 = at0f(s); updf(); return 32;
-        case '>': m_v1 = at0f(s); updf(); return 32;
+        case '<': m_v0 = at0f(s); updf(); return 32 + 4*!m_fch;
+        case '>': m_v1 = at0f(s); updf(); return 32 + 4*!m_fch;
         case 's': return ssrc(*s);
         case 'F': return sxop(*s);
         case 'f': return sfun(*s);
@@ -722,6 +721,10 @@ void WrapScale::wl_1(int flg) { if (flg &  2) gui2.sz(snm()), gui2.c1(36);
 void WrapScale::wl_2(int flg) { if (flg & 64) gui2.hdbl(m_v0);
 				if (flg &128) gui2.hdbl(m_v1); }
 
+const char * WrapScale::fnm() const {
+	if (m_fch) return sfi_ent(m_fch)->f.s;
+	return "!con" + (m_v0==0.0 && m_v1==0.0);
+}
 /////// scl-vec /////////////////////////////////////////////////////////////
 
 WrapScVec::WrapScVec(const WrapScVec * that, int arg) : SOB(arg) {
