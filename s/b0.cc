@@ -65,6 +65,12 @@ BX_SCALC(ALSBox::sc_ft) {
 //? simple impulse (first sample is 1.0, the rest are all zero)
 //? HINT: since a simple impulse has a flat frequency graph, it is
 //? ideal for testing the frequency response of filters.
+//? Using an LTI filter with a simple impulse allows you to export
+//? the filter for use with any other program that supports a
+//? "convolution" operation -- convolving any sample with the
+//? impulse response (i.e. the output of the filter when used with
+//? a simple impulse) is the same as filtering the sample.
+//? ==> .!b.?.etc.LTI filters
 
 BX_SCALC(BoxInst::sc_zero) { return **outb=0.0, 0; }
 BX_SCALC(BoxInst::sc_cp0)  { return BOX_CP0; }

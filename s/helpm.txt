@@ -2,7 +2,7 @@
 {{{0.about}}}
 lflab - lineral filter based audio lab
 vX.YY
-Copyright (C) Marton Laszlo Toth, 2014-2019.
+Copyright (C) Marton Laszlo Toth, 2014-2020.
 This is free software (GNU General Public License version 2),
 with ABSOLUTELY NO WARRANTY.
 ---
@@ -122,6 +122,10 @@ output is the same as for filtering the sum of two inputs
 - When you delay the input, the output will be delayed by the
 same amount (otherwise unchanged).
 ---
+Because of the above rules an LTI filter is fully defined by
+its impulse response, the simple impulse box is very useful
+for testing and exporting filters.
+==> .!b.imp.^1
 Builtin and example filters (names beginning with "=") are LTI
 filters (some of them can have variable parameters -- these
 filters are only time-invariant when all parameters (2nd, 3rd
@@ -647,9 +651,10 @@ folders (see below), intruments, boxes and clipboards.
 A folder can contain up to 32 named objects (of any type).
 Name: up to 20 ASCII characters except dot(.) and dollar sign.
 Folders can be opened by double-clicking on the name or
-clicking on the little +/arrow. (clipboards can also be opened
-as folders (+/>) but in most cases it is more convenient to
-open their own window (double-click)).
+clicking on the little +/arrow.
+Clipboards can also be opened as folders (+/>) but in most
+cases it is more convenient to open their own window
+(double-click on the _name_, not the arrow).
 ---
 On the bottom, there are buttons for rename/local copy/
 copy/move/del and a create object menu button. The text field
@@ -994,24 +999,27 @@ You can change the in/out labels (and FG/BG color) here:
 However, in the expressions the inputs/outputs will still be
 called "x0", "x1", ... "x<n>" and "y0", "y1" ... "y<n>".
 {{{1.track}}}
-right now, the track editor is very simple, so the recommended
-way is to write individual sounds (or perhaps simple loops) to
-.wav files, and use a more full-featured tracker to compose
-your 4-hour opera :)
----
+A track is a collection of wrap objects (sounds). It can be
+played directly, or used as any other box with these inputs:
+BPM: BPM<0 means -BPM*parent_track_BPM (for track-in-track)
+from/to: play this portion of the track only (first time)
+rpt#: repeat the track this many times
+r.fr/t.to: repeat this portion of the track (second+ time)
+mxid: mixer ID (for target setting in wraps, see below)
+==> 3.target/trigger -- how even empty tracks can be useful
 Top line: prev/snd menu/next, turn align (to vertical lines)
 on/off, move selected sound, start/stop playing & recording,
-set default divide & pixel/beat. Under p/b, from the "clip"
-button you can drag a sound from the current (p.src) clipboard.
+set default divide & pixel/beat.
+Under p/b, from the "clip" button you can drag the selected
+sound from the current (paste source) clipboard.
+Right clicking a beat number gives a context menu with quick
+play/loop options.
 On the left column, divide per line can be set, the arrows are
 for scrolling. On the top and bottom (beat #) lines you can
 click for context menus (play/loop some # of beats).
 ---
-Every track can be used as a box (in graphs or instruments),
-with BPM and from-to-repeat as input (BPM can be non-constant).
-If you set a negative number "-x" for BPM, the BPM of the
-containing track will be multiplied by x. (so -1.0 means simply
-equal to parent track BPM, useful for track-in-track.)
+Tracks can be edited while being played -- unlike for other
+boxes, the changes are effective immediately.
 ---
 keyboard:
 x - cut & select next
@@ -1204,7 +1212,7 @@ but the value will stay zero.
 {{{3.midi/control}}}
 Here you can bind control actions to MIDI key/controller input.
 Currently three kinds of control actions are supported: grab 
-play lines, grab all control lines, and set target.
+play lines, grab all control lines, and set target wrap.
 ==> 4.grab/release -- how to (de)activate ctrl lines
 You can have at most 11 control actions defined for each shadow
 wrap. In the first line, the number of control actions is shown
@@ -1253,7 +1261,7 @@ shading ("C"..."H").
 Note: When you change the resolution (and the control position
 is fixed), the sound may change.
 {{{3.write to file}}}
-"wav" tab in the wrap config window.
+"wv" tab in the wrap config window.
 Here you can write the sound to a wav/flac file.
 "stereo" -- toggle 2-channel output
 "from-to" -- only write the selected (plot(t), top right) part
@@ -1261,11 +1269,12 @@ Here you can write the sound to a wav/flac file.
 For details how audio file output works, see these help texts:
 ==> 1.auconv -- this will pops up, unless ...
 ==> 1.misc config -- ... you set a default action here
+FLAC output is only available when you have "flac" installed.
 {{{3.general config}}}
 "cfg" tab in the wrap config window
 Here you can change the following settings for a wrap:
 - mute: when on, the wrap is silent in a track
-- t: time limit (beats, not in sec., useful for tracks)
+- t: time limit when used in tracks (in beats, not seconds)
 - >shdw: middle-click creates a shadow wrap instead of a copy
 - sl.upd: slider pos. updated when slider moving (when off,
 update only happens at right-click).
