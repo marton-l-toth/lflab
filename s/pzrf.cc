@@ -223,6 +223,15 @@ static void half_zero(RECF_ABXY * to, double fq0, double bw1, double c = 1.0) {
 }
 
 QUICK_PZFILT(SBandF) { set_n_d(1); half_zero(m_ab, inb[0][0], inb[1][0]); return 0; }
+//? {{{!._bF}}}
+//? Simple band-pass/high-pass filter (single pole, half-zero)
+//? in - filter input
+//? fq - frequency
+//? Q - sharpness
+//? Q=0.01: narrow band, with some high freq let through
+//? Q=0.1: wider band, lot of high freq let through
+//? Q=0.3: high-pass with a little bump at "fq"
+//? Q>.5: high-pass
 
 //? {{{!._eqF}}}
 //? Equalizer filter
