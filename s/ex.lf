@@ -2,7 +2,32 @@
 _V0.9
 :F:RC.$D!e
 N$F
-C.!e$Dsc$D02$tt3x3_5
+C.!e$Dsc$D03$tdrum_3+2
+E$G%%%fYu
+E$C5
+<Example loop where the "reference sounds" (in line 03) are
+<controlled by MIDI sliders.
+<Loop 0...2 uses sliders from device #0 (tested with KORG
+<nanoKONTROL2), and loop 2...4 uses sliders from the virt.
+<MIDI device. (see more at clipboard descriptions)
+X$g_201
+X$b900
+C.!e.sc.03$tdrum-pause
+X$g_201
+X$b900
+C.!e.sc.03$thi_5+3
+X$g_201
+X$b900
+C.!e.sc.03$tbass
+X$g_201
+X$b900
+C.!e.sc.03$timpatient
+X$g_201
+X$b900
+C.!e.sc.03$tT
+X$g_201
+X$b900
+C.!e.sc$D02$tt3x3_5
 E$G%%%fYu
 E$C<
 <An example of using shadow wraps for track editing.
@@ -193,13 +218,7 @@ E$C@
 <knob #8: loop BPM
 <==> midi input devices
 C.!e.mi$Dbox$tl1-mi
-E$G%%%fYu
-E$C5
-<Example loop where the "reference sounds" (in line 03) are
-<controlled by MIDI sliders.
-<Loop 0...2 uses sliders from device #0 (tested with KORG
-<nanoKONTROL2), and loop 2...4 uses sliders from the virt.
-<MIDI device. (see more at clipboard descriptions)
+E$O0.!e.sc.03.drum_3+2
 X$g_201
 X$b900
 C.!e.mi.box$gl1-mi-g
@@ -231,6 +250,7 @@ X$+2:2<5
 X$+2:3=9999
 X$+2:4<4
 X$+2:5<5
+X$+2:6=0
 X$+3:0<2:0
 X$+3:1<1:1
 X$+4:0<2:1
@@ -381,7 +401,7 @@ X$g_201
 X$b900
 C.!e.box.trk$tjaggy1
 E$Gzzz<%a
-E$00BPM$01from$02to$03rpt#$04r.fr$05r.to
+E$00BPM$01from$02to$03rpt#$04r.fr$05r.to$06mxid
 X$g_201
 X$b900
 C.!e.box$Diter$Dv$i=1p+i
@@ -1552,6 +1572,78 @@ X$+3:1<2
 X$+4:0<3:0
 X$+4:1<3
 X$+4:2<3:0
+C.!e.box.fb$gC@-@fq-1p-1h
+E$G;zM%%G
+E$00fq$01omix$021p$03h1$04dmp$05mulx$06t*$071p*$08h1-2
+E$201p1$21dyF1$22mul1$23h1-1$24dyI1$25mulx$261p2$27dyF2$28mul2$29h1-2$2AdyI2$2Bomix
+E$CG
+<A "nice" interface for the raw feedback loop of two connected
+<quasi-strings. Input ports:
+<in - filter input
+<fq - base frequency
+<1p - (relative) parameter for single-pole filter
+<h1 - high-pass filter parameter
+<dmp - dampening (attenutation)
+<mulx - connection factor between the two strings
+<t* - delay multiplier (frq. divider) for second string
+<1p* - single-pole paran multiplier for second string
+<h1-2 - high-pass param for second string
+<omix - mixing of two strings for out0 (0:1st 0.5:avg 1:2nd)
+<---
+<It is generally advisable to have feedback boxes designed in a
+<similar way: the actual graph box with feedback should be a
+<minimal one (taking raw values for filters from the input),
+<and a separate "interface graph box" like this one should be
+<made to convert nice inputs (like frequency) to raw ones (like
+<integer and fractional delay). Besides making viewing/editing
+<easier that it would be for one huge graph, this is also good
+<for CPU usage: feedack loops get more and more CPU-hungry as
+<the delay time goes below about 10ms, so all computation that
+<can be done outside the feedback box should be done outside.
+X$<9
+X$>12
+X$iz$.!b.ar./
+X$iz$.!b.ar.*
+X$iz$.!b.ar.*
+X$iz$.!b.ar.f1.exp-
+X$iz$.!b.ar.*
+X$iz$.!b.ar.*
+X$iz$.!b.ar.-
+X$iz$.!e.box.fb.co.t-split
+X$iz$.!b.ar.f1.exp-
+X$iz$.!e.box.fb.co.t-split
+X$iz$.!b.ar.f1.exp-
+X$+0:0=1
+X$+0:1<0
+X$+1:0<0:0
+X$+1:1<4
+X$+2:0<0
+X$+2:1<2
+X$+3:0<1:0
+X$+4:0<0:0
+X$+4:1<6
+X$+5:0<2:0
+X$+5:1<7
+X$+6:0<3:0
+X$+6:1<5
+X$+7:0<4:0
+X$+7:1=0.1
+X$+8:0<5:0
+X$+9:0<0:0
+X$+9:1=0.1
+X$+10:0<2:0
+X$+11:0<10:0
+X$+11:1<9:1
+X$+11:2<6:0
+X$+11:3<3
+X$+11:4<9:0
+X$+11:5<5
+X$+11:6<8:0
+X$+11:7<7:1
+X$+11:8<6:0
+X$+11:9<8
+X$+11:10<7:0
+X$+11:11<1
 C.!e.box.fb$gfb-bpf
 E$G%%%uu0
 E$00in$01fq$02Q$03t$04mul
@@ -1603,30 +1695,7 @@ X$+7:0<6:0
 C.!e.box.fb$g=@-@fq-1p-1h
 E$G;zM%%G
 E$O2.!e.box.fb.=@-@fq-1p-1h-
-E$CG
-<A "nice" interface for the raw feedback loop of two connected
-<quasi-strings. Input ports:
-<in - filter input
-<fq - base frequency
-<1p - (relative) parameter for single-pole filter
-<h1 - high-pass filter parameter
-<dmp - dampening (attenutation)
-<mulx - connection factor between the two strings
-<t* - delay multiplier (frq. divider) for second string
-<1p* - single-pole paran multiplier for second string
-<h1-2 - high-pass param for second string
-<omix - mixing of two strings for out0 (0:1st 0.5:avg 1:2nd)
-<---
-<It is generally advisable to have feedback boxes designed in a
-<similar way: the actual graph box with feedback should be a
-<minimal one (taking raw values for filters from the input),
-<and a separate "interface graph box" like this one should be
-<made to convert nice inputs (like frequency) to raw ones (like
-<integer and fractional delay). Besides making viewing/editing
-<easier that it would be for one huge graph, this is also good
-<for CPU usage: feedack loops get more and more CPU-hungry as
-<the delay time goes below about 10ms, so all computation that
-<can be done outside the feedback box should be done outside.
+E$O4.!e.box.fb.C@-@fq-1p-1h
 X$<10
 X$>1
 X$iz$.!b.ar./
@@ -1674,6 +1743,34 @@ X$+11:10<8
 X$+11:11<7:0
 X$+11:12<9
 X$+12:0<11:0
+C.!e.box.fb$i=@-@fq-1p-1h_C
+E$G;zM%%G
+E$01fq$021p$03h1$04dmp$05mulx$06t*$071p*$08h1-2$09omix
+X$i10
+X$c.!e.box.fb.C@-@fq-1p-1h
+X$f.!e.box.fb.co.=@-@-1p-1h-dly
+X$=311
+X$+1001
+X$+1109
+X$+1202
+X$+1303
+X$+1404
+X$+1505
+X$+1606
+X$+1707
+X$+1808
+X$+2110
+X$+2211
+X$+2312
+X$+2413
+X$+2514
+X$+2615
+X$+2716
+X$+2817
+X$+2918
+X$+2a19
+X$+2b1a
+X$+2c1b
 C.!e.box.iter$De$i=e3i
 E$GuuK3%F
 E$01(#b)$02fq1$03[fi]$04t1$05c1$06t2$07c2$08t3$09c3$0Admp
@@ -15093,3 +15190,318 @@ C.!e.sc.02.t3x3_5$s010:000189C0
 X$O0.!e.sc.01.t3x3L_2.010:00000000
 X$G3G;0000Ib
 X$>.!e.sc.02.t3x3_5.030:0000D890
+C.!e.sc.03.T$w010:00000000
+X$i21=1
+X$i23=55
+X$i24=1e-05
+X$i00=-1
+X$i02=32
+X$i03=9999
+X$i05=32
+X$G6000000Ib
+X$b.!e.sc.03.drum-pause
+C.!e.sc.03.T$w030:0004EC00
+X$#*Q2cccccc::
+X$i20*0.00707596612706177:1:xlA
+X$i25*-1:1:5-?
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i00=-1
+X$i02=8
+X$i03=9999
+X$i05=8
+X$G6N00000Ib
+X$b.!e.sc.03.bass
+C.!e.sc.03.T$w020:000F6180
+X$#*I2cccccc::
+X$i20*0.00707596612706177:1:xlA
+X$i25*-1:1:5-?
+X$i21=1
+X$i23=11
+X$i24=1e-05
+X$i00=-1
+X$i02=9
+X$i03=99999
+X$i05=9
+X$G6G00000Ib
+X$b.!e.sc.03.hi_5+3
+C.!e.sc.03.impatient$w010:00000000
+X$i21=1
+X$i23=55
+X$i24=1e-05
+X$i00=-1
+X$i02=32
+X$i03=9999
+X$i05=32
+X$G6000000Ib
+X$b.!e.sc.03.drum-pause
+C.!e.sc.03.impatient$w020:00000000
+X$O0.!e.sc.03.T.020:000F6180
+X$G6G00000Ib
+X$b.!e.sc.03.hi_5+3
+C.!e.sc.03.impatient$w030:00000000
+X$O0.!e.sc.03.T.030:0004EC00
+X$G6N00000Ib
+X$b.!e.sc.03.bass
+C.!e.sc.03.bass$w010:00000000
+X$O1.!e.8.v
+X$O2.!e.8.u
+X$O3.!e.8.u
+X$i21=1
+X$i22=0.05
+X$i23=0.6
+X$i24=0.05
+X$i01=7
+X$i03=5
+X$i60=0.5
+X$i61=1e-05
+X$i44=3
+X$i45=8
+X$O6.!e.8.u
+X$G603IY00Ib
+X$F00001
+X$b.!e.box.nz.nz+bwH+1p
+X$>.!e.box.iter.@.=@fq-1p-1h-i
+C.!e.sc.03.bass$w020:00013B00
+X$O1.!e.8.v
+X$O2.!e.8.u
+X$O3.!e.8.u
+X$i21=1
+X$i22=0.05
+X$i23=0.6
+X$i24=0.05
+X$i01=7
+X$i03=5
+X$i60=0.5
+X$i61=1e-05
+X$i44=3
+X$i45=8
+X$O6.!e.8.u
+X$G613IY00Ib
+X$F00001
+X$b.!e.box.nz.nz+bwH+1p
+X$>.!e.box.iter.@.=@fq-1p-1h-i
+C.!e.sc.03.bass$w010:00027600
+X$O1.!e.8.v
+X$O2.!e.8.u
+X$O3.!e.8.u
+X$i21=1
+X$i22=0.05
+X$i23=0.6
+X$i24=0.05
+X$i01=7
+X$i03=5
+X$i60=0.5
+X$i61=1e-05
+X$i44=3
+X$i45=8
+X$O6.!e.8.u
+X$G623IY00Ib
+X$F00001
+X$b.!e.box.nz.nz+bwH+1p
+X$>.!e.box.iter.@.=@fq-1p-1h-i
+C.!e.sc.03.hi_5+3$w011:0000B130
+X$O1.!e.8.q
+X$O2.!e.8.q
+X$O3.!e.8.o
+X$i21=0.5
+X$i23=0.5
+X$i24=1e-05
+X$i25=-0.5
+X$i02=3
+X$i60=0.1
+X$i61=1e-05
+X$i43=0
+X$O6.!e.8.o
+X$G6T4@20;Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@@fq-1p-1h
+C.!e.sc.03.hi_5+3$w020:0000D890
+X$O1.!e.8.q
+X$O2.!e.8.q
+X$O3.!e.8.o
+X$i21=0.5
+X$i23=0.5
+X$i24=1e-05
+X$i25=-0.55
+X$i02=3
+X$i60=0.1
+X$i61=1e-05
+X$i43=0
+X$O6.!e.8.o
+X$G6V4@20;Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@@fq-1p-1h
+C.!e.sc.03.hi_5+3$w010:0000FFF0
+X$O1.!e.8.q
+X$O2.!e.8.q
+X$O3.!e.8.o
+X$i21=0.5
+X$i23=0.5
+X$i24=1e-05
+X$i25=-0.6
+X$i02=3
+X$i60=0.1
+X$i61=1e-05
+X$i43=0
+X$O6.!e.8.o
+X$G6[4@20;Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@@fq-1p-1h
+C.!e.sc.03.hi_5+3$w020:00012750
+X$O1.!e.8.q
+X$O2.!e.8.q
+X$O3.!e.8.o
+X$i21=0.5
+X$i23=0.5
+X$i24=1e-05
+X$i25=-0.65
+X$i02=3
+X$i60=0.1
+X$i61=1e-05
+X$i43=0
+X$O6.!e.8.o
+X$G6]4@20;Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@@fq-1p-1h
+C.!e.sc.03.hi_5+3$w010:00014EB0
+X$O1.!e.8.q
+X$O2.!e.8.q
+X$O3.!e.8.o
+X$i21=0.5
+X$i23=0.5
+X$i24=1e-05
+X$i25=-0.7
+X$i02=3
+X$i60=0.1
+X$i61=1e-05
+X$i43=0
+X$O6.!e.8.o
+X$G6`4@20;Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@@fq-1p-1h
+C.!e.sc.03.hi_5+3$w010:00027600
+X$O1.!e.8.n
+X$O2.!e.8.n
+X$O3.!e.8.m
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i25=0.7
+X$i02=5
+X$i60=0.5
+X$i61=1e-05
+X$i43=0
+X$i47=1
+X$i48=0
+X$i49=1
+X$i4a=0
+X$i4c=0.9
+X$O6.!e.8.m
+X$G6\@:A00Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@-@fq-1p-1h_C
+C.!e.sc.03.hi_5+3$w020:00031380
+X$O1.!e.8.n
+X$O2.!e.8.n
+X$O3.!e.8.m
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i25=0.75
+X$i02=5
+X$i60=0.5
+X$i61=1e-05
+X$i43=0
+X$i47=1
+X$i48=0
+X$i49=1
+X$i4a=0
+X$i4c=0.9
+X$O6.!e.8.m
+X$G6^@:A00Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@-@fq-1p-1h_C
+C.!e.sc.03.hi_5+3$w010:0003B100
+X$O1.!e.8.n
+X$O2.!e.8.n
+X$O3.!e.8.m
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i25=0.8
+X$i02=5
+X$i60=0.5
+X$i61=1e-05
+X$i43=0
+X$i47=1
+X$i48=0
+X$i49=1
+X$i4a=0
+X$i4c=0.9
+X$O6.!e.8.m
+X$G6`@:A00Ib
+X$b.!e.box.imp.^g+bwH
+X$>.!e.box.fb.=@-@fq-1p-1h_C
+C.!e.sc.03.drum-pause$w010:00000000
+X$#*IIcccccc::
+X$tb00086470
+X$i21=1
+X$i23=0.5
+X$i24=1e-05
+X$i00=-1
+X$i02=2
+X$i03=11
+X$i05=2
+X$G6000000Ib
+X$b.!e.sc.03.drum_3+2
+C.!e.sc.03.drum_3+2$s010:00000000
+X$#*I2cccccc::
+X$x41
+X$z*0080
+X$tA000F4240
+X$O1.!e.mi.box.l1-mi.010:00000000
+X$G6B0RF00Ib
+X$F00004
+C.!e.sc.03.drum_3+2$s010:00002760
+X$O0.!e.mi.box.l1-mi.010:00000000
+X$O1.!e.mi.box.l1-mi.010:00000000
+X$G6B0RF00Ib
+X$F00004
+C.!e.sc.03.drum_3+2$s030:00003B10
+X$O0.!e.mi.box.l1-mi.030:00003B10
+X$O2.!e.mi.box.l1-mi.030:00003B10
+X$!1"6h0,086
+X$!2"6h0,096
+X$G3D7S=00Ib
+X$F1813C
+X$Tffffffff
+X$<.!e.sc.03.drum_3+2.010:00002760
+X$<.!e.sc.03.drum_3+2.010:00000000
+X$>.!e.8.0
+C.!e.sc.03.drum_3+2$s010:00004EC0
+X$O0.!e.mi.box.l1-mi.010:00004EC0
+X$O1.!e.mi.box.l1-mi.010:00000000
+X$G3G0RF00Ib
+X$F00004
+X$>.!e.sc.03.drum_3+2.030:00003B10
+C.!e.sc.03.drum_3+2$s010:0000C4E0
+X$O0.!e.mi.box.l1-mi.010:0000C4E0
+X$G661RF00Ib
+X$F00004
+C.!e.sc.03.drum_3+2$s030:0000D890
+X$O0.!e.8.0
+X$O2.!e.mi.box.l1-mi.030:00003B10
+X$!1"6h0,086
+X$!2"6h0,096
+X$G347S<00Ib
+X$F1813C
+X$Tffffffff
+X$<.!e.sc.03.drum_3+2.010:0000C4E0
+X$>.!e.8.0
+C.!e.sc.03.drum_3+2$s010:0000EC40
+X$O0.!e.mi.box.l1-mi.010:0000C4E0
+X$G611RF00Ib
+X$F00004
+X$>.!e.sc.03.drum_3+2.030:0000D890
