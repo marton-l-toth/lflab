@@ -30,6 +30,7 @@ unsigned int ** mi_root[32] = { mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_dflti,mi_
 static char *mi_dsc[32], keytrans[128], mi_devname[24] = "/dev/snd/midiCxDy";
 
 char mi_tr_l2p[32], mi_tr_p2l[32], mi_dscl[32], midi_dvid[32];
+unsigned char midi_last_pdck[4];
 int midi_fd[32];
 unsigned int midi_bv, midi_err_bv;
 static const char ktrr_02_27[26] = {15,2,16,3,17,4,18,19,6,20,7,21,8,22,23,10,24,11,25,26,13,27,14,5,9,12},
@@ -87,8 +88,10 @@ found:	mi_log(i, "system", p, ++j); return j; }
 
 static void midi_kc(int i, int ch, int k, int v) {
  	unsigned int *p0 = mi_rw(i, ch, 0), *p = p0+k, x = *p, x25 = x & ~127u;
+	int j = mi_tr_p2l[i];
+	midi_last_pdck[0] = i; midi_last_pdck[1] = j; midi_last_pdck[2] = ch; midi_last_pdck[3] = k;
 	if (DBGC|midi_dispflg) log("midi: dev%02d(%02d) ch%02d ky%03d %03d=>%03d (#%05x,%02d)",
-			mi_tr_p2l[i], i, ch, k, *p&127, v, (*p>>7)&0xfffff, x25>>27);
+			j, i, ch, k, *p&127, v, (*p>>7)&0xfffff, x25>>27);
 	if (!x25) return (void) (*p = v);  else *p = x25|v;
 	int ec = wrap_midi_ev(x, k, v, p0); if (ec>=0) return;
 	if (ec==MDE_KEEPV) return (void) (*p = x);

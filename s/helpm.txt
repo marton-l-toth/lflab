@@ -1208,7 +1208,8 @@ useful to set volume (typically s6) to dev31/ch0/ky255.
 MIDI control positions all have zero value at lflab start.
 They are only updated when changed. If a slider is assigned to
 a non-existent device/control, no error message will be shown
-but the value will stay zero. 
+but the value will stay zero.
+==> 3.midi/quick set -- quickly set dev/chan/key
 {{{3.midi/control}}}
 Here you can bind control actions to MIDI key/controller input.
 Currently three kinds of control actions are supported: grab 
@@ -1230,6 +1231,7 @@ lines can share MIDI keys/controls.
 Target selection only works if the current target is on a
 clipboard. You can either set it to the <n>th element (0..31),
 go up/down/left/right/next/prev or skip target selection (--).
+==> 3.midi/quick set -- quickly set dev/chan/key
 {{{3.midi/play}}}
 Here you can bind play actions (more or less having the same
 effect as a click on the grid) to MIDI keys/controls. Since it
@@ -1250,6 +1252,19 @@ The default control IDs are working for KORG(R) nanoPAD2; when
 you have a different touchpad with the same logic, it may work
 with different ctrl IDs, otherwise see:
 ==> 4.new devices
+==> 3.midi/quick set -- quickly set dev/chan/key
+{{{3.midi/quick set}}}
+When configuring MIDI controls (sliders/control/play), you can
+use middle-click on the following fields:
+- dev: set the device ID to the last touched MIDI device ID
+- chan: set device and channel to the last touched MIDI device
+- key(k0/k1): set dev/chan/key to the last touched key/slider
+- num. of keys (abs(k1-k0)+1 or abs(k1-k0)/2+1) (play cfg.)
+These settings work in the following parts of shadow wrap 
+config window:
+==> 3.midi/sliders -- dev, ch, ky
+==> 3.midi/control -- dev, ch, ky
+==> 3.midi/play -- d, c, k0, k1, nk
 {{{3.grid config}}}
 "[#]" tab in the wrap config window
 Here you can set the number of columns(x) and rows(y) of the

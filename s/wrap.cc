@@ -366,7 +366,7 @@ class SWrapMEP : public SOB {
 		void w(int of) { w_nl(of); if (of) w_ls(0,99,-1); }
 
 		char ixtr[21], rsrv[2], nl;
-		unsigned int *p3[3]; // d5 c4 k8 x6 y6 t3 | k8 k8 X6 Y6 s4
+		unsigned int *p3[3]; // d5 c4 k8 x6 y6 t3 | k8 k8 X6 Y6 s4   TODO: leak???
 };
 
 class SWrapSOB : public SOB {
@@ -1151,9 +1151,25 @@ int SWrapMSL::ln(const char *s) {
 	int d = b32_to_i(s[2]); if (d<0 || s[3]!=',') return BXE_PARSE;
 	return (a<<23) + (z<<17) + (d<<12) + atoi_h(s+4); }
 
+static int mi_intv_cmd(unsigned int *bv, int b0, int nb, const char * arg, int mul4, int e) {
+	// esc: (devpos+1) + 256*(chpos+1) + 65536*(keypos+1)
+	static unsigned int esc_tab[] = { 0x0d, 0x090d, 0x01090d,  // MSL (a6z6d5c4k8)
+					  0x15, 0x1115, 0x091115,  // MEC (t6d5c4k8g8)
+					  0x1c, 0x181c, 0x10181c}; // MEP (d5c4k8x6y6t3) 
+	if (*arg!=',') return intv_cmd_b(bv, b0, nb, arg, mul4);
+	if (DBGC) log("mi_intv_cmd(2): '%s' last: %d/%d/%d", 
+				arg, midi_last_pdck[1],midi_last_pdck[2],midi_last_pdck[3]);
+	if0((unsigned int)e>8u) return log("mi_intv_cmd: e=%d (BUG)",e), gui_errq_add(MDE_WTF), 0;
+	unsigned int ebv = esc_tab[e], j, tbv = *bv;
+	if ((j= ebv    &0xff))	--j, tbv &= ~(31u<<j),  tbv |= (midi_last_pdck[1] << j);
+	if ((j=(ebv>>8)&0xff))	--j, tbv &= ~(15u<<j),  tbv |= (midi_last_pdck[2] << j);
+	if ((j= ebv>>16))	--j, tbv &= ~(255u<<j), tbv |= (midi_last_pdck[3] << j);
+	*bv = tbv; return INT_MAX;
+} // used by MSL, MEC & MEP
+
 #define IV568 static const int i5=0x1f0501, i6=0x3f0801, i8=0x400801
 int SWrapMSL::cmd(const char *s) {
-	IV568; int k, j = *(s++) - 49;
+	IV568; int r, k, j = *(s++) - 49;
 	unsigned int *q = a6z6d5c4k8 + j; 
 	if ((unsigned int)j > 5u) return BXE_PARSE;
 	switch(*s) { case '*': if ((k=ln(s+1))<0) return k; else *q = k, upd_mul(j);
@@ -1162,9 +1178,9 @@ int SWrapMSL::cmd(const char *s) {
 		     case '0': m_u8_refcnt &= ~(0x1000000u<<j); return (WRF_MSL_NZ &- !!bv()) | 0x8000;
 		     case 'z': return intv_cmd_b(q, 17, 6, s+1, i6) ? (upd_mul(j), j|0x1000) : 0;
 		     case 'a': return intv_cmd_b(q, 23, 6, s+1, i6) ? (upd_mul(j), j| 0x800) : 0;
-		     case 'd': return intv_cmd_b(q, 12, 5, s+1, i5) ? (		   j| 0x400) : 0;
-		     case 'c': return intv_cmd_b(q,  8, 4, s+1, i5) ? (		   j| 0x200) : 0;
-		     case 'k': return intv_cmd_b(q,  0, 8, s+1, i8) ? (		   j| 0x100) : 0;
+		     case 'd': return    mi_intv_cmd(q, 12, 5, s+1, i5, 0)  ?           j|0x400 : 0;
+		     case 'c': return (r=mi_intv_cmd(q,  8, 4, s+1, i5, 1)) ? (r&0x600)|j|0x200 : 0;
+		     case 'k': return (r=mi_intv_cmd(q,  0, 8, s+1, i8, 2)) ? (r&0x700)|j|0x100 : 0;
 		     default: return BXE_CENUM; 
 	}}
 
@@ -1260,16 +1276,16 @@ int SWrapMEC::grab_l(int nid, int j, int flg) {
 	return midi_grab(nid, j+21, (x>>20)&31, (x>>16)&15, 1, &k, flg); }
 
 int SWrapMEC::cmd(const char * s) {
-	IV568; int j,k;
+	IV568; int j,k,r;
 	if (*s=='+') return ((j=add_l()) < 0) ? j : parse_l(j, s+1);
 	if ((unsigned int)(j=b32_to_i(*s))>10u || !(m_u32&(1u<<j))) return j<0 ? MDE_PARSE : MDE_UNDEFC;
 	unsigned int *p = t6d5c4k8g8 + j;
 	switch(s[1]) {
 		case '-': return del_l(j);
 		case '+': return dup_l(j);
-		case 'd': return intv_cmd_b(p, 20, 5, s+2, i5)	 ? (j| 16) : 0;
-		case 'c': return intv_cmd_b(p, 16, 4, s+2, i5)	 ? (j| 32) : 0;
-		case 'k': return intv_cmd_b(p,  8, 8, s+2, i8) 	 ? (j| 64) : 0;
+		case 'd': return    mi_intv_cmd(p, 20, 5, s+2, i5, 3)  ? ( j|         16) : 0;
+		case 'c': return (r=mi_intv_cmd(p, 16, 4, s+2, i5, 4)) ? ( j|(r&48) | 32) : 0;
+		case 'k': return (r=mi_intv_cmd(p,  8, 8, s+2, i8, 5)) ? ( j|(r&112)| 64) : 0;
 		case 't': return intv_cmd_b(p, 26, 6, s+2, i6,25)? (j|128) : 0;
 		case 'g': return intv_cmd_b(p, 25, 1, s+2, 1)    ? (j|512) : 0;
 		case 'z': return k=un253(*p&255)>>6, intv_cmd(&k,s+2,0,20,i5) && set_p0pn(j,k,-1) ?(j|256):0;
@@ -1400,7 +1416,7 @@ int SWrapMEP::grab_l(int nid, int j, int flg) {
 }
 
 int SWrapMEP::cmd(const char * s) {
-	IV568; int j, k;
+	IV568; int j, k, r;
 	if (*s=='+') return ((j=add_l())<0) ? j : parse_l(j, s+1);
 	if ((unsigned int)(j=b32_to_i(*s)) >= (unsigned int)(nl)) return (j<0) ? MDE_PARSE : MDE_UNDEFP;
 	unsigned int *p = p_l(j);
@@ -1409,11 +1425,19 @@ int SWrapMEP::cmd(const char * s) {
 		case '+': return dup_l(j);
 		case 'm': return mv_l(j,s[2]);
 		case 't': return (k=ty_c2i(s[2]))>=0? (*p&=~7,*p|=k,j|  0x1040) : k;
-		case 'd': return intv_cmd_b(p  , 27, 5, s+2, i5) ? (j|  0x2040) : 0;
-		case 'c': return intv_cmd_b(p  , 23, 4, s+2, i5) ? (j|  0x4040) : 0;
-		case 'x': return intv_cmd_b(p  , 15, 8, s+2, i8) ? (j|  0x8040) : 0;
-		case 'y': return intv_cmd_b(p+1, 24, 8, s+2, i8) ? (j| 0x10040) : 0;
-		case 'z': return intv_cmd_b(p+1, 16, 8, s+2, i8) ? (j| 0x20040) : 0;
+		case 'd': return    mi_intv_cmd(p, 27, 5, s+2, i5, 6)  ? (j		|0x2040) : 0;
+		case 'c': return (r=mi_intv_cmd(p, 23, 4, s+2, i5, 7)) ? (j | (r&0x6000)|0x4040) : 0;
+		case 'x': return (r=mi_intv_cmd(p, 15, 8, s+2, i8, 8)) ? (j | (r&0xe000)|0x8040) : 0;
+		case 'y': if (s[2]==',') {
+				  p[0] = (p[0]&0x7fffff) + (midi_last_pdck[1]<<27) + (midi_last_pdck[2]<<23);
+				  p[1] = (p[1]&0xffffff) + (midi_last_pdck[3]<<24);  return j | 0x1e040; }
+			  return intv_cmd_b(p+1, 24, 8, s+2, i8) ? (j| 0x10040) : 0;
+		case 'z': if (s[2]==',') {
+				  unsigned int i0 = p[0], i1 = p[1], k0=(i0>>15)&255u, k1 = i1>>24,
+					       dif1 = 1u + (k0<k1 ? k1-k0 : k0-k1), nk = (i1>>16)&255u;
+				  p[1] = (p[1]&~0xff0000u) + ((nk!=dif1 ? dif1 : (dif1>>1)+1u)<<16);
+				  return j | 0x20040; }
+			  return intv_cmd_b(p+1, 16, 8, s+2, i8) ? (j| 0x20040) : 0;
 		case '1': return intv_cmd_b(p  ,  9, 6, s+2, i6) ? (j| 0x40040) : 0;
 		case '2': return intv_cmd_b(p  ,  3, 6, s+2, i6) ? (j| 0x80040) : 0;
 		case '3': return intv_cmd_b(p+1, 10, 6, s+2, i6) ? (j|0x100040) : 0;
@@ -1550,7 +1574,7 @@ int AWrapGen::key_op(int k, int op, const char * xys, int nof, int dly_tg) {
 		case 12: ec = add2mx_txdlv(trg,0,dly,tlim,0); if (ec>=0) ec = add2ctl(ec, k|65536); break;
 		default: ec = BXE_CENUM; break;
 	}
-	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8);
+	if (nb) m_bflg = bfsav, memcpy(m_xys6, xysav, 8); // no it may not
 	return ec;
 }
 
@@ -1803,7 +1827,7 @@ int DWrapGen::add2mx_txdlv(int trg0, int flg, int dly, int lim, const double *vs
 	if (!m_sfbx[0]) return EEE_NOEFF;
 	double x, in[36], v11[11];
 	int ni, no, nv = 0, ncf = (flg|=pflg()) & WRF_NOCON, v0f = !!(flg & WRF_SKIPV0),
-	    trf = !(flg&WRF_NOREC) && !trg0 && trk_rec_trg, trg = trg0 + (!trg0&glob_flg);
+	    trf = !(flg&WRF_NOREC) && !trg0 && trk_rec_trg, trg = trg0 + ((!trg0)&glob_flg);
 	WrapSOB * sob = m_sob.ro(); 
 	TXD_GET(v11, sob->m_core.ro(), m_xys6);
 	sob->prep11(v11, flg | (768^(v0f<<9)), m_xys6);

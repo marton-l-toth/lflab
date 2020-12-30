@@ -3,6 +3,8 @@
 
 extern unsigned int midi_bv;
 extern int midi_fd[32];
+extern unsigned char midi_last_pdck[4];
+
 void midi_input(int i);
 int midi_cmd(const char *s);
 int midi_grab(int id, int ix, int dev, int ch, int kc, const unsigned char *kv, int flg);
