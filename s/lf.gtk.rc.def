@@ -35,4 +35,5 @@ style "mnui"
   	fg[NORMAL] = {1.0, 1.0, .5}
  	text[NORMAL] = {1.0, 1.0, .5}
 }
-widget "*lflabPU*" style "mnui"
+# popup menu -- on some machines only FG is set, resulting in yellow text on white bg
+#widget "*lflabPU*" style "mnui"
