@@ -4,6 +4,10 @@ function osbtab {
              grep -v '^%' | bc | grep -n ^ | sed 's/\([0-9]*\):\(.*\)/    case \2: return \1;/'
 }
 
+if [[ $(echo '1+1' | bc) != 2 ]]; then
+	echo "$0: please install 'bc' (calculator)" >> /dev/stderr; exit 1
+fi
+
 if [[ -z "$1" ]]; then echo "usage: $0 <input-file>"; exit 1; fi
 in="$1"
 TMPF=/tmp/mk_errtab.$$
