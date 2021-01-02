@@ -23,7 +23,7 @@ static struct timespec asv_ts;
 
 void hi() { log("lflab: linear filter based audio lab %d.%02d (%s)\n%s\n%s\n%s",
 		v_major, v_minor, patch_string, pt_hello,
-		"Copyright (C) 2014-2020 Marton Laszlo Toth",
+		"Copyright (C) 2014-2021 Marton Laszlo Toth",
 		"This is free software (GNU GPL 2.0) with ABSOLUTELY NO WARRANTY.",
 		"see the file \"COPYING\" for details"); }
 

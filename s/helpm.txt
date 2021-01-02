@@ -2,7 +2,7 @@
 {{{0.about}}}
 lflab - lineral filter based audio lab
 vX.YY
-Copyright (C) Marton Laszlo Toth, 2014-2020.
+Copyright (C) Marton Laszlo Toth, 2014-2021.
 This is free software (GNU General Public License version 2),
 with ABSOLUTELY NO WARRANTY.
 ---
