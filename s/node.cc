@@ -909,7 +909,7 @@ int ClipNode::add(ANode * that, const char * nm, int i, int j) {
 int ClipNode::show_dsc(int f) { return !m_extra ? NDE_NODSC : f&1 ? lookup_n_q(m_extra)->draw_window(16) : 0; }
 void ClipNode::draw_1(ABoxNode * nd) { gui2.clip_box(this, nd->m_u24.c.i); }
 void ClipNode::show_newbox(ABoxNode * nd) { if (!nd->box()) return nd->winflg_or(8);
-	if (winflg(8)) gui2.clip_box(this, nd->m_u24.c.i); else draw();  }
+	if (winflg(8)) gui2.clip_box(this, nd->m_u24.c.i), cond_present(); else draw();  }
 
 int ClipNode::rm(ANode * that) {
 	int i = that->m_u24.c.i;
@@ -1017,11 +1017,13 @@ io:
 	} else if (*q==this && *q!=m0_kcp[0]) {
 		*q = m0_kcp[0];
 		if (winflg(8)) gui2.clip_flg(m_id, *s, 0);
-		if ((*q)->winflg(8)) gui2.clip_flg((*q)->id(), *s, 1);
+		if ((*q)->winflg(8)) gui2.clip_flg((*q)->id(), *s, 1), (*q)->cond_present();
 		else if (f & NOF_FGUI) (*q)->draw();
 	}
 	return 0;
 }
+
+void ClipNode::cond_present() { if (CFG_GUI_AGRCLIP.i) gui2.setwin(16*m_id+3,'K'),gui2.lx0('P'); }
 
 void ClipNode::draw() {
 	gui2.cre(16*m_id+3, 'K', "!,");

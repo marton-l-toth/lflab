@@ -554,6 +554,7 @@ class ClipNode : public ADirNode { // name: i_nnxy12
 		int add_hlp(ANode * that);
                 int wfind(BoxGen * bx);
 		int find_free(int i0);
+		void cond_present();
 
 		unsigned int m_map;
 		char m_sel,  m_flg; // 1:dup 2:au

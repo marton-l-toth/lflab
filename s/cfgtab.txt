@@ -15,6 +15,7 @@ GUI_TRKUP   |i|100        |10  |999  |trkup |track play (arrow) update interval 
 GUI_SLFOC   |i|1          |0   |1    |slfoc |1: sliders can have keyboard focus (eff. after GUI restart)
 GUI_QCPU    |i|0          |0   |1    |qcpu  |1: quick&dirty CPU meter redraw (bypassing GTK ev.queue)
 GUI_F_YN    |i|1          |0   |1    |fwask |1: ask before overwriting file (save as/save lib)
+GUI_AGRCLIP |i|1          |0   |1    |agclp |1: aggressively raise clipboard when copying/pasting
 DEVEL       |i|0          |0   |1    |devel |1: allow non-ready features (at your own risk)
 PLOT_XSIZ   |i|4	  |0   |6    |plotx |max. FFT-plot samples - 2^x * (1Msamp=23.777sec=16MB)
 CLK_TYPE    |i|1	  |0   |1    |clkty |clock type: 0:monotonic 1:monot.raw (eff. after restart)
